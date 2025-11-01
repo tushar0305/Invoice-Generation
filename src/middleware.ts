@@ -26,9 +26,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - / (the root path which redirects to /dashboard or /login)
+     * - / (the root path, which is handled by src/app/page.tsx)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-    '/', // This ensures the root is also covered by the middleware
+    '/((?!api|_next/static|_next/image|favicon.ico|/).*)',
+    // We explicitly exclude the root '/' because src/app/page.tsx is now responsible
+    // for the initial authenticated vs. unauthenticated routing logic.
   ],
 };
