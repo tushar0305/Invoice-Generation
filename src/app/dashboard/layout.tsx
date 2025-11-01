@@ -12,13 +12,10 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, FilePlus2, LogOut, Users, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, FilePlus2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from '@/components/logo';
-import { useAuth, useUser } from '@/firebase';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 
 export default function DashboardLayout({
   children,
@@ -26,14 +23,6 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const auth = useAuth();
-  const { user } = useUser();
-  const router = useRouter();
-
-  const handleSignOut = () => {
-    auth.signOut();
-    router.push('/login');
-  };
 
   const getTitle = () => {
     if (pathname === '/dashboard') return 'Dashboard';
@@ -103,10 +92,7 @@ export default function DashboardLayout({
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-            <Button variant="ghost" onClick={handleSignOut} className="w-full justify-start">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-            </Button>
+            {/* Logout functionality is disabled */}
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
