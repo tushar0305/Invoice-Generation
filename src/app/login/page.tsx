@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter } from 'next/navigation';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -30,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -64,16 +64,16 @@ export default function LoginPage() {
         );
         toast({
           title: 'Account Created',
-          description: "You've been successfully signed up.",
+          description: "You've been successfully signed up. You will be redirected shortly.",
         });
       } else {
         await signInWithEmailAndPassword(auth, values.email, values.password);
         toast({
           title: 'Signed In',
-          description: "You're now logged in.",
+          description: "You're now logged in. You will be redirected shortly.",
         });
       }
-      // Redirection is handled by the root page based on auth state change.
+      // Redirection is now handled by the root page based on auth state change.
     } catch (error: any) {
       console.error(error);
       toast({
