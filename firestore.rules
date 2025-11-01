@@ -60,12 +60,16 @@ service cloud.firestore {
       function isSignedIn() {
         return request.auth != null;
       }
+      
+      function isOwner(docData) {
+        return isSignedIn() && request.auth.uid == docData.userId;
+      }
 
-      allow get: if isSignedIn() && request.auth.uid == resource.data.customerId;
-      allow list: if isSignedIn() && request.auth.uid == resource.data.customerId;
-      allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
-      allow update: if isSignedIn() && request.auth.uid == resource.data.customerId;
-      allow delete: if isSignedIn() && request.auth.uid == resource.data.customerId;
+      allow get: if isOwner(resource.data);
+      allow list: if isSignedIn() && request.query.resource.data.userId == request.auth.uid;
+      allow create: if isOwner(request.resource.data);
+      allow update: if isOwner(resource.data);
+      allow delete: if isOwner(resource.data);
     }
 
     /**
@@ -81,7 +85,7 @@ service cloud.firestore {
       }
 
      function isInvoiceOwner() {
-          return isSignedIn() && get(/databases/$(database)/documents/invoices/$(invoiceId)).data.customerId == request.auth.uid;
+          return isSignedIn() && get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId == request.auth.uid;
       }
 
       allow get: if isInvoiceOwner();
