@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
-import AuthWrapper from '@/app/AuthWrapper';
 
 export const metadata: Metadata = {
   title: 'Saambh Invoice Pro',
@@ -31,7 +30,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
         <FirebaseClientProvider>
-          <AuthWrapper>{children}</AuthWrapper>
+          {children}
           <Toaster />
         </FirebaseClientProvider>
       </body>
