@@ -50,11 +50,12 @@ service cloud.firestore {
           return isSignedIn() && get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId == request.auth.uid;
         }
         // Allow reads/writes if the user owns the parent invoice.
-        // For creates within a batch, this get() might happen before the parent is created.
-        // However, the top-level 'create' rule on the invoice itself provides the primary guard.
+        // For creates within a batch, the top-level 'create' rule on the invoice itself provides the primary guard.
         // If the invoice create fails, the entire batch fails.
         allow read, write: if isInvoiceOwner();
       }
     }
   }
 }
+
+    
