@@ -7,7 +7,7 @@
  *
  * Data Structure:
  * - /customers/{customerId}: Stores customer profiles. Only the customer can read/write their own profile.
- * - /invoices/{invoiceId}: Stores invoice data. Only the customer associated with the invoice (via customerId) can read/write the invoice.
+ * - /invoices/{invoiceId}: Stores invoice data. Only the customer associated with the invoice (via userId) can read/write the invoice.
  * - /invoices/{invoiceId}/invoiceItems/{invoiceItemId}: Stores individual invoice items. Access is restricted to the owner of the parent invoice.
  *
  * Key Security Decisions:
@@ -16,7 +16,7 @@
  * - Data shape is not validated in this prototype to allow for rapid iteration.
  *
  * Denormalization for Authorization:
- * - The `Invoice` entity includes a `customerId` field. This is intentionally denormalized to avoid needing to perform a `get()` operation to the `customers` collection to validate ownership when accessing invoices.
+ * - The `Invoice` entity includes a `userId` field. This is intentionally denormalized to avoid needing to perform a `get()` operation to the `customers` collection to validate ownership when accessing invoices.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -50,11 +50,11 @@ service cloud.firestore {
     /**
      * @description Enforces that only the owner of a customer can manage their invoices.
      * @path /invoices/{invoiceId}
-     * @allow (create) - User 'user_abc' can create an invoice if request.auth.uid is signed in and request.resource.data.customerId matches.
+     * @allow (create) - User 'user_abc' can create an invoice if request.auth.uid is signed in and request.resource.data.userId matches.
      * @allow (get, list, update, delete) - User 'user_abc' can read, update, or delete an invoice if they own the customer associated with the invoice.
      * @deny (create) - User 'user_xyz' cannot create an invoice for customer 'user_abc'.
      * @deny (get, list, update, delete) - User 'user_xyz' cannot read, update, or delete an invoice associated with customer 'user_abc'.
-     * @principle Enforces document ownership via the `customerId` field.
+     * @principle Enforces document ownership via the `userId` field.
      */
     match /invoices/{invoiceId} {
       function isSignedIn() {
