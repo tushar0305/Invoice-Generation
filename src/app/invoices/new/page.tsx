@@ -1,12 +1,19 @@
-import { InvoiceForm } from '@/components/invoice-form';
-import { Card, CardContent } from '@/components/ui/card';
+'use client';
 
-export const metadata = {
-  title: 'New Invoice | Saambh Invoice Pro',
-};
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
-export default function NewInvoicePage() {
+export default function NewInvoiceRedirectPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/dashboard/invoices/new');
+  }, [router]);
+
   return (
-    <InvoiceForm />
+    <div className="flex h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
   );
 }

@@ -1,41 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { InvoiceForm } from '@/components/invoice-form';
-import { getInvoiceById } from '@/lib/data';
-import { notFound } from 'next/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
-import type { Invoice } from '@/lib/definitions';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
-export default function EditInvoicePage({ params }: { params: { id: string } }) {
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [loading, setLoading] = useState(true);
-  const id = params.id;
+export default function EditInvoiceRedirectPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
 
   useEffect(() => {
-    async function fetchInvoice() {
-      const fetchedInvoice = await getInvoiceById(id);
-      if (fetchedInvoice) {
-        setInvoice(fetchedInvoice);
-      }
-      setLoading(false);
-    }
+    router.replace(`/dashboard/invoices/${params.id}/edit`);
+  }, [router, params.id]);
 
-    fetchInvoice();
-  }, [id]);
-
-  if (loading) {
-    return (
-        <div className="flex h-screen items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-    );
-  }
-
-  if (!invoice) {
-    notFound();
-  }
-
-  return <InvoiceForm invoice={invoice} />;
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
+  );
 }

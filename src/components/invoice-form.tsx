@@ -4,9 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
+import { CalendarIcon, Loader2, PlusCircle, Sparkles, Trash2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { generateDescriptionAction, upsertInvoice } from '@/lib/actions';
-import type { Invoice, InvoiceItem } from '@/lib/definitions';
+import type { Invoice } from '@/lib/definitions';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -112,9 +112,9 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         await upsertInvoice(payload);
         toast({
           title: `Invoice ${invoice ? 'updated' : 'created'} successfully!`,
-          description: `Redirecting to dashboard...`,
+          description: `Redirecting to invoices list...`,
         });
-        router.push('/dashboard');
+        router.push('/dashboard/invoices');
       } catch (error) {
         toast({
           variant: 'destructive',
@@ -142,6 +142,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="flex items-center gap-4">
+          <Button type="button" variant="outline" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        </div>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-8">
             <Card>

@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { saveInvoice } from '@/lib/data';
+import { saveInvoice, getInvoiceById } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { generateInvoiceItemDescription } from '@/ai/flows/generate-invoice-item-description';
@@ -42,8 +42,9 @@ export async function upsertInvoice(data: UpsertInvoiceData) {
     throw new Error('Failed to save invoice.');
   }
 
-  revalidatePath('/dashboard');
-  redirect('/dashboard');
+  revalidatePath('/dashboard/invoices');
+  revalidatePath(`/dashboard/invoices/${data.id}/view`);
+  redirect('/dashboard/invoices');
 }
 
 export async function generateDescriptionAction(keywords: string): Promise<{description?: string, error?: string}> {
@@ -56,5 +57,20 @@ export async function generateDescriptionAction(keywords: string): Promise<{desc
   } catch (error) {
     console.error('AI description generation failed:', error);
     return { error: 'Failed to generate description from AI.' };
+  }
+}
+
+export async function updateInvoiceStatus(invoiceId: string, status: 'paid' | 'due') {
+  try {
+    const invoice = await getInvoiceById(invoiceId);
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+    await saveInvoice({ ...invoice, status });
+    revalidatePath('/dashboard/invoices');
+    revalidatePath(`/dashboard/invoices/${invoiceId}/view`);
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to update invoice status.');
   }
 }

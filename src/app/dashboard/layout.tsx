@@ -26,10 +26,11 @@ export default function DashboardLayout({
 
   const getTitle = () => {
     if (pathname === '/dashboard') return 'Dashboard';
-    if (pathname === '/invoices') return 'Invoices';
-    if (pathname === '/customers') return 'Customers';
-    if (pathname === '/invoices/new') return 'Create New Invoice';
+    if (pathname === '/dashboard/invoices') return 'Invoices';
+    if (pathname === '/dashboard/customers') return 'Customers';
+    if (pathname === '/dashboard/invoices/new') return 'Create New Invoice';
     if (pathname.includes('/edit')) return 'Edit Invoice';
+    if (pathname.includes('/view')) return 'View Invoice';
     return 'Dashboard';
   };
 
@@ -56,10 +57,10 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === '/invoices'}
+                isActive={pathname === '/dashboard/invoices'}
                 tooltip="Invoices"
               >
-                <Link href="/invoices">
+                <Link href="/dashboard/invoices">
                   <FileText />
                   <span>Invoices</span>
                 </Link>
@@ -68,10 +69,10 @@ export default function DashboardLayout({
              <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === '/customers'}
+                isActive={pathname === '/dashboard/customers'}
                 tooltip="Customers"
               >
-                <Link href="/customers">
+                <Link href="/dashboard/customers">
                   <Users />
                   <span>Customers</span>
                 </Link>
@@ -80,10 +81,10 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === '/invoices/new'}
+                isActive={pathname === '/dashboard/invoices/new'}
                 tooltip="New Invoice"
               >
-                <Link href="/invoices/new">
+                <Link href="/dashboard/invoices/new">
                   <FilePlus2 />
                   <span>New Invoice</span>
                 </Link>
