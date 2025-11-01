@@ -24,7 +24,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useUser } from '@/firebase';
-import { getFirestore, doc, setDoc, writeBatch, collection, getDocs, serverTimestamp, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, writeBatch, collection, getDocs, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -55,10 +55,13 @@ async function getNextInvoiceNumber(firestore: any, userId: string): Promise<str
     const q = await getDocs(invoicesCol); // Note: this fetches all invoices. A user-specific counter would be better.
     let latestInvoiceNumber = 0;
     q.forEach(doc => {
-        const numPart = parseInt(doc.data().invoiceNumber.split('-')[2]);
+      const docData = doc.data();
+      if(docData.userId === userId && docData.invoiceNumber) {
+        const numPart = parseInt(docData.invoiceNumber.split('-')[2]);
         if(numPart > latestInvoiceNumber) {
             latestInvoiceNumber = numPart;
         }
+      }
     });
 
     const nextNumber = latestInvoiceNumber + 1;
@@ -130,50 +133,28 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
     startTransition(async () => {
       try {
-        const batch = writeBatch(firestore);
-        let invoiceId = invoice?.id;
-        
-        const { items, ...invoiceData } = data;
-        
-        const invoicePayload: Omit<Invoice, 'id' | 'items'> & { id?: string } = {
-          ...invoiceData,
-          userId: user.uid,
-          invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
-          // This is a placeholder, will be overwritten for new invoices
-          invoiceNumber: invoice?.invoiceNumber || '', 
-        };
+        const invoiceId = invoice?.id ?? doc(collection(firestore, 'invoices')).id;
+        const invoiceRef = doc(firestore, 'invoices', invoiceId);
 
-        if (invoiceId) { // Editing existing invoice
-            const invoiceDocRef = doc(firestore, 'invoices', invoiceId);
-            batch.update(invoiceDocRef, { 
-                ...invoicePayload,
-                updatedAt: serverTimestamp() 
-            });
-
-        } else { // Creating new invoice
-            const newInvoiceRef = doc(collection(firestore, 'invoices'));
-            invoiceId = newInvoiceRef.id;
-            invoicePayload.id = invoiceId;
-            invoicePayload.invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
+        await runTransaction(firestore, async (transaction) => {
+            let invoiceNumber = invoice?.invoiceNumber;
+            if (!invoiceNumber) {
+                invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
+            }
             
-            batch.set(newInvoiceRef, {
-                ...invoicePayload,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-            });
-        }
-        
-        // Handle items subcollection for both create and edit
-        const itemsColRef = collection(firestore, 'invoices', invoiceId, 'invoiceItems');
-        const existingItemsSnapshot = await getDocs(itemsColRef);
-        existingItemsSnapshot.forEach(doc => batch.delete(doc.ref));
-        
-        items.forEach(item => {
-            const itemDocRef = doc(itemsColRef, item.id);
-            batch.set(itemDocRef, item);
+            const invoicePayload = {
+              ...data,
+              id: invoiceId,
+              userId: user.uid,
+              invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+              invoiceNumber: invoiceNumber,
+              updatedAt: serverTimestamp(),
+              createdAt: invoice?.createdAt ?? serverTimestamp(),
+            };
+            
+            // This transactionally writes the main invoice document AND all its items.
+            transaction.set(invoiceRef, invoicePayload);
         });
-
-        await batch.commit();
         
         toast({
           title: `Invoice ${invoice ? 'updated' : 'created'} successfully!`,
@@ -429,5 +410,3 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     </Form>
   );
 }
-
-    

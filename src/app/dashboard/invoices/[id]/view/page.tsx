@@ -130,7 +130,7 @@ export default function ViewInvoicePage() {
                         </Link>
                     </Button>
                     <Button variant="outline" asChild>
-                         <Link href={`/dashboard/invoices/${invoice.id}/print`} target="_blank">
+                         <Link href={`/dashboard/invoices/${id}/print`} target="_blank">
                             <Printer className="mr-2 h-4 w-4" /> Print
                         </Link>
                     </Button>

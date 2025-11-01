@@ -1,0 +1,60 @@
+/**
+ * @fileoverview Firestore Security Rules for Saambh Jewellers Invoice App.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model. Users can only manage
+ * their own data.
+ *
+ * Data Structure:
+ * - /customers/{customerId}: Stores customer profiles. (Not currently used, but rules are in place).
+ * - /invoices/{invoiceId}: Stores invoice data. Only the user associated with the invoice (via userId) can read/write it.
+ * - /invoices/{invoiceId}/invoiceItems/{invoiceItemId}: Stores invoice items. Access is inherited from the parent invoice.
+ *
+ * Key Security Decisions:
+ * - Users can ONLY manage their own invoices and associated data.
+ * - Listing invoices is ONLY allowed when querying for one's own invoices.
+ * - Data shape validation is omitted in this prototype for rapid iteration.
+ *
+ * Denormalization for Authorization:
+ * - The `Invoice` entity includes a `userId` field. This is intentionally denormalized to avoid needing a `get()` operation to another collection to validate ownership when accessing invoices, which is more performant and a best practice for security rules.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /customers/{customerId} {
+      function isOwner() {
+        return isSignedIn() && request.auth.uid == customerId;
+      }
+
+      allow read, write: if isOwner();
+    }
+
+    match /invoices/{invoiceId} {
+      // For single doc reads, updates, and deletes check the existing document's userId
+      allow get, update, delete: if isSignedIn() && get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId == request.auth.uid;
+      
+      // For list (query) operations, ensure the query filters by the user's ID
+      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0].field == 'userId' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid;
+      
+      // For create operations, check the new document's data
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+      // Invoice items can be managed by the owner of the parent invoice.
+      match /invoiceItems/{invoiceItemId} {
+        function isInvoiceOwner() {
+          return isSignedIn() && get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId == request.auth.uid;
+        }
+        // Allow reads/writes if the user owns the parent invoice.
+        // For creates within a batch, this get() might happen before the parent is created.
+        // However, the top-level 'create' rule on the invoice itself provides the primary guard.
+        // If the invoice create fails, the entire batch fails.
+        allow read, write: if isInvoiceOwner();
+      }
+    }
+  }
+}
