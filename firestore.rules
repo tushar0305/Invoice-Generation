@@ -35,25 +35,14 @@ service cloud.firestore {
     }
 
     match /invoices/{invoiceId} {
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-      // Allow reading a single document if the user is the owner.
-      allow get: if isOwner(get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId);
-
-      // Allow listing/querying documents only if the query is filtering by the user's own userId.
-      // This is the key rule to allow `useCollection` with a `where('userId', '==', user.uid)` query.
-      allow list: if isSignedIn() && request.query.where.size() == 1 && request.query.where[0].field == 'userId' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid;
-
-      // Allow creating a document if the new document's userId matches the user's uid.
-      allow create: if isOwner(request.resource.data.userId);
-
-      // Allow updating a document if the user owns the existing document.
-      allow update: if isOwner(get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId);
+      // For single doc reads, check the existing document's userId
+      allow get, update, delete: if isSignedIn() && get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId == request.auth.uid;
       
-      // Allow deleting a document if the user owns it.
-      allow delete: if isOwner(get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId);
+      // For list (query) operations, ensure the query filters by the user's ID
+      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0].field == 'userId' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid;
+      
+      // For create operations, check the new document's data
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
 
       // Invoice items can be managed by the owner of the parent invoice.
       match /invoiceItems/{invoiceItemId} {
