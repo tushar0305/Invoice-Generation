@@ -16,4 +16,5 @@ export type Invoice = {
   items: InvoiceItem[];
   discount: number; // as a currency value
   tax: number; // as a percentage
+  status: 'paid' | 'due';
 };

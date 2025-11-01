@@ -41,7 +41,7 @@ export default function DashboardLayout({
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/dashboard'}
-                tooltip={{ children: 'Dashboard' }}
+                tooltip="Dashboard"
               >
                 <Link href="/dashboard">
                   <LayoutDashboard />
@@ -53,7 +53,7 @@ export default function DashboardLayout({
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/invoices/new'}
-                tooltip={{ children: 'New Invoice' }}
+                tooltip="New Invoice"
               >
                 <Link href="/invoices/new">
                   <FilePlus2 />

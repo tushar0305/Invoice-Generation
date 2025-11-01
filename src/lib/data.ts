@@ -15,6 +15,7 @@ let invoices: Invoice[] = [
     ],
     discount: 2500,
     tax: 3,
+    status: 'paid',
   },
   {
     id: '2',
@@ -28,6 +29,21 @@ let invoices: Invoice[] = [
     ],
     discount: 500,
     tax: 3,
+    status: 'due',
+  },
+    {
+    id: '3',
+    invoiceNumber: 'INV-2024-003',
+    customerName: 'Anjali Sharma',
+    customerAddress: '123, Diamond Street, Mumbai, 400001',
+    customerPhone: '9876543210',
+    invoiceDate: '2024-07-25',
+    items: [
+      { id: 'item-1', description: 'Platinum Bracelet', weight: 25, rate: 3500, makingCharges: 7000 },
+    ],
+    discount: 1000,
+    tax: 3,
+    status: 'paid',
   },
 ];
 

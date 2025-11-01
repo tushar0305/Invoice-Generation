@@ -22,6 +22,7 @@ const InvoiceFormSchema = z.object({
   })).min(1, "At least one item is required."),
   discount: z.coerce.number().min(0, "Discount must be a non-negative number."),
   tax: z.coerce.number().min(0).max(100, "Tax must be between 0 and 100."),
+  status: z.enum(['paid', 'due']),
 });
 
 type UpsertInvoiceData = Omit<Invoice, 'invoiceNumber'>;

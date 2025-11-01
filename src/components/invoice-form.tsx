@@ -22,6 +22,7 @@ import { generateDescriptionAction, upsertInvoice } from '@/lib/actions';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const formSchema = z.object({
   customerName: z.string().min(2, 'Customer name is required'),
@@ -37,6 +38,7 @@ const formSchema = z.object({
     })).min(1, 'At least one item is required'),
   discount: z.coerce.number().min(0, 'Discount cannot be negative'),
   tax: z.coerce.number().min(0).max(100, 'Tax should be a percentage'),
+  status: z.enum(['paid', 'due']),
 });
 
 type InvoiceFormValues = z.infer<typeof formSchema>;
@@ -67,6 +69,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         items: [{ id: uuidv4(), description: '', weight: 0, rate: 0, makingCharges: 0 }],
         discount: 0,
         tax: 3,
+        status: 'due',
       };
 
   const form = useForm<InvoiceFormValues>({
@@ -111,6 +114,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           title: `Invoice ${invoice ? 'updated' : 'created'} successfully!`,
           description: `Redirecting to dashboard...`,
         });
+        router.push('/dashboard');
       } catch (error) {
         toast({
           variant: 'destructive',
@@ -266,6 +270,27 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                     <FormMessage />
                   </FormItem>
                 )} />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="due">Due</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 
