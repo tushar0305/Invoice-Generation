@@ -44,7 +44,7 @@ service cloud.firestore {
 
       // Allow listing/querying documents only if the query is filtering by the user's own userId.
       // This is the key rule to allow `useCollection` with a `where('userId', '==', user.uid)` query.
-      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0].field == 'userId' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where.size() == 1 && request.query.where[0].field == 'userId' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid;
 
       // Allow creating a document if the new document's userId matches the user's uid.
       allow create: if isOwner(request.resource.data.userId);
