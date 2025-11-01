@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Table,
   TableHeader,
@@ -13,14 +14,27 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, MoreHorizontal, FilePlus2, Edit, Printer, Eye } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Search, MoreHorizontal, FilePlus2, Edit, Printer, Eye, Trash2, Loader2 } from 'lucide-react';
 import { getInvoices } from '@/lib/data';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { deleteInvoice } from '@/lib/actions';
+import { useToast } from '@/hooks/use-toast';
+
 
 function calculateGrandTotal(invoice: Invoice) {
     const subtotal = invoice.items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
@@ -35,16 +49,60 @@ export default function InvoicesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isDeleting, startDeleteTransition] = useTransition();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+
 
   useEffect(() => {
     async function fetchInvoices() {
       setLoading(true);
-      const data = await getInvoices();
-      setInvoices(data);
-      setLoading(false);
+      try {
+        const data = await getInvoices();
+        setInvoices(data);
+      } catch (error) {
+        console.error("Failed to fetch invoices:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load invoices. Please try again later.",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
     fetchInvoices();
-  }, []);
+  }, [toast]);
+
+  const handleDeleteConfirmation = (invoiceId: string) => {
+    setInvoiceToDelete(invoiceId);
+    setDialogOpen(true);
+  };
+
+  const executeDelete = () => {
+    if (!invoiceToDelete) return;
+    startDeleteTransition(async () => {
+      try {
+        await deleteInvoice(invoiceToDelete);
+        setInvoices(prev => prev.filter(inv => inv.id !== invoiceToDelete));
+        toast({
+          title: 'Invoice Deleted',
+          description: 'The invoice has been successfully deleted.',
+        });
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to delete the invoice.',
+        });
+      } finally {
+        setDialogOpen(false);
+        setInvoiceToDelete(null);
+      }
+    });
+  };
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter(invoice =>
@@ -55,6 +113,7 @@ export default function InvoicesPage() {
   }, [invoices, searchTerm, statusFilter]);
 
   return (
+    <>
     <div className="space-y-6">
       <Card>
         <CardHeader>
@@ -153,6 +212,14 @@ export default function InvoicesPage() {
                                           Print
                                       </Link>
                                   </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    className="cursor-pointer flex items-center text-red-600 focus:text-red-600 focus:bg-red-50"
+                                    onClick={() => handleDeleteConfirmation(invoice.id)}
+                                  >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                  </DropdownMenuItem>
                               </DropdownMenuContent>
                           </DropdownMenu>
                       </TableCell>
@@ -171,5 +238,28 @@ export default function InvoicesPage() {
         </CardContent>
       </Card>
     </div>
+    <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the invoice
+              and all of its associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeDelete}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

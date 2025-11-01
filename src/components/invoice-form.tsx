@@ -109,12 +109,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           id: invoice?.id,
           invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
         };
-        await upsertInvoice(payload);
+        const savedInvoice = await upsertInvoice(payload);
         toast({
           title: `Invoice ${invoice ? 'updated' : 'created'} successfully!`,
-          description: `Redirecting to invoices list...`,
+          description: `Redirecting to view invoice...`,
         });
-        router.push('/dashboard/invoices');
+        router.push(`/dashboard/invoices/${savedInvoice.id}/view`);
       } catch (error) {
         toast({
           variant: 'destructive',

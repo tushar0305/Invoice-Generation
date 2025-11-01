@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { saveInvoice, getInvoiceById } from '@/lib/data';
+import { saveInvoice, getInvoiceById, deleteInvoice as deleteInvoiceFromDb } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { generateInvoiceItemDescription } from '@/ai/flows/generate-invoice-item-description';
@@ -42,10 +42,24 @@ export async function upsertInvoice(data: UpsertInvoiceData) {
     throw new Error('Failed to save invoice.');
   }
 
-  revalidatePath('/dashboard/invoices');
-  revalidatePath(`/dashboard/invoices/${data.id}/view`);
+  // No longer redirecting from server action, page will handle it.
+}
+
+export async function deleteInvoice(invoiceId: string) {
+  if (!invoiceId) {
+    throw new Error('Invoice ID is required for deletion.');
+  }
+  try {
+    await deleteInvoiceFromDb(invoiceId);
+    // Revalidation is handled in the data function
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to delete invoice.');
+  }
+  // Redirect to the invoices list after deletion
   redirect('/dashboard/invoices');
 }
+
 
 export async function generateDescriptionAction(keywords: string): Promise<{description?: string, error?: string}> {
   if (!keywords) {

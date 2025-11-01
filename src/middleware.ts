@@ -2,8 +2,21 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Authentication is currently disabled.
-  // All requests are allowed to proceed.
+  const token = request.cookies.get('firebaseIdToken');
+  const { pathname } = request.nextUrl;
+
+  // If the user is trying to access the login page but is already authenticated,
+  // redirect them to the dashboard.
+  if (token && pathname === '/login') {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // If the user is not authenticated and is trying to access a protected route
+  // (any route other than login), redirect them to the login page.
+  if (!token && pathname !== '/login') {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   return NextResponse.next();
 }
 
@@ -15,7 +28,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - root page (/)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|$).*)',
   ],
 };

@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Edit, Printer, DollarSign, Users, CreditCard } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard } from 'lucide-react';
 import { getInvoices } from '@/lib/data';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
@@ -21,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { format, subDays } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 function calculateGrandTotal(invoice: Invoice) {
     const subtotal = invoice.items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
@@ -38,16 +39,27 @@ type CustomerStats = {
 export default function DashboardPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     async function fetchInvoices() {
       setLoading(true);
-      const data = await getInvoices();
-      setInvoices(data);
-      setLoading(false);
+      try {
+        const data = await getInvoices();
+        setInvoices(data);
+      } catch (error) {
+        console.error("Failed to fetch invoices:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load dashboard data. Please try again later.",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
     fetchInvoices();
-  }, []);
+  }, [toast]);
 
   const recentInvoices = useMemo(() => {
     return invoices.sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()).slice(0, 5);
@@ -75,6 +87,12 @@ export default function DashboardPage() {
     });
     return data;
   }, [invoices, loading]);
+
+  const topCustomers = useMemo(() => {
+    return Object.entries(customerData)
+      .sort(([, a], [, b]) => b.totalPurchase - a.totalPurchase)
+      .slice(0, 5);
+  }, [customerData]);
 
   const chartData = useMemo(() => {
     if (loading) return [];
@@ -129,8 +147,8 @@ export default function DashboardPage() {
             </Card>
         </div>
       
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      <Card className="lg:col-span-3">
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-5 gap-6">
+      <Card className="xl:col-span-3">
         <CardHeader>
             <CardTitle>Sales Trend (Last 30 Days)</CardTitle>
         </CardHeader>
@@ -171,75 +189,119 @@ export default function DashboardPage() {
            )}
         </CardContent>
       </Card>
-      <Card className="lg:col-span-2">
-        <CardHeader>
-            <CardTitle>Recent Invoices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="w-[50px] text-right"> </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                      <TableRow key={`skeleton-${i}`}>
-                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-5 w-28 ml-auto" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
-                      </TableRow>
-                  ))
-                ) : recentInvoices.length > 0 ? (
-                  recentInvoices.map(invoice => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                      <TableCell>{invoice.customerName}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(calculateGrandTotal(invoice))}</TableCell>
-                      <TableCell className="text-right">
-                          <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                  <DropdownMenuItem asChild>
-                                      <Link href={`/invoices/${invoice.id}/edit`} className="cursor-pointer flex items-center">
-                                          <Edit className="mr-2 h-4 w-4" />
-                                          Edit
-                                      </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem asChild>
-                                      <Link href={`/invoices/${invoice.id}/print`} target="_blank" className="cursor-pointer flex items-center">
-                                          <Printer className="mr-2 h-4 w-4" />
-                                          Print
-                                      </Link>
-                                  </DropdownMenuItem>
-                              </DropdownMenuContent>
-                          </DropdownMenu>
-                      </TableCell>
+      <div className="space-y-6 xl:col-span-2">
+        <Card>
+          <CardHeader>
+              <CardTitle>Top Customers</CardTitle>
+              <CardDescription>Your most valuable customers by total purchase.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={`skel-cust-${i}`} className="flex justify-between items-center">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-5 w-24" />
+                    </div>
+                  ))}
+                </div>
+            ) : topCustomers.length > 0 ? (
+                <ul className="space-y-4">
+                {topCustomers.map(([name, stats]) => (
+                    <li key={name} className="flex justify-between items-center">
+                        <span className="font-medium">{name}</span>
+                        <span className="text-muted-foreground">{formatCurrency(stats.totalPurchase)}</span>
+                    </li>
+                ))}
+                </ul>
+            ) : (
+                <p className="text-sm text-muted-foreground text-center h-24 flex items-center justify-center">No customer data available.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+    <Card>
+      <CardHeader>
+          <CardTitle>Recent Invoices</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice #</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="w-[50px] text-right"> </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={`skeleton-recent-${i}`}>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-5 w-28 ml-auto" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24">
-                      No invoices found.
+                ))
+              ) : recentInvoices.length > 0 ? (
+                recentInvoices.map(invoice => (
+                  <TableRow key={invoice.id}>
+                    <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                    <TableCell>{invoice.customerName}</TableCell>
+                     <TableCell>
+                      <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'} className={invoice.status === 'paid' ? 'bg-green-600/80' : ''}>
+                        {invoice.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">{formatCurrency(calculateGrandTotal(invoice))}</TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/dashboard/invoices/${invoice.id}/view`} className="cursor-pointer flex items-center">
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        View
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/dashboard/invoices/${invoice.id}/edit`} className="cursor-pointer flex items-center">
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/dashboard/invoices/${invoice.id}/print`} target="_blank" className="cursor-pointer flex items-center">
+                                        <Printer className="mr-2 h-4 w-4" />
+                                        Print
+                                    </Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-      </div>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center h-24">
+                    No invoices found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
     </div>
   );
 }

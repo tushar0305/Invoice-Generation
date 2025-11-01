@@ -16,6 +16,7 @@ import { getInvoices } from '@/lib/data';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 type CustomerStats = {
     totalPurchase: number;
@@ -27,16 +28,27 @@ export default function CustomersPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     async function fetchInvoices() {
       setLoading(true);
-      const data = await getInvoices();
-      setInvoices(data);
-      setLoading(false);
+      try {
+        const data = await getInvoices();
+        setInvoices(data);
+      } catch (error) {
+        console.error("Failed to fetch customer data:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load customer data. Please try again later.",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
     fetchInvoices();
-  }, []);
+  }, [toast]);
 
   const customerData = useMemo(() => {
     if (loading) return {};

@@ -8,6 +8,7 @@ export type InvoiceItem = {
 
 export type Invoice = {
   id: string; // db id
+  userId: string; // a reference to the user who owns this invoice
   invoiceNumber: string; // user-facing id
   customerName: string;
   customerAddress: string;
@@ -17,4 +18,6 @@ export type Invoice = {
   discount: number; // as a currency value
   tax: number; // as a percentage
   status: 'paid' | 'due';
+  createdAt?: any;
+  updatedAt?: any;
 };
