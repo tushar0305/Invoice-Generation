@@ -24,7 +24,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useUser } from '@/firebase';
-import { getFirestore, doc, setDoc, writeBatch, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, writeBatch, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -47,7 +47,7 @@ const formSchema = z.object({
 type InvoiceFormValues = z.infer<typeof formSchema>;
 
 interface InvoiceFormProps {
-  invoice?: Invoice & { items: InvoiceItem[] }; // Allow items for initial form population
+  invoice?: Invoice & { items: InvoiceItem[] };
 }
 
 async function getNextInvoiceNumber(firestore: any, userId: string): Promise<string> {
@@ -136,33 +136,39 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       try {
         const invoiceId = invoice?.id ?? doc(collection(firestore, 'invoices')).id;
         const invoiceRef = doc(firestore, 'invoices', invoiceId);
-        const invoiceNumber = invoice?.invoiceNumber ?? await getNextInvoiceNumber(firestore, user.uid);
         
-        // This is the critical change: separate the items from the main invoice payload.
         const { items, ...invoiceMainData } = data;
-
-        const invoicePayload: Invoice = {
-            ...invoiceMainData,
-            id: invoiceId,
-            userId: user.uid,
-            invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
-            invoiceNumber: invoiceNumber,
-            updatedAt: serverTimestamp(),
-            createdAt: invoice?.createdAt ?? serverTimestamp(),
-        };
 
         const batch = writeBatch(firestore);
 
-        // 1. Set the main invoice document (without the items array)
-        batch.set(invoiceRef, invoicePayload);
+        if (invoice) { // This is an UPDATE
+            const invoicePayload = {
+                ...invoiceMainData,
+                invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+                updatedAt: serverTimestamp(),
+            };
+            batch.update(invoiceRef, invoicePayload);
+        } else { // This is a CREATE
+            const invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
+            const invoicePayload = {
+                ...invoiceMainData,
+                id: invoiceId,
+                userId: user.uid,
+                invoiceNumber: invoiceNumber,
+                invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            };
+            batch.set(invoiceRef, invoicePayload);
+        }
 
-        // 2. Set each invoice item in the subcollection
+        // For both create and update, we sync the subcollection of items.
+        // First, we could delete old items if this is an update, but for simplicity, we'll just overwrite.
         items.forEach((item) => {
             const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
             batch.set(itemRef, item);
         });
         
-        // 3. Commit the entire batch at once
         await batch.commit();
         
         toast({
@@ -170,6 +176,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           description: `Redirecting to view invoice...`,
         });
         router.push(`/dashboard/invoices/${invoiceId}/view`);
+        router.refresh();
 
       } catch (error) {
         console.error("Failed to save invoice:", error);
