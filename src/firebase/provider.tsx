@@ -3,7 +3,7 @@
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { Auth, User, onAuthStateChanged, getIdToken } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 interface FirebaseProviderProps {
@@ -52,6 +52,22 @@ export interface UserHookResult { // Renamed from UserAuthHookResult for consist
 // React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
+// Function to set a cookie
+const setCookie = (name: string, value: string, days: number) => {
+    let expires = "";
+    if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+
+// Function to erase a cookie
+const eraseCookie = (name: string) => {   
+    document.cookie = name+'=; Max-Age=-99999999;';  
+}
+
 /**
  * FirebaseProvider manages and provides Firebase services and user authentication state.
  */
@@ -78,11 +94,19 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+      async (firebaseUser) => { // Auth state determined
+        if (firebaseUser) {
+          const token = await getIdToken(firebaseUser);
+          setCookie('firebaseIdToken', token, 1); // Set cookie for 1 day
+          setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        } else {
+          eraseCookie('firebaseIdToken'); // Clear cookie on sign out
+          setUserAuthState({ user: null, isUserLoading: false, userError: null });
+        }
       },
       (error) => { // Auth listener error
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
+        eraseCookie('firebaseIdToken');
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );

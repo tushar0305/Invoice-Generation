@@ -1,4 +1,17 @@
+'use client';
 import type { Invoice } from './definitions';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+} from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 // In-memory store for invoices
 let invoices: Invoice[] = [
