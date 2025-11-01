@@ -42,7 +42,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const auth = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -64,16 +63,16 @@ export default function LoginPage() {
         );
         toast({
           title: 'Account Created',
-          description: "You've been successfully signed up. You will be redirected shortly.",
+          description: "You've been successfully signed up.",
         });
       } else {
         await signInWithEmailAndPassword(auth, values.email, values.password);
         toast({
           title: 'Signed In',
-          description: "You're now logged in. You will be redirected shortly.",
+          description: "You're now logged in.",
         });
       }
-      // Redirection is now handled by the root page based on auth state change.
+      // Redirection is now handled by the AuthWrapper component.
     } catch (error: any) {
       console.error(error);
       toast({

@@ -11,9 +11,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // If the user is not authenticated and is trying to access a protected route
-  // (any route other than login), redirect them to the login page.
+  // If the user is not authenticated and is trying to access a protected route,
+  // redirect them to the login page.
   if (!token && pathname !== '/login') {
+    // Let the client-side AuthWrapper handle the redirect for a smoother experience
+    // This server-side redirect can be a fallback
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -28,8 +30,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - root page (/)
+     * - The root page itself (/), which is handled by AuthWrapper
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    // We explicitly include /dashboard and its sub-paths to ensure they are protected.
+    '/dashboard/:path*',
   ],
 };
