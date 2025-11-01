@@ -134,12 +134,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
     startTransition(async () => {
       try {
+        const batch = writeBatch(firestore);
         const invoiceId = invoice?.id ?? doc(collection(firestore, 'invoices')).id;
         const invoiceRef = doc(firestore, 'invoices', invoiceId);
         
+        // Separate the main invoice data from the items subcollection data
         const { items, ...invoiceMainData } = data;
-
-        const batch = writeBatch(firestore);
 
         if (invoice) { // This is an UPDATE
             const invoicePayload = {
@@ -162,10 +162,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             batch.set(invoiceRef, invoicePayload);
         }
 
-        // For both create and update, we sync the subcollection of items.
-        // First, we could delete old items if this is an update, but for simplicity, we'll just overwrite.
+        // Handle items subcollection
+        // For simplicity in this example, we'll overwrite all items on update.
+        // A more advanced implementation might compare old and new items.
         items.forEach((item) => {
             const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
+            // The item object from the form is already in the correct shape for our InvoiceItem definition
             batch.set(itemRef, item);
         });
         
