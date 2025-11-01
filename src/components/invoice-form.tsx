@@ -132,50 +132,47 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       try {
         const batch = writeBatch(firestore);
         let invoiceId = invoice?.id;
-        let invoiceNumber = invoice?.invoiceNumber;
         
         const { items, ...invoiceData } = data;
+        
+        const invoicePayload: Omit<Invoice, 'id' | 'items'> & { id?: string } = {
+          ...invoiceData,
+          userId: user.uid,
+          invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+          // This is a placeholder, will be overwritten for new invoices
+          invoiceNumber: invoice?.invoiceNumber || '', 
+        };
 
         if (invoiceId) { // Editing existing invoice
             const invoiceDocRef = doc(firestore, 'invoices', invoiceId);
             batch.update(invoiceDocRef, { 
-                ...invoiceData, 
-                invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+                ...invoicePayload,
                 updatedAt: serverTimestamp() 
-            });
-
-            // Overwrite items subcollection
-            const itemsColRef = collection(firestore, 'invoices', invoiceId, 'items');
-            const existingItemsSnapshot = await getDocs(itemsColRef);
-            existingItemsSnapshot.forEach(doc => batch.delete(doc.ref));
-            
-            items.forEach(item => {
-                const itemDocRef = doc(itemsColRef, item.id);
-                batch.set(itemDocRef, item);
             });
 
         } else { // Creating new invoice
             const newInvoiceRef = doc(collection(firestore, 'invoices'));
             invoiceId = newInvoiceRef.id;
-            invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
-
+            invoicePayload.id = invoiceId;
+            invoicePayload.invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
+            
             batch.set(newInvoiceRef, {
-                ...invoiceData,
-                id: invoiceId,
-                userId: user.uid,
-                invoiceNumber: invoiceNumber,
-                invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+                ...invoicePayload,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             });
-
-            const itemsColRef = collection(firestore, 'invoices', invoiceId, 'items');
-            items.forEach(item => {
-                const itemDocRef = doc(itemsColRef, item.id);
-                batch.set(itemDocRef, item);
-            });
         }
         
+        // Handle items subcollection for both create and edit
+        const itemsColRef = collection(firestore, 'invoices', invoiceId, 'invoiceItems');
+        const existingItemsSnapshot = await getDocs(itemsColRef);
+        existingItemsSnapshot.forEach(doc => batch.delete(doc.ref));
+        
+        items.forEach(item => {
+            const itemDocRef = doc(itemsColRef, item.id);
+            batch.set(itemDocRef, item);
+        });
+
         await batch.commit();
         
         toast({
@@ -185,7 +182,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         router.push(`/dashboard/invoices/${invoiceId}/view`);
 
       } catch (error) {
-        console.error(error);
+        console.error("Failed to save invoice:", error);
         toast({
           variant: 'destructive',
           title: 'An error occurred',
@@ -432,3 +429,5 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     </Form>
   );
 }
+
+    
