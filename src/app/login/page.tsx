@@ -73,7 +73,7 @@ export default function LoginPage() {
           description: "You're now logged in.",
         });
       }
-      // The redirect is now handled by the root page.tsx based on auth state.
+      // Redirection is handled by the root page based on auth state change.
     } catch (error: any) {
       console.error(error);
       toast({
