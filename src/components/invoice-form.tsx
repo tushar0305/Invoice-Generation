@@ -24,7 +24,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useUser } from '@/firebase';
-import { getFirestore, doc, setDoc, writeBatch, collection, getDocs, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, writeBatch, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -47,7 +47,7 @@ const formSchema = z.object({
 type InvoiceFormValues = z.infer<typeof formSchema>;
 
 interface InvoiceFormProps {
-  invoice?: Invoice;
+  invoice?: Invoice & { items: InvoiceItem[] }; // Allow items for initial form population
 }
 
 async function getNextInvoiceNumber(firestore: any, userId: string): Promise<string> {
@@ -138,10 +138,11 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         const invoiceRef = doc(firestore, 'invoices', invoiceId);
         const invoiceNumber = invoice?.invoiceNumber ?? await getNextInvoiceNumber(firestore, user.uid);
         
-        const { items, ...invoiceData } = data;
+        // This is the critical change: separate the items from the main invoice payload.
+        const { items, ...invoiceMainData } = data;
 
-        const invoicePayload: Omit<Invoice, 'items'> = {
-            ...invoiceData,
+        const invoicePayload: Invoice = {
+            ...invoiceMainData,
             id: invoiceId,
             userId: user.uid,
             invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
@@ -152,15 +153,16 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
         const batch = writeBatch(firestore);
 
-        // Set the main invoice document
+        // 1. Set the main invoice document (without the items array)
         batch.set(invoiceRef, invoicePayload);
 
-        // Set each invoice item in the subcollection
+        // 2. Set each invoice item in the subcollection
         items.forEach((item) => {
             const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
             batch.set(itemRef, item);
         });
-
+        
+        // 3. Commit the entire batch at once
         await batch.commit();
         
         toast({
@@ -417,5 +419,3 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     </Form>
   );
 }
-
-    

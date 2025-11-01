@@ -1,9 +1,9 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useTransition, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { notFound, useRouter, useParams } from 'next/navigation';
-import type { Invoice } from '@/lib/definitions';
+import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Loader2, Printer, Edit, ArrowLeft, CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc, useMemoFirebase } from '@/firebase';
+import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, getFirestore, updateDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
 
 
@@ -66,7 +66,10 @@ export default function ViewInvoicePage() {
     const firestore = getFirestore();
 
     const invoiceRef = useMemoFirebase(() => doc(firestore, 'invoices', id), [firestore, id]);
-    const { data: invoice, isLoading: loading } = useDoc<Invoice>(invoiceRef);
+    const { data: invoice, isLoading: loadingInvoice } = useDoc<Invoice>(invoiceRef);
+
+    const itemsRef = useMemoFirebase(() => collection(firestore, `invoices/${id}/invoiceItems`), [firestore, id]);
+    const { data: items, isLoading: loadingItems } = useCollection<InvoiceItem>(itemsRef);
     
     const handleStatusChange = (status: 'paid' | 'due') => {
         if (!invoice) return;
@@ -87,17 +90,19 @@ export default function ViewInvoicePage() {
             }
         });
     };
+    
+    const isLoading = loadingInvoice || loadingItems;
 
-    if (loading) {
+    if (isLoading) {
         return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
-    if (!invoice) {
+    if (!invoice || !items) {
         notFound();
     }
     
     const { subtotal, taxAmount, grandTotal } = (() => {
-        const subtotal = invoice.items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
+        const subtotal = items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
         const subtotalAfterDiscount = subtotal - invoice.discount;
         const taxAmount = subtotalAfterDiscount * (invoice.tax / 100);
         const grandTotal = subtotalAfterDiscount + taxAmount;
@@ -176,7 +181,7 @@ export default function ViewInvoicePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {invoice.items.map(item => (
+                            {items.map(item => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.description}</TableCell>
                                     <TableCell className="text-center">{item.weight}</TableCell>

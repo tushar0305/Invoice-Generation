@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Table,
@@ -14,23 +14,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard } from 'lucide-react';
-import type { Invoice } from '@/lib/definitions';
+import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { format, subDays } from 'date-fns';
 import { useCollection, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getFirestore } from 'firebase/firestore';
+import { collection, query, where, getFirestore, getDocs } from 'firebase/firestore';
 
+type InvoiceWithTotal = Invoice & { grandTotal: number };
 
-function calculateGrandTotal(invoice: Invoice) {
-    const subtotal = invoice.items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
-    const discountAmount = invoice.discount;
-    const subtotalAfterDiscount = subtotal - discountAmount;
-    const taxAmount = subtotalAfterDiscount * (invoice.tax / 100);
+function calculateGrandTotal(items: InvoiceItem[], discount: number, tax: number) {
+    const subtotal = items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
+    const subtotalAfterDiscount = subtotal - discount;
+    const taxAmount = subtotalAfterDiscount * (tax / 100);
     return subtotalAfterDiscount + taxAmount;
 }
+
 
 type CustomerStats = {
     totalPurchase: number;
@@ -46,35 +47,60 @@ export default function DashboardPage() {
     return query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
   }, [firestore, user]);
 
-  const { data: invoices, isLoading: loading } = useCollection<Invoice>(invoicesQuery);
+  const { data: invoices, isLoading: loadingInvoices } = useCollection<Invoice>(invoicesQuery);
+
+  const [invoicesWithTotals, setInvoicesWithTotals] = useState<InvoiceWithTotal[]>([]);
+  const [loadingTotals, setLoadingTotals] = useState(true);
+
+   useEffect(() => {
+    async function fetchTotals() {
+      if (!invoices) return;
+      
+      setLoadingTotals(true);
+      const invoicesWithFetchedTotals = await Promise.all(
+        invoices.map(async (invoice) => {
+          const itemsCol = collection(firestore, `invoices/${invoice.id}/invoiceItems`);
+          const itemsSnap = await getDocs(itemsCol);
+          const items = itemsSnap.docs.map(d => d.data() as InvoiceItem);
+          const grandTotal = calculateGrandTotal(items, invoice.discount, invoice.tax);
+          return { ...invoice, grandTotal };
+        })
+      );
+      setInvoicesWithTotals(invoicesWithFetchedTotals);
+      setLoadingTotals(false);
+    }
+    fetchTotals();
+  }, [invoices, firestore]);
+
+  const loading = loadingInvoices || loadingTotals;
 
   const recentInvoices = useMemo(() => {
-    if (!invoices) return [];
-    return [...invoices].sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()).slice(0, 5);
-  }, [invoices]);
+    if (!invoicesWithTotals) return [];
+    return [...invoicesWithTotals].sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()).slice(0, 5);
+  }, [invoicesWithTotals]);
 
   const { totalSales, totalCustomers, paidInvoicesCount } = useMemo(() => {
-    if (loading || !invoices) return { totalSales: 0, totalCustomers: 0, paidInvoicesCount: 0 };
-    const paidInvoices = invoices.filter(inv => inv.status === 'paid');
-    const totalSales = paidInvoices.reduce((sum, inv) => sum + calculateGrandTotal(inv), 0);
-    const totalCustomers = new Set(invoices.map(inv => inv.customerName)).size;
+    if (loading || !invoicesWithTotals) return { totalSales: 0, totalCustomers: 0, paidInvoicesCount: 0 };
+    const paidInvoices = invoicesWithTotals.filter(inv => inv.status === 'paid');
+    const totalSales = paidInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const totalCustomers = new Set(invoicesWithTotals.map(inv => inv.customerName)).size;
     return { totalSales, totalCustomers, paidInvoicesCount: paidInvoices.length };
-  }, [invoices, loading]);
+  }, [invoicesWithTotals, loading]);
 
   const customerData = useMemo(() => {
-    if (loading || !invoices) return {};
+    if (loading || !invoicesWithTotals) return {};
     const data: Record<string, CustomerStats> = {};
-    invoices.forEach(invoice => {
+    invoicesWithTotals.forEach(invoice => {
         if (!data[invoice.customerName]) {
             data[invoice.customerName] = { totalPurchase: 0, invoiceCount: 0 };
         }
         if(invoice.status === 'paid') {
-            data[invoice.customerName].totalPurchase += calculateGrandTotal(invoice);
+            data[invoice.customerName].totalPurchase += invoice.grandTotal;
         }
         data[invoice.customerName].invoiceCount++;
     });
     return data;
-  }, [invoices, loading]);
+  }, [invoicesWithTotals, loading]);
 
   const topCustomers = useMemo(() => {
     return Object.entries(customerData)
@@ -83,14 +109,14 @@ export default function DashboardPage() {
   }, [customerData]);
 
   const chartData = useMemo(() => {
-    if (loading || !invoices) return [];
+    if (loading || !invoicesWithTotals) return [];
     const last30Days = Array.from({ length: 30 }, (_, i) => format(subDays(new Date(), i), 'yyyy-MM-dd')).reverse();
     
-    const salesByDay = invoices
+    const salesByDay = invoicesWithTotals
       .filter(inv => inv.status === 'paid')
       .reduce((acc, inv) => {
         const date = format(new Date(inv.invoiceDate), 'yyyy-MM-dd');
-        acc[date] = (acc[date] || 0) + calculateGrandTotal(inv);
+        acc[date] = (acc[date] || 0) + inv.grandTotal;
         return acc;
       }, {} as Record<string, number>);
 
@@ -98,7 +124,7 @@ export default function DashboardPage() {
       date: format(new Date(date), 'MMM dd'),
       sales: salesByDay[date] || 0
     }));
-  }, [invoices, loading]);
+  }, [invoicesWithTotals, loading]);
 
   return (
     <div className="space-y-6">
@@ -246,7 +272,7 @@ export default function DashboardPage() {
                         {invoice.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{formatCurrency(calculateGrandTotal(invoice))}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(invoice.grandTotal)}</TableCell>
                     <TableCell className="text-right">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
