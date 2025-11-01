@@ -62,15 +62,16 @@ export default function ViewInvoicePage({ params }: { params: { id: string } }) 
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const { toast } = useToast();
+    const id = params.id;
 
     useEffect(() => {
-        getInvoiceById(params.id).then(data => {
+        getInvoiceById(id).then(data => {
             if (data) {
                 setInvoice(data);
             }
             setLoading(false);
         });
-    }, [params.id]);
+    }, [id]);
     
     const handleStatusChange = (status: 'paid' | 'due') => {
         if (!invoice) return;
