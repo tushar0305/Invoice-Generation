@@ -2,97 +2,66 @@
  * @fileoverview Firestore Security Rules for Saambh Jewellers Invoice App.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for customers,
- * and allows owner-only access to invoices and invoice items.
+ * This ruleset enforces a strict user-ownership model. Users can only manage
+ * their own data.
  *
  * Data Structure:
- * - /customers/{customerId}: Stores customer profiles. Only the customer can read/write their own profile.
- * - /invoices/{invoiceId}: Stores invoice data. Only the customer associated with the invoice (via userId) can read/write the invoice.
- * - /invoices/{invoiceId}/invoiceItems/{invoiceItemId}: Stores individual invoice items. Access is restricted to the owner of the parent invoice.
+ * - /customers/{customerId}: Stores customer profiles. (Not currently used, but rules are in place).
+ * - /invoices/{invoiceId}: Stores invoice data. Only the user associated with the invoice (via userId) can read/write it.
+ * - /invoices/{invoiceId}/invoiceItems/{invoiceItemId}: Stores invoice items. Access is inherited from the parent invoice.
  *
  * Key Security Decisions:
- * - Users can only manage their own customers and associated invoices/invoice items.
- * - Listing of customers and invoices is allowed only for the respective owner.
- * - Data shape is not validated in this prototype to allow for rapid iteration.
+ * - Users can ONLY manage their own invoices and associated data.
+ * - Listing invoices is ONLY allowed when querying for one's own invoices.
+ * - Data shape validation is omitted in this prototype for rapid iteration.
  *
  * Denormalization for Authorization:
- * - The `Invoice` entity includes a `userId` field. This is intentionally denormalized to avoid needing to perform a `get()` operation to the `customers` collection to validate ownership when accessing invoices.
+ * - The `Invoice` entity includes a `userId` field. This is intentionally denormalized to avoid needing a `get()` operation to another collection to validate ownership when accessing invoices, which is more performant and a best practice for security rules.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Enforces that only the customer can read and write their own profile.
-     * @path /customers/{customerId}
-     * @allow (create) - User 'user_abc' can create a customer document if request.auth.uid == 'user_abc' and request.resource.data.id == 'user_abc'.
-     * @allow (get, list, update, delete) - User 'user_abc' can read, update, or delete a customer document if request.auth.uid == 'user_abc'.
-     * @deny (create) - User 'user_xyz' cannot create a customer document with ID 'user_abc'.
-     * @deny (get, list, update, delete) - User 'user_xyz' cannot read, update, or delete customer document 'user_abc'.
-     * @principle Enforces document ownership for all operations.
-     */
-    match /customers/{customerId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
+    function isSignedIn() {
+      return request.auth != null;
+    }
 
+    match /customers/{customerId} {
       function isOwner() {
         return isSignedIn() && request.auth.uid == customerId;
       }
 
-      allow get: if isOwner();
-      allow list: if isOwner();
-      allow create: if isOwner() && request.resource.data.id == customerId;
-      allow update: if isOwner();
-      allow delete: if isOwner();
+      allow read, write: if isOwner();
     }
 
-    /**
-     * @description Enforces that only the owner of a customer can manage their invoices.
-     * @path /invoices/{invoiceId}
-     * @allow (create) - User 'user_abc' can create an invoice if request.auth.uid is signed in and request.resource.data.userId matches.
-     * @allow (get, list, update, delete) - User 'user_abc' can read, update, or delete an invoice if they own the customer associated with the invoice.
-     * @deny (create) - User 'user_xyz' cannot create an invoice for customer 'user_abc'.
-     * @deny (get, list, update, delete) - User 'user_xyz' cannot read, update, or delete an invoice associated with customer 'user_abc'.
-     * @principle Enforces document ownership via the `userId` field.
-     */
     match /invoices/{invoiceId} {
-      function isSignedIn() {
-        return request.auth != null;
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
       }
+
+      // Allow reading a single document if the user is the owner.
+      allow get: if isOwner(get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId);
+
+      // Allow listing/querying documents only if the query is filtering by the user's own userId.
+      // This is the key rule to allow `useCollection` with a `where('userId', '==', user.uid)` query.
+      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0].field == 'userId' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid;
+
+      // Allow creating a document if the new document's userId matches the user's uid.
+      allow create: if isOwner(request.resource.data.userId);
+
+      // Allow updating a document if the user owns the existing document.
+      allow update: if isOwner(get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId);
       
-      function isOwner(docData) {
-        return isSignedIn() && request.auth.uid == docData.userId;
-      }
+      // Allow deleting a document if the user owns it.
+      allow delete: if isOwner(get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId);
 
-      allow get: if isOwner(resource.data);
-      allow list: if isSignedIn() && request.query.where.size() == 1 && request.query.where[0].field == "userId" && request.query.where[0].op == "==" && request.query.where[0].value == request.auth.uid;
-      allow create: if isOwner(request.resource.data);
-      allow update: if isOwner(resource.data);
-      allow delete: if isOwner(resource.data);
-    }
-
-    /**
-     * @description Enforces that only the owner of an invoice can manage its invoice items.
-     * @path /invoices/{invoiceId}/invoiceItems/{invoiceItemId}
-     * @allow (create, get, list, update, delete) - The owner of the invoice can perform all CRUD operations on invoice items.
-     * @deny (create, get, list, update, delete) - Any other user cannot perform CRUD operations.
-     * @principle Restricts access to invoice items based on invoice ownership.
-     */
-    match /invoices/{invoiceId}/invoiceItems/{invoiceItemId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-     function isInvoiceOwner() {
+      // Invoice items can be managed by the owner of the parent invoice.
+      match /invoiceItems/{invoiceItemId} {
+        function isInvoiceOwner() {
           return isSignedIn() && get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId == request.auth.uid;
+        }
+        allow read, write: if isInvoiceOwner();
       }
-
-      allow get: if isInvoiceOwner();
-      allow list: if isInvoiceOwner();
-      allow create: if isInvoiceOwner();
-      allow update: if isInvoiceOwner();
-      allow delete: if isInvoiceOwner();
     }
   }
 }
