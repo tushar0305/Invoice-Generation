@@ -15,15 +15,10 @@ export function middleware(request: NextRequest) {
   }
 
   // If trying to access a protected route without a token, redirect to login
-  if (!hasToken) {
+  if (!hasToken && pathname !== '/login') {
     return NextResponse.redirect(new URL('/login', request.url));
   }
-
-  // If user is logged in and trying to access root, redirect to dashboard
-  if (pathname === '/') {
-     return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
+  
   return NextResponse.next();
 }
 
@@ -35,7 +30,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - login
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|login).*)',
   ],
 };
