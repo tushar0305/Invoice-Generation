@@ -10,37 +10,36 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
-  getFirestore,
   writeBatch,
   serverTimestamp,
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { initializeFirebase } from '@/firebase';
+import { getFirebaseAdmin } from '@/firebase/server';
 import type { Invoice, InvoiceItem } from './definitions';
 import { revalidatePath } from 'next/cache';
 
-function getDb() {
-  return initializeFirebase().firestore;
+// Mock user ID since login is disabled.
+// In a real app, this would come from a real authentication system.
+const MOCK_USER_ID = 'user-test-123';
+
+async function getDb() {
+  const { firestore } = await getFirebaseAdmin();
+  return firestore;
 }
 
 function getUserId() {
-  const auth = getAuth();
-  const user = auth.currentUser;
-  if (!user) {
-    // In a real app, you'd want more robust error handling or redirection.
-    // For now, we'll throw an error, as this function should only be called
-    // in a context where a user is expected to be logged in.
-    throw new Error('User not authenticated. Cannot perform data operations.');
-  }
-  return user.uid;
+  // Using a mock user ID because authentication is currently disabled.
+  // When you re-enable login, you would replace this with a real call
+  // to get the authenticated user's ID, probably from next-auth or similar.
+  return MOCK_USER_ID;
 }
 
 export async function getInvoices(): Promise<Invoice[]> {
-  const db = getDb();
+  const db = await getDb();
   const userId = getUserId();
   const invoicesCol = collection(db, 'invoices');
   const q = query(invoicesCol, where('userId', '==', userId));
   const invoiceSnapshot = await getDocs(q);
+
   const invoices = await Promise.all(
     invoiceSnapshot.docs.map(async (doc) => {
       const invoiceData = doc.data() as Omit<Invoice, 'id' | 'items'>;
@@ -60,7 +59,7 @@ export async function getInvoices(): Promise<Invoice[]> {
 }
 
 export async function getInvoiceById(id: string): Promise<Invoice | undefined> {
-  const db = getDb();
+  const db = await getDb();
   const userId = getUserId();
   const invoiceDocRef = doc(db, 'invoices', id);
   const invoiceDoc = await getDoc(invoiceDocRef);
@@ -84,7 +83,7 @@ export async function getInvoiceById(id: string): Promise<Invoice | undefined> {
 }
 
 export async function getNextInvoiceNumber(): Promise<string> {
-  const db = getDb();
+  const db = await getDb();
   const userId = getUserId();
   const invoicesCol = collection(db, 'invoices');
   const q = query(invoicesCol, where('userId', '==', userId));
@@ -105,7 +104,7 @@ export async function getNextInvoiceNumber(): Promise<string> {
 export async function saveInvoice(
   invoiceData: Omit<Invoice, 'id' | 'invoiceNumber'> & { id?: string }
 ): Promise<Invoice> {
-  const db = getDb();
+  const db = await getDb();
   const userId = getUserId();
   const batch = writeBatch(db);
 
@@ -133,11 +132,12 @@ export async function saveInvoice(
     });
   } else {
     // Create new invoice
-    invoiceId = doc(collection(db, 'invoices')).id;
+    const newInvoiceRef = doc(collection(db, 'invoices'));
+    invoiceId = newInvoiceRef.id;
     invoiceNumber = await getNextInvoiceNumber();
-    const invoiceDocRef = doc(db, 'invoices', invoiceId);
     const { items, ...invoiceToCreate } = invoiceData;
-    batch.set(invoiceDocRef, {
+    
+    batch.set(newInvoiceRef, {
       ...invoiceToCreate,
       id: invoiceId,
       invoiceNumber: invoiceNumber,
@@ -168,7 +168,7 @@ export async function saveInvoice(
 }
 
 export async function deleteInvoice(invoiceId: string): Promise<void> {
-  const db = getDb();
+  const db = await getDb();
   const userId = getUserId();
   const invoiceDocRef = doc(db, 'invoices', invoiceId);
   const invoiceDoc = await getDoc(invoiceDocRef);
