@@ -1,21 +1,9 @@
 'use server';
 
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  writeBatch,
-  serverTimestamp,
-} from 'firebase/firestore';
 import { getFirebaseAdmin } from '@/firebase/server';
 import type { Invoice, InvoiceItem } from './definitions';
 import { revalidatePath } from 'next/cache';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // Mock user ID since login is disabled.
 // In a real app, this would come from a real authentication system.
@@ -36,15 +24,15 @@ function getUserId() {
 export async function getInvoices(): Promise<Invoice[]> {
   const db = await getDb();
   const userId = getUserId();
-  const invoicesCol = collection(db, 'invoices');
-  const q = query(invoicesCol, where('userId', '==', userId));
-  const invoiceSnapshot = await getDocs(q);
+  const invoicesCol = db.collection('invoices');
+  const q = invoicesCol.where('userId', '==', userId);
+  const invoiceSnapshot = await q.get();
 
   const invoices = await Promise.all(
     invoiceSnapshot.docs.map(async (doc) => {
       const invoiceData = doc.data() as Omit<Invoice, 'id' | 'items'>;
-      const itemsCol = collection(db, `invoices/${doc.id}/items`);
-      const itemsSnapshot = await getDocs(itemsCol);
+      const itemsCol = db.collection(`invoices/${doc.id}/items`);
+      const itemsSnapshot = await itemsCol.get();
       const items = itemsSnapshot.docs.map(
         (itemDoc) => ({ ...itemDoc.data(), id: itemDoc.id }) as InvoiceItem
       );
@@ -61,16 +49,16 @@ export async function getInvoices(): Promise<Invoice[]> {
 export async function getInvoiceById(id: string): Promise<Invoice | undefined> {
   const db = await getDb();
   const userId = getUserId();
-  const invoiceDocRef = doc(db, 'invoices', id);
-  const invoiceDoc = await getDoc(invoiceDocRef);
+  const invoiceDocRef = db.collection('invoices').doc(id);
+  const invoiceDoc = await invoiceDocRef.get();
 
-  if (!invoiceDoc.exists() || invoiceDoc.data().userId !== userId) {
+  if (!invoiceDoc.exists || invoiceDoc.data()?.userId !== userId) {
     return undefined;
   }
 
   const invoiceData = invoiceDoc.data() as Omit<Invoice, 'id' | 'items'>;
-  const itemsCol = collection(db, `invoices/${id}/items`);
-  const itemsSnapshot = await getDocs(itemsCol);
+  const itemsCol = db.collection(`invoices/${id}/items`);
+  const itemsSnapshot = await itemsCol.get();
   const items = itemsSnapshot.docs.map(
     (itemDoc) => ({ ...itemDoc.data(), id: itemDoc.id }) as InvoiceItem
   );
@@ -85,9 +73,9 @@ export async function getInvoiceById(id: string): Promise<Invoice | undefined> {
 export async function getNextInvoiceNumber(): Promise<string> {
   const db = await getDb();
   const userId = getUserId();
-  const invoicesCol = collection(db, 'invoices');
-  const q = query(invoicesCol, where('userId', '==', userId));
-  const snapshot = await getDocs(q);
+  const invoicesCol = db.collection('invoices');
+  const q = invoicesCol.where('userId', '==', userId);
+  const snapshot = await q.get();
 
   if (snapshot.empty) {
     return 'INV-2024-001';
@@ -106,7 +94,7 @@ export async function saveInvoice(
 ): Promise<Invoice> {
   const db = await getDb();
   const userId = getUserId();
-  const batch = writeBatch(db);
+  const batch = db.batch();
 
   let invoiceId = invoiceData.id;
   let invoiceNumber = '';
@@ -118,21 +106,21 @@ export async function saveInvoice(
       throw new Error('Invoice not found for update');
     }
     invoiceNumber = existingInvoice.invoiceNumber;
-    const invoiceDocRef = doc(db, 'invoices', invoiceId);
+    const invoiceDocRef = db.collection('invoices').doc(invoiceId);
     const { items, ...invoiceToUpdate } = invoiceData;
-    batch.update(invoiceDocRef, { ...invoiceToUpdate, updatedAt: serverTimestamp() });
+    batch.update(invoiceDocRef, { ...invoiceToUpdate, updatedAt: FieldValue.serverTimestamp() });
 
     // Handle items update (simple overwrite for now)
-    const itemsCol = collection(db, `invoices/${invoiceId}/items`);
-    const existingItems = await getDocs(itemsCol);
+    const itemsCol = db.collection(`invoices/${invoiceId}/items`);
+    const existingItems = await itemsCol.get();
     existingItems.docs.forEach((d) => batch.delete(d.ref));
     invoiceData.items.forEach((item) => {
-      const itemDocRef = doc(itemsCol, item.id);
+      const itemDocRef = itemsCol.doc(item.id);
       batch.set(itemDocRef, item);
     });
   } else {
     // Create new invoice
-    const newInvoiceRef = doc(collection(db, 'invoices'));
+    const newInvoiceRef = db.collection('invoices').doc();
     invoiceId = newInvoiceRef.id;
     invoiceNumber = await getNextInvoiceNumber();
     const { items, ...invoiceToCreate } = invoiceData;
@@ -142,14 +130,14 @@ export async function saveInvoice(
       id: invoiceId,
       invoiceNumber: invoiceNumber,
       userId: userId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
     
     // Add items to subcollection
-    const itemsCol = collection(db, `invoices/${invoiceId}/items`);
+    const itemsCol = db.collection(`invoices/${invoiceId}/items`);
     invoiceData.items.forEach(item => {
-        const itemDocRef = doc(itemsCol, item.id);
+        const itemDocRef = itemsCol.doc(item.id);
         batch.set(itemDocRef, item);
     });
   }
@@ -170,17 +158,17 @@ export async function saveInvoice(
 export async function deleteInvoice(invoiceId: string): Promise<void> {
   const db = await getDb();
   const userId = getUserId();
-  const invoiceDocRef = doc(db, 'invoices', invoiceId);
-  const invoiceDoc = await getDoc(invoiceDocRef);
+  const invoiceDocRef = db.collection('invoices').doc(invoiceId);
+  const invoiceDoc = await invoiceDocRef.get();
 
-  if (!invoiceDoc.exists() || invoiceDoc.data().userId !== userId) {
+  if (!invoiceDoc.exists || invoiceDoc.data()?.userId !== userId) {
     throw new Error("Invoice not found or you don't have permission to delete it.");
   }
   
   // Firestore doesn't automatically delete subcollections, so we do it manually.
-  const batch = writeBatch(db);
-  const itemsColRef = collection(db, `invoices/${invoiceId}/items`);
-  const itemsSnapshot = await getDocs(itemsColRef);
+  const batch = db.batch();
+  const itemsColRef = db.collection(`invoices/${invoiceId}/items`);
+  const itemsSnapshot = await itemsColRef.get();
   itemsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
 
   // Delete the main invoice document
