@@ -73,7 +73,7 @@ export default function LoginPage() {
           description: "You're now logged in.",
         });
       }
-      router.push('/');
+      router.push('/dashboard');
     } catch (error: any) {
       console.error(error);
       toast({

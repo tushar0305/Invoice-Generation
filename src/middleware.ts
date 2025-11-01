@@ -5,17 +5,13 @@ export function middleware(request: NextRequest) {
   const hasToken = request.cookies.has('firebaseIdToken');
   const { pathname } = request.nextUrl;
 
-  // Allow access to login and signup pages regardless of auth status
-  if (pathname.startsWith('/login') || pathname.startsWith('/signup')) {
-    // If logged in, redirect to dashboard from login/signup
-    if (hasToken) {
+  // If the user is logged in and tries to access the login page, redirect to dashboard
+  if (hasToken && pathname.startsWith('/login')) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-    return NextResponse.next();
   }
-
-  // If trying to access a protected route without a token, redirect to login
-  if (!hasToken && pathname !== '/login') {
+  
+  // If the user is not logged in and tries to access a protected route, redirect to login
+  if (!hasToken && !pathname.startsWith('/login')) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
   
@@ -30,8 +26,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - login
+     * - / (the root path which redirects to /dashboard or /login)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|login).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/', // This ensures the root is also covered by the middleware
   ],
 };
