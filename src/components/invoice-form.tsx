@@ -18,11 +18,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { generateDescriptionAction, upsertInvoice } from '@/lib/actions';
-import type { Invoice } from '@/lib/definitions';
+import { generateDescriptionAction } from '@/lib/actions';
+import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { useUser } from '@/firebase';
+import { getFirestore, doc, setDoc, writeBatch, collection, getDocs, serverTimestamp, getDoc } from 'firebase/firestore';
+
 
 const formSchema = z.object({
   customerName: z.string().min(2, 'Customer name is required'),
@@ -47,6 +50,22 @@ interface InvoiceFormProps {
   invoice?: Invoice;
 }
 
+async function getNextInvoiceNumber(firestore: any, userId: string): Promise<string> {
+    const invoicesCol = collection(firestore, 'invoices');
+    const q = await getDocs(invoicesCol); // Note: this fetches all invoices. A user-specific counter would be better.
+    let latestInvoiceNumber = 0;
+    q.forEach(doc => {
+        const numPart = parseInt(doc.data().invoiceNumber.split('-')[2]);
+        if(numPart > latestInvoiceNumber) {
+            latestInvoiceNumber = numPart;
+        }
+    });
+
+    const nextNumber = latestInvoiceNumber + 1;
+    return `INV-2024-${String(nextNumber).padStart(3, '0')}`;
+}
+
+
 export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -54,6 +73,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiKeywords, setAiKeywords] = useState('');
   const [aiTargetIndex, setAiTargetIndex] = useState<number | null>(null);
+  const { user } = useUser();
+  const firestore = getFirestore();
 
   const defaultValues: Partial<InvoiceFormValues> = invoice
     ? {
@@ -102,20 +123,69 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const { subtotal, grandTotal } = calculateTotals();
 
   async function onSubmit(data: InvoiceFormValues) {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to save an invoice.'});
+        return;
+    }
+
     startTransition(async () => {
       try {
-        const payload = {
-          ...data,
-          id: invoice?.id,
-          invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
-        };
-        const savedInvoice = await upsertInvoice(payload);
+        const batch = writeBatch(firestore);
+        let invoiceId = invoice?.id;
+        let invoiceNumber = invoice?.invoiceNumber;
+        
+        const { items, ...invoiceData } = data;
+
+        if (invoiceId) { // Editing existing invoice
+            const invoiceDocRef = doc(firestore, 'invoices', invoiceId);
+            batch.update(invoiceDocRef, { 
+                ...invoiceData, 
+                invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+                updatedAt: serverTimestamp() 
+            });
+
+            // Overwrite items subcollection
+            const itemsColRef = collection(firestore, 'invoices', invoiceId, 'items');
+            const existingItemsSnapshot = await getDocs(itemsColRef);
+            existingItemsSnapshot.forEach(doc => batch.delete(doc.ref));
+            
+            items.forEach(item => {
+                const itemDocRef = doc(itemsColRef, item.id);
+                batch.set(itemDocRef, item);
+            });
+
+        } else { // Creating new invoice
+            const newInvoiceRef = doc(collection(firestore, 'invoices'));
+            invoiceId = newInvoiceRef.id;
+            invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
+
+            batch.set(newInvoiceRef, {
+                ...invoiceData,
+                id: invoiceId,
+                userId: user.uid,
+                invoiceNumber: invoiceNumber,
+                invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+
+            const itemsColRef = collection(firestore, 'invoices', invoiceId, 'items');
+            items.forEach(item => {
+                const itemDocRef = doc(itemsColRef, item.id);
+                batch.set(itemDocRef, item);
+            });
+        }
+        
+        await batch.commit();
+        
         toast({
           title: `Invoice ${invoice ? 'updated' : 'created'} successfully!`,
           description: `Redirecting to view invoice...`,
         });
-        router.push(`/dashboard/invoices/${savedInvoice.id}/view`);
+        router.push(`/dashboard/invoices/${invoiceId}/view`);
+
       } catch (error) {
+        console.error(error);
         toast({
           variant: 'destructive',
           title: 'An error occurred',

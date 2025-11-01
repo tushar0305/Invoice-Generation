@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useTransition } from 'react';
 import Link from 'next/link';
-import { notFound, useRouter } from 'next/navigation';
-import { getInvoiceById } from '@/lib/data';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import type { Invoice } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Loader2, Printer, Edit, ArrowLeft, CheckCircle, Clock } from 'lucide-react';
@@ -13,8 +12,10 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { updateInvoiceStatus } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useDoc, useMemoFirebase } from '@/firebase';
+import { doc, getFirestore, updateDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
+
 
 // A simple number to words converter for INR
 function toWords(num: number): string {
@@ -56,30 +57,23 @@ function toWords(num: number): string {
 }
 
 
-export default function ViewInvoicePage({ params }: { params: { id: string } }) {
-    const [invoice, setInvoice] = useState<Invoice | null>(null);
-    const [loading, setLoading] = useState(true);
+export default function ViewInvoicePage() {
+    const params = useParams();
+    const id = params.id as string;
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const { toast } = useToast();
-    const id = params.id;
+    const firestore = getFirestore();
 
-    useEffect(() => {
-        getInvoiceById(id).then(data => {
-            if (data) {
-                setInvoice(data);
-            }
-            setLoading(false);
-        });
-    }, [id]);
+    const invoiceRef = useMemoFirebase(() => doc(firestore, 'invoices', id), [firestore, id]);
+    const { data: invoice, isLoading: loading } = useDoc<Invoice>(invoiceRef);
     
     const handleStatusChange = (status: 'paid' | 'due') => {
         if (!invoice) return;
 
         startTransition(async () => {
             try {
-                await updateInvoiceStatus(invoice.id, status);
-                setInvoice(prev => prev ? { ...prev, status } : null);
+                await updateDoc(invoiceRef, { status });
                 toast({
                     title: 'Status Updated',
                     description: `Invoice marked as ${status}.`,

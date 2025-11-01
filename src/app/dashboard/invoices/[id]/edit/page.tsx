@@ -1,29 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { InvoiceForm } from '@/components/invoice-form';
-import { getInvoiceById } from '@/lib/data';
-import { notFound } from 'next/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
-import type { Invoice } from '@/lib/definitions';
+import { notFound, useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { InvoiceForm } from '@/components/invoice-form';
+import type { Invoice } from '@/lib/definitions';
+import { useDoc, useMemoFirebase } from '@/firebase';
+import { doc, getFirestore } from 'firebase/firestore';
 
-export default function EditInvoicePage({ params }: { params: { id: string } }) {
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [loading, setLoading] = useState(true);
-  const id = params.id;
+export default function EditInvoicePage() {
+  const params = useParams();
+  const id = params.id as string;
+  const firestore = getFirestore();
 
-  useEffect(() => {
-    async function fetchInvoice() {
-      const fetchedInvoice = await getInvoiceById(id);
-      if (fetchedInvoice) {
-        setInvoice(fetchedInvoice);
-      }
-      setLoading(false);
-    }
-
-    fetchInvoice();
-  }, [id]);
+  const invoiceRef = useMemoFirebase(() => {
+    if (!id) return null;
+    return doc(firestore, 'invoices', id);
+  }, [firestore, id]);
+  
+  const { data: invoice, isLoading: loading } = useDoc<Invoice>(invoiceRef);
 
   if (loading) {
     return (

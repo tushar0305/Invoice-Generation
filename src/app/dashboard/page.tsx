@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import {
   Table,
@@ -14,14 +14,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard } from 'lucide-react';
-import { getInvoices } from '@/lib/data';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { format, subDays } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
+import { useCollection, useUser, useMemoFirebase } from '@/firebase';
+import { collection, query, where, getFirestore } from 'firebase/firestore';
+
 
 function calculateGrandTotal(invoice: Invoice) {
     const subtotal = invoice.items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
@@ -37,36 +38,23 @@ type CustomerStats = {
 };
 
 export default function DashboardPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = getFirestore();
 
-  useEffect(() => {
-    async function fetchInvoices() {
-      setLoading(true);
-      try {
-        const data = await getInvoices();
-        setInvoices(data);
-      } catch (error) {
-        console.error("Failed to fetch invoices:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load dashboard data. Please try again later.",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchInvoices();
-  }, [toast]);
+  const invoicesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
+  }, [firestore, user]);
+
+  const { data: invoices, isLoading: loading } = useCollection<Invoice>(invoicesQuery);
 
   const recentInvoices = useMemo(() => {
-    return invoices.sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()).slice(0, 5);
+    if (!invoices) return [];
+    return [...invoices].sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()).slice(0, 5);
   }, [invoices]);
 
   const { totalSales, totalCustomers, paidInvoicesCount } = useMemo(() => {
-    if (loading) return { totalSales: 0, totalCustomers: 0, paidInvoicesCount: 0 };
+    if (loading || !invoices) return { totalSales: 0, totalCustomers: 0, paidInvoicesCount: 0 };
     const paidInvoices = invoices.filter(inv => inv.status === 'paid');
     const totalSales = paidInvoices.reduce((sum, inv) => sum + calculateGrandTotal(inv), 0);
     const totalCustomers = new Set(invoices.map(inv => inv.customerName)).size;
@@ -74,7 +62,7 @@ export default function DashboardPage() {
   }, [invoices, loading]);
 
   const customerData = useMemo(() => {
-    if (loading) return {};
+    if (loading || !invoices) return {};
     const data: Record<string, CustomerStats> = {};
     invoices.forEach(invoice => {
         if (!data[invoice.customerName]) {
@@ -95,7 +83,7 @@ export default function DashboardPage() {
   }, [customerData]);
 
   const chartData = useMemo(() => {
-    if (loading) return [];
+    if (loading || !invoices) return [];
     const last30Days = Array.from({ length: 30 }, (_, i) => format(subDays(new Date(), i), 'yyyy-MM-dd')).reverse();
     
     const salesByDay = invoices
@@ -142,7 +130,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                     {loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{paidInvoicesCount}</div>}
-                     <p className="text-xs text-muted-foreground">Out of {invoices.length} total invoices</p>
+                     <p className="text-xs text-muted-foreground">Out of {invoices?.length || 0} total invoices</p>
                 </CardContent>
             </Card>
         </div>

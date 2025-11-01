@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Search, MoreHorizontal, FilePlus2, Edit, Printer, Eye, Trash2, Loader2 } from 'lucide-react';
-import { getInvoices } from '@/lib/data';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,8 +31,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteInvoice } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useCollection, useUser, useMemoFirebase } from '@/firebase';
+import { collection, query, where, getFirestore, writeBatch, doc } from 'firebase/firestore';
 
 
 function calculateGrandTotal(invoice: Invoice) {
@@ -45,36 +45,23 @@ function calculateGrandTotal(invoice: Invoice) {
 }
 
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
 
+  const { user } = useUser();
+  const firestore = getFirestore();
 
-  useEffect(() => {
-    async function fetchInvoices() {
-      setLoading(true);
-      try {
-        const data = await getInvoices();
-        setInvoices(data);
-      } catch (error) {
-        console.error("Failed to fetch invoices:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load invoices. Please try again later.",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchInvoices();
-  }, [toast]);
+  const invoicesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
+  }, [firestore, user]);
+
+  const { data: invoices, isLoading: loading } = useCollection<Invoice>(invoicesQuery);
 
   const handleDeleteConfirmation = (invoiceId: string) => {
     setInvoiceToDelete(invoiceId);
@@ -83,15 +70,23 @@ export default function InvoicesPage() {
 
   const executeDelete = () => {
     if (!invoiceToDelete) return;
+
     startDeleteTransition(async () => {
       try {
-        await deleteInvoice(invoiceToDelete);
-        setInvoices(prev => prev.filter(inv => inv.id !== invoiceToDelete));
+        const batch = writeBatch(firestore);
+        const invoiceDocRef = doc(firestore, 'invoices', invoiceToDelete);
+        
+        // This is a simplified delete, it doesn't delete subcollections.
+        // For a full app, you would need a cloud function to delete subcollection items.
+        batch.delete(invoiceDocRef);
+        await batch.commit();
+
         toast({
           title: 'Invoice Deleted',
           description: 'The invoice has been successfully deleted.',
         });
       } catch (error) {
+        console.error(error);
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -105,6 +100,7 @@ export default function InvoicesPage() {
   };
 
   const filteredInvoices = useMemo(() => {
+    if (!invoices) return [];
     return invoices.filter(invoice =>
       (invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&

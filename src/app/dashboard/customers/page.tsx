@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Table,
   TableHeader,
@@ -12,11 +12,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-import { getInvoices } from '@/lib/data';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { useCollection, useUser, useMemoFirebase } from '@/firebase';
+import { collection, query, where, getFirestore } from 'firebase/firestore';
+
 
 type CustomerStats = {
     totalPurchase: number;
@@ -25,40 +26,31 @@ type CustomerStats = {
 };
 
 export default function CustomersPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = getFirestore();
 
-  useEffect(() => {
-    async function fetchInvoices() {
-      setLoading(true);
-      try {
-        const data = await getInvoices();
-        setInvoices(data);
-      } catch (error) {
-        console.error("Failed to fetch customer data:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load customer data. Please try again later.",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchInvoices();
-  }, [toast]);
+  const invoicesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
+  }, [firestore, user]);
+
+  const { data: invoices, isLoading: loading } = useCollection<Invoice>(invoicesQuery);
+
 
   const customerData = useMemo(() => {
-    if (loading) return {};
+    if (loading || !invoices) return {};
     const data: Record<string, CustomerStats> = {};
     invoices.forEach(invoice => {
         if (!data[invoice.customerName]) {
             data[invoice.customerName] = { totalPurchase: 0, invoiceCount: 0, lastPurchase: invoice.invoiceDate };
         }
         if(invoice.status === 'paid') {
-            data[invoice.customerName].totalPurchase += invoice.items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0) - invoice.discount;
+            const subtotal = invoice.items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
+            const subtotalAfterDiscount = subtotal - invoice.discount;
+            const taxAmount = subtotalAfterDiscount * (invoice.tax / 100);
+            const grandTotal = subtotalAfterDiscount + taxAmount;
+            data[invoice.customerName].totalPurchase += grandTotal;
         }
         data[invoice.customerName].invoiceCount++;
         if (new Date(invoice.invoiceDate) > new Date(data[invoice.customerName].lastPurchase)) {
