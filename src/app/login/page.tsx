@@ -73,7 +73,7 @@ export default function LoginPage() {
           description: "You're now logged in.",
         });
       }
-      router.replace('/dashboard');
+      // The redirect is now handled by the root page.tsx based on auth state.
     } catch (error: any) {
       console.error(error);
       toast({
