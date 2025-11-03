@@ -151,7 +151,7 @@ export default function DashboardLayout({
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
-              {/* Logout functionality is disabled */}
+              <UserNav />
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>
