@@ -1,9 +1,11 @@
 export type InvoiceItem = {
   id: string;
   description: string;
-  weight: number;
+  purity: string;
+  grossWeight: number;
+  netWeight: number;
   rate: number;
-  makingCharges: number;
+  making: number;
 };
 
 export type Invoice = {
@@ -15,7 +17,7 @@ export type Invoice = {
   customerPhone: string;
   invoiceDate: string; // YYYY-MM-DD
   discount: number; // as a currency value
-  tax: number; // as a percentage
+  tax: number; // as a percentage, used to derive CGST/SGST
   status: 'paid' | 'due';
   createdAt?: any;
   updatedAt?: any;
