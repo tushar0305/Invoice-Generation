@@ -97,12 +97,12 @@ export default function ViewInvoicePage() {
         return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
-    if (!invoice || !items) {
+    if (!invoice) {
         notFound();
     }
     
     const { subtotal, taxAmount, grandTotal } = (() => {
-        const subtotal = items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
+        const subtotal = (items || []).reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
         const subtotalAfterDiscount = subtotal - invoice.discount;
         const taxAmount = subtotalAfterDiscount * (invoice.tax / 100);
         const grandTotal = subtotalAfterDiscount + taxAmount;
@@ -181,7 +181,7 @@ export default function ViewInvoicePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {items.map(item => (
+                            {items && items.map(item => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.description}</TableCell>
                                     <TableCell className="text-center">{item.weight}</TableCell>
