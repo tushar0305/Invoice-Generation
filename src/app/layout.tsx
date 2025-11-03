@@ -5,9 +5,9 @@ import { FirebaseClientProvider } from '@/firebase';
 import { AuthWrapper } from '@/components/auth-wrapper';
 
 export const metadata: Metadata = {
-  title: 'Saambh Invoice Pro',
+  title: 'Saambh Jewellers',
   description:
-    'An elegant invoice generation app for Saambh Jewellers to create, manage, and print detailed customer invoices.',
+    'Invoice generation and management for Saambh Jewellers.',
 };
 
 export default function RootLayout({

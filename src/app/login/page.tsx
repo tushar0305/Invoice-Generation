@@ -28,7 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
@@ -41,6 +41,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const auth = useAuth();
   const { toast } = useToast();
 
@@ -51,6 +52,25 @@ export default function LoginPage() {
       password: '',
     },
   });
+
+  function getFirebaseAuthErrorMessage(errorCode: string): string {
+    switch (errorCode) {
+      case 'auth/invalid-email':
+        return 'The email address is not valid.';
+      case 'auth/user-disabled':
+        return 'This user account has been disabled.';
+      case 'auth/user-not-found':
+        return 'No user found with this email. Please sign up.';
+      case 'auth/wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'auth/email-already-in-use':
+        return 'This email is already in use. Please sign in.';
+      case 'auth/weak-password':
+        return 'The password is too weak. Please use a stronger password.';
+      default:
+        return 'An unexpected error occurred. Please try again.';
+    }
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -78,7 +98,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Authentication Error',
-        description: error.message,
+        description: getFirebaseAuthErrorMessage(error.code),
       });
     } finally {
       setIsSubmitting(false);
@@ -128,11 +148,26 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="••••••••"
-                        type="password"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="••••••••"
+                          type={showPassword ? 'text' : 'password'}
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
