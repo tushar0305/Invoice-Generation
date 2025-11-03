@@ -254,75 +254,139 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Invoice Items</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-2/5">Description</TableHead>
-                      <TableHead>Weight</TableHead>
-                      <TableHead>Rate</TableHead>
-                      <TableHead>Making</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="w-12"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fields.map((field, index) => {
-                      const item = watchedItems[index];
-                      const itemTotal = (item.weight || 0) * (item.rate || 0) + (item.makingCharges || 0);
-                      return (
-                        <TableRow key={field.id}>
-                          <TableCell>
-                            <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (
-                              <FormItem>
-                                <div className="flex items-center gap-1">
-                                  <Textarea placeholder="Item description" {...field} className="min-h-0 h-10"/>
-                                  <Dialog onOpenChange={(open) => !open && setAiTargetIndex(null)}>
-                                    <DialogTrigger asChild>
-                                      <Button type="button" variant="ghost" size="icon" className="shrink-0 text-accent" onClick={() => setAiTargetIndex(index)}>
-                                        <Sparkles className="h-4 w-4" />
-                                      </Button>
-                                    </DialogTrigger>
-                                  </Dialog>
+                <CardHeader>
+                    <CardTitle>Invoice Items</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {/* Desktop Table */}
+                    <div className="hidden md:block">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-2/5">Description</TableHead>
+                                    <TableHead>Weight</TableHead>
+                                    <TableHead>Rate</TableHead>
+                                    <TableHead>Making</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                    <TableHead className="w-12"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {fields.map((field, index) => {
+                                    const item = watchedItems[index];
+                                    const itemTotal = (item.weight || 0) * (item.rate || 0) + (item.makingCharges || 0);
+                                    return (
+                                        <TableRow key={field.id}>
+                                            <TableCell>
+                                                <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (
+                                                <FormItem>
+                                                    <div className="flex items-center gap-1">
+                                                    <Textarea placeholder="Item description" {...field} className="min-h-0 h-10"/>
+                                                    <Dialog onOpenChange={(open) => !open && setAiTargetIndex(null)}>
+                                                        <DialogTrigger asChild>
+                                                        <Button type="button" variant="ghost" size="icon" className="shrink-0 text-accent" onClick={() => setAiTargetIndex(index)}>
+                                                            <Sparkles className="h-4 w-4" />
+                                                        </Button>
+                                                        </DialogTrigger>
+                                                    </Dialog>
+                                                    </div>
+                                                    <FormMessage />
+                                                </FormItem>
+                                                )} />
+                                            </TableCell>
+                                            <TableCell>
+                                                <FormField control={form.control} name={`items.${index}.weight`} render={({ field }) => (
+                                                <FormItem><FormControl><Input type="number" placeholder="g / ct" {...field} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                            </TableCell>
+                                            <TableCell>
+                                                <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
+                                                <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                            </TableCell>
+                                            <TableCell>
+                                                <FormField control={form.control} name={`items.${index}.makingCharges`} render={({ field }) => (
+                                                <FormItem><FormControl><Input type="number" placeholder="Charges" {...field} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium">{formatCurrency(itemTotal)}</TableCell>
+                                            <TableCell>
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => fields.length > 1 && remove(index)} disabled={fields.length <= 1}>
+                                                <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="md:hidden space-y-4">
+                        {fields.map((field, index) => {
+                            const item = watchedItems[index];
+                            const itemTotal = (item.weight || 0) * (item.rate || 0) + (item.makingCharges || 0);
+                            return (
+                                <div key={field.id} className="border rounded-lg p-4 space-y-4">
+                                    <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Description</FormLabel>
+                                            <div className="flex items-center gap-1">
+                                                <FormControl>
+                                                    <Textarea placeholder="Item description" {...field} />
+                                                </FormControl>
+                                                <Dialog onOpenChange={(open) => !open && setAiTargetIndex(null)}>
+                                                    <DialogTrigger asChild>
+                                                    <Button type="button" variant="ghost" size="icon" className="shrink-0 text-accent" onClick={() => setAiTargetIndex(index)}>
+                                                        <Sparkles className="h-4 w-4" />
+                                                    </Button>
+                                                    </DialogTrigger>
+                                                </Dialog>
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormField control={form.control} name={`items.${index}.weight`} render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Weight</FormLabel>
+                                                <FormControl><Input type="number" placeholder="g / ct" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Rate</FormLabel>
+                                                <FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                    <FormField control={form.control} name={`items.${index}.makingCharges`} render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Making Charges</FormLabel>
+                                            <FormControl><Input type="number" placeholder="Charges" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <div className="flex justify-between items-center pt-2 border-t">
+                                        <span className="font-medium">Amount: {formatCurrency(itemTotal)}</span>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => fields.length > 1 && remove(index)} disabled={fields.length <= 1}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </TableCell>
-                          <TableCell>
-                            <FormField control={form.control} name={`items.${index}.weight`} render={({ field }) => (
-                              <FormItem><FormControl><Input type="number" placeholder="g / ct" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                          </TableCell>
-                          <TableCell>
-                            <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
-                              <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                          </TableCell>
-                           <TableCell>
-                            <FormField control={form.control} name={`items.${index}.makingCharges`} render={({ field }) => (
-                              <FormItem><FormControl><Input type="number" placeholder="Charges" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                          </TableCell>
-                          <TableCell className="text-right font-medium">{formatCurrency(itemTotal)}</TableCell>
-                          <TableCell>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => fields.length > 1 && remove(index)} disabled={fields.length <= 1}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-                <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ id: uuidv4(), description: '', weight: 0, rate: 0, makingCharges: 0 })}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Item
-                </Button>
-              </CardContent>
+                            )
+                        })}
+                    </div>
+
+                    <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ id: uuidv4(), description: '', weight: 0, rate: 0, makingCharges: 0 })}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                    </Button>
+                </CardContent>
             </Card>
+
           </div>
 
           <div className="lg:col-span-1 space-y-8">
