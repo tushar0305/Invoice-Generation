@@ -14,7 +14,7 @@ const shopDetails = {
     email: 'contact@saambh.com',
     gstin: '08AAAAA0000A1Z5',
     pan: 'AAAAA0000A',
-    logo_url: '/logo.png' // Assuming you have a logo in the public folder
+    logo_url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAAKACAYAAABn90sPAAAAAXNSR0IArs4c6QAAIABJREFUeJzs3XuMbVl5//FvJwK7gRWEbQ8rYAoKLYKEEJbSgS1qSltJpW0F2oVWIq1Iq1YKVZEiWlS0f6SoVBWqNlq1tUkrkLYg6R/aUkIqYAsECwzYGAJWEGDD2GDAJhCwgB3sbSAw9/vOWHLJ45y55sy8n+/v5JFkkp858803eZ/3eZ/3W6sJBAJ/LpSLAOD9BQgBAPgEIAQA4BOAEA6A6/5c0AAAAASUVORK5CYII='
 }
 
 function toWords(num: number): string {
