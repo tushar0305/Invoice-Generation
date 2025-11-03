@@ -62,7 +62,8 @@ export default function LoginPage() {
       case 'auth/user-not-found':
         return 'No user found with this email. Please sign up.';
       case 'auth/wrong-password':
-        return 'Incorrect password. Please try again.';
+      case 'auth/invalid-credential':
+        return 'Invalid credentials. Please check your email and password.';
       case 'auth/email-already-in-use':
         return 'This email is already in use. Please sign in.';
       case 'auth/weak-password':
