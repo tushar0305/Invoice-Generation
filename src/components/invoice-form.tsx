@@ -138,19 +138,17 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         const invoiceId = invoice?.id ?? doc(collection(firestore, 'invoices')).id;
         const invoiceRef = doc(firestore, 'invoices', invoiceId);
         
-        // Separate the main invoice data from the items subcollection data
         const { items, ...invoiceMainData } = data;
 
         if (invoice) { // This is an UPDATE
-            const invoicePayload = {
+             batch.update(invoiceRef, {
                 ...invoiceMainData,
                 invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
                 updatedAt: serverTimestamp(),
-            };
-            batch.update(invoiceRef, invoicePayload);
+            });
         } else { // This is a CREATE
             const invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
-            const invoicePayload = {
+            batch.set(invoiceRef, {
                 ...invoiceMainData,
                 id: invoiceId,
                 userId: user.uid,
@@ -158,17 +156,25 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                 invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
-            };
-            batch.set(invoiceRef, invoicePayload);
+            });
         }
 
-        // Handle items subcollection
-        // For simplicity in this example, we'll overwrite all items on update.
-        // A more advanced implementation might compare old and new items.
+        const currentItemsSnapshot = await getDocs(collection(firestore, `invoices/${invoiceId}/invoiceItems`));
+        const currentItemIds = new Set(currentItemsSnapshot.docs.map(doc => doc.id));
+        const newItemIds = new Set(items.map(item => item.id));
+
+        // Set/update new items
         items.forEach((item) => {
             const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
-            // The item object from the form is already in the correct shape for our InvoiceItem definition
             batch.set(itemRef, item);
+        });
+
+        // Delete items that were removed
+        currentItemIds.forEach(id => {
+            if (!newItemIds.has(id)) {
+                const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, id);
+                batch.delete(itemRef);
+            }
         });
         
         await batch.commit();
@@ -177,8 +183,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           title: `Invoice ${invoice ? 'updated' : 'created'} successfully!`,
           description: `Redirecting to view invoice...`,
         });
-        router.push(`/dashboard/invoices/${invoiceId}/view`);
-        router.refresh();
+        
+        window.location.href = `/dashboard/invoices/${invoiceId}/view`;
 
       } catch (error) {
         console.error("Failed to save invoice:", error);
