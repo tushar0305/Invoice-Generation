@@ -139,21 +139,23 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         const invoiceRef = doc(firestore, 'invoices', invoiceId);
         
         const { items, ...invoiceMainData } = data;
+        const invoicePayload = {
+            ...invoiceMainData,
+            invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+        };
 
         if (invoice) { // This is an UPDATE
              batch.update(invoiceRef, {
-                ...invoiceMainData,
-                invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+                ...invoicePayload,
                 updatedAt: serverTimestamp(),
             });
         } else { // This is a CREATE
             const invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
             batch.set(invoiceRef, {
-                ...invoiceMainData,
+                ...invoicePayload,
                 id: invoiceId,
                 userId: user.uid,
                 invoiceNumber: invoiceNumber,
-                invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
