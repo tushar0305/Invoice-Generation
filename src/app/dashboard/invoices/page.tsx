@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useMemoFirebase, usePaginatedCollection } from '@/firebase';
+import { useUser, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, query, where, getFirestore, writeBatch, doc, getDocs, orderBy } from 'firebase/firestore';
 
 
@@ -50,16 +50,17 @@ export default function InvoicesPage() {
 
   const invoicesQuery = useMemoFirebase(() => {
     if (!user) return null;
+    
     let q = query(collection(firestore, 'invoices'), where('userId', '==', user.uid), orderBy('invoiceDate', 'desc'));
 
     if (statusFilter !== 'all') {
         q = query(q, where('status', '==', statusFilter));
     }
-
+    
     return q;
   }, [firestore, user, statusFilter]);
 
-  const { data: invoices, isLoading, error, loadMore, hasMore } = usePaginatedCollection<Invoice>(invoicesQuery, 10);
+  const { data: invoices, isLoading, error } = useCollection<Invoice>(invoicesQuery);
 
   const handleDeleteConfirmation = (invoiceId: string) => {
     setInvoiceToDelete(invoiceId);
@@ -158,7 +159,7 @@ export default function InvoicesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading && filteredInvoices.length === 0 ? (
+                {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={`skeleton-${i}`}>
                           <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -230,14 +231,6 @@ export default function InvoicesPage() {
               </TableBody>
             </Table>
           </div>
-          {hasMore && (
-            <div className="mt-6 flex justify-center">
-                <Button onClick={loadMore} disabled={isLoading}>
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                    Load More
-                </Button>
-            </div>
-           )}
         </CardContent>
       </Card>
     </div>
@@ -266,5 +259,3 @@ export default function InvoicesPage() {
     </>
   );
 }
-
-    
