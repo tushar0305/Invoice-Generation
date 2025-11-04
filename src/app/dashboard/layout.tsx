@@ -38,13 +38,7 @@ import { Button } from '@/components/ui/button';
 
 function UserNav() {
   const { user } = useUser();
-  const auth = useAuth();
   const router = useRouter();
-
-  const handleSignOut = async () => {
-    await auth.signOut();
-    router.push('/login');
-  };
 
   if (!user) {
     return null;
@@ -92,11 +86,6 @@ function UserNav() {
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Sign out</span>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -109,6 +98,12 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const auth = useAuth();
+
+  const handleSignOut = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
 
   const getTitle = () => {
     if (pathname === '/dashboard') return 'Dashboard';
@@ -181,7 +176,20 @@ export default function DashboardLayout({
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
-            <UserNav />
+            <div className="flex flex-col gap-2">
+              <UserNav />
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={handleSignOut}
+                    tooltip="Sign Out"
+                  >
+                    <LogOut />
+                    <span>Sign Out</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </div>
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>
