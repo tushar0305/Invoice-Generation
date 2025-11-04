@@ -307,6 +307,23 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                                             <Sparkles className="h-4 w-4" />
                                                         </Button>
                                                         </DialogTrigger>
+                                                        <DialogContent>
+                                                            <DialogHeader>
+                                                                <DialogTitle>Generate Item Description</DialogTitle>
+                                                            </DialogHeader>
+                                                            <div className="space-y-4">
+                                                                <p>Enter keywords to generate a description for your jewellery item.</p>
+                                                                <Input 
+                                                                placeholder="e.g., gold ring 22k diamond"
+                                                                value={aiKeywords}
+                                                                onChange={(e) => setAiKeywords(e.target.value)}
+                                                                />
+                                                                <Button onClick={handleGenerateDescription} disabled={aiLoading || !aiKeywords} className="w-full">
+                                                                {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                                                                Generate with AI
+                                                                </Button>
+                                                            </div>
+                                                        </DialogContent>
                                                     </Dialog>
                                                     </div>
                                                     <FormMessage />
@@ -371,6 +388,23 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                                         <Sparkles className="h-4 w-4" />
                                                     </Button>
                                                     </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Generate Item Description</DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="space-y-4">
+                                                            <p>Enter keywords to generate a description for your jewellery item.</p>
+                                                            <Input 
+                                                            placeholder="e.g., gold ring 22k diamond"
+                                                            value={aiKeywords}
+                                                            onChange={(e) => setAiKeywords(e.target.value)}
+                                                            />
+                                                            <Button onClick={handleGenerateDescription} disabled={aiLoading || !aiKeywords} className="w-full">
+                                                            {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                                                            Generate with AI
+                                                            </Button>
+                                                        </div>
+                                                    </DialogContent>
                                                 </Dialog>
                                             </div>
                                             <FormMessage />
@@ -500,27 +534,6 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           </div>
         </div>
       </form>
-      {aiTargetIndex !== null && (
-        <Dialog open={aiTargetIndex !== null} onOpenChange={(open) => !open && setAiTargetIndex(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Generate Item Description</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p>Enter keywords to generate a description for your jewellery item.</p>
-            <Input 
-              placeholder="e.g., gold ring 22k diamond"
-              value={aiKeywords}
-              onChange={(e) => setAiKeywords(e.target.value)}
-            />
-            <Button onClick={handleGenerateDescription} disabled={aiLoading || !aiKeywords} className="w-full">
-              {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-              Generate with AI
-            </Button>
-          </div>
-        </DialogContent>
-        </Dialog>
-      )}
     </Form>
   );
 }

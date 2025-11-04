@@ -136,7 +136,7 @@ export default function DashboardPage() {
         <CardContent className="h-[300px] w-full">
            {isLoading ? <Skeleton className="w-full h-full" /> : (
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                     <defs>
                         <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
@@ -151,10 +151,11 @@ export default function DashboardPage() {
                         axisLine={false}
                     />
                     <YAxis 
-                        tickFormatter={(value) => formatCurrency(value as number)}
+                        tickFormatter={(value) => formatCurrency(value as number, true)}
                         tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
+                        width={80}
                     />
                     <Tooltip
                         contentStyle={{ 

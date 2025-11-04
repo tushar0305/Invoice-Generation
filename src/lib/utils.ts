@@ -5,11 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-IN', {
+export function formatCurrency(amount: number, compact = false) {
+  const options: Intl.NumberFormatOptions = {
     style: 'currency',
     currency: 'INR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  };
+
+  if (compact) {
+    options.notation = 'compact';
+    options.compactDisplay = 'short';
+  }
+
+  return new Intl.NumberFormat('en-IN', options).format(amount);
 }
