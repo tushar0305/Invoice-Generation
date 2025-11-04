@@ -156,8 +156,8 @@ function DashboardLayoutInternal({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const auth = useAuth();
+  const router = useRouter();
 
   const handleSignOut = async () => {
     await auth.signOut();
