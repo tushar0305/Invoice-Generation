@@ -73,7 +73,7 @@ async function getNextInvoiceNumber(firestore: any, userId: string): Promise<str
 
 const calculateTotals = (items: InvoiceFormValues['items'], discount: number, tax: number) => {
     const subtotal = items.reduce((acc, item) => {
-      const itemTotal = (item.netWeight || 0) * (item.rate || 0) + (item.making || 0);
+      const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + (Number(item.making) || 0);
       return acc + itemTotal;
     }, 0);
     const totalBeforeTax = subtotal - (discount || 0);
@@ -185,7 +185,14 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         // Set/update new items
         items.forEach((item) => {
             const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
-            batch.set(itemRef, item);
+            batch.set(itemRef, {
+              ...item,
+              // Ensure all numeric fields are stored as numbers
+              grossWeight: Number(item.grossWeight) || 0,
+              netWeight: Number(item.netWeight) || 0,
+              rate: Number(item.rate) || 0,
+              making: Number(item.making) || 0,
+            });
         });
 
         // Delete items that were removed
@@ -293,7 +300,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                             <TableBody>
                                 {fields.map((field, index) => {
                                     const item = watchedItems[index];
-                                    const itemTotal = (item.netWeight || 0) * (item.rate || 0) + (item.making || 0);
+                                    const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + (Number(item.making) || 0);
                                     return (
                                         <TableRow key={field.id}>
                                             <TableCell>
@@ -372,7 +379,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                      <div className="md:hidden space-y-4">
                         {fields.map((field, index) => {
                              const item = watchedItems[index];
-                             const itemTotal = (item.netWeight || 0) * (item.rate || 0) + (item.making || 0);
+                             const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + (Number(item.making) || 0);
                              return (
                                 <div key={field.id} className="border rounded-lg p-4 space-y-4">
                                     <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (

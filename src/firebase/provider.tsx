@@ -50,7 +50,7 @@ export interface UserHookResult { // Renamed from UserAuthHookResult for consist
 }
 
 // React Context
-export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
+export const FirebaseContext = createContext<FirebaseContextState & { sidebar?: any } | undefined>(undefined);
 
 // Function to set a cookie
 const setCookie = (name: string, value: string, days: number) => {
@@ -114,7 +114,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [auth]); // Depends on the auth instance
 
   // Memoize the context value
-  const contextValue = useMemo((): FirebaseContextState => {
+  const contextValue = useMemo(() => {
     const servicesAvailable = !!(firebaseApp && firestore && auth);
     return {
       areServicesAvailable: servicesAvailable,
@@ -139,7 +139,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
  * Hook to access core Firebase services and user authentication state.
  * Throws error if core services are not available or used outside provider.
  */
-export const useFirebase = (): FirebaseServicesAndUser => {
+export const useFirebase = (): FirebaseServicesAndUser & { sidebar?: any } => {
   const context = useContext(FirebaseContext);
 
   if (context === undefined) {
@@ -157,6 +157,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
+    sidebar: context.sidebar,
   };
 };
 
@@ -198,3 +199,11 @@ export const useUser = (): UserHookResult => { // Renamed from useAuthUser
   const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
   return { user, isUserLoading, userError };
 };
+
+export const useSidebar = () => {
+    const context = useFirebase();
+    if (context.sidebar === undefined) {
+        throw new Error('useSidebar must be used within a SidebarProvider');
+    }
+    return context.sidebar;
+}

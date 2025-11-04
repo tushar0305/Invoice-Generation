@@ -24,7 +24,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@/components/logo';
 import { AuthWrapper } from '@/components/auth-wrapper';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useSidebar } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -91,6 +91,64 @@ function UserNav() {
   );
 }
 
+function NavMenu() {
+    const pathname = usePathname();
+    const router = useRouter();
+    const { setOpenMobile } = useSidebar();
+
+    const handleNav = (href: string) => {
+        router.push(href);
+        setOpenMobile(false);
+    }
+    
+    return (
+        <>
+            <SidebarMenu className="flex flex-col gap-2">
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard')}
+                  isActive={pathname === '/dashboard'}
+                  tooltip="Dashboard"
+                >
+                  <LayoutDashboard />
+                  <span>Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                   onClick={() => handleNav('/dashboard/invoices')}
+                  isActive={pathname.startsWith('/dashboard/invoices')}
+                  tooltip="Invoices"
+                >
+                  <FileText />
+                  <span>Invoices</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard/customers')}
+                  isActive={pathname === '/dashboard/customers'}
+                  tooltip="Customers"
+                >
+                  <Users />
+                  <span>Customers</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <div className="px-2 pt-4">
+                <Button
+                  variant="outline"
+                  className="h-auto w-full justify-start gap-2 p-2 text-left"
+                  onClick={() => handleNav('/dashboard/invoices/new')}
+                >
+                  <PlusCircle />
+                  <span>New Invoice</span>
+                </Button>
+              </div>
+            </SidebarMenu>
+        </>
+    )
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -126,54 +184,7 @@ export default function DashboardLayout({
             <Logo />
           </SidebarHeader>
           <SidebarContent>
-            <SidebarMenu className="flex flex-col gap-2">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === '/dashboard'}
-                  tooltip="Dashboard"
-                >
-                  <Link href="/dashboard">
-                    <LayoutDashboard />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname.startsWith('/dashboard/invoices')}
-                  tooltip="Invoices"
-                >
-                  <Link href="/dashboard/invoices">
-                    <FileText />
-                    <span>Invoices</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === '/dashboard/customers'}
-                  tooltip="Customers"
-                >
-                  <Link href="/dashboard/customers">
-                    <Users />
-                    <span>Customers</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <div className="px-2 pt-4">
-                <Button
-                  variant="outline"
-                  className="h-auto w-full justify-start gap-2 p-2 text-left"
-                  onClick={() => router.push('/dashboard/invoices/new')}
-                >
-                  <PlusCircle />
-                  <span>New Invoice</span>
-                </Button>
-              </div>
-            </SidebarMenu>
+            <NavMenu />
           </SidebarContent>
           <SidebarFooter>
             <div className="flex flex-col gap-2">
