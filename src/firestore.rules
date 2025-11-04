@@ -9,9 +9,11 @@
  * - /customers/{customerId}: Stores customer profiles. (Not currently used, but rules are in place).
  * - /invoices/{invoiceId}: Stores invoice data. Only the user associated with the invoice (via userId) can read/write it.
  * - /invoices/{invoiceId}/invoiceItems/{invoiceItemId}: Stores invoice items. Access is inherited from the parent invoice.
+ * - /userSettings/{userId}: Stores user settings. Only the authenticated user can read/write their own settings.
  *
  * Key Security Decisions:
  * - Users can ONLY manage their own invoices and associated data.
+ * - Users can ONLY manage their own settings.
  * - Listing invoices is ONLY allowed when querying for one's own invoices.
  * - Data shape validation is omitted in this prototype for rapid iteration.
  *
@@ -54,6 +56,10 @@ service cloud.firestore {
         // If the invoice create fails, the entire batch fails.
         allow read, write: if isInvoiceOwner();
       }
+    }
+
+    match /userSettings/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
   }
 }

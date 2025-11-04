@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2, PlusCircle, Sparkles, Trash2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 import { Button } from '@/components/ui/button';
@@ -19,11 +19,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { generateDescriptionAction } from '@/lib/actions';
-import type { Invoice, InvoiceItem } from '@/lib/definitions';
+import type { Invoice, InvoiceItem, UserSettings } from '@/lib/definitions';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useUser } from '@/firebase';
+import { useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { getFirestore, doc, writeBatch, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 
@@ -92,6 +92,13 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const { user } = useUser();
   const firestore = getFirestore();
 
+  const settingsRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'userSettings', user.uid);
+  }, [firestore, user]);
+
+  const { data: settings, isLoading: settingsLoading } = useDoc<UserSettings>(settingsRef);
+
   const defaultValues: Partial<InvoiceFormValues> = invoice
     ? {
         ...invoice,
@@ -114,6 +121,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     defaultValues,
     mode: 'onChange',
   });
+
+   useEffect(() => {
+    if (settings && !invoice) { // Only set defaults for new invoices
+      form.setValue('tax', settings.cgstRate + settings.sgstRate);
+    }
+  }, [settings, invoice, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -473,7 +486,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   <FormField control={form.control} name="tax" render={({ field }) => (
                       <FormItem>
                           <div className="flex items-center justify-between">
-                            <FormLabel>Tax (GST %) </FormLabel>
+                            <FormLabel>Total GST (%) </FormLabel>
                             <FormControl><Input type="number" className="w-32 text-right" {...field} /></FormControl>
                           </div>
                           <FormMessage />
@@ -486,8 +499,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
               </CardFooter>
             </Card>
             
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={isPending || settingsLoading}>
+              {(isPending || settingsLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {invoice ? 'Update' : 'Create'} Invoice
             </Button>
           </div>

@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, FileText, FilePlus2, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, FilePlus2, LogOut, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@/components/logo';
@@ -65,6 +65,11 @@ function UserNav() {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/dashboard/settings')} className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Sign out</span>
@@ -85,6 +90,7 @@ export default function DashboardLayout({
     if (pathname === '/dashboard') return 'Dashboard';
     if (pathname === '/dashboard/invoices') return 'Invoices';
     if (pathname === '/dashboard/customers') return 'Customers';
+    if (pathname === '/dashboard/settings') return 'Settings';
     if (pathname === '/dashboard/invoices/new') return 'Create New Invoice';
     if (pathname.includes('/edit')) return 'Edit Invoice';
     if (pathname.includes('/view')) return 'View Invoice';
@@ -115,7 +121,7 @@ export default function DashboardLayout({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname === '/dashboard/invoices'}
+                  isActive={pathname.startsWith('/dashboard/invoices')}
                   tooltip="Invoices"
                 >
                   <Link href="/dashboard/invoices">
@@ -136,22 +142,35 @@ export default function DashboardLayout({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="space-y-2">
+            <SidebarMenu>
+               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname === '/dashboard/invoices/new'}
-                  tooltip="New Invoice"
+                  isActive={pathname === '/dashboard/settings'}
+                  tooltip="Settings"
                 >
-                  <Link href="/dashboard/invoices/new">
-                    <FilePlus2 />
-                    <span>New Invoice</span>
+                  <Link href="/dashboard/settings">
+                    <Settings />
+                    <span>Settings</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => {
+                    const auth = useAuth.getState();
+                    auth.signOut();
+                  }}
+                  tooltip="Sign Out"
+                >
+                  <LogOut />
+                  <span>Sign Out</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter>
-              <UserNav />
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>

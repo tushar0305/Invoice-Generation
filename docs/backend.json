@@ -128,6 +128,31 @@
         "unitPrice",
         "quantity"
       ]
+    },
+    "UserSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserSettings",
+      "type": "object",
+      "description": "Stores user-specific settings.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserSettings document, typically the same as userId."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user these settings belong to."
+        },
+        "cgstRate": {
+          "type": "number",
+          "description": "The user-defined default CGST rate."
+        },
+        "sgstRate": {
+          "type": "number",
+          "description": "The user-defined default SGST rate."
+        }
+      },
+      "required": ["id", "userId", "cgstRate", "sgstRate"]
     }
   },
   "auth": {
@@ -189,8 +214,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/userSettings/{userId}",
+        "definition": {
+          "entityName": "UserSettings",
+          "schema": {
+            "$ref": "#/backend/entities/UserSettings"
+          },
+          "description": "Stores user-specific settings. Document ID is the user's UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The user's unique ID."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the Saambh Invoice Pro application, focusing on scalability, security, and ease of management. It follows the principles of Authorization Independence, Structural Segregation, and Access Modeling to ensure robust security rules and efficient data access. Separate collections are used for `Customers` and `Invoices` to facilitate filtering and display on dedicated pages as requested. Invoice Items are modeled as a subcollection of Invoices to preserve data locality. User authentication is handled by Firebase Auth, securing access to the application's data.\n\nAuthorization Independence is achieved by denormalizing the `customerId` in the `invoices` collection, removing the necessity to perform `get()` operations to validate ownership.\n\nStructural Segregation is achieved by storing `customers` and `invoices` in separate top-level collections. This prevents mixing of data with differing access control requirements within the same collection. The separation of `customers` and `invoices` ensures QAPs are maintained, as listing and filtering of customers or invoices can be done securely without exposing unintended data.\n\nThe structure supports the display of chart trends and filtering of customers and invoices as required by the user story."
+    "reasoning": "The Firestore data structure is designed to support the Saambh Invoice Pro application, focusing on scalability, security, and ease of management. It follows the principles of Authorization Independence, Structural Segregation, and Access Modeling to ensure robust security rules and efficient data access. Separate collections are used for `Customers` and `Invoices` to facilitate filtering and display on dedicated pages as requested. Invoice Items are modeled as a subcollection of Invoices to preserve data locality. A `userSettings` collection is added to store user-specific preferences like tax rates, keyed by user ID for direct access. User authentication is handled by Firebase Auth, securing access to the application's data.\n\nAuthorization Independence is achieved by denormalizing the `userId` in the `invoices` collection, removing the necessity to perform `get()` operations to validate ownership.\n\nStructural Segregation is achieved by storing `customers`, `invoices`, and `userSettings` in separate top-level collections. This prevents mixing of data with differing access control requirements within the same collection. The separation of `customers` and `invoices` ensures QAPs are maintained, as listing and filtering of customers or invoices can be done securely without exposing unintended data.\n\nThe structure supports the display of chart trends and filtering of customers and invoices as required by the user story."
   }
 }

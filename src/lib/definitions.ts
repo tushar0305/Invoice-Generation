@@ -23,3 +23,10 @@ export type Invoice = {
   createdAt?: any;
   updatedAt?: any;
 };
+
+export type UserSettings = {
+  id: string;
+  userId: string;
+  cgstRate: number;
+  sgstRate: number;
+};
