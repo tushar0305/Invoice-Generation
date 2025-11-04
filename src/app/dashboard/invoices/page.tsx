@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition, useEffect } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Search, MoreHorizontal, FilePlus2, Edit, Printer, Eye, Trash2, Loader2 } from 'lucide-react';
-import type { Invoice, InvoiceItem } from '@/lib/definitions';
+import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -35,14 +35,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useCollection, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getFirestore, writeBatch, doc, getDocs } from 'firebase/firestore';
 
-type InvoiceWithTotal = Invoice & { grandTotal: number };
-
-function calculateGrandTotal(items: InvoiceItem[], discount: number, tax: number) {
-    const subtotal = items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
-    const subtotalAfterDiscount = subtotal - discount;
-    const taxAmount = subtotalAfterDiscount * (tax / 100);
-    return subtotalAfterDiscount + taxAmount;
-}
 
 export default function InvoicesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,32 +53,7 @@ export default function InvoicesPage() {
     return query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
   }, [firestore, user]);
 
-  const { data: invoices, isLoading: loadingInvoices } = useCollection<Invoice>(invoicesQuery);
-
-  const [invoicesWithTotals, setInvoicesWithTotals] = useState<InvoiceWithTotal[]>([]);
-  const [loadingTotals, setLoadingTotals] = useState(true);
-
-  useEffect(() => {
-    async function fetchTotals() {
-      if (!invoices) return;
-      
-      setLoadingTotals(true);
-      const invoicesWithFetchedTotals = await Promise.all(
-        invoices.map(async (invoice) => {
-          const itemsCol = collection(firestore, `invoices/${invoice.id}/invoiceItems`);
-          const itemsSnap = await getDocs(itemsCol);
-          const items = itemsSnap.docs.map(d => d.data() as InvoiceItem);
-          const grandTotal = calculateGrandTotal(items, invoice.discount, invoice.tax);
-          return { ...invoice, grandTotal };
-        })
-      );
-      setInvoicesWithTotals(invoicesWithFetchedTotals);
-      setLoadingTotals(false);
-    }
-    fetchTotals();
-  }, [invoices, firestore]);
-
-  const loading = loadingInvoices || loadingTotals;
+  const { data: invoices, isLoading } = useCollection<Invoice>(invoicesQuery);
 
   const handleDeleteConfirmation = (invoiceId: string) => {
     setInvoiceToDelete(invoiceId);
@@ -127,13 +94,13 @@ export default function InvoicesPage() {
   };
 
   const filteredInvoices = useMemo(() => {
-    if (!invoicesWithTotals) return [];
-    return invoicesWithTotals.filter(invoice =>
+    if (!invoices) return [];
+    return invoices.filter(invoice =>
       (invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (statusFilter === 'all' || invoice.status === statusFilter)
     );
-  }, [invoicesWithTotals, searchTerm, statusFilter]);
+  }, [invoices, searchTerm, statusFilter]);
 
   return (
     <>
@@ -186,7 +153,7 @@ export default function InvoicesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={`skeleton-${i}`}>
                           <TableCell><Skeleton className="h-5 w-24" /></TableCell>

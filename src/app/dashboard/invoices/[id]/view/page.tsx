@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition, useState, useEffect } from 'react';
+import { useTransition, useState } from 'react';
 import Link from 'next/link';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getFirestore, updateDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, getFirestore, updateDoc, collection } from 'firebase/firestore';
 
 
 // A simple number to words converter for INR
@@ -102,10 +102,10 @@ export default function ViewInvoicePage() {
     }
     
     const { subtotal, taxAmount, grandTotal } = (() => {
-        const subtotal = (items || []).reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
+        const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + item.making, 0);
         const subtotalAfterDiscount = subtotal - invoice.discount;
         const taxAmount = subtotalAfterDiscount * (invoice.tax / 100);
-        const grandTotal = subtotalAfterDiscount + taxAmount;
+        const grandTotal = invoice.grandTotal;
         return { subtotal, subtotalAfterDiscount, taxAmount, grandTotal };
     })();
 
@@ -174,7 +174,7 @@ export default function ViewInvoicePage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-2/5">Item Description</TableHead>
-                                <TableHead className="text-center">Weight</TableHead>
+                                <TableHead className="text-center">Net Wt.</TableHead>
                                 <TableHead className="text-right">Rate</TableHead>
                                 <TableHead className="text-right">Making</TableHead>
                                 <TableHead className="text-right">Amount</TableHead>
@@ -184,10 +184,10 @@ export default function ViewInvoicePage() {
                             {items && items.map(item => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.description}</TableCell>
-                                    <TableCell className="text-center">{item.weight}</TableCell>
+                                    <TableCell className="text-center">{item.netWeight}</TableCell>
                                     <TableCell className="text-right">{formatCurrency(item.rate)}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(item.makingCharges)}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency((item.weight * item.rate) + item.makingCharges)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(item.making)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency((item.netWeight * item.rate) + item.making)}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

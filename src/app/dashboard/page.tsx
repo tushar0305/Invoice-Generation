@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import {
   Table,
@@ -14,23 +14,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard } from 'lucide-react';
-import type { Invoice, InvoiceItem } from '@/lib/definitions';
+import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { format, subDays } from 'date-fns';
 import { useCollection, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getFirestore, getDocs } from 'firebase/firestore';
-
-type InvoiceWithTotal = Invoice & { grandTotal: number };
-
-function calculateGrandTotal(items: InvoiceItem[], discount: number, tax: number) {
-    const subtotal = items.reduce((acc, item) => acc + (item.weight * item.rate) + item.makingCharges, 0);
-    const subtotalAfterDiscount = subtotal - discount;
-    const taxAmount = subtotalAfterDiscount * (tax / 100);
-    return subtotalAfterDiscount + taxAmount;
-}
+import { collection, query, where, getFirestore } from 'firebase/firestore';
 
 
 type CustomerStats = {
@@ -47,50 +38,26 @@ export default function DashboardPage() {
     return query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
   }, [firestore, user]);
 
-  const { data: invoices, isLoading: loadingInvoices } = useCollection<Invoice>(invoicesQuery);
+  const { data: invoices, isLoading } = useCollection<Invoice>(invoicesQuery);
 
-  const [invoicesWithTotals, setInvoicesWithTotals] = useState<InvoiceWithTotal[]>([]);
-  const [loadingTotals, setLoadingTotals] = useState(true);
-
-   useEffect(() => {
-    async function fetchTotals() {
-      if (!invoices) return;
-      
-      setLoadingTotals(true);
-      const invoicesWithFetchedTotals = await Promise.all(
-        invoices.map(async (invoice) => {
-          const itemsCol = collection(firestore, `invoices/${invoice.id}/invoiceItems`);
-          const itemsSnap = await getDocs(itemsCol);
-          const items = itemsSnap.docs.map(d => d.data() as InvoiceItem);
-          const grandTotal = calculateGrandTotal(items, invoice.discount, invoice.tax);
-          return { ...invoice, grandTotal };
-        })
-      );
-      setInvoicesWithTotals(invoicesWithFetchedTotals);
-      setLoadingTotals(false);
-    }
-    fetchTotals();
-  }, [invoices, firestore]);
-
-  const loading = loadingInvoices || loadingTotals;
 
   const recentInvoices = useMemo(() => {
-    if (!invoicesWithTotals) return [];
-    return [...invoicesWithTotals].sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()).slice(0, 5);
-  }, [invoicesWithTotals]);
+    if (!invoices) return [];
+    return [...invoices].sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()).slice(0, 5);
+  }, [invoices]);
 
   const { totalSales, totalCustomers, paidInvoicesCount } = useMemo(() => {
-    if (loading || !invoicesWithTotals) return { totalSales: 0, totalCustomers: 0, paidInvoicesCount: 0 };
-    const paidInvoices = invoicesWithTotals.filter(inv => inv.status === 'paid');
+    if (isLoading || !invoices) return { totalSales: 0, totalCustomers: 0, paidInvoicesCount: 0 };
+    const paidInvoices = invoices.filter(inv => inv.status === 'paid');
     const totalSales = paidInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
-    const totalCustomers = new Set(invoicesWithTotals.map(inv => inv.customerName)).size;
+    const totalCustomers = new Set(invoices.map(inv => inv.customerName)).size;
     return { totalSales, totalCustomers, paidInvoicesCount: paidInvoices.length };
-  }, [invoicesWithTotals, loading]);
+  }, [invoices, isLoading]);
 
   const customerData = useMemo(() => {
-    if (loading || !invoicesWithTotals) return {};
+    if (isLoading || !invoices) return {};
     const data: Record<string, CustomerStats> = {};
-    invoicesWithTotals.forEach(invoice => {
+    invoices.forEach(invoice => {
         if (!data[invoice.customerName]) {
             data[invoice.customerName] = { totalPurchase: 0, invoiceCount: 0 };
         }
@@ -100,7 +67,7 @@ export default function DashboardPage() {
         data[invoice.customerName].invoiceCount++;
     });
     return data;
-  }, [invoicesWithTotals, loading]);
+  }, [invoices, isLoading]);
 
   const topCustomers = useMemo(() => {
     return Object.entries(customerData)
@@ -109,10 +76,10 @@ export default function DashboardPage() {
   }, [customerData]);
 
   const chartData = useMemo(() => {
-    if (loading || !invoicesWithTotals) return [];
+    if (isLoading || !invoices) return [];
     const last30Days = Array.from({ length: 30 }, (_, i) => format(subDays(new Date(), i), 'yyyy-MM-dd')).reverse();
     
-    const salesByDay = invoicesWithTotals
+    const salesByDay = invoices
       .filter(inv => inv.status === 'paid')
       .reduce((acc, inv) => {
         const date = format(new Date(inv.invoiceDate), 'yyyy-MM-dd');
@@ -124,7 +91,7 @@ export default function DashboardPage() {
       date: format(new Date(date), 'MMM dd'),
       sales: salesByDay[date] || 0
     }));
-  }, [invoicesWithTotals, loading]);
+  }, [invoices, isLoading]);
 
   return (
     <div className="space-y-6">
@@ -135,7 +102,7 @@ export default function DashboardPage() {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    {loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(totalSales)}</div>}
+                    {isLoading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(totalSales)}</div>}
                     <p className="text-xs text-muted-foreground">Total sales from paid invoices</p>
                 </CardContent>
             </Card>
@@ -145,7 +112,7 @@ export default function DashboardPage() {
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    {loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{totalCustomers}</div>}
+                    {isLoading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{totalCustomers}</div>}
                     <p className="text-xs text-muted-foreground">Total unique customers</p>
                 </CardContent>
             </Card>
@@ -155,7 +122,7 @@ export default function DashboardPage() {
                     <CreditCard className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    {loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{paidInvoicesCount}</div>}
+                    {isLoading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{paidInvoicesCount}</div>}
                      <p className="text-xs text-muted-foreground">Out of {invoices?.length || 0} total invoices</p>
                 </CardContent>
             </Card>
@@ -167,7 +134,7 @@ export default function DashboardPage() {
             <CardTitle>Sales Trend (Last 30 Days)</CardTitle>
         </CardHeader>
         <CardContent className="h-[300px] w-full">
-           {loading ? <Skeleton className="w-full h-full" /> : (
+           {isLoading ? <Skeleton className="w-full h-full" /> : (
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <defs>
@@ -210,7 +177,7 @@ export default function DashboardPage() {
               <CardDescription>Your most valuable customers by total purchase.</CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {isLoading ? (
                 <div className="space-y-4">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <div key={`skel-cust-${i}`} className="flex justify-between items-center">
@@ -252,7 +219,7 @@ export default function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={`skeleton-recent-${i}`}>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>

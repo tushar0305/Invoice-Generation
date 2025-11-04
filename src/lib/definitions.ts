@@ -19,6 +19,7 @@ export type Invoice = {
   discount: number; // as a currency value
   tax: number; // as a percentage, used to derive CGST/SGST
   status: 'paid' | 'due';
+  grandTotal: number; // Denormalized for performance
   createdAt?: any;
   updatedAt?: any;
 };

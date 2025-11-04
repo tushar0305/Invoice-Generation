@@ -71,6 +71,16 @@ async function getNextInvoiceNumber(firestore: any, userId: string): Promise<str
     return `INV-2024-${String(nextNumber).padStart(3, '0')}`;
 }
 
+const calculateGrandTotal = (items: InvoiceFormValues['items'], discount: number, tax: number) => {
+    const subtotal = items.reduce((acc, item) => {
+      const itemTotal = (item.netWeight || 0) * (item.rate || 0) + (item.making || 0);
+      return acc + itemTotal;
+    }, 0);
+    const subtotalAfterDiscount = subtotal - (discount || 0);
+    const taxAmount = subtotalAfterDiscount * ((tax || 0) / 100);
+    const grandTotal = subtotalAfterDiscount + taxAmount;
+    return grandTotal;
+};
 
 export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const router = useRouter();
@@ -141,10 +151,13 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         const invoiceRef = doc(firestore, 'invoices', invoiceId);
         
         const { items, ...invoiceMainData } = data;
+
+        const finalGrandTotal = calculateGrandTotal(items, data.discount, data.tax);
         
         const invoicePayload = {
             ...invoiceMainData,
             invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
+            grandTotal: finalGrandTotal,
         };
 
         if (invoice) { // This is an UPDATE
