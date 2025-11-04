@@ -71,15 +71,15 @@ async function getNextInvoiceNumber(firestore: any, userId: string): Promise<str
     return `INV-2024-${String(nextNumber).padStart(3, '0')}`;
 }
 
-const calculateGrandTotal = (items: InvoiceFormValues['items'], discount: number, tax: number) => {
+const calculateTotals = (items: InvoiceFormValues['items'], discount: number, tax: number) => {
     const subtotal = items.reduce((acc, item) => {
       const itemTotal = (item.netWeight || 0) * (item.rate || 0) + (item.making || 0);
       return acc + itemTotal;
     }, 0);
-    const subtotalAfterDiscount = subtotal - (discount || 0);
-    const taxAmount = subtotalAfterDiscount * ((tax || 0) / 100);
-    const grandTotal = subtotalAfterDiscount + taxAmount;
-    return grandTotal;
+    const totalBeforeTax = subtotal - (discount || 0);
+    const taxAmount = totalBeforeTax * ((tax || 0) / 100);
+    const grandTotal = totalBeforeTax + taxAmount;
+    return { subtotal, grandTotal };
 };
 
 export function InvoiceForm({ invoice }: InvoiceFormProps) {
@@ -124,19 +124,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const watchedDiscount = form.watch('discount');
   const watchedTax = form.watch('tax');
 
-  const calculateTotals = () => {
-    const subtotal = watchedItems.reduce((acc, item) => {
-      const itemTotal = (item.netWeight || 0) * (item.rate || 0) + (item.making || 0);
-      return acc + itemTotal;
-    }, 0);
-    const discountAmount = watchedDiscount || 0;
-    const subtotalAfterDiscount = subtotal - discountAmount;
-    const taxAmount = subtotalAfterDiscount * ((watchedTax || 0) / 100);
-    const grandTotal = subtotalAfterDiscount + taxAmount;
-    return { subtotal, discountAmount, taxAmount, grandTotal };
-  };
-  
-  const { subtotal, grandTotal } = calculateTotals();
+  const { subtotal, grandTotal } = calculateTotals(watchedItems, watchedDiscount, watchedTax);
 
   async function onSubmit(data: InvoiceFormValues) {
     if (!user) {
@@ -152,7 +140,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         
         const { items, ...invoiceMainData } = data;
 
-        const finalGrandTotal = calculateGrandTotal(items, data.discount, data.tax);
+        const { grandTotal: finalGrandTotal } = calculateTotals(items, data.discount, data.tax);
         
         const invoicePayload = {
             ...invoiceMainData,

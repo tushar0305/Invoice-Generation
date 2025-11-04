@@ -103,10 +103,10 @@ export default function ViewInvoicePage() {
     
     const { subtotal, taxAmount, grandTotal } = (() => {
         const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + item.making, 0);
-        const subtotalAfterDiscount = subtotal - invoice.discount;
-        const taxAmount = subtotalAfterDiscount * (invoice.tax / 100);
+        const totalBeforeTax = subtotal - invoice.discount;
+        const taxAmount = totalBeforeTax * (invoice.tax / 100);
         const grandTotal = invoice.grandTotal;
-        return { subtotal, subtotalAfterDiscount, taxAmount, grandTotal };
+        return { subtotal, totalBeforeTax, taxAmount, grandTotal };
     })();
 
 
