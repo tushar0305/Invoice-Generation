@@ -22,13 +22,7 @@ export function Logo() {
           strokeWidth="2"
           strokeLinejoin="round"
         />
-        <path
-          d="M18 24C18 24 20 26 24 26C28 26 30 24 30 24"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <path d="M6 16H42" stroke="currentColor" strokeWidth="2" />
       </svg>
       <span className="font-headline text-xl font-bold text-primary">
         Saambh Jewellers

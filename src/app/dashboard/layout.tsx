@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, FileText, FilePlus2, LogOut, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Settings, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@/components/logo';
@@ -88,12 +88,14 @@ export default function DashboardLayout({
 
   const getTitle = () => {
     if (pathname === '/dashboard') return 'Dashboard';
-    if (pathname === '/dashboard/invoices') return 'Invoices';
+    if (pathname.startsWith('/dashboard/invoices')) {
+       if (pathname.includes('/new')) return 'Create New Invoice';
+       if (pathname.includes('/edit')) return 'Edit Invoice';
+       if (pathname.includes('/view')) return 'View Invoice';
+       return 'Invoices'
+    }
     if (pathname === '/dashboard/customers') return 'Customers';
     if (pathname === '/dashboard/settings') return 'Settings';
-    if (pathname === '/dashboard/invoices/new') return 'Create New Invoice';
-    if (pathname.includes('/edit')) return 'Edit Invoice';
-    if (pathname.includes('/view')) return 'View Invoice';
     return 'Dashboard';
   };
 
@@ -144,8 +146,8 @@ export default function DashboardLayout({
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
-          <SidebarFooter className="space-y-2">
-            <SidebarMenu>
+          <SidebarFooter>
+             <SidebarMenu>
                <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
@@ -156,18 +158,6 @@ export default function DashboardLayout({
                     <Settings />
                     <span>Settings</span>
                   </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => {
-                    const auth = useAuth.getState();
-                    auth.signOut();
-                  }}
-                  tooltip="Sign Out"
-                >
-                  <LogOut />
-                  <span>Sign Out</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
