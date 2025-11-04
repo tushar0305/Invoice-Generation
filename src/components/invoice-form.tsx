@@ -190,7 +190,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           description: `Redirecting to view invoice...`,
         });
         
-        window.location.href = `/dashboard/invoices/${invoiceId}/view`;
+        router.push(`/dashboard/invoices/${invoiceId}/view`);
 
       } catch (error) {
         console.error("Failed to save invoice:", error);
