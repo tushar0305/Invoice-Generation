@@ -376,29 +376,23 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <FormField control={form.control} name={`items.${index}.purity`} render={({ field }) => (
                                             <FormItem><FormLabel>Purity</FormLabel><FormControl><Input placeholder="22K" {...field} /></FormControl><FormMessage /></FormItem>
                                         )} />
                                         <FormField control={form.control} name={`items.${index}.grossWeight`} render={({ field }) => (
                                             <FormItem><FormLabel>Gross Wt</FormLabel><FormControl><Input type="number" placeholder="g" {...field} /></FormControl><FormMessage /></FormItem>
                                         )} />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
                                         <FormField control={form.control} name={`items.${index}.netWeight`} render={({ field }) => (
                                             <FormItem><FormLabel>Net Wt</FormLabel><FormControl><Input type="number" placeholder="g" {...field} /></FormControl><FormMessage /></FormItem>
                                         )} />
                                         <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
                                             <FormItem><FormLabel>Rate</FormLabel><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
                                         )} />
+                                        <FormField control={form.control} name={`items.${index}.making`} render={({ field }) => (
+                                            <FormItem><FormLabel>Making Charges</FormLabel><FormControl><Input type="number" placeholder="Charges" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
                                     </div>
-                                     <FormField control={form.control} name={`items.${index}.making`} render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Making Charges</FormLabel>
-                                            <FormControl><Input type="number" placeholder="Charges" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
                                     <div className="flex justify-between items-center pt-2 border-t">
                                         <span className="font-medium">Amount: {formatCurrency(itemTotal)}</span>
                                         <Button type="button" variant="ghost" size="icon" onClick={() => fields.length > 1 && remove(index)} disabled={fields.length <= 1}>
