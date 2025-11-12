@@ -63,13 +63,16 @@ function toWords(num: number): string {
 }
 
 function formatTwoDecimals(num: number) {
+    if (typeof num !== 'number' || isNaN(num)) {
+        return '0.00';
+    }
     return num.toFixed(2);
 }
 
 function LogoFallback() {
     return (
-        <div className="mx-auto w-20 h-20 mb-2 flex items-center justify-center">
-            <svg width="64" height="64" viewBox="0 0 960 1152" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <div className="logo-fallback-container">
+             <svg width="80" height="80" viewBox="0 0 960 1152" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M0 576V534.477L453.531 0H100.807L3.73558 418.104L0 576Z" fill="#D4AF37"/>
                 <path d="M480 1152L678.704 573.441L480 299.599L308.501 534.957L480 1152Z" fill="#D4AF37"/>
                 <path d="M372.239 455.616L480 202.247L574.956 442.803L372.239 455.616Z" fill="#D4AF37"/>
@@ -125,101 +128,124 @@ export default function PrintInvoicePage() {
     const finalAmount = Math.round(grandTotal);
 
     return (
-        <div className="invoice-container">
-            <div className="watermark" style={{ backgroundImage: `url('${shopDetails.logo_url}')` }} />
-            
-            <div className="relative z-10">
-                <header className="header">
-                    {logoLoaded ? (
-                        <img
-                        src={shopDetails.logo_url}
-                        alt="Saambh Jewellers Logo"
-                        className="header-logo"
-                        onError={() => setLogoLoaded(false)}
-                        />
-                    ) : (
-                        <LogoFallback />
-                    )}
-                    <h1 className="shop-name">{shopDetails.name}</h1>
-                    <p className="shop-address">{shopDetails.address}</p>
-                    <p className="shop-contact">Phone: {shopDetails.phone} | Email: {shopDetails.email}</p>
+        <div className="invoice-body">
+            <div className="watermark" style={{ backgroundImage: `url('${shopDetails.logo_url}')` }}></div>
+            <div className="invoice-container">
+                <header className="invoice-header">
+                    <div className="shop-details-container">
+                        {logoLoaded ? (
+                            <img
+                            src={shopDetails.logo_url}
+                            alt="Shop Logo"
+                            className="shop-logo"
+                            onError={() => setLogoLoaded(false)}
+                            />
+                        ) : (
+                            <LogoFallback />
+                        )}
+                        <div className="shop-info">
+                            <h1 className="shop-name">{shopDetails.name}</h1>
+                            <p>{shopDetails.address}</p>
+                            <p><strong>Phone:</strong> {shopDetails.phone} | <strong>Email:</strong> {shopDetails.email}</p>
+                            <p><strong>GSTIN:</strong> {shopDetails.gstin} | <strong>PAN:</strong> {shopDetails.pan}</p>
+                        </div>
+                    </div>
+                    <div className="invoice-meta">
+                        <h2>TAX INVOICE</h2>
+                        <p><strong>Invoice #:</strong> {invoice.invoiceNumber}</p>
+                        <p><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
+                    </div>
                 </header>
                 
-                <div className="invoice-details">
-                    <div>
-                        <p><strong>Invoice No:</strong> {invoice.invoiceNumber}</p>
-                        <p><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
-                        <p><strong>GSTIN:</strong> {shopDetails.gstin}</p>
-                    </div>
-                    <div className="customer-details">
-                        <p><strong>Customer:</strong> {invoice.customerName}</p>
-                        <p><strong>Phone:</strong> {invoice.customerPhone}</p>
-                        <p><strong>Address:</strong> {invoice.customerAddress}</p>
-                    </div>
-                </div>
+                <section className="customer-details">
+                    <h3>Bill To:</h3>
+                    <p><strong>{invoice.customerName}</strong></p>
+                    <p>{invoice.customerAddress}</p>
+                    <p>{invoice.customerPhone}</p>
+                </section>
 
-                <table className="items-table">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th className="text-right">Weight</th>
-                            <th className="text-right">Amount (₹)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {items.map(item => (
-                            <tr key={item.id}>
-                                <td>{item.description}</td>
-                                <td className="text-right">{formatTwoDecimals(item.netWeight)}g</td>
-                                <td className="text-right">{formatTwoDecimals((item.netWeight * item.rate) + item.making)}</td>
+                <section className="items-section">
+                    <table className="items-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Item Description</th>
+                                <th className="text-right">Purity</th>
+                                <th className="text-right">Gross Wt.</th>
+                                <th className="text-right">Net Wt.</th>
+                                <th className="text-right">Rate</th>
+                                <th className="text-right">Making</th>
+                                <th className="text-right">Amount</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-                
-                <div className="summary">
-                    <div className="summary-box">
-                        <div className="summary-item">
+                        </thead>
+                        <tbody>
+                            {items.map((item, index) => (
+                                <tr key={item.id}>
+                                    <td>{index + 1}</td>
+                                    <td>{item.description}</td>
+                                    <td className="text-right">{item.purity}</td>
+                                    <td className="text-right">{formatTwoDecimals(item.grossWeight)}g</td>
+                                    <td className="text-right">{formatTwoDecimals(item.netWeight)}g</td>
+                                    <td className="text-right">₹{formatTwoDecimals(item.rate)}</td>
+                                    <td className="text-right">₹{formatTwoDecimals(item.making)}</td>
+                                    <td className="text-right">₹{formatTwoDecimals((item.netWeight * item.rate) + item.making)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </section>
+
+                <section className="summary-section">
+                    <div className="summary-details">
+                        <div className="summary-row">
                             <span>Subtotal</span>
                             <span>₹{formatTwoDecimals(subtotal)}</span>
                         </div>
                         {invoice.discount > 0 && (
-                             <div className="summary-item">
+                            <div className="summary-row">
                                 <span>Discount</span>
                                 <span>- ₹{formatTwoDecimals(invoice.discount)}</span>
                             </div>
                         )}
-                        <div className="summary-item">
-                            <span>CGST ({cgstRate}%)</span>
-                            <span>₹{formatTwoDecimals(cgstAmount)}</span>
+                        <div className="summary-row">
+                            <span>CGST ({formatTwoDecimals(cgstRate)}%)</span>
+                            <span>+ ₹{formatTwoDecimals(cgstAmount)}</span>
                         </div>
-                        <div className="summary-item">
-                            <span>SGST ({sgstRate}%)</span>
-                            <span>₹{formatTwoDecimals(sgstAmount)}</span>
+                        <div className="summary-row">
+                            <span>SGST ({formatTwoDecimals(sgstRate)}%)</span>
+                            <span>+ ₹{formatTwoDecimals(sgstAmount)}</span>
                         </div>
                          {roundOff !== 0 && (
-                            <div className="summary-item">
+                            <div className="summary-row">
                                 <span>Round Off</span>
                                 <span>₹{formatTwoDecimals(roundOff)}</span>
                             </div>
                         )}
-                        <div className="summary-item total">
-                            <span>Grand Total</span>
+                        <div className="summary-row grand-total">
+                            <span>GRAND TOTAL</span>
                             <span>₹{formatTwoDecimals(finalAmount)}</span>
                         </div>
                     </div>
-                </div>
-                 <div className="words-section">
-                    <strong>Amount in Words:</strong> {toWords(finalAmount)}
-                </div>
+                </section>
+                
+                <section className="words-section">
+                    <strong>Amount in Words:</strong>
+                    <p>{toWords(finalAmount)}</p>
+                </section>
 
-                <footer className="footer">
-                    <p>Thank you for shopping with {shopDetails.name}!</p>
-                    <p className="italic">“Every piece tells a story of elegance.”</p>
+                <footer className="invoice-footer">
+                    <div className="terms">
+                        <h4>Terms & Conditions</h4>
+                        <p>1. Goods once sold will not be taken back or exchanged.</p>
+                        <p>2. All disputes are subject to Jaipur jurisdiction only.</p>
+                    </div>
+                    <div className="signature">
+                        <p>For {shopDetails.name}</p>
+                        <div className="signature-box"></div>
+                        <p>Authorised Signatory</p>
+                    </div>
                 </footer>
             </div>
         </div>
     );
 }
-
-    

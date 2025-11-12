@@ -5,136 +5,215 @@ export const metadata = {
   title: 'Print Invoice',
 };
 
-export default function PrintLayout({ children }: { children: React.ReactNode }) {
+export default function PrintLayout({ children }: { children: React.Node }) {
   return (
     <html lang="en">
       <body>
         <style jsx global>{`
+          @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+          
           @page {
             size: A4;
             margin: 0;
           }
-          body {
-            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+          .invoice-body {
+            font-family: 'Roboto', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-          }
-          .invoice-container {
-            position: relative;
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 40px;
-            overflow: hidden;
-            font-size: 14px;
+            background-color: #fff;
             color: #333;
+            font-size: 11px;
+            line-height: 1.6;
+            position: relative;
           }
           .watermark {
-            position: absolute;
-            inset: 0;
-            opacity: 0.06;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.05;
+            z-index: 0;
             pointer-events: none;
+            overflow: hidden;
             background-repeat: no-repeat;
             background-position: center;
-            background-size: 60%;
-            z-index: 0;
+            background-size: 50%;
           }
-          .header {
-            text-align: center;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 16px;
-            margin-bottom: 24px;
+          .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 25mm 15mm;
+            position: relative;
+            z-index: 1;
+            background: transparent;
           }
-          .header-logo {
-            margin: 0 auto 8px auto;
-            width: 80px;
-            height: 80px;
-          }
-          .shop-name {
-            font-size: 28px;
-            font-weight: 700;
-            color: #b8860b; /* DarkGoldenRod */
-          }
-          .shop-address, .shop-contact {
-            font-size: 12px;
-            color: #555;
-          }
-          .invoice-details {
+          .invoice-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 24px;
-            font-size: 12px;
+            align-items: flex-start;
+            border-bottom: 2px solid #D4AF37;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
           }
-          .invoice-details .customer-details {
+          .shop-details-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+          }
+          .shop-logo {
+            width: 70px;
+            height: 70px;
+          }
+          .logo-fallback-container {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .shop-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #800000;
+            margin: 0;
+            text-transform: uppercase;
+          }
+          .shop-info p {
+            margin: 2px 0;
+            font-size: 10px;
+          }
+          .invoice-meta {
             text-align: right;
+          }
+          .invoice-meta h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin: 0 0 10px 0;
+          }
+          .invoice-meta p {
+            margin: 2px 0;
+            font-size: 11px;
+          }
+          .customer-details {
+            border: 1px solid #eee;
+            background-color: #fcfcfc;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+          }
+          .customer-details h3 {
+            margin: 0 0 5px 0;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #800000;
+          }
+          .customer-details p {
+            margin: 1px 0;
           }
           .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 24px;
-            font-size: 12px;
+            margin-bottom: 20px;
           }
           .items-table th, .items-table td {
-            border: 1px solid #eee;
-            padding: 8px;
+            border: 1px solid #e5e7eb;
+            padding: 8px 10px;
           }
           .items-table th {
-            background-color: #fcf8e3; /* Light yellow */
+            background-color: #f9fafb;
+            font-weight: 700;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             text-align: left;
-            font-weight: 600;
           }
           .items-table .text-right {
             text-align: right;
           }
-          .summary {
+          .summary-section {
             display: flex;
             justify-content: flex-end;
-            font-size: 12px;
+            margin-top: 10px;
+            margin-bottom: 20px;
           }
-          .summary-box {
-            width: 50%;
-            max-width: 300px;
+          .summary-details {
+            width: 45%;
+            max-width: 350px;
           }
-          .summary-item {
+          .summary-row {
             display: flex;
             justify-content: space-between;
-            padding: 6px 0;
+            padding: 7px 10px;
+            border-bottom: 1px solid #eee;
           }
-          .summary-item.total {
-            font-size: 18px;
+          .summary-row:last-child {
+            border-bottom: none;
+          }
+          .summary-row.grand-total {
+            font-size: 16px;
             font-weight: 700;
-            border-top: 2px solid #333;
-            margin-top: 8px;
-            padding-top: 8px;
+            background-color: #f9fafb;
+            color: #800000;
+            border-top: 2px solid #D4AF37;
+            padding: 10px;
+            border-radius: 0 0 4px 4px;
           }
           .words-section {
-            margin-top: 24px;
-            padding: 12px 0;
-            border-top: 1px solid #eee;
-            border-bottom: 1px solid #eee;
+            padding: 15px;
+            border-top: 1px dashed #ccc;
+            border-bottom: 1px dashed #ccc;
+            margin-bottom: 30px;
             font-size: 12px;
           }
-          .footer {
+          .words-section p {
+            margin: 0;
+            font-style: italic;
+          }
+          .invoice-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+          .terms {
+            font-size: 9px;
+            color: #666;
+          }
+          .terms h4 {
+            margin: 0 0 5px 0;
+            font-weight: 700;
+            color: #333;
+          }
+          .terms p {
+            margin: 0;
+          }
+          .signature {
             text-align: center;
-            margin-top: 32px;
-            padding-top: 16px;
-            border-top: 1px solid #eee;
-            font-size: 12px;
-            color: #777;
           }
+          .signature p {
+            margin: 0;
+            font-size: 11px;
+          }
+          .signature-box {
+            height: 50px;
+            margin-bottom: 5px;
+          }
+          
           @media print {
             body { 
               -webkit-print-color-adjust: exact; 
               print-color-adjust: exact;
-              background-color: #fff;
-              margin: 0;
             }
             .invoice-container {
-                box-shadow: none;
-                margin: 0;
-                padding: 25mm 15mm; /* Standard print margins */
-                max-width: 100%;
-                border-radius: 0;
+              box-shadow: none;
+              margin: 0;
+              max-width: 100%;
+              border-radius: 0;
             }
           }
         `}</style>
@@ -143,5 +222,3 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
     </html>
   );
 }
-
-    
