@@ -32,8 +32,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, query, where, getFirestore, writeBatch, doc, getDocs, orderBy } from 'firebase/firestore';
+import { useUser, useMemoFirebase } from '@/firebase';
+import { collection, query, where, getFirestore, writeBatch, doc, getDocs, orderBy, limit } from 'firebase/firestore';
+import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
 
 
 export default function InvoicesPage() {
@@ -60,7 +61,7 @@ export default function InvoicesPage() {
     return q;
   }, [firestore, user, statusFilter]);
 
-  const { data: invoices, isLoading, error } = useCollection<Invoice>(invoicesQuery);
+  const { data: invoices, isLoading, error, loadMore, hasMore } = usePaginatedCollection<Invoice>(invoicesQuery, 10);
 
   const handleDeleteConfirmation = (invoiceId: string) => {
     setInvoiceToDelete(invoiceId);
@@ -102,6 +103,7 @@ export default function InvoicesPage() {
 
   const filteredInvoices = useMemo(() => {
     if (!invoices) return [];
+    if (!searchTerm) return invoices;
     return invoices.filter(invoice =>
       (invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -159,7 +161,7 @@ export default function InvoicesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {isLoading && filteredInvoices.length === 0 ? (
                   Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={`skeleton-${i}`}>
                           <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -231,6 +233,13 @@ export default function InvoicesPage() {
               </TableBody>
             </Table>
           </div>
+           {hasMore && (
+              <div className="mt-6 flex justify-center">
+                <Button onClick={loadMore} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Load More'}
+                </Button>
+              </div>
+            )}
         </CardContent>
       </Card>
     </div>
