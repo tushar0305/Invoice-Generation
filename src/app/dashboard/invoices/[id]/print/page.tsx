@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
@@ -15,7 +15,6 @@ const shopDetails = {
     email: 'contact@saambh.com',
     gstin: '08AAAAA0000A1Z5',
     pan: 'AAAAA0000A',
-    logo_url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUwMCIgdmlld0JveD0iMCAwIDk2MCAxMTUyIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMCA1NzZWNTM0LjQ3N0w0NTMuNTMxIDBIMTAwLjgwN0wzLjczNTU4IDQxOC4xMDRMMCA1NzZaIiBmaWxsPSIjRDNBMTM3Ii8+CjxwYXRoIGQPSJNNjUyLjM4NyA0NDIuODA0TDQ4MCAxNTkuMzY3TDMyMS43NzMgNDU1LjYxNkw0ODAgNTk5LjE3OEw2NTIuMzg3IDQ0Mi4wMDRaTTk2MCA1NzZWNTMinaeN0w0OTAuOTk0IDBIMTk0LjMzOUw5NTYuMjY0IDQxOC4xMDRMOTYwIDU3NloiIGZpbGw9IiM4MDAwMDAiLz4KPC9zdmc+Cg=='
 };
 
 function toWords(num: number): string {
@@ -69,26 +68,11 @@ function formatTwoDecimals(num: number) {
     return num.toFixed(2);
 }
 
-function LogoFallback() {
-    return (
-        <div className="logo-fallback-container">
-             <svg width="80" height="80" viewBox="0 0 960 1152" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 576V534.477L453.531 0H100.807L3.73558 418.104L0 576Z" fill="#D4AF37"/>
-                <path d="M480 1152L678.704 573.441L480 299.599L308.501 534.957L480 1152Z" fill="#D4AF37"/>
-                <path d="M372.239 455.616L480 202.247L574.956 442.803L372.239 455.616Z" fill="#D4AF37"/>
-                <path d="M652.387 442.804L480 159.367L321.773 455.616L480 599.178L652.387 442.804Z" fill="#800000"/>
-                <path d="M960 576V534.477L490.994 0H194.339L956.264 418.104L960 576Z" fill="#800000"/>
-            </svg>
-        </div>
-    )
-}
-
 export default function PrintInvoicePage() {
     const params = useParams();
     const id = params.id as string;
     const firestore = getFirestore();
     const printTriggered = useRef(false);
-    const [logoLoaded, setLogoLoaded] = useState(true);
 
     const invoiceRef = useMemoFirebase(() => doc(firestore, 'invoices', id), [firestore, id]);
     const { data: invoice, isLoading: loadingInvoice } = useDoc<Invoice>(invoiceRef);
@@ -128,124 +112,113 @@ export default function PrintInvoicePage() {
     const finalAmount = Math.round(grandTotal);
 
     return (
-        <div className="invoice-body">
-            <div className="watermark" style={{ backgroundImage: `url('${shopDetails.logo_url}')` }}></div>
-            <div className="invoice-container">
-                <header className="invoice-header">
-                    <div className="shop-details-container">
-                        {logoLoaded ? (
-                            <img
-                            src={shopDetails.logo_url}
-                            alt="Shop Logo"
-                            className="shop-logo"
-                            onError={() => setLogoLoaded(false)}
-                            />
-                        ) : (
-                            <LogoFallback />
-                        )}
-                        <div className="shop-info">
-                            <h1 className="shop-name">{shopDetails.name}</h1>
-                            <p>{shopDetails.address}</p>
-                            <p><strong>Phone:</strong> {shopDetails.phone} | <strong>Email:</strong> {shopDetails.email}</p>
-                            <p><strong>GSTIN:</strong> {shopDetails.gstin} | <strong>PAN:</strong> {shopDetails.pan}</p>
-                        </div>
-                    </div>
-                    <div className="invoice-meta">
-                        <h2>TAX INVOICE</h2>
-                        <p><strong>Invoice #:</strong> {invoice.invoiceNumber}</p>
-                        <p><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
-                    </div>
-                </header>
-                
-                <section className="customer-details">
-                    <h3>Bill To:</h3>
-                    <p><strong>{invoice.customerName}</strong></p>
-                    <p>{invoice.customerAddress}</p>
-                    <p>{invoice.customerPhone}</p>
-                </section>
+        <div className="invoice-container">
+            <header className="invoice-header">
+                <div className="header-left">
+                    <h1 className="shop-name">{shopDetails.name}</h1>
+                    <p>{shopDetails.address}</p>
+                </div>
+                <div className="header-right">
+                    <h2>TAX INVOICE</h2>
+                    <p><strong>Invoice #:</strong> {invoice.invoiceNumber}</p>
+                    <p><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
+                    <p><strong>GSTIN:</strong> {shopDetails.gstin}</p>
+                    <p><strong>PAN:</strong> {shopDetails.pan}</p>
+                </div>
+            </header>
+            
+            <div className="separator"></div>
 
-                <section className="items-section">
-                    <table className="items-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Item Description</th>
-                                <th className="text-right">Purity</th>
-                                <th className="text-right">Gross Wt.</th>
-                                <th className="text-right">Net Wt.</th>
-                                <th className="text-right">Rate</th>
-                                <th className="text-right">Making</th>
-                                <th className="text-right">Amount</th>
+            <section className="customer-details">
+                <h3>Buyer Details:</h3>
+                <p><strong>{invoice.customerName}</strong></p>
+                <p>{invoice.customerAddress}</p>
+                <p>Phone: {invoice.customerPhone}</p>
+            </section>
+
+            <div className="separator"></div>
+
+            <section className="items-section">
+                <table className="items-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Item Description</th>
+                            <th className="text-right">Purity</th>
+                            <th className="text-right">Gross Wt.</th>
+                            <th className="text-right">Net Wt.</th>
+                            <th className="text-right">Rate</th>
+                            <th className="text-right">Making</th>
+                            <th className="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {items.map((item, index) => (
+                            <tr key={item.id}>
+                                <td>{index + 1}</td>
+                                <td>{item.description}</td>
+                                <td className="text-right">{item.purity}</td>
+                                <td className="text-right">{formatTwoDecimals(item.grossWeight)}g</td>
+                                <td className="text-right">{formatTwoDecimals(item.netWeight)}g</td>
+                                <td className="text-right">₹{formatTwoDecimals(item.rate)}</td>
+                                <td className="text-right">₹{formatTwoDecimals(item.making)}</td>
+                                <td className="text-right">₹{formatTwoDecimals((item.netWeight * item.rate) + item.making)}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {items.map((item, index) => (
-                                <tr key={item.id}>
-                                    <td>{index + 1}</td>
-                                    <td>{item.description}</td>
-                                    <td className="text-right">{item.purity}</td>
-                                    <td className="text-right">{formatTwoDecimals(item.grossWeight)}g</td>
-                                    <td className="text-right">{formatTwoDecimals(item.netWeight)}g</td>
-                                    <td className="text-right">₹{formatTwoDecimals(item.rate)}</td>
-                                    <td className="text-right">₹{formatTwoDecimals(item.making)}</td>
-                                    <td className="text-right">₹{formatTwoDecimals((item.netWeight * item.rate) + item.making)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </section>
+                        ))}
+                    </tbody>
+                </table>
+            </section>
 
-                <section className="summary-section">
-                    <div className="summary-details">
-                        <div className="summary-row">
-                            <span>Subtotal</span>
-                            <span>₹{formatTwoDecimals(subtotal)}</span>
-                        </div>
-                        {invoice.discount > 0 && (
-                            <div className="summary-row">
-                                <span>Discount</span>
-                                <span>- ₹{formatTwoDecimals(invoice.discount)}</span>
-                            </div>
-                        )}
-                        <div className="summary-row">
-                            <span>CGST ({formatTwoDecimals(cgstRate)}%)</span>
-                            <span>+ ₹{formatTwoDecimals(cgstAmount)}</span>
-                        </div>
-                        <div className="summary-row">
-                            <span>SGST ({formatTwoDecimals(sgstRate)}%)</span>
-                            <span>+ ₹{formatTwoDecimals(sgstAmount)}</span>
-                        </div>
-                         {roundOff !== 0 && (
-                            <div className="summary-row">
-                                <span>Round Off</span>
-                                <span>₹{formatTwoDecimals(roundOff)}</span>
-                            </div>
-                        )}
-                        <div className="summary-row grand-total">
-                            <span>GRAND TOTAL</span>
-                            <span>₹{formatTwoDecimals(finalAmount)}</span>
-                        </div>
+            <section className="summary-section">
+                <div className="summary-details">
+                    <div className="summary-row">
+                        <span>Subtotal</span>
+                        <span>₹{formatTwoDecimals(subtotal)}</span>
                     </div>
-                </section>
-                
-                <section className="words-section">
-                    <strong>Amount in Words:</strong>
-                    <p>{toWords(finalAmount)}</p>
-                </section>
+                    {invoice.discount > 0 && (
+                        <div className="summary-row">
+                            <span>Discount</span>
+                            <span>- ₹{formatTwoDecimals(invoice.discount)}</span>
+                        </div>
+                    )}
+                    <div className="summary-row">
+                        <span>CGST ({formatTwoDecimals(cgstRate)}%)</span>
+                        <span>+ ₹{formatTwoDecimals(cgstAmount)}</span>
+                    </div>
+                    <div className="summary-row">
+                        <span>SGST ({formatTwoDecimals(sgstRate)}%)</span>
+                        <span>+ ₹{formatTwoDecimals(sgstAmount)}</span>
+                    </div>
+                     {roundOff !== 0 && (
+                        <div className="summary-row">
+                            <span>Round Off</span>
+                            <span>₹{formatTwoDecimals(roundOff)}</span>
+                        </div>
+                    )}
+                    <div className="summary-row grand-total">
+                        <span>GRAND TOTAL</span>
+                        <span>₹{formatTwoDecimals(finalAmount)}</span>
+                    </div>
+                </div>
+            </section>
+            
+            <section className="words-section">
+                <strong>Amount in Words:</strong>
+                <p>{toWords(finalAmount)}</p>
+            </section>
 
-                <footer className="invoice-footer">
-                    <div className="terms">
-                        <h4>Terms & Conditions</h4>
-                        <p>1. Goods once sold will not be taken back or exchanged.</p>
-                        <p>2. All disputes are subject to Jaipur jurisdiction only.</p>
-                    </div>
-                    <div className="signature">
-                        <p>For {shopDetails.name}</p>
-                        <div className="signature-box"></div>
-                        <p>Authorised Signatory</p>
-                    </div>
-                </footer>
-            </div>
+            <footer className="invoice-footer">
+                <div className="terms">
+                    <h4>Terms & Conditions</h4>
+                    <p>1. Goods once sold will not be taken back or exchanged.</p>
+                    <p>2. All disputes are subject to Jaipur jurisdiction only.</p>
+                </div>
+                <div className="signature">
+                    <p>For {shopDetails.name}</p>
+                    <div className="signature-box"></div>
+                    <p>Authorised Signatory</p>
+                </div>
+            </footer>
         </div>
     );
 }

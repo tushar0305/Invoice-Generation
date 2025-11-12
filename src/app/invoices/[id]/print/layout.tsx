@@ -5,7 +5,7 @@ export const metadata = {
   title: 'Print Invoice',
 };
 
-export default function PrintLayout({ children }: { children: React.Node }) {
+export default function PrintLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
@@ -16,102 +16,68 @@ export default function PrintLayout({ children }: { children: React.Node }) {
             size: A4;
             margin: 0;
           }
-          .invoice-body {
+          .invoice-body { /* This class is not used, keeping for potential future use */
+            background-color: #fff;
+          }
+          .invoice-container {
             font-family: 'Roboto', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            background-color: #fff;
             color: #333;
             font-size: 11px;
-            line-height: 1.6;
-            position: relative;
-          }
-          .watermark {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.05;
-            z-index: 0;
-            pointer-events: none;
-            overflow: hidden;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: 50%;
-          }
-          .invoice-container {
+            line-height: 1.5;
             max-width: 800px;
             margin: 0 auto;
-            padding: 25mm 15mm;
+            padding: 25mm 20mm;
             position: relative;
-            z-index: 1;
-            background: transparent;
+            background: #fff;
           }
           .invoice-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 2px solid #D4AF37;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
           }
-          .shop-details-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
+          .header-left {
+            max-width: 60%;
           }
-          .shop-logo {
-            width: 70px;
-            height: 70px;
-          }
-          .logo-fallback-container {
-            width: 70px;
-            height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+          .header-right {
+            text-align: right;
           }
           .shop-name {
             font-size: 24px;
             font-weight: 700;
             color: #800000;
-            margin: 0;
+            margin: 0 0 5px 0;
             text-transform: uppercase;
           }
-          .shop-info p {
-            margin: 2px 0;
-            font-size: 10px;
+          .header-left p {
+            margin: 0;
+            font-size: 11px;
+            color: #444;
           }
-          .invoice-meta {
-            text-align: right;
-          }
-          .invoice-meta h2 {
-            font-size: 18px;
+          .header-right h2 {
+            font-size: 16px;
             font-weight: 700;
-            color: #333;
             margin: 0 0 10px 0;
           }
-          .invoice-meta p {
+          .header-right p {
             margin: 2px 0;
             font-size: 11px;
           }
+          .separator {
+            border-top: 2px solid #D4AF37;
+            margin: 15px 0;
+          }
           .customer-details {
-            border: 1px solid #eee;
-            background-color: #fcfcfc;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+            margin-bottom: 15px;
           }
           .customer-details h3 {
             margin: 0 0 5px 0;
             font-size: 12px;
             font-weight: 700;
-            text-transform: uppercase;
             color: #800000;
+            text-transform: uppercase;
           }
           .customer-details p {
             margin: 1px 0;
@@ -214,6 +180,7 @@ export default function PrintLayout({ children }: { children: React.Node }) {
               margin: 0;
               max-width: 100%;
               border-radius: 0;
+              padding: 20mm 15mm;
             }
           }
         `}</style>
