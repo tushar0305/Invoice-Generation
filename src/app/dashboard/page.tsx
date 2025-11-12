@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { format, subDays } from 'date-fns';
 import { useCollection, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getFirestore } from 'firebase/firestore';
+import { collection, query, where, getFirestore, orderBy } from 'firebase/firestore';
 
 
 type CustomerStats = {
