@@ -10,71 +10,163 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
     <html lang="en">
       <body>
         <style jsx global>{`
-          @page { size: A4; margin: 15mm; }
-          body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            font-size: 11px; 
-            color: #111111; 
-            line-height: 1.5; 
-            position: relative; 
+          @page {
+            size: A4;
+            margin: 15mm;
+          }
+          body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            font-size: 10px;
+            font-weight: 400;
+            line-height: 1.6;
+            color: #333;
             background-color: #fff;
           }
-          .watermark { 
-            position: fixed; 
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.08; 
-            z-index: 0; 
-            pointer-events: none;
-            overflow: hidden;
-          }
-          .watermark img { 
-            width: auto; 
-            height: 750px;
-            filter: grayscale(100%) contrast(80%);
-          }
-          .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-start; 
-            margin-bottom: 30px; 
-            padding-bottom: 12px; 
+          .invoice-container {
             position: relative;
-            z-index: 1;
           }
-          .logo-section { 
-            min-width: 60%; 
-            padding-right: 20px;
+          .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            opacity: 0.05;
+            z-index: 0;
+            pointer-events: none;
           }
-          .shop-name { 
-            font-size: 22px; 
-            font-weight: 800; 
-            color: #111111; 
-            margin-bottom: 2px; 
-            letter-spacing: 0.3px; 
+          .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+          }
+          .header-left .shop-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 4px;
+          }
+          .header-left .shop-details {
+            font-size: 11px;
+            line-height: 1.5;
+          }
+          .header-right {
+            text-align: right;
+          }
+          .header-right .invoice-title {
+            font-size: 24px;
+            font-weight: 700;
             text-transform: uppercase;
+            color: #000;
+            margin-bottom: 8px;
           }
-          .shop-details { margin-top: 2px; font-size: 12px; }
-          .invoice-info { text-align: right; }
-          .invoice-info div { margin-bottom: 4px; }
-          .invoice-title { font-size: 22px; font-weight: 800; color: #111111; margin-bottom: 6px; text-transform: uppercase; }
-          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-          th, td { border: 1px solid #d1d5db; padding: 10px 8px; text-align: left; }
-          th { background: #f3f4f6; font-weight: 700; color: #111111; font-size: 10px; text-transform: uppercase; }
-          td { font-size: 10px; color: #111111; }
-          .right { text-align: right; }
-          .totals { width: 45%; margin-left: auto; margin-top: 15px; }
-          .totals td { border: none; padding: 6px 8px; }
-          .totals tr.grand-total td { border-top: 2px solid #111111; padding-top: 10px; font-size: 16px; font-weight: 800; color: #111111; }
-          .grand { font-size: 16px; font-weight: 800; color: #111111; }
-          .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #d1d5db; display: flex; justify-content: space-between; font-size: 10px; color: #444444; }
-          .signature-section { text-align: right; }
-          
+          .header-right .invoice-meta div {
+            margin-bottom: 2px;
+            font-size: 11px;
+          }
+          .buyer-details {
+            margin-bottom: 30px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 4px;
+          }
+          .buyer-details .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #000;
+          }
+          .buyer-details p {
+            margin: 0;
+            line-height: 1.6;
+            font-size: 11px;
+          }
+          .items-section table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .items-section th,
+          .items-section td {
+            border: 1px solid #eee;
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+          }
+          .items-section th {
+            background-color: #f9f9f9;
+            font-weight: 600;
+            color: #000;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .items-section td {
+            font-size: 11px;
+          }
+          .text-right {
+            text-align: right;
+          }
+          .summary-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+          }
+          .summary-box {
+            width: 45%;
+            max-width: 350px;
+          }
+          .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 10px;
+            font-size: 11px;
+          }
+          .summary-row:nth-child(odd) {
+             background-color: #f9f9f9;
+          }
+          .summary-row.grand-total {
+            font-weight: 700;
+            font-size: 16px;
+            color: #000;
+            background-color: #f3f4f6;
+            border-top: 2px solid #ddd;
+            padding-top: 12px;
+            padding-bottom: 12px;
+          }
+          .amount-in-words {
+            padding: 15px 10px;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 40px;
+            font-size: 11px;
+          }
+          .invoice-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            color: #888;
+            font-size: 10px;
+          }
+          .signature-area {
+            text-align: center;
+          }
+          .signature-line {
+            border-top: 1px solid #ccc;
+            margin-top: 50px;
+            padding-top: 5px;
+            width: 200px;
+          }
           @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }

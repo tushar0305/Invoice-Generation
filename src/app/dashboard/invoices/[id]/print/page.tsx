@@ -9,12 +9,13 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const shopDetails = {
+    name: 'SAAMBH JEWELLERS',
     address: '123 Royal Plaza, Jaipur, Rajasthan 302001',
     phone: '9876543210',
     email: 'contact@saambh.com',
     gstin: '08AAAAA0000A1Z5',
     pan: 'AAAAA0000A',
-    logo_url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUwMCIgdmlld0JveD0iMCAwIDk2MCAxMTUyIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMCA1NzZWNTM0LjQ3N0w0NTMuNTMxIDBIMTAwLjgwN0wzLjczNTU4IDQxOC4xMDRMMCA1NzZaTTQ4MCAxMTUyTDY3OC43MDQgNTczLjQ0MUw0ODAgMjk5LjU5OUwzMDguNTAxIDUzNC45NTdMNDgwIDExNTJaTTM3Mi4yMzkgNDU1LjYxNkw0ODAgMjAyLjI0N0w1NzQuOTU2IDQ0Mi44MDNMMzcyLjIzOSA0NTUuNjE2WiIgZmlsbD0iI0Q0QUYzNyIvPgo8cGF0aCBkPSJNNjUyLjM4NyA0NDIuODA0TDQ4MCAxNTkuMzY3TDMyMS43NzMgNDU1LjYxNkw0ODAgNTk5LjE3OEw2NTIuMzg3IDQ0Mi44MDRaTTk2MCA1NzZWNTM0LjQ3N0w0OTAuOTk0IDBIMTk0LjMzOUw5NTYuMjY0IDQxOC4xMDRMOTYwIDU3NloiIGZpbGw9IiM4MDAwMDAiLz4KPC9zdmc+Cg=='
+    logo_url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUwMCIgdmlld0JveD0iMCAwIDk2MCAxMTUyIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMCA1NzZWNTM0LjQ3N0w0NTMuNTMxIDBIMTAwLjgwN0wzLjczNTU4IDQxOC4xMDRMMCA1NzZaTTQ4MCAxMTUyTDY3OC43MDQgNTczLjQ0MUw0ODAgMjk5LjU5OUwzMDguNTAxIDUzNC45NTdMNDgwIDExNTJaTTM3Mi4yMzkgNDU1LjYxNkw0ODAgMjAyLjI0N0w1NzQuOTU2IDQ0Mi44MDNMMzcyLjIzOSA0NTUuNjE2WiIgZmlsbD0iI0Q0QUYzNyIvPgo8cGF0aCBkPSJNNjUyLjM4NyA0NDIuODA0TDQ4MCAxNTkuMzY3TDMyMS43NzMgNDU1LjYxNkw0ODAgNTk5LjE3OEw2NTIuMzg3IDQ0Mi4wMDRaTTk2MCA1NzZWNTM0LjQ3N0w0OTAuOTk0IDBIMTk0LjMzOUw5NTYuMjY0IDQxOC4xMDRMOTYwIDU3NloiIGZpbGw9IiM4MDAwMDAiLz4KPC9zdmc+Cg=='
 }
 
 function toWords(num: number): string {
@@ -109,99 +110,112 @@ export default function PrintInvoicePage() {
     const finalAmount = Math.round(grandTotal);
 
     return (
-        <div className="bg-white">
-            <div className="watermark"><img src={shopDetails.logo_url} alt="Watermark" /></div>
-            <div className="header">
-                <div className="logo-section">
-                    <div className="shop-info">
-                    <div className="shop-name">SAAMBH JEWELLERS</div>
+        <div className="invoice-container">
+            <div className="watermark" style={{ backgroundImage: `url(${shopDetails.logo_url})` }}></div>
+            <header className="invoice-header">
+                <div className="header-left">
+                    <div className="shop-name">{shopDetails.name}</div>
                     <div className="shop-details">
-                        <div style={{ color: '#333', marginBottom: '4px' }}>{shopDetails.address}</div>
-                        <div style={{ color: '#333', marginBottom: '4px' }}>
-                        <strong>Phone:</strong> {shopDetails.phone}
-                        </div>
-                        <div style={{ color: '#333' }}>
-                        <strong>Email:</strong> {shopDetails.email}
-                        </div>
-                    </div>
+                        {shopDetails.address}<br />
+                        <strong>Phone:</strong> {shopDetails.phone} | <strong>Email:</strong> {shopDetails.email}
                     </div>
                 </div>
-                <div className="invoice-info">
+                <div className="header-right">
                     <div className="invoice-title">TAX INVOICE</div>
-                    <div><strong>Invoice No:</strong> {invoice.invoiceNumber}</div>
-                    <div><strong>GSTIN:</strong> {shopDetails.gstin}</div>
-                    <div><strong>PAN:</strong> {shopDetails.pan}</div>
-                    <div><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd-MMM-yyyy')}</div>
-                </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid #d1d5db', marginTop: '20px' }}></div>
-            <div style={{ borderBottom: '2px solid #d1d5db', margin: '5px 0', padding: '15px 0' }}>
-                <div style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '15px', letterSpacing: '.04em', marginBottom: '12px' }}>Buyer Details</div>
-                <div style={{ fontSize: '14px', marginBottom: '4px' }}><strong>{invoice.customerName}</strong></div>
-                <div style={{ color: '#333', marginBottom: '4px' }}>{invoice.customerAddress}</div>
-                <div style={{ color: '#333' }}>Phone: {invoice.customerPhone}</div>
-            </div>
-
-            <table>
-                <thead>
-                    <tr>
-                    <th>Description</th>
-                    <th>Purity</th>
-                    <th className="right">Gross Wt</th>
-                    <th className="right">Net Wt</th>
-                    <th className="right">Rate</th>
-                    <th className="right">Making</th>
-                    <th className="right">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {items.map(item => (
-                        <tr key={item.id}>
-                        <td>{item.description}</td>
-                        <td>{item.purity}</td>
-                        <td className="right">{formatTwoDecimals(item.grossWeight)}</td>
-                        <td className="right">{formatTwoDecimals(item.netWeight)}</td>
-                        <td className="right">₹ {formatTwoDecimals(item.rate)}</td>
-                        <td className="right">₹ {formatTwoDecimals(item.making)}</td>
-                        <td className="right">₹ {formatTwoDecimals((item.netWeight * item.rate) + item.making)}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-
-            <table className="totals" style={{ width: '50%', marginLeft: 'auto', marginTop: 0 }}>
-                <tbody>
-                    <tr><td className="right">Subtotal:</td><td className="right">₹ {formatTwoDecimals(subtotal)}</td></tr>
-                    {invoice.discount > 0 && (
-                        <tr><td className="right">Discount:</td><td className="right">- ₹ {formatTwoDecimals(invoice.discount)}</td></tr>
-                    )}
-                    <tr><td className="right">CGST ({cgstRate}%):</td><td className="right">₹ {formatTwoDecimals(cgstAmount)}</td></tr>
-                    <tr><td className="right">SGST ({sgstRate}%):</td><td className="right">₹ {formatTwoDecimals(sgstAmount)}</td></tr>
-                    <tr><td className="right">Round Off:</td><td className="right">₹ {formatTwoDecimals(roundOff)}</td></tr>
-                    <tr className="grand-total"><td className="right grand">Grand Total:</td><td className="right grand">₹ {formatTwoDecimals(finalAmount)}</td></tr>
-                </tbody>
-            </table>
-
-            <div style={{ marginTop: '20px', padding: '15px 0', borderTop: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db' }}>
-                <div style={{ fontSize: '12px' }}>
-                    <strong>Amount in Words:</strong> 
-                    <span style={{ color: '#333' }}> {toWords(finalAmount)}</span>
-                </div>
-            </div>
-
-            <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div style={{ color: '#666666' }}>Thank you for your business!</div>
-                <div className="signature-section">
-                    <div><strong>FOR SAAMBH JEWELLERS</strong></div>
-                    <div style={{ marginTop: '40px', borderTop: '1px solid #d1d5db', width: '200px', marginLeft: 'auto', paddingTop: '8px' }}>
-                    Authorized Signatory
+                    <div className="invoice-meta">
+                        <div><strong>Invoice No:</strong> {invoice.invoiceNumber}</div>
+                        <div><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd-MMM-yyyy')}</div>
+                        <div><strong>GSTIN:</strong> {shopDetails.gstin}</div>
+                        <div><strong>PAN:</strong> {shopDetails.pan}</div>
                     </div>
                 </div>
-            </div>
+            </header>
+
+            <section className="buyer-details">
+                <div className="section-title">Buyer Details</div>
+                <p>
+                    <strong>{invoice.customerName}</strong><br />
+                    {invoice.customerAddress}<br />
+                    Phone: {invoice.customerPhone}
+                </p>
+            </section>
+
+            <section className="items-section">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Purity</th>
+                            <th className="text-right">Gross Wt.</th>
+                            <th className="text-right">Net Wt.</th>
+                            <th className="text-right">Rate</th>
+                            <th className="text-right">Making</th>
+                            <th className="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {items.map(item => (
+                            <tr key={item.id}>
+                                <td>{item.description}</td>
+                                <td>{item.purity}</td>
+                                <td className="text-right">{formatTwoDecimals(item.grossWeight)}g</td>
+                                <td className="text-right">{formatTwoDecimals(item.netWeight)}g</td>
+                                <td className="text-right">₹{formatTwoDecimals(item.rate)}</td>
+                                <td className="text-right">₹{formatTwoDecimals(item.making)}</td>
+                                <td className="text-right">₹{formatTwoDecimals((item.netWeight * item.rate) + item.making)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </section>
+
+            <section className="summary-section">
+                <div className="summary-spacer"></div>
+                <div className="summary-box">
+                    <div className="summary-row">
+                        <span>Subtotal</span>
+                        <span>₹{formatTwoDecimals(subtotal)}</span>
+                    </div>
+                    {invoice.discount > 0 && (
+                        <div className="summary-row">
+                            <span>Discount</span>
+                            <span>- ₹{formatTwoDecimals(invoice.discount)}</span>
+                        </div>
+                    )}
+                    <div className="summary-row">
+                        <span>CGST ({cgstRate}%)</span>
+                        <span>₹{formatTwoDecimals(cgstAmount)}</span>
+                    </div>
+                    <div className="summary-row">
+                        <span>SGST ({sgstRate}%)</span>
+                        <span>₹{formatTwoDecimals(sgstAmount)}</span>
+                    </div>
+                     {roundOff !== 0 && (
+                        <div className="summary-row">
+                            <span>Round Off</span>
+                            <span>₹{formatTwoDecimals(roundOff)}</span>
+                        </div>
+                    )}
+                    <div className="summary-row grand-total">
+                        <span>Grand Total</span>
+                        <span>₹{formatTwoDecimals(finalAmount)}</span>
+                    </div>
+                </div>
+            </section>
+            
+            <section className="amount-in-words">
+                <strong>Amount in Words:</strong> {toWords(finalAmount)}
+            </section>
+
+            <footer className="invoice-footer">
+                <div className="footer-notes">
+                    Thank you for your business!
+                </div>
+                <div className="signature-area">
+                    <div>For {shopDetails.name}</div>
+                    <div className="signature-line">Authorized Signatory</div>
+                </div>
+            </footer>
         </div>
     );
 }
-
-    
-
