@@ -37,22 +37,22 @@ function toWords(num: number): string {
     let str = '';
     const crores = Math.floor(num / 10000000);
     if (crores > 0) {
-        str += inWords(crores) + ' crore ';
+        str += inWords(crores) + 'crore ';
         num %= 10000000;
     }
     const lakhs = Math.floor(num / 100000);
     if (lakhs > 0) {
-        str += inWords(lakhs) + ' lakh ';
+        str += inWords(lakhs) + 'lakh ';
         num %= 100000;
     }
     const thousands = Math.floor(num / 1000);
     if (thousands > 0) {
-        str += inWords(thousands) + ' thousand ';
+        str += inWords(thousands) + 'thousand ';
         num %= 1000;
     }
     const hundreds = Math.floor(num / 100);
     if (hundreds > 0) {
-        str += inWords(hundreds) + ' hundred ';
+        str += inWords(hundreds) + 'hundred ';
         num %= 100;
     }
     if (num > 0) {
@@ -110,38 +110,39 @@ export default function PrintInvoicePage() {
     const finalAmount = Math.round(grandTotal);
 
     return (
-        <div className="invoice-container">
-            <div className="watermark" style={{ backgroundImage: `url(${shopDetails.logo_url})` }}></div>
-            <header className="invoice-header">
-                <div className="header-left">
-                    <div className="shop-name">{shopDetails.name}</div>
-                    <div className="shop-details">
-                        {shopDetails.address}<br />
-                        <strong>Phone:</strong> {shopDetails.phone} | <strong>Email:</strong> {shopDetails.email}
+        <>
+            <div className="watermark-container">
+                <img src={shopDetails.logo_url} alt="Watermark" />
+            </div>
+            <div className="invoice-body">
+                <header className="header">
+                    <div className="shop-info">
+                        <div className="shop-name">{shopDetails.name}</div>
+                        <div className="shop-details">
+                           <div>{shopDetails.address}</div>
+                           <div><strong>Phone:</strong> {shopDetails.phone}</div>
+                           <div><strong>Email:</strong> {shopDetails.email}</div>
+                        </div>
                     </div>
-                </div>
-                <div className="header-right">
-                    <div className="invoice-title">TAX INVOICE</div>
-                    <div className="invoice-meta">
+                    <div className="invoice-info">
+                        <div className="invoice-title">TAX INVOICE</div>
                         <div><strong>Invoice No:</strong> {invoice.invoiceNumber}</div>
-                        <div><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd-MMM-yyyy')}</div>
                         <div><strong>GSTIN:</strong> {shopDetails.gstin}</div>
                         <div><strong>PAN:</strong> {shopDetails.pan}</div>
+                        <div><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd-MMM-yyyy')}</div>
                     </div>
-                </div>
-            </header>
+                </header>
 
-            <section className="buyer-details">
-                <div className="section-title">Buyer Details</div>
-                <p>
-                    <strong>{invoice.customerName}</strong><br />
-                    {invoice.customerAddress}<br />
-                    Phone: {invoice.customerPhone}
-                </p>
-            </section>
+                <section className="buyer-section">
+                    <div className="title">Buyer Details</div>
+                    <div className="details">
+                        <div style={{ fontSize: '14px' }}><strong>{invoice.customerName}</strong></div>
+                        <div>{invoice.customerAddress}</div>
+                        <div>Phone: {invoice.customerPhone}</div>
+                    </div>
+                </section>
 
-            <section className="items-section">
-                <table>
+                <table className="items-table">
                     <thead>
                         <tr>
                             <th>Description</th>
@@ -167,55 +168,52 @@ export default function PrintInvoicePage() {
                         ))}
                     </tbody>
                 </table>
-            </section>
+                
+                <table className="totals-table">
+                    <tbody>
+                        <tr>
+                            <td className="text-right">Subtotal:</td>
+                            <td className="text-right">₹{formatTwoDecimals(subtotal)}</td>
+                        </tr>
+                         {invoice.discount > 0 && (
+                            <tr>
+                                <td className="text-right">Discount:</td>
+                                <td className="text-right">- ₹{formatTwoDecimals(invoice.discount)}</td>
+                            </tr>
+                        )}
+                        <tr>
+                            <td className="text-right">CGST ({cgstRate}%):</td>
+                            <td className="text-right">₹{formatTwoDecimals(cgstAmount)}</td>
+                        </tr>
+                        <tr>
+                            <td className="text-right">SGST ({sgstRate}%):</td>
+                            <td className="text-right">₹{formatTwoDecimals(sgstAmount)}</td>
+                        </tr>
+                         {roundOff !== 0 && (
+                            <tr>
+                                <td className="text-right">Round Off:</td>
+                                <td className="text-right">₹{formatTwoDecimals(roundOff)}</td>
+                            </tr>
+                        )}
+                        <tr>
+                            <td className="text-right grand-total">Grand Total:</td>
+                            <td className="text-right grand-total">₹{formatTwoDecimals(finalAmount)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <section className="words-section">
+                    <strong>Amount in Words:</strong> {toWords(finalAmount)}
+                </section>
 
-            <section className="summary-section">
-                <div className="summary-spacer"></div>
-                <div className="summary-box">
-                    <div className="summary-row">
-                        <span>Subtotal</span>
-                        <span>₹{formatTwoDecimals(subtotal)}</span>
+                <footer className="footer">
+                    <div className="thanks">Thank you for your business!</div>
+                    <div className="signature-section">
+                        <div><strong>FOR {shopDetails.name.toUpperCase()}</strong></div>
+                        <div className="signature-line">Authorized Signatory</div>
                     </div>
-                    {invoice.discount > 0 && (
-                        <div className="summary-row">
-                            <span>Discount</span>
-                            <span>- ₹{formatTwoDecimals(invoice.discount)}</span>
-                        </div>
-                    )}
-                    <div className="summary-row">
-                        <span>CGST ({cgstRate}%)</span>
-                        <span>₹{formatTwoDecimals(cgstAmount)}</span>
-                    </div>
-                    <div className="summary-row">
-                        <span>SGST ({sgstRate}%)</span>
-                        <span>₹{formatTwoDecimals(sgstAmount)}</span>
-                    </div>
-                     {roundOff !== 0 && (
-                        <div className="summary-row">
-                            <span>Round Off</span>
-                            <span>₹{formatTwoDecimals(roundOff)}</span>
-                        </div>
-                    )}
-                    <div className="summary-row grand-total">
-                        <span>Grand Total</span>
-                        <span>₹{formatTwoDecimals(finalAmount)}</span>
-                    </div>
-                </div>
-            </section>
-            
-            <section className="amount-in-words">
-                <strong>Amount in Words:</strong> {toWords(finalAmount)}
-            </section>
-
-            <footer className="invoice-footer">
-                <div className="footer-notes">
-                    Thank you for your business!
-                </div>
-                <div className="signature-area">
-                    <div>For {shopDetails.name}</div>
-                    <div className="signature-line">Authorized Signatory</div>
-                </div>
-            </footer>
-        </div>
+                </footer>
+            </div>
+        </>
     );
 }

@@ -15,157 +15,162 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
             margin: 15mm;
           }
           body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11px;
+            color: #111;
+            line-height: 1.5;
+            position: relative;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-            font-size: 10px;
-            font-weight: 400;
-            line-height: 1.6;
-            color: #333;
-            background-color: #fff;
           }
-          .invoice-container {
-            position: relative;
-          }
-          .watermark {
+          .watermark-container {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            height: 80%;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
-            opacity: 0.05;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.08;
             z-index: 0;
             pointer-events: none;
+            overflow: hidden;
           }
-          .invoice-header {
+          .watermark-container img {
+            width: auto;
+            height: 750px;
+            filter: grayscale(100%) contrast(80%);
+          }
+          .invoice-body {
+            position: relative;
+            z-index: 1;
+          }
+          .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            padding-bottom: 20px;
             margin-bottom: 20px;
-            border-bottom: 2px solid #eee;
           }
-          .header-left .shop-name {
-            font-size: 24px;
-            font-weight: 700;
-            color: #000;
+          .shop-info .shop-name {
+            font-size: 22px;
+            font-weight: 800;
+            color: #111;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+          }
+          .shop-info .shop-details {
+            font-size: 12px;
+            color: #333;
+          }
+          .shop-details div {
             margin-bottom: 4px;
           }
-          .header-left .shop-details {
-            font-size: 11px;
-            line-height: 1.5;
-          }
-          .header-right {
+          .invoice-info {
             text-align: right;
+            flex-shrink: 0;
+            white-space: nowrap;
           }
-          .header-right .invoice-title {
-            font-size: 24px;
+          .invoice-info .invoice-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #111;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+          }
+          .invoice-info div {
+            margin-bottom: 4px;
+          }
+          .buyer-section {
+            border-top: 1px solid #d1d5db;
+            border-bottom: 2px solid #d1d5db;
+            margin: 20px 0;
+            padding: 15px 0;
+          }
+          .buyer-section .title {
             font-weight: 700;
             text-transform: uppercase;
-            color: #000;
-            margin-bottom: 8px;
+            font-size: 15px;
+            letter-spacing: .04em;
+            margin-bottom: 12px;
           }
-          .header-right .invoice-meta div {
-            margin-bottom: 2px;
-            font-size: 11px;
+          .buyer-section .details {
+            font-size: 14px;
           }
-          .buyer-details {
-            margin-bottom: 30px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px solid #eee;
-            border-radius: 4px;
+          .buyer-section .details div {
+             color: #333;
+             margin-bottom: 4px;
           }
-          .buyer-details .section-title {
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #000;
-          }
-          .buyer-details p {
-            margin: 0;
-            line-height: 1.6;
-            font-size: 11px;
-          }
-          .items-section table {
+          .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-top: 12px;
           }
-          .items-section th,
-          .items-section td {
-            border: 1px solid #eee;
-            padding: 8px 10px;
+          .items-table th, .items-table td {
+            border: 1px solid #d1d5db;
+            padding: 10px 8px;
             text-align: left;
-            vertical-align: top;
           }
-          .items-section th {
-            background-color: #f9f9f9;
-            font-weight: 600;
-            color: #000;
-            font-size: 9px;
+          .items-table th {
+            background: #f3f4f6;
+            font-weight: 700;
+            color: #111;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
           }
-          .items-section td {
-            font-size: 11px;
+          .items-table td {
+            font-size: 10px;
+            color: #111;
           }
           .text-right {
             text-align: right;
           }
-          .summary-section {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 20px;
+          .totals-table {
+            width: 50%;
+            margin-left: auto;
+            margin-top: 0;
+            border-collapse: collapse;
           }
-          .summary-box {
-            width: 45%;
-            max-width: 350px;
+          .totals-table td {
+            border: none;
+            padding: 6px 8px;
           }
-          .summary-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 10px;
-            font-size: 11px;
+          .totals-table tr:last-child td {
+            border-top: 2px solid #111;
+            padding-top: 10px;
           }
-          .summary-row:nth-child(odd) {
-             background-color: #f9f9f9;
-          }
-          .summary-row.grand-total {
-            font-weight: 700;
+          .totals-table .grand-total {
             font-size: 16px;
-            color: #000;
-            background-color: #f3f4f6;
-            border-top: 2px solid #ddd;
-            padding-top: 12px;
-            padding-bottom: 12px;
+            font-weight: 800;
+            color: #111;
           }
-          .amount-in-words {
-            padding: 15px 10px;
-            border-top: 1px solid #eee;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 40px;
-            font-size: 11px;
+          .words-section {
+            margin-top: 20px;
+            padding: 15px 0;
+            border-top: 1px solid #d1d5db;
+            border-bottom: 1px solid #d1d5db;
+            font-size: 12px;
           }
-          .invoice-footer {
+          .footer {
+            margin-top: 25px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            color: #888;
-            font-size: 10px;
           }
-          .signature-area {
-            text-align: center;
+          .footer .thanks {
+            color: #666;
           }
-          .signature-line {
-            border-top: 1px solid #ccc;
-            margin-top: 50px;
-            padding-top: 5px;
+          .footer .signature-section {
+            text-align: right;
+          }
+          .footer .signature-line {
+            margin-top: 40px;
+            border-top: 1px solid #d1d5db;
             width: 200px;
+            margin-left: auto;
+            padding-top: 8px;
+            font-size:10px;
+             color: #444;
           }
           @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
