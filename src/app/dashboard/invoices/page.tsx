@@ -52,7 +52,7 @@ export default function InvoicesPage() {
   const invoicesQuery = useMemoFirebase(() => {
     if (!user) return null;
     
-    let q = query(collection(firestore, 'invoices'), where('userId', '==', user.uid), orderBy('invoiceDate', 'desc'));
+    let q = query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
 
     if (statusFilter !== 'all') {
         q = query(q, where('status', '==', statusFilter));
