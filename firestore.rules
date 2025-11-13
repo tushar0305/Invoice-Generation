@@ -15,10 +15,6 @@
  * - Users can ONLY manage their own invoices and associated data.
  * - Users can ONLY manage their own settings.
  * - Listing invoices is ONLY allowed when querying for one's own invoices.
- * - Data shape validation is omitted in this prototype for rapid iteration.
- *
- * Denormalization for Authorization:
- * - The `Invoice` entity includes a `userId` field. This is intentionally denormalized to avoid needing a `get()` operation to another collection to validate ownership when accessing invoices, which is more performant and a best practice for security rules.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -29,42 +25,29 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Invoices can only be accessed by their owner.
+    // Invoices: per-document rules. Firestore evaluates 'read' (get + list) per document.
+    // Simpler and more robust than attempting to introspect request.query.
     match /invoices/{invoiceId} {
-      // The user is the owner if their UID matches the invoice's userId field.
-      function isOwner() {
-        return isSignedIn() &&
+      // Allow creation only if the new document's userId matches auth uid.
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Allow reads (get & list), updates, deletes only if the existing document belongs to the user.
+      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // Invoice items: must belong to an invoice the user owns.
+      match /invoiceItems/{itemId} {
+        allow read, write: if isSignedIn() &&
           get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId == request.auth.uid;
       }
-
-      // A user can create an invoice if they are logged in and the new
-      // invoice's userId is their own.
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-
-      // A user can read, update, or delete an invoice if they are the owner.
-      allow get, update, delete: if isOwner();
-
-      // Allow listing only when the query is scoped to the caller's userId.
-      // This avoids using resource in list rules (which is undefined for queries).
-      allow list: if isSignedIn() && request.query.where.size() > 0 &&
-        request.query.where[0].field == 'userId' &&
-        request.query.where[0].op == '==' &&
-        request.query.where[0].value == request.auth.uid;
-
-      // Secure the items subcollection (actual name used in the app is 'invoiceItems').
-      match /invoiceItems/{itemId} {
-        // Allow access to items if the user is the owner of the parent invoice document.
-        allow read, write: if isOwner();
-      }
     }
 
-    // Customers and user settings follow the same ownership model.
-    match /customers/{customerId} {
-      allow read, write: if isSignedIn() && request.auth.uid == customerId;
-    }
-
+    // User settings: users can only read/write their own settings.
     match /userSettings/{userId} {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Customers (optional): users can only read/write their own customer data.
+    match /customers/{customerId} {
+      allow read, write: if isSignedIn() && request.auth.uid == customerId;
     }
 
     // Default deny all other access

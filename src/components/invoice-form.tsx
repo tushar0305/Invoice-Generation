@@ -24,7 +24,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { getFirestore, doc, writeBatch, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, writeBatch, collection, getDocs, query, where, serverTimestamp, setDoc } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -161,14 +161,28 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             grandTotal: finalGrandTotal,
         };
 
-        if (invoice) { // This is an UPDATE
+    if (invoice) { // This is an UPDATE
              batch.update(invoiceRef, {
                 ...invoicePayload,
                 updatedAt: serverTimestamp(),
             });
+
+      // For existing invoices, fetch current items to handle deletions
+      const currentItemsSnapshot = await getDocs(collection(firestore, `invoices/${invoiceId}/invoiceItems`));
+      const currentItemIds = new Set(currentItemsSnapshot.docs.map(doc => doc.id));
+      const newItemIds = new Set(items.map(item => item.id));
+
+      // Delete items that were removed
+      currentItemIds.forEach(id => {
+        if (!newItemIds.has(id)) {
+          const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, id);
+          batch.delete(itemRef);
+        }
+      });
         } else { // This is a CREATE
             const invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
-            batch.set(invoiceRef, {
+            // Create the parent invoice FIRST so security rules for subcollection writes pass.
+            await setDoc(invoiceRef, {
                 ...invoicePayload,
                 id: invoiceId,
                 userId: user.uid,
@@ -176,34 +190,41 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
+
+            // Now create items in a separate batch after parent exists
+            const itemsBatch = writeBatch(firestore);
+            items.forEach((item) => {
+                const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
+                itemsBatch.set(itemRef, {
+                  ...item,
+                  grossWeight: Number(item.grossWeight) || 0,
+                  netWeight: Number(item.netWeight) || 0,
+                  rate: Number(item.rate) || 0,
+                  making: Number(item.making) || 0,
+                });
+            });
+            await itemsBatch.commit();
         }
 
-        const currentItemsSnapshot = await getDocs(collection(firestore, `invoices/${invoiceId}/invoiceItems`));
-        const currentItemIds = new Set(currentItemsSnapshot.docs.map(doc => doc.id));
-        const newItemIds = new Set(items.map(item => item.id));
-
-        // Set/update new items
-        items.forEach((item) => {
-            const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
-            batch.set(itemRef, {
-              ...item,
-              // Ensure all numeric fields are stored as numbers
-              grossWeight: Number(item.grossWeight) || 0,
-              netWeight: Number(item.netWeight) || 0,
-              rate: Number(item.rate) || 0,
-              making: Number(item.making) || 0,
-            });
-        });
-
-        // Delete items that were removed
-        currentItemIds.forEach(id => {
-            if (!newItemIds.has(id)) {
-                const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, id);
-                batch.delete(itemRef);
-            }
-        });
+        // For UPDATE flow, set/update all items in the same batch
+        if (invoice) {
+          items.forEach((item) => {
+              const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
+              batch.set(itemRef, {
+                ...item,
+                // Ensure all numeric fields are stored as numbers
+                grossWeight: Number(item.grossWeight) || 0,
+                netWeight: Number(item.netWeight) || 0,
+                rate: Number(item.rate) || 0,
+                making: Number(item.making) || 0,
+              });
+          });
+        }
         
-        await batch.commit();
+        // Commit only for UPDATE path; CREATE already committed above
+        if (invoice) {
+          await batch.commit();
+        }
         
         toast({
           title: `Invoice ${invoice ? 'updated' : 'created'} successfully!`,

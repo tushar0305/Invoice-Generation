@@ -31,6 +31,18 @@ export function FirebaseErrorListener() {
 
   // On re-render, if an error exists in state, throw it.
   if (error) {
+    // Temporary mitigation: don't crash the app if reading userSettings is blocked.
+    // The create-invoice flow can still proceed with default tax values.
+    // Once Firestore rules are successfully deployed, this suppression can be removed.
+    const path = (error as any)?.request?.path as string | undefined;
+    if (path && path.includes('/documents/userSettings/')) {
+      if (typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.warn('Suppressed Firestore permission error for userSettings:', path);
+      }
+      return null;
+    }
+
     throw error;
   }
 
