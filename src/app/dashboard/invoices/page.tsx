@@ -111,7 +111,7 @@ export default function InvoicesPage() {
   }, [invoices, searchTerm]);
 
   const handlePrintNavigate = (invoiceId: string) => {
-    router.push(`/dashboard/invoices/${invoiceId}/view?print=1`);
+    router.push(`/dashboard/invoices/${invoiceId}/print`);
   };
 
   return (
