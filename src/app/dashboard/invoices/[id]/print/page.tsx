@@ -78,7 +78,7 @@ export default function PrintInvoicePage() {
     const { data: invoice, isLoading: loadingInvoice } = useDoc<Invoice>(invoiceRef);
 
     const itemsRef = useMemoFirebase(() => collection(firestore, `invoices/${id}/invoiceItems`), [firestore, id]);
-    const { data: items, isLoading: loadingItems } = useCollection<InvoiceItem[]>(itemsRef);
+    const { data: items, isLoading: loadingItems } = useCollection<InvoiceItem>(itemsRef);
 
     const isLoading = loadingInvoice || loadingItems;
 
