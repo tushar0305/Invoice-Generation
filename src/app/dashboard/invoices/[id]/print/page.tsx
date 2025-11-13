@@ -8,64 +8,40 @@ import { doc, collection, getFirestore } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
-const shopDetails = {
+const shop = {
     name: 'SAAMBH JEWELLERS',
     address: '123 Royal Plaza, Jaipur, Rajasthan 302001',
     phone: '9876543210',
     email: 'contact@saambh.com',
     gstin: '08AAAAA0000A1Z5',
     pan: 'AAAAA0000A',
+    logoUrl: '/img/logo.jpeg',
 };
 
 function toWords(num: number): string {
     const a = ['', 'one ', 'two ', 'three ', 'four ', 'five ', 'six ', 'seven ', 'eight ', 'nine ', 'ten ', 'eleven ', 'twelve ', 'thirteen ', 'fourteen ', 'fifteen ', 'sixteen ', 'seventeen ', 'eighteen ', 'nineteen '];
     const b = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-
     function inWords(n: number): string {
-        let s = '';
-        if (n < 20) {
-            s = a[n];
-        } else {
-            const digit = n % 10;
-            s = b[Math.floor(n / 10)] + (digit ? '-' : '') + a[digit];
-        }
-        return s;
+        if (n < 20) return a[n];
+        const digit = n % 10;
+        return b[Math.floor(n / 10)] + (digit ? '-' : '') + a[digit];
     }
-    
-    if (num === 0) return 'Zero';
+    if (num === 0) return 'zero';
     let str = '';
     const crores = Math.floor(num / 10000000);
-    if (crores > 0) {
-        str += inWords(crores) + 'crore ';
-        num %= 10000000;
-    }
+    if (crores > 0) { str += inWords(crores) + ' crore '; num %= 10000000; }
     const lakhs = Math.floor(num / 100000);
-    if (lakhs > 0) {
-        str += inWords(lakhs) + 'lakh ';
-        num %= 100000;
-    }
+    if (lakhs > 0) { str += inWords(lakhs) + ' lakh '; num %= 100000; }
     const thousands = Math.floor(num / 1000);
-    if (thousands > 0) {
-        str += inWords(thousands) + 'thousand ';
-        num %= 1000;
-    }
+    if (thousands > 0) { str += inWords(thousands) + ' thousand '; num %= 1000; }
     const hundreds = Math.floor(num / 100);
-    if (hundreds > 0) {
-        str += inWords(hundreds) + 'hundred ';
-        num %= 100;
-    }
-    if (num > 0) {
-        if (str !== '') str += 'and ';
-        str += inWords(num);
-    }
-    return str.trim().replace(/\s+/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') + ' Only';
+    if (hundreds > 0) { str += inWords(hundreds) + ' hundred '; num %= 100; }
+    if (num > 0) { str += inWords(num); }
+    return str.trim().replace(/\s+/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-function formatTwoDecimals(num: number) {
-    if (typeof num !== 'number' || isNaN(num)) {
-        return '0.00';
-    }
-    return num.toFixed(2);
+function f2(n: number) {
+    return (Number(n) || 0).toFixed(2);
 }
 
 export default function PrintInvoicePage() {
@@ -76,7 +52,6 @@ export default function PrintInvoicePage() {
 
     const invoiceRef = useMemoFirebase(() => doc(firestore, 'invoices', id), [firestore, id]);
     const { data: invoice, isLoading: loadingInvoice } = useDoc<Invoice>(invoiceRef);
-
     const itemsRef = useMemoFirebase(() => collection(firestore, `invoices/${id}/invoiceItems`), [firestore, id]);
     const { data: items, isLoading: loadingItems } = useCollection<InvoiceItem>(itemsRef);
 
@@ -89,136 +64,119 @@ export default function PrintInvoicePage() {
         }
     }, [isLoading, invoice, items]);
 
-
     if (isLoading) {
-        return <div className="flex h-screen items-center justify-center bg-white"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+        return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
-
     if (!invoice || !items) {
         notFound();
     }
-    
-    const subtotal = items.reduce((acc, item) => acc + (item.netWeight * item.rate) + item.making, 0);
-    const taxRate = invoice.tax || 0;
-    const cgstRate = taxRate / 2;
-    const sgstRate = taxRate / 2;
-    
-    const totalBeforeTax = subtotal - invoice.discount;
-    const cgstAmount = totalBeforeTax * (cgstRate / 100);
-    const sgstAmount = totalBeforeTax * (sgstRate / 100);
 
-    const grandTotal = totalBeforeTax + cgstAmount + sgstAmount;
-    const roundOff = Math.round(grandTotal) - grandTotal;
-    const finalAmount = Math.round(grandTotal);
+    const subtotal = items.reduce((acc, item) => acc + (item.netWeight * item.rate) + item.making, 0);
+    const totalBeforeTax = subtotal - invoice.discount;
+    const cgstRate = (invoice.tax || 0) / 2;
+    const sgstRate = (invoice.tax || 0) / 2;
+    const cgst = totalBeforeTax * (cgstRate / 100);
+    const sgst = totalBeforeTax * (sgstRate / 100);
+    const totalAmount = totalBeforeTax + cgst + sgst;
+    const roundOff = Math.round(totalAmount) - totalAmount;
+    const finalAmount = Math.round(totalAmount);
 
     return (
-        <div className="invoice-container">
-            <header className="invoice-header">
-                <div className="header-left">
-                    <h1 className="shop-name">{shopDetails.name}</h1>
-                    <p>{shopDetails.address}</p>
+        <>
+            <div className="watermark"><img src={shop.logoUrl} alt="Watermark" /></div>
+            <div className="header">
+                <div className="logo-section">
+                    <div className="shop-info">
+                        <div className="shop-name">{shop.name}</div>
+                        <div className="shop-details" style={{ fontSize: 12 }}>
+                            <div style={{ color: '#333', marginBottom: 4 }}>{shop.address}</div>
+                            {(shop.phone || shop.email) && (
+                                <>
+                                    <div style={{ color: '#333', marginBottom: 4 }}>
+                                        {shop.phone && (<><strong>Phone:</strong> {shop.phone}</>)}
+                                    </div>
+                                    <div style={{ color: '#333' }}>
+                                        {shop.email && (<><strong>Email:</strong> {shop.email}</>)}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
                 </div>
-                <div className="header-right">
-                    <h2>TAX INVOICE</h2>
-                    <p><strong>Invoice #:</strong> {invoice.invoiceNumber}</p>
-                    <p><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
-                    <p><strong>GSTIN:</strong> {shopDetails.gstin}</p>
-                    <p><strong>PAN:</strong> {shopDetails.pan}</p>
+                <div className="invoice-info">
+                    <div className="invoice-title">TAX INVOICE</div>
+                    <div><strong>Invoice No:</strong> {invoice.invoiceNumber}</div>
+                    <div><strong>GSTIN:</strong> {shop.gstin}</div>
+                    <div><strong>PAN:</strong> {shop.pan}</div>
+                    <div><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</div>
                 </div>
-            </header>
-            
-            <div className="separator"></div>
+            </div>
 
-            <section className="customer-details">
-                <h3>Buyer Details:</h3>
-                <p><strong>{invoice.customerName}</strong></p>
-                <p>{invoice.customerAddress}</p>
-                <p>Phone: {invoice.customerPhone}</p>
-            </section>
+            <div style={{ borderTop: '1px solid #d1d5db', marginTop: 20 }}></div>
+            <div style={{ borderBottom: '2px solid #d1d5db', margin: '5px 0', padding: '15px 0' }}>
+                <div style={{ fontWeight: 700, textTransform: 'uppercase' as const, fontSize: 15, letterSpacing: '.04em', marginBottom: 12 }}>Buyer Details</div>
+                <div style={{ fontSize: 14, marginBottom: 4 }}><strong>{invoice.customerName}</strong></div>
+                {invoice.customerAddress && (
+                    <div style={{ color: '#333', marginBottom: 4 }}>{invoice.customerAddress}</div>
+                )}
+                {invoice.customerPhone && (
+                    <div style={{ color: '#333' }}>Phone: {invoice.customerPhone}</div>
+                )}
+            </div>
 
-            <div className="separator"></div>
-
-            <section className="items-section">
-                <table className="items-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Item Description</th>
-                            <th className="text-right">Purity</th>
-                            <th className="text-right">Gross Wt.</th>
-                            <th className="text-right">Net Wt.</th>
-                            <th className="text-right">Rate</th>
-                            <th className="text-right">Making</th>
-                            <th className="text-right">Amount</th>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Purity</th>
+                        <th className="right">Gross Wt</th>
+                        <th className="right">Net Wt</th>
+                        <th className="right">Rate</th>
+                        <th className="right">Making</th>
+                        <th className="right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {items.map(item => (
+                        <tr key={item.id}>
+                            <td>{item.description}</td>
+                            <td>{item.purity}</td>
+                            <td className="right">{f2(item.grossWeight)}</td>
+                            <td className="right">{f2(item.netWeight)}</td>
+                            <td className="right">₹ {f2(item.rate)}</td>
+                            <td className="right">₹ {f2(item.making)}</td>
+                            <td className="right">₹ {f2((item.netWeight * item.rate) + item.making)}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {items.map((item, index) => (
-                            <tr key={item.id}>
-                                <td>{index + 1}</td>
-                                <td>{item.description}</td>
-                                <td className="text-right">{item.purity}</td>
-                                <td className="text-right">{formatTwoDecimals(item.grossWeight)}g</td>
-                                <td className="text-right">{formatTwoDecimals(item.netWeight)}g</td>
-                                <td className="text-right">₹{formatTwoDecimals(item.rate)}</td>
-                                <td className="text-right">₹{formatTwoDecimals(item.making)}</td>
-                                <td className="text-right">₹{formatTwoDecimals((item.netWeight * item.rate) + item.making)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </section>
+                    ))}
+                </tbody>
+            </table>
 
-            <section className="summary-section">
-                <div className="summary-details">
-                    <div className="summary-row">
-                        <span>Subtotal</span>
-                        <span>₹{formatTwoDecimals(subtotal)}</span>
-                    </div>
-                    {invoice.discount > 0 && (
-                        <div className="summary-row">
-                            <span>Discount</span>
-                            <span>- ₹{formatTwoDecimals(invoice.discount)}</span>
-                        </div>
-                    )}
-                    <div className="summary-row">
-                        <span>CGST ({formatTwoDecimals(cgstRate)}%)</span>
-                        <span>+ ₹{formatTwoDecimals(cgstAmount)}</span>
-                    </div>
-                    <div className="summary-row">
-                        <span>SGST ({formatTwoDecimals(sgstRate)}%)</span>
-                        <span>+ ₹{formatTwoDecimals(sgstAmount)}</span>
-                    </div>
-                     {roundOff !== 0 && (
-                        <div className="summary-row">
-                            <span>Round Off</span>
-                            <span>₹{formatTwoDecimals(roundOff)}</span>
-                        </div>
-                    )}
-                    <div className="summary-row grand-total">
-                        <span>GRAND TOTAL</span>
-                        <span>₹{formatTwoDecimals(finalAmount)}</span>
-                    </div>
-                </div>
-            </section>
-            
-            <section className="words-section">
-                <strong>Amount in Words:</strong>
-                <p>{toWords(finalAmount)}</p>
-            </section>
+            <table className="totals">
+                <tbody>
+                    <tr><td className="right">Subtotal:</td><td className="right">₹ {f2(subtotal)}</td></tr>
+                    <tr><td className="right">CGST ({f2(cgstRate)}%):</td><td className="right">₹ {f2(cgst)}</td></tr>
+                    <tr><td className="right">SGST ({f2(sgstRate)}%):</td><td className="right">₹ {f2(sgst)}</td></tr>
+                    <tr><td className="right">Round Off:</td><td className="right">₹ {f2(roundOff)}</td></tr>
+                    <tr><td className="right grand">Grand Total:</td><td className="right grand">₹ {f2(finalAmount)}</td></tr>
+                </tbody>
+            </table>
 
-            <footer className="invoice-footer">
-                <div className="terms">
-                    <h4>Terms & Conditions</h4>
-                    <p>1. Goods once sold will not be taken back or exchanged.</p>
-                    <p>2. All disputes are subject to Jaipur jurisdiction only.</p>
+            <div style={{ marginTop: 20, padding: '15px 0', borderTop: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db' }}>
+                <div style={{ fontSize: 12 }}>
+                    <strong>Amount in Words:</strong>{' '}
+                    <span style={{ color: '#333' }}>{toWords(finalAmount)} Rupees Only</span>
                 </div>
-                <div className="signature">
-                    <p>For {shopDetails.name}</p>
-                    <div className="signature-box"></div>
-                    <p>Authorised Signatory</p>
+            </div>
+
+            <div className="footer" style={{ marginTop: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div style={{ color: '#666666' }}>Thank you for your business!</div>
+                <div className="signature-section">
+                    <div><strong>FOR {shop.name}</strong></div>
+                    <div style={{ marginTop: 40, borderTop: '1px solid #d1d5db', width: 200, marginLeft: 'auto', paddingTop: 8 }}>
+                        Authorized Signatory
+                    </div>
                 </div>
-            </footer>
-        </div>
+            </div>
+        </>
     );
 }

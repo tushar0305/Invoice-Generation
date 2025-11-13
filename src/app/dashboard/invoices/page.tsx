@@ -110,6 +110,10 @@ export default function InvoicesPage() {
     );
   }, [invoices, searchTerm]);
 
+  const handlePrintNavigate = (invoiceId: string) => {
+    router.push(`/dashboard/invoices/${invoiceId}/view?print=1`);
+  };
+
   return (
     <>
     <div className="space-y-6">
@@ -204,12 +208,10 @@ export default function InvoicesPage() {
                                           Edit
                                       </Link>
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem asChild>
-                                      <Link href={`/dashboard/invoices/${invoice.id}/print`} target="_blank" className="cursor-pointer flex items-center">
-                                          <Printer className="mr-2 h-4 w-4" />
-                                          Print
-                                      </Link>
-                                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer flex items-center" onClick={() => handlePrintNavigate(invoice.id)}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print
+                  </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem 
                                     className="cursor-pointer flex items-center text-red-600 focus:text-red-600 focus:bg-red-50"

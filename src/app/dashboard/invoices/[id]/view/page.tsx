@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useTransition, useState } from 'react';
+import { useTransition, useEffect } from 'react';
 import Link from 'next/link';
-import { notFound, useRouter, useParams } from 'next/navigation';
+import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Loader2, Printer, Edit, ArrowLeft, CheckCircle, Clock } from 'lucide-react';
@@ -62,6 +62,7 @@ export default function ViewInvoicePage() {
     const id = params.id as string;
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     const firestore = getFirestore();
 
@@ -91,28 +92,61 @@ export default function ViewInvoicePage() {
         });
     };
     
-    const isLoading = loadingInvoice || loadingItems;
+        const isLoading = loadingInvoice || loadingItems;
 
-    if (isLoading) {
-        return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    }
+        // Auto-trigger print when arriving with ?print=1 once data is ready.
+        // Keep hook unconditionally positioned before any early return to preserve hook order.
+        useEffect(() => {
+            if (!isLoading && invoice && items && searchParams?.get('print') === '1') {
+                setTimeout(() => {
+                    window.print();
+                    // Clean URL so back/refresh doesn't re-print
+                    router.replace(`/dashboard/invoices/${id}/view`);
+                }, 300);
+            }
+        }, [isLoading, invoice, items, searchParams, router, id]);
+
+        // Tweak document title during print to minimize header content if headers/footers are enabled.
+        // Keep this hook above any early returns to preserve hook order.
+        useEffect(() => {
+            if (!invoice) return;
+            const originalTitle = document.title;
+            const before = () => {
+                document.title = `Invoice ${invoice.invoiceNumber}`;
+            };
+            const after = () => {
+                document.title = originalTitle;
+            };
+            window.addEventListener('beforeprint', before);
+            window.addEventListener('afterprint', after);
+            return () => {
+                window.removeEventListener('beforeprint', before);
+                window.removeEventListener('afterprint', after);
+                document.title = originalTitle;
+            };
+        }, [invoice]);
+
+        if (isLoading) {
+                return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+        }
 
     if (!invoice) {
         notFound();
     }
     
-    const { subtotal, taxAmount, grandTotal } = (() => {
+        const { subtotal, taxAmount, grandTotal } = (() => {
         const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + item.making, 0);
         const totalBeforeTax = subtotal - invoice.discount;
         const taxAmount = totalBeforeTax * (invoice.tax / 100);
         const grandTotal = invoice.grandTotal;
-        return { subtotal, totalBeforeTax, taxAmount, grandTotal };
+        return { subtotal, taxAmount, grandTotal };
     })();
 
+            
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/invoices')}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Invoices
@@ -134,14 +168,15 @@ export default function ViewInvoicePage() {
                             <Edit className="mr-2 h-4 w-4" /> Edit
                         </Link>
                     </Button>
-                    <Button variant="outline" asChild>
-                         <Link href={`/dashboard/invoices/${id}/print`} target="_blank">
+                    <Button asChild variant="outline">
+                        <Link href={`/dashboard/invoices/${invoice.id}/print`}>
                             <Printer className="mr-2 h-4 w-4" /> Print
                         </Link>
                     </Button>
                 </div>
             </div>
             
+            <div id="print-area">
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -227,6 +262,35 @@ export default function ViewInvoicePage() {
                     </div>
                 </CardFooter>
             </Card>
-        </div>
-    );
+            </div>
+                {/* Print styles to optimize the view for PDF/print without navigating */}
+                <style jsx global>{`
+                    @media print {
+                      html, body {
+                        background: #fff !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                      }
+                      /* Hide everything except the print area */
+                      body * { visibility: hidden !important; }
+                      #print-area, #print-area * { visibility: visible !important; }
+                      #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+
+                      /* Hide app chrome and overlays */
+                      .no-print { display: none !important; }
+                      [data-radix-portal], .radix-portal { display: none !important; }
+                      header, nav, footer { display: none !important; }
+
+                      /* Tidy visuals for print */
+                      .shadow, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl { box-shadow: none !important; }
+                      .ring-1, .ring, .border { border-color: #ddd !important; }
+                      table, tr, td, th { page-break-inside: avoid; }
+                      a[href]::after { content: none !important; }
+
+                      /* Page size and margins */
+                      @page { size: A4; margin: 12mm; }
+                    }
+                `}</style>
+                </div>
+        );
 }
