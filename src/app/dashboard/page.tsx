@@ -128,15 +128,16 @@ export default function DashboardPage() {
             </Card>
         </div>
       
-    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-5 gap-6">
+    <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
       <Card className="xl:col-span-3">
         <CardHeader>
             <CardTitle>Sales Trend (Last 30 Days)</CardTitle>
         </CardHeader>
-        <CardContent className="h-[300px] w-full">
+        <CardContent className="p-2 sm:p-6">
+          <div className="h-[250px] sm:h-[300px] w-full">
            {isLoading ? <Skeleton className="w-full h-full" /> : (
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                     <defs>
                         <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
@@ -146,29 +147,35 @@ export default function DashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis 
                         dataKey="date" 
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                         tickLine={false}
                         axisLine={false}
+                        interval="preserveStartEnd"
+                        minTickGap={20}
                     />
                     <YAxis 
                         tickFormatter={(value) => formatCurrency(value as number, true)}
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                         tickLine={false}
                         axisLine={false}
-                        width={80}
+                        width={60}
                     />
                     <Tooltip
                         contentStyle={{ 
                             backgroundColor: 'hsl(var(--background))', 
-                            borderColor: 'hsl(var(--border))'
+                            borderColor: 'hsl(var(--border))',
+                            borderRadius: '6px',
+                            padding: '8px 12px'
                         }}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        labelStyle={{ color: 'hsl(var(--foreground))', fontSize: 12 }}
+                        itemStyle={{ fontSize: 12 }}
                         formatter={(value) => [formatCurrency(value as number), 'Sales']}
                     />
-                    <Area type="monotone" dataKey="sales" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorSales)" />
+                    <Area type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
                 </AreaChart>
             </ResponsiveContainer>
            )}
+          </div>
         </CardContent>
       </Card>
       <div className="space-y-6 xl:col-span-2">
@@ -190,9 +197,9 @@ export default function DashboardPage() {
             ) : topCustomers.length > 0 ? (
                 <ul className="space-y-4">
                 {topCustomers.map(([name, stats]) => (
-                    <li key={name} className="flex justify-between items-center">
-                        <span className="font-medium">{name}</span>
-                        <span className="text-muted-foreground">{formatCurrency(stats.totalPurchase)}</span>
+                    <li key={name} className="flex justify-between items-center gap-4">
+                        <span className="font-medium truncate flex-1">{name}</span>
+                        <span className="text-muted-foreground text-sm sm:text-base whitespace-nowrap">{formatCurrency(stats.totalPurchase)}</span>
                     </li>
                 ))}
                 </ul>

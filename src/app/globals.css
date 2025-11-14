@@ -82,3 +82,49 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile WebView Fixes - Prevent Horizontal Scroll */
+html {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  position: relative;
+}
+
+/* Ensure all elements fit within viewport */
+* {
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+/* Fix tables on mobile */
+@media screen and (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Ensure forms don't overflow */
+  form {
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Fix sidebar on mobile WebView */
+  [data-sidebar] {
+    max-width: 100vw !important;
+  }
+  
+  /* Touch target improvements */
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+}
