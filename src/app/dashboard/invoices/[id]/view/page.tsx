@@ -134,12 +134,16 @@ export default function ViewInvoicePage() {
         notFound();
     }
     
-        const { subtotal, taxAmount, grandTotal } = (() => {
+        const { subtotal, sgstAmount, cgstAmount, taxAmount, grandTotal } = (() => {
         const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + item.making, 0);
         const totalBeforeTax = subtotal - invoice.discount;
-        const taxAmount = totalBeforeTax * (invoice.tax / 100);
+        const sgstRate = invoice.sgst ?? ((invoice.tax || 0) / 2);
+        const cgstRate = invoice.cgst ?? ((invoice.tax || 0) / 2);
+        const sgstAmount = totalBeforeTax * (sgstRate / 100);
+        const cgstAmount = totalBeforeTax * (cgstRate / 100);
+        const taxAmount = sgstAmount + cgstAmount;
         const grandTotal = invoice.grandTotal;
-        return { subtotal, taxAmount, grandTotal };
+        return { subtotal, sgstAmount, cgstAmount, taxAmount, grandTotal };
     })();
 
             
@@ -244,8 +248,12 @@ export default function ViewInvoicePage() {
                                 <span>{formatCurrency(subtotal - invoice.discount)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="font-semibold text-muted-foreground">GST ({invoice.tax}%):</span>
-                                <span>+ {formatCurrency(taxAmount)}</span>
+                                <span className="font-semibold text-muted-foreground">SGST ({invoice.sgst ?? ((invoice.tax || 0) / 2)}%):</span>
+                                <span>+ {formatCurrency(sgstAmount)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="font-semibold text-muted-foreground">CGST ({invoice.cgst ?? ((invoice.tax || 0) / 2)}%):</span>
+                                <span>+ {formatCurrency(cgstAmount)}</span>
                             </div>
                             <Separator />
                             <div className="flex justify-between text-xl font-bold text-primary">

@@ -17,7 +17,9 @@ export type Invoice = {
   customerPhone: string;
   invoiceDate: string; // YYYY-MM-DD
   discount: number; // as a currency value
-  tax: number; // as a percentage, used to derive CGST/SGST
+  sgst: number; // as a percentage
+  cgst: number; // as a percentage
+  tax?: number; // DEPRECATED: kept for backward compatibility, use sgst and cgst instead
   status: 'paid' | 'due';
   grandTotal: number; // Denormalized for performance
   createdAt?: any;

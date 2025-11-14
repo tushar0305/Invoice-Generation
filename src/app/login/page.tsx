@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,6 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSigningUp, setIsSigningUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const auth = useAuth();
   const { toast } = useToast();
@@ -60,14 +58,10 @@ export default function LoginPage() {
       case 'auth/user-disabled':
         return 'This user account has been disabled.';
       case 'auth/user-not-found':
-        return 'No user found with this email. Please sign up.';
+        return 'No user found with this email. Please contact admin.';
       case 'auth/wrong-password':
       case 'auth/invalid-credential':
         return 'Invalid credentials. Please check your email and password.';
-      case 'auth/email-already-in-use':
-        return 'This email is already in use. Please sign in.';
-      case 'auth/weak-password':
-        return 'The password is too weak. Please use a stronger password.';
       default:
         return 'An unexpected error occurred. Please try again.';
     }
@@ -76,23 +70,11 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      if (isSigningUp) {
-        await createUserWithEmailAndPassword(
-          auth,
-          values.email,
-          values.password
-        );
-        toast({
-          title: 'Account Created',
-          description: "You've been successfully signed up.",
-        });
-      } else {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
-        toast({
-          title: 'Signed In',
-          description: "You're now logged in.",
-        });
-      }
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      toast({
+        title: 'Signed In',
+        description: "You're now logged in.",
+      });
       // Redirection is now handled by the AuthWrapper component.
     } catch (error: any) {
       console.error(error);
@@ -114,12 +96,10 @@ export default function LoginPage() {
             <Logo />
           </div>
           <CardTitle className="text-2xl">
-            {isSigningUp ? 'Create an Account' : 'Welcome Back'}
+            Welcome Back
           </CardTitle>
           <CardDescription>
-            {isSigningUp
-              ? 'Enter your email and password to create an account.'
-              : 'Enter your credentials to access your dashboard.'}
+            Enter your credentials to access your dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -178,35 +158,10 @@ export default function LoginPage() {
                 {isSubmitting && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                {isSigningUp ? 'Sign Up' : 'Sign In'}
+                Sign In
               </Button>
             </form>
           </Form>
-          <div className="mt-4 text-center text-sm">
-            {isSigningUp ? (
-              <>
-                Already have an account?{' '}
-                <Button
-                  variant="link"
-                  className="p-0"
-                  onClick={() => setIsSigningUp(false)}
-                >
-                  Sign In
-                </Button>
-              </>
-            ) : (
-              <>
-                Don't have an account?{' '}
-                <Button
-                  variant="link"
-                  className="p-0"
-                  onClick={() => setIsSigningUp(true)}
-                >
-                  Sign Up
-                </Button>
-              </>
-            )}
-          </div>
         </CardContent>
       </Card>
     </div>

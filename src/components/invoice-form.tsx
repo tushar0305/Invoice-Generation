@@ -35,14 +35,15 @@ const formSchema = z.object({
   items: z.array(z.object({
       id: z.string(),
       description: z.string().min(1, 'Description is required'),
-      purity: z.string().min(1, "Purity is required."),
+      purity: z.enum(["10", "12", "14", "18", "20", "22", "24"], { required_error: 'Purity is required.' }),
       grossWeight: z.coerce.number().positive('Gross Wt. must be positive'),
       netWeight: z.coerce.number().positive('Net Wt. must be positive'),
       rate: z.coerce.number().min(0, 'Rate is required'),
       making: z.coerce.number().min(0, 'Making charges are required'),
     })).min(1, 'At least one item is required'),
   discount: z.coerce.number().min(0, 'Discount cannot be negative'),
-  tax: z.coerce.number().min(0).max(100, 'Tax should be a percentage'),
+  sgst: z.coerce.number().min(0).max(100, 'SGST should be a percentage'),
+  cgst: z.coerce.number().min(0).max(100, 'CGST should be a percentage'),
   status: z.enum(['paid', 'due']),
 });
 
@@ -71,14 +72,15 @@ async function getNextInvoiceNumber(firestore: any, userId: string): Promise<str
     return `INV-2024-${String(nextNumber).padStart(3, '0')}`;
 }
 
-const calculateTotals = (items: InvoiceFormValues['items'], discount: number, tax: number) => {
+const calculateTotals = (items: InvoiceFormValues['items'], discount: number, sgst: number, cgst: number) => {
     const subtotal = items.reduce((acc, item) => {
       const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + (Number(item.making) || 0);
       return acc + itemTotal;
     }, 0);
     const totalBeforeTax = subtotal - (discount || 0);
-    const taxAmount = totalBeforeTax * ((tax || 0) / 100);
-    const grandTotal = totalBeforeTax + taxAmount;
+    const sgstAmount = totalBeforeTax * ((sgst || 0) / 100);
+    const cgstAmount = totalBeforeTax * ((cgst || 0) / 100);
+    const grandTotal = totalBeforeTax + sgstAmount + cgstAmount;
     return { subtotal, grandTotal };
 };
 
@@ -103,16 +105,19 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     ? {
         ...invoice,
         invoiceDate: new Date(invoice.invoiceDate),
-        items: invoice.items.map(item => ({...item}))
+        items: invoice.items.map(item => ({...item, purity: item.purity as InvoiceFormValues['items'][number]['purity']})),
+        sgst: (invoice as any).sgst ?? 1.5,
+        cgst: (invoice as any).cgst ?? 1.5,
       }
     : {
         customerName: '',
         customerAddress: '',
         customerPhone: '',
         invoiceDate: new Date(),
-        items: [{ id: uuidv4(), description: '', purity: '22K', grossWeight: 0, netWeight: 0, rate: 0, making: 0 }],
+        items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 }],
         discount: 0,
-        tax: 3,
+        sgst: 1.5,
+        cgst: 1.5,
         status: 'due',
       };
 
@@ -124,7 +129,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
    useEffect(() => {
     if (settings && !invoice) { // Only set defaults for new invoices
-      form.setValue('tax', settings.cgstRate + settings.sgstRate);
+      form.setValue('sgst', settings.sgstRate ?? 1.5);
+      form.setValue('cgst', settings.cgstRate ?? 1.5);
     }
   }, [settings, invoice, form]);
 
@@ -135,9 +141,10 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
   const watchedItems = form.watch('items');
   const watchedDiscount = form.watch('discount');
-  const watchedTax = form.watch('tax');
+  const watchedSgst = form.watch('sgst');
+  const watchedCgst = form.watch('cgst');
 
-  const { subtotal, grandTotal } = calculateTotals(watchedItems, watchedDiscount, watchedTax);
+  const { subtotal, grandTotal } = calculateTotals(watchedItems, watchedDiscount, watchedSgst, watchedCgst);
 
   async function onSubmit(data: InvoiceFormValues) {
     if (!user) {
@@ -153,7 +160,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         
         const { items, ...invoiceMainData } = data;
 
-        const { grandTotal: finalGrandTotal } = calculateTotals(items, data.discount, data.tax);
+        const { grandTotal: finalGrandTotal } = calculateTotals(items, data.discount, data.sgst, data.cgst);
         
         const invoicePayload = {
             ...invoiceMainData,
@@ -308,7 +315,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-1/3">Description</TableHead>
+                                    <TableHead className="min-w-[250px]">Description</TableHead>
                                     <TableHead>Purity</TableHead>
                                     <TableHead>Gross Wt</TableHead>
                                     <TableHead>Net Wt</TableHead>
@@ -328,7 +335,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                                 <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (
                                                 <FormItem>
                                                     <div className="flex items-center gap-1">
-                                                    <Textarea placeholder="Item description" {...field} className="min-h-0 h-10"/>
+                                                    <Textarea placeholder="Item description" {...field} className="min-h-0 h-10 min-w-[200px] md:min-w-[250px]"/>
                                                     <Dialog onOpenChange={(open) => !open && setAiTargetIndex(null)}>
                                                         <DialogTrigger asChild>
                                                         <Button type="button" variant="ghost" size="icon" className="shrink-0 text-accent" onClick={() => setAiTargetIndex(index)}>
@@ -360,27 +367,45 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                             </TableCell>
                                              <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.purity`} render={({ field }) => (
-                                                <FormItem><FormControl><Input placeholder="22K" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem>
+                                                  <FormControl>
+                                                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                                                      <SelectTrigger className="min-w-[70px] md:min-w-[90px]">
+                                                        <SelectValue placeholder="Purity" />
+                                                      </SelectTrigger>
+                                                      <SelectContent>
+                                                        <SelectItem value="10">10</SelectItem>
+                                                        <SelectItem value="12">12</SelectItem>
+                                                        <SelectItem value="14">14</SelectItem>
+                                                        <SelectItem value="18">18</SelectItem>
+                                                        <SelectItem value="20">20</SelectItem>
+                                                        <SelectItem value="22">22</SelectItem>
+                                                        <SelectItem value="24">24</SelectItem>
+                                                      </SelectContent>
+                                                    </Select>
+                                                  </FormControl>
+                                                  <FormMessage />
+                                                </FormItem>
                                                 )} />
                                             </TableCell>
                                             <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.grossWeight`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="g" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input type="number" placeholder="g" {...field} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                             </TableCell>
                                             <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.netWeight`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="g" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input type="number" placeholder="g" {...field} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                             </TableCell>
                                             <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                             </TableCell>
                                             <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.making`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="Charges" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input type="number" placeholder="Charges" {...field} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                             </TableCell>
                                             <TableCell className="text-right font-medium">{formatCurrency(itemTotal)}</TableCell>
@@ -440,7 +465,26 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                     )} />
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <FormField control={form.control} name={`items.${index}.purity`} render={({ field }) => (
-                                            <FormItem><FormLabel>Purity</FormLabel><FormControl><Input placeholder="22K" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem>
+                                              <FormLabel>Purity</FormLabel>
+                                              <FormControl>
+                                                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                                                  <SelectTrigger>
+                                                    <SelectValue placeholder="Purity" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="10">10</SelectItem>
+                                                    <SelectItem value="12">12</SelectItem>
+                                                    <SelectItem value="14">14</SelectItem>
+                                                    <SelectItem value="18">18</SelectItem>
+                                                    <SelectItem value="20">20</SelectItem>
+                                                    <SelectItem value="22">22</SelectItem>
+                                                    <SelectItem value="24">24</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
                                         )} />
                                         <FormField control={form.control} name={`items.${index}.grossWeight`} render={({ field }) => (
                                             <FormItem><FormLabel>Gross Wt</FormLabel><FormControl><Input type="number" placeholder="g" {...field} /></FormControl><FormMessage /></FormItem>
@@ -467,7 +511,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                     </div>
 
 
-                    <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ id: uuidv4(), description: '', purity: '22K', grossWeight: 0, netWeight: 0, rate: 0, making: 0 })}>
+                    <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 })}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                     </Button>
                 </CardContent>
@@ -539,15 +583,26 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                            <FormMessage />
                       </FormItem>
                   )} />
-                  <FormField control={form.control} name="tax" render={({ field }) => (
-                      <FormItem>
-                          <div className="flex items-center justify-between">
-                            <FormLabel>Total GST (%) </FormLabel>
-                            <FormControl><Input type="number" className="w-32 text-right" {...field} /></FormControl>
-                          </div>
-                          <FormMessage />
-                      </FormItem>
-                  )} />
+                  <div className="flex gap-4">
+                    <FormField control={form.control} name="sgst" render={({ field }) => (
+                        <FormItem className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <FormLabel>SGST (%)</FormLabel>
+                              <FormControl><Input type="number" className="w-20 text-right" {...field} /></FormControl>
+                            </div>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="cgst" render={({ field }) => (
+                        <FormItem className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <FormLabel>CGST (%)</FormLabel>
+                              <FormControl><Input type="number" className="w-20 text-right" {...field} /></FormControl>
+                            </div>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                  </div>
               </CardContent>
               <CardFooter className="flex justify-between font-bold text-lg bg-muted/50 py-4">
                 <span>Grand Total</span>

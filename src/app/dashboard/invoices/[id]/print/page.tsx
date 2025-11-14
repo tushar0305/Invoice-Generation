@@ -73,8 +73,9 @@ export default function PrintInvoicePage() {
 
     const subtotal = items.reduce((acc, item) => acc + (item.netWeight * item.rate) + item.making, 0);
     const totalBeforeTax = subtotal - invoice.discount;
-    const cgstRate = (invoice.tax || 0) / 2;
-    const sgstRate = (invoice.tax || 0) / 2;
+    // Use new sgst/cgst fields, fallback to tax/2 for backward compatibility
+    const cgstRate = invoice.cgst ?? ((invoice.tax || 0) / 2);
+    const sgstRate = invoice.sgst ?? ((invoice.tax || 0) / 2);
     const cgst = totalBeforeTax * (cgstRate / 100);
     const sgst = totalBeforeTax * (sgstRate / 100);
     const totalAmount = totalBeforeTax + cgst + sgst;
