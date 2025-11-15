@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard, Plus, ArrowUpRight, ArrowDownRight, MessageCircle } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard, Plus, MessageCircle } from 'lucide-react';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -57,70 +57,47 @@ export default function DashboardPage() {
   }, [invoices]);
 
   const {
-    totalSales7d,
-    sales7dChangePct,
+    totalPaidAllTime,
     totalCustomers,
-    paidInvoices7d,
-    paid7dChangePct,
+    paidInvoicesAllTime,
     outstandingDueAmount,
     outstandingDueCount,
+    sales7dChangePct,
+    paid7dChangePct,
   } = useMemo(() => {
     if (isLoading || !invoices) {
       return {
-        totalSales7d: 0,
-        sales7dChangePct: null as number | null,
+        totalPaidAllTime: 0,
         totalCustomers: 0,
-        paidInvoices7d: 0,
-        paid7dChangePct: null as number | null,
+        paidInvoicesAllTime: 0,
         outstandingDueAmount: 0,
         outstandingDueCount: 0,
+        sales7dChangePct: null as number | null,
+        paid7dChangePct: null as number | null,
       };
     }
-
-    const today = startOfDay(new Date());
-    const start7 = subDays(today, 6); // inclusive window: today and previous 6 days
-    const prevStart7 = subDays(start7, 7);
-    const prevEnd7 = subDays(start7, 1);
-
-    const inWindow = (d: Date, start: Date, end: Date) =>
-      isWithinInterval(d, { start, end });
-
     const paid = invoices.filter((inv) => inv.status === 'paid');
     const due = invoices.filter((inv) => inv.status === 'due');
-
-    const paid7 = paid.filter((inv) =>
-      inWindow(new Date(inv.invoiceDate), start7, today)
-    );
-    const paidPrev7 = paid.filter((inv) =>
-      inWindow(new Date(inv.invoiceDate), prevStart7, prevEnd7)
-    );
-
-    const totalSales7d = paid7.reduce((sum, inv) => sum + inv.grandTotal, 0);
-    const prevSales7d = paidPrev7.reduce((sum, inv) => sum + inv.grandTotal, 0);
-
-    const sales7dChangePct = prevSales7d === 0
-      ? (totalSales7d > 0 ? 100 : null)
-      : ((totalSales7d - prevSales7d) / prevSales7d) * 100;
-
-    const paidInvoices7d = paid7.length;
-    const paidPrev7Count = paidPrev7.length;
-    const paid7dChangePct = paidPrev7Count === 0
-      ? (paidInvoices7d > 0 ? 100 : null)
-      : ((paidInvoices7d - paidPrev7Count) / paidPrev7Count) * 100;
-
+    const totalPaidAllTime = paid.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const paidInvoicesAllTime = paid.length;
     const totalCustomers = new Set(invoices.map((inv) => inv.customerName)).size;
     const outstandingDueAmount = due.reduce((sum, inv) => sum + inv.grandTotal, 0);
     const outstandingDueCount = due.length;
-
-    return {
-      totalSales7d,
-      sales7dChangePct,
-      totalCustomers,
-      paidInvoices7d,
-      paid7dChangePct,
-      outstandingDueAmount,
-      outstandingDueCount,
-    };
+    // 7-day trend calculations
+    const today = startOfDay(new Date());
+    const start7 = subDays(today, 6);
+    const prevStart7 = subDays(start7, 7);
+    const prevEnd7 = subDays(start7, 1);
+    const inWindow = (d: Date, start: Date, end: Date) => isWithinInterval(d, { start, end });
+    const paid7 = paid.filter((inv) => inWindow(new Date(inv.invoiceDate), start7, today));
+    const paidPrev7 = paid.filter((inv) => inWindow(new Date(inv.invoiceDate), prevStart7, prevEnd7));
+    const sales7 = paid7.reduce((s, inv) => s + inv.grandTotal, 0);
+    const salesPrev7 = paidPrev7.reduce((s, inv) => s + inv.grandTotal, 0);
+    const sales7dChangePct = salesPrev7 === 0 ? (sales7 > 0 ? 100 : null) : ((sales7 - salesPrev7) / salesPrev7) * 100;
+    const paid7Count = paid7.length;
+    const paidPrev7Count = paidPrev7.length;
+    const paid7dChangePct = paidPrev7Count === 0 ? (paid7Count > 0 ? 100 : null) : ((paid7Count - paidPrev7Count) / paidPrev7Count) * 100;
+    return { totalPaidAllTime, totalCustomers, paidInvoicesAllTime, outstandingDueAmount, outstandingDueCount, sales7dChangePct, paid7dChangePct };
   }, [invoices, isLoading]);
 
   const customerData = useMemo(() => {
@@ -130,9 +107,8 @@ export default function DashboardPage() {
         if (!data[invoice.customerName]) {
             data[invoice.customerName] = { totalPurchase: 0, invoiceCount: 0 };
         }
-        if(invoice.status === 'paid') {
-            data[invoice.customerName].totalPurchase += invoice.grandTotal;
-        }
+        // Sum across all invoices (paid + due) to show complete customer spend
+        data[invoice.customerName].totalPurchase += invoice.grandTotal;
         data[invoice.customerName].invoiceCount++;
     });
     return data;
@@ -177,31 +153,24 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Revenue (7d)</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
                       <Skeleton className="h-8 w-3/4" />
                     ) : (
-                      <div className="flex items-baseline gap-2">
-                        <div className="text-2xl font-bold">{formatCurrency(totalSales7d)}</div>
-                        {sales7dChangePct === null ? (
-                          <span className="text-xs text-muted-foreground">vs prev 7d —</span>
-                        ) : sales7dChangePct >= 0 ? (
-                          <span className="text-xs text-green-600 flex items-center gap-1">
-                            <ArrowUpRight className="h-3 w-3" />
-                            {sales7dChangePct.toFixed(0)}%
+                      <>
+                        <div className="text-2xl font-bold">{formatCurrency(totalPaidAllTime)}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Paid sales, all-time
+                          <span className="mx-2">•</span>
+                          <span>
+                            7d: {sales7dChangePct === null ? '—' : `${sales7dChangePct >= 0 ? '+' : ''}${sales7dChangePct.toFixed(0)}%`}
                           </span>
-                        ) : (
-                          <span className="text-xs text-red-600 flex items-center gap-1">
-                            <ArrowDownRight className="h-3 w-3" />
-                            {Math.abs(sales7dChangePct).toFixed(0)}%
-                          </span>
-                        )}
-                      </div>
+                        </div>
+                      </>
                     )}
-                    <p className="text-xs text-muted-foreground">Paid sales, last 7 days</p>
                 </CardContent>
             </Card>
              <Card>
@@ -214,33 +183,26 @@ export default function DashboardPage() {
                     <p className="text-xs text-muted-foreground">Total unique customers</p>
                 </CardContent>
             </Card>
-             <Card>
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Paid Invoices (7d)</CardTitle>
+                    <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
                     <CreditCard className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
                       <Skeleton className="h-8 w-1/4" />
                     ) : (
-                      <div className="flex items-baseline gap-2">
-                        <div className="text-2xl font-bold">{paidInvoices7d}</div>
-                        {paid7dChangePct === null ? (
-                          <span className="text-xs text-muted-foreground">vs prev 7d —</span>
-                        ) : paid7dChangePct >= 0 ? (
-                          <span className="text-xs text-green-600 flex items-center gap-1">
-                            <ArrowUpRight className="h-3 w-3" />
-                            {paid7dChangePct.toFixed(0)}%
+                      <>
+                        <div className="text-2xl font-bold">{paidInvoicesAllTime}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          All-time count
+                          <span className="mx-2">•</span>
+                          <span>
+                            7d: {paid7dChangePct === null ? '—' : `${paid7dChangePct >= 0 ? '+' : ''}${paid7dChangePct.toFixed(0)}%`}
                           </span>
-                        ) : (
-                          <span className="text-xs text-red-600 flex items-center gap-1">
-                            <ArrowDownRight className="h-3 w-3" />
-                            {Math.abs(paid7dChangePct).toFixed(0)}%
-                          </span>
-                        )}
-                      </div>
+                        </div>
+                      </>
                     )}
-                     <p className="text-xs text-muted-foreground">Out of {invoices?.length || 0} total invoices</p>
                 </CardContent>
             </Card>
             <Card>

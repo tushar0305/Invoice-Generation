@@ -46,9 +46,8 @@ export default function CustomersPage() {
             data[invoice.customerName] = { totalPurchase: 0, invoiceCount: 0, lastPurchase: invoice.invoiceDate };
         }
 
-        if (invoice.status === 'paid') {
-            data[invoice.customerName].totalPurchase += invoice.grandTotal;
-        }
+        // Sum across all invoices (paid + due) to reflect complete spend
+        data[invoice.customerName].totalPurchase += invoice.grandTotal;
 
         data[invoice.customerName].invoiceCount++;
         if (new Date(invoice.invoiceDate) > new Date(data[invoice.customerName].lastPurchase)) {

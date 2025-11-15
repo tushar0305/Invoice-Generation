@@ -16,6 +16,7 @@ import { useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserSettings } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getAuth, signOut } from 'firebase/auth';
 
 const settingsFormSchema = z.object({
   cgstRate: z.coerce.number().min(0, 'CGST rate must be positive'),
@@ -25,7 +26,7 @@ const settingsFormSchema = z.object({
   panNumber: z.string().trim().optional(),
   address: z.string().trim().optional(),
   phoneNumber: z.string().trim().optional(),
-  email: z.string().email().optional(),
+  // email is not part of the form schema anymore
 });
 
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
@@ -47,14 +48,13 @@ export default function SettingsPage() {
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsFormSchema),
     defaultValues: {
-      cgstRate: 1.5,
-      sgstRate: 1.5,
-      shopName: 'Jewellers Store',
-      gstNumber: '',
-      panNumber: '',
-      address: '',
-      phoneNumber: '',
-      email: '',
+  cgstRate: 1.5,
+  sgstRate: 1.5,
+  shopName: 'Jewellers Store',
+  gstNumber: '',
+  panNumber: '',
+  address: '',
+  phoneNumber: '',
     },
   });
 
@@ -68,7 +68,6 @@ export default function SettingsPage() {
         panNumber: settings.panNumber || '',
         address: settings.address || '',
         phoneNumber: settings.phoneNumber || '',
-        email: settings.email || user?.email || '',
       });
     }
   }, [settings, form]);
@@ -82,9 +81,8 @@ export default function SettingsPage() {
     startTransition(async () => {
       try {
     const userSettingsRef = doc(firestore, 'userSettings', user.uid);
-        
-        const settingsPayload = {
-            ...data,
+    const settingsPayload = {
+      ...data,
       id: user.uid,
       userId: user.uid,
       updatedAt: serverTimestamp(),
@@ -93,28 +91,22 @@ export default function SettingsPage() {
       panNumber: data.panNumber || '',
       address: data.address || '',
       phoneNumber: data.phoneNumber || '',
-      email: user.email || data.email || '',
-        };
-
-        if(!settings) {
-            (settingsPayload as any).createdAt = serverTimestamp();
-        }
-
-        await setDoc(userSettingsRef, settingsPayload, { merge: true });
-        
-        toast({
-          title: 'Settings saved successfully!',
-        });
-        
-      } catch (error) {
-        console.error("Failed to save settings:", error);
-        toast({
-          variant: 'destructive',
-          title: 'An error occurred',
-          description: 'Failed to save settings. Please try again.',
-        });
-      }
+      email: user.email || '', // always use the current user's email
+    };
+    if (!settings) {
+      (settingsPayload as any).createdAt = serverTimestamp();
+    }
+    await setDoc(userSettingsRef, settingsPayload, { merge: true });
+    toast({ title: 'Settings saved successfully!' });
+  } catch (error) {
+    console.error("Failed to save settings:", error);
+    toast({
+      variant: 'destructive',
+      title: 'An error occurred',
+      description: 'Failed to save settings. Please try again.',
     });
+  }
+  });
   }
   
   const isLoading = isUserLoading || settingsLoading;
@@ -164,13 +156,15 @@ export default function SettingsPage() {
                             <FormMessage />
                           </FormItem>
                         )} />
-                        <FormField control={form.control} name="email" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl><Input placeholder="you@example.com" value={field.value} disabled readOnly /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
+                        <div>
+                          <FormLabel>Email</FormLabel>
+                          <Input
+                            placeholder="you@example.com"
+                            value={user?.email || ''}
+                            disabled
+                            readOnly
+                          />
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <FormField control={form.control} name="gstNumber" render={({ field }) => (
@@ -206,10 +200,29 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     
-                    <Button type="submit" disabled={isPending}>
-                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Save Settings
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                      <Button type="submit" disabled={isPending} className="flex-1">
+                          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Save Settings
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="sm:w-40"
+                        onClick={async () => {
+                          try {
+                            const auth = getAuth();
+                            await signOut(auth);
+                            toast({ title: 'Signed Out', description: 'You have been signed out.' });
+                          } catch (e) {
+                            console.error(e);
+                            toast({ variant: 'destructive', title: 'Sign out failed', description: 'Please try again.' });
+                          }
+                        }}
+                      >
+                        Sign Out
+                      </Button>
+                    </div>
                 </form>
                 </Form>
             )}

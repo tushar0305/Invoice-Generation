@@ -9,25 +9,7 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
         @page { size: A4; margin: 15mm; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; color: #111111; line-height: 1.5; }
         
-        .watermark { 
-          position: fixed; 
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0.08; 
-          z-index: 0; 
-          pointer-events: none;
-          overflow: hidden;
-        }
-        .watermark img { 
-          width: auto; 
-          height: 750px; 
-          filter: grayscale(100%) contrast(80%);
-        }
+        /* Watermark removed per user request (brown box) */
         .header { 
           display: flex; 
           justify-content: space-between; 

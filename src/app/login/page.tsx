@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const auth = useAuth();
   const { toast } = useToast();
 
@@ -70,17 +72,18 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      toast({
-        title: 'Signed In',
-        description: "You're now logged in.",
-      });
-      // Redirection is now handled by the AuthWrapper component.
+      if (mode === 'signin') {
+        await signInWithEmailAndPassword(auth, values.email, values.password);
+        toast({ title: 'Signed In', description: "You're now logged in." });
+      } else {
+        await createUserWithEmailAndPassword(auth, values.email, values.password);
+        toast({ title: 'Account Created', description: 'Your account is ready. You are now signed in.' });
+      }
     } catch (error: any) {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: 'Authentication Error',
+        title: mode === 'signin' ? 'Authentication Error' : 'Signup Error',
         description: getFirebaseAuthErrorMessage(error.code),
       });
     } finally {
@@ -96,10 +99,10 @@ export default function LoginPage() {
             <Logo generic />
           </div>
           <CardTitle className="text-2xl">
-            Welcome Back
+            {mode === 'signin' ? 'Welcome Back' : 'Create Account'}
           </CardTitle>
           <CardDescription>
-            Enter your credentials to access your dashboard.
+            {mode === 'signin' ? 'Enter your credentials to access your dashboard.' : 'Sign up with email and password to start.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -158,8 +161,33 @@ export default function LoginPage() {
                 {isSubmitting && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Sign In
+                {mode === 'signin' ? 'Sign In' : 'Sign Up'}
               </Button>
+              <div className="text-center text-sm text-muted-foreground">
+                {mode === 'signin' ? (
+                  <>
+                    New here?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setMode('signup')}
+                      className="text-primary hover:underline"
+                    >
+                      Create an account
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setMode('signin')}
+                      className="text-primary hover:underline"
+                    >
+                      Sign in
+                    </button>
+                  </>
+                )}
+              </div>
             </form>
           </Form>
         </CardContent>

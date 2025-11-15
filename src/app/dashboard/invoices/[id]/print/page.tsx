@@ -103,7 +103,7 @@ export default function PrintInvoicePage() {
 
     return (
         <>
-            <div className="watermark"><img src={shopProfile.logoUrl} alt="Watermark" /></div>
+            {/* Watermark removed per user request */}
             <div className="header">
                 <div className="logo-section">
                     <div className="shop-info">
