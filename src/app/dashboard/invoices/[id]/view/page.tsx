@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, getFirestore, updateDoc, collection } from 'firebase/firestore';
+import type { UserSettings } from '@/lib/definitions';
 
 
 // A simple number to words converter for INR
@@ -68,6 +69,11 @@ export default function ViewInvoicePage() {
 
     const invoiceRef = useMemoFirebase(() => doc(firestore, 'invoices', id), [firestore, id]);
     const { data: invoice, isLoading: loadingInvoice } = useDoc<Invoice>(invoiceRef);
+    const settingsRef = useMemoFirebase(() => {
+        if (!invoice) return null;
+        return doc(firestore, 'userSettings', invoice.userId);
+    }, [firestore, invoice]);
+    const { data: settings } = useDoc<UserSettings>(settingsRef);
 
     const itemsRef = useMemoFirebase(() => collection(firestore, `invoices/${id}/invoiceItems`), [firestore, id]);
     const { data: items, isLoading: loadingItems } = useCollection<InvoiceItem>(itemsRef);
@@ -184,10 +190,16 @@ export default function ViewInvoicePage() {
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                        <div>
-                            <CardTitle className="text-3xl font-bold text-primary font-headline">Saambh Jewellers</CardTitle>
-                            <p className="text-sm text-muted-foreground">123 Royal Plaza, Jaipur, Rajasthan 302001</p>
-                        </div>
+                                                                        <div>
+                                                                                <CardTitle className="text-3xl font-bold text-primary font-headline">{settings?.shopName || 'Jewellers Store'}</CardTitle>
+                                                                                <p className="text-sm text-muted-foreground">{settings?.address || 'Address Not Set'}</p>
+                                                                                <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                                                                                    <span><strong>GST:</strong> {settings?.gstNumber || 'GST Not Set'}</span>
+                                                                                    <span><strong>PAN:</strong> {settings?.panNumber || 'PAN Not Set'}</span>
+                                                                                    {settings?.phoneNumber && <span><strong>Phone:</strong> {settings.phoneNumber}</span>}
+                                                                                    {(settings?.email || '') && <span><strong>Email:</strong> {settings?.email}</span>}
+                                                                                </div>
+                                                                        </div>
                         <div className="text-left sm:text-right">
                              <h2 className="text-2xl font-semibold">Invoice #{invoice.invoiceNumber}</h2>
                              <p className="text-sm text-muted-foreground">Date: {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>

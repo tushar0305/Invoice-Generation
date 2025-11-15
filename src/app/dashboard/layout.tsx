@@ -40,6 +40,7 @@ import { Button } from '@/components/ui/button';
 function UserNav() {
   const { user } = useUser();
   const router = useRouter();
+  const { setOpenMobile } = useSidebar();
 
   if (!user) {
     return null;
@@ -81,7 +82,11 @@ function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => router.push('/dashboard/settings')}
+          onClick={() => {
+            router.push('/dashboard/settings');
+            // Ensure mobile drawer closes when navigating to settings
+            setOpenMobile(false);
+          }}
           className="cursor-pointer"
         >
           <Settings className="mr-2 h-4 w-4" />

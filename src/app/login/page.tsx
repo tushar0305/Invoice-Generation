@@ -93,7 +93,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
-            <Logo />
+            <Logo generic />
           </div>
           <CardTitle className="text-2xl">
             Welcome Back

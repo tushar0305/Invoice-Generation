@@ -2,20 +2,21 @@
 
 import { useEffect, useRef } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import type { Invoice, InvoiceItem } from '@/lib/definitions';
+import type { Invoice, InvoiceItem, UserSettings } from '@/lib/definitions';
 import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, getFirestore } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
-const shop = {
-    name: 'SAAMBH JEWELLERS',
-    address: '123 Royal Plaza, Jaipur, Rajasthan 302001',
-    phone: '9876543210',
-    email: 'contact@saambh.com',
-    gstin: '08AAAAA0000A1Z5',
-    pan: 'AAAAA0000A',
+// Default shop profile values when user hasn't configured settings yet.
+const DEFAULT_SHOP = {
+    shopName: 'Jewellers Store',
+    address: 'Address Not Set',
+    gstNumber: 'GST Not Set',
+    panNumber: 'PAN Not Set',
     logoUrl: '/img/logo.jpeg',
+    phoneNumber: '',
+    email: '',
 };
 
 function toWords(num: number): string {
@@ -52,6 +53,13 @@ export default function PrintInvoicePage() {
 
     const invoiceRef = useMemoFirebase(() => doc(firestore, 'invoices', id), [firestore, id]);
     const { data: invoice, isLoading: loadingInvoice } = useDoc<Invoice>(invoiceRef);
+
+    // Once we know the invoice owner, load user settings for dynamic shop profile.
+    const settingsRef = useMemoFirebase(() => {
+        if (!invoice) return null;
+        return doc(firestore, 'userSettings', invoice.userId);
+    }, [firestore, invoice]);
+    const { data: settings } = useDoc<UserSettings>(settingsRef);
     const itemsRef = useMemoFirebase(() => collection(firestore, `invoices/${id}/invoiceItems`), [firestore, id]);
     const { data: items, isLoading: loadingItems } = useCollection<InvoiceItem>(itemsRef);
 
@@ -82,33 +90,48 @@ export default function PrintInvoicePage() {
     const roundOff = Math.round(totalAmount) - totalAmount;
     const finalAmount = Math.round(totalAmount);
 
+    // Merge settings with defaults
+    const shopProfile = {
+        name: settings?.shopName || DEFAULT_SHOP.shopName,
+        address: settings?.address || DEFAULT_SHOP.address,
+        gst: settings?.gstNumber || DEFAULT_SHOP.gstNumber,
+        pan: settings?.panNumber || DEFAULT_SHOP.panNumber,
+        phone: settings?.phoneNumber || DEFAULT_SHOP.phoneNumber,
+        email: settings?.email || DEFAULT_SHOP.email,
+        logoUrl: DEFAULT_SHOP.logoUrl,
+    };
+
     return (
         <>
-            <div className="watermark"><img src={shop.logoUrl} alt="Watermark" /></div>
+            <div className="watermark"><img src={shopProfile.logoUrl} alt="Watermark" /></div>
             <div className="header">
                 <div className="logo-section">
                     <div className="shop-info">
-                        <div className="shop-name">{shop.name}</div>
-                        <div className="shop-details" style={{ fontSize: 12 }}>
-                            <div style={{ color: '#333', marginBottom: 4 }}>{shop.address}</div>
-                            {(shop.phone || shop.email) && (
-                                <>
-                                    <div style={{ color: '#333', marginBottom: 4 }}>
-                                        {shop.phone && (<><strong>Phone:</strong> {shop.phone}</>)}
-                                    </div>
-                                    <div style={{ color: '#333' }}>
-                                        {shop.email && (<><strong>Email:</strong> {shop.email}</>)}
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                        <div className="shop-name">{shopProfile.name}</div>
+                                                <div className="shop-details" style={{ fontSize: 12 }}>
+                                                        <div style={{ color: '#333', marginBottom: 4 }}>{shopProfile.address}</div>
+                                                        {(shopProfile.phone || shopProfile.email) && (
+                                                                <>
+                                                                        {shopProfile.phone && (
+                                                                            <div style={{ color: '#333', marginBottom: 4 }}>
+                                                                                <strong>Phone:</strong> {shopProfile.phone}
+                                                                            </div>
+                                                                        )}
+                                                                        {shopProfile.email && (
+                                                                            <div style={{ color: '#333' }}>
+                                                                                <strong>Email:</strong> {shopProfile.email}
+                                                                            </div>
+                                                                        )}
+                                                                </>
+                                                        )}
+                                                </div>
                     </div>
                 </div>
                 <div className="invoice-info">
                     <div className="invoice-title">TAX INVOICE</div>
                     <div><strong>Invoice No:</strong> {invoice.invoiceNumber}</div>
-                    <div><strong>GSTIN:</strong> {shop.gstin}</div>
-                    <div><strong>PAN:</strong> {shop.pan}</div>
+                    <div><strong>GSTIN:</strong> {shopProfile.gst}</div>
+                    <div><strong>PAN:</strong> {shopProfile.pan}</div>
                     <div><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</div>
                 </div>
             </div>
@@ -172,7 +195,7 @@ export default function PrintInvoicePage() {
             <div className="footer" style={{ marginTop: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div style={{ color: '#666666' }}>Thank you for your business!</div>
                 <div className="signature-section">
-                    <div><strong>FOR {shop.name}</strong></div>
+                    <div><strong>FOR {shopProfile.name}</strong></div>
                     <div style={{ marginTop: 40, borderTop: '1px solid #d1d5db', width: 200, marginLeft: 'auto', paddingTop: 8 }}>
                         Authorized Signatory
                     </div>

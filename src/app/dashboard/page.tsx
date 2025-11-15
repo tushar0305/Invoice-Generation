@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard, Plus } from 'lucide-react';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -95,6 +95,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Floating quick-add invoice button for frequent use */}
+      <Link href="/dashboard/invoices/new" className="fixed z-40 bottom-6 right-6 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-[0.97] transition px-5 py-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary">
+        <Plus className="h-4 w-4" />
+        New Invoice
+      </Link>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -20,6 +20,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 const settingsFormSchema = z.object({
   cgstRate: z.coerce.number().min(0, 'CGST rate must be positive'),
   sgstRate: z.coerce.number().min(0, 'SGST rate must be positive'),
+  shopName: z.string().trim().min(1, 'Shop name is required').optional(),
+  gstNumber: z.string().trim().optional(),
+  panNumber: z.string().trim().optional(),
+  address: z.string().trim().optional(),
+  phoneNumber: z.string().trim().optional(),
+  email: z.string().email().optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
@@ -43,6 +49,12 @@ export default function SettingsPage() {
     defaultValues: {
       cgstRate: 1.5,
       sgstRate: 1.5,
+      shopName: 'Jewellers Store',
+      gstNumber: '',
+      panNumber: '',
+      address: '',
+      phoneNumber: '',
+      email: '',
     },
   });
 
@@ -51,6 +63,12 @@ export default function SettingsPage() {
       form.reset({
         cgstRate: settings.cgstRate,
         sgstRate: settings.sgstRate,
+        shopName: settings.shopName || 'Jewellers Store',
+        gstNumber: settings.gstNumber || '',
+        panNumber: settings.panNumber || '',
+        address: settings.address || '',
+        phoneNumber: settings.phoneNumber || '',
+        email: settings.email || user?.email || '',
       });
     }
   }, [settings, form]);
@@ -63,13 +81,19 @@ export default function SettingsPage() {
 
     startTransition(async () => {
       try {
-        const userSettingsRef = doc(firestore, 'userSettings', user.uid);
+    const userSettingsRef = doc(firestore, 'userSettings', user.uid);
         
         const settingsPayload = {
             ...data,
-            id: user.uid,
-            userId: user.uid,
-            updatedAt: serverTimestamp()
+      id: user.uid,
+      userId: user.uid,
+      updatedAt: serverTimestamp(),
+      shopName: data.shopName || 'Jewellers Store',
+      gstNumber: data.gstNumber || '',
+      panNumber: data.panNumber || '',
+      address: data.address || '',
+      phoneNumber: data.phoneNumber || '',
+      email: user.email || data.email || '',
         };
 
         if(!settings) {
@@ -98,8 +122,8 @@ export default function SettingsPage() {
   return (
      <Card className="max-w-2xl mx-auto">
         <CardHeader>
-            <CardTitle>Tax Settings</CardTitle>
-            <CardDescription>Define your default CGST and SGST tax rates. These will be automatically applied to new invoices.</CardDescription>
+      <CardTitle>Profile & Tax Settings</CardTitle>
+      <CardDescription>Your shop details appear on invoices. Tax rates auto-fill new invoices.</CardDescription>
         </CardHeader>
         <CardContent>
             {isLoading ? (
@@ -117,20 +141,70 @@ export default function SettingsPage() {
             ) : (
                 <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    <FormField control={form.control} name="cgstRate" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>CGST Rate (%)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="e.g., 1.5" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
-                    <FormField control={form.control} name="sgstRate" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>SGST Rate (%)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="e.g., 1.5" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
+                    <div className="grid grid-cols-1 gap-6">
+                      <FormField control={form.control} name="shopName" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Shop Name</FormLabel>
+                          <FormControl><Input placeholder="e.g., Jewellers Store" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="address" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address</FormLabel>
+                          <FormControl><Input placeholder="Full address" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone</FormLabel>
+                            <FormControl><Input placeholder="e.g., 9876543210" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="email" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl><Input placeholder="you@example.com" value={field.value} disabled readOnly /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <FormField control={form.control} name="gstNumber" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>GST Number</FormLabel>
+                            <FormControl><Input placeholder="e.g., 08AAAAA0000A1Z5" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="panNumber" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>PAN Number</FormLabel>
+                            <FormControl><Input placeholder="e.g., AAAAA0000A" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <FormField control={form.control} name="cgstRate" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Default CGST Rate (%)</FormLabel>
+                            <FormControl><Input type="number" step="0.01" placeholder="e.g., 1.5" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="sgstRate" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Default SGST Rate (%)</FormLabel>
+                            <FormControl><Input type="number" step="0.01" placeholder="e.g., 1.5" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                    </div>
                     
                     <Button type="submit" disabled={isPending}>
                         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

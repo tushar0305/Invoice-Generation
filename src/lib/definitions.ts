@@ -31,4 +31,10 @@ export type UserSettings = {
   userId: string;
   cgstRate: number;
   sgstRate: number;
+  shopName?: string; // Display name of the shop
+  gstNumber?: string; // GST identification number
+  panNumber?: string; // PAN number
+  address?: string; // Shop address / location
+  phoneNumber?: string; // Contact phone number
+  email?: string; // Contact email (defaults to auth email, not editable in UI)
 };
