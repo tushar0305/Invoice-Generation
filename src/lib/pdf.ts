@@ -1,6 +1,7 @@
 import type { Invoice, InvoiceItem, UserSettings } from './definitions';
 import { format } from 'date-fns';
 import { formatCurrency } from './utils';
+import html2canvas from 'html2canvas';
 
 // Dynamic import caches
 let JsPdfModule: any;
@@ -117,4 +118,90 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
   doc.restoreGraphicsState?.();
 
   return new Blob([doc.output('arraybuffer')], { type: 'application/pdf' });
+}
+
+// Generate a PDF Blob by rendering the existing print route inside an iframe and capturing it.
+// Produces a visually identical PDF to the print layout.
+export async function generatePdfFromPrintPage(invoiceId: string): Promise<Blob> {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    throw new Error('PDF generation must run in the browser');
+  }
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-10000px';
+  iframe.style.top = '0';
+  iframe.style.width = '1024px';
+  iframe.style.height = '1448px'; // Roughly A4 px at 96dpi
+  iframe.style.visibility = 'hidden';
+  iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms');
+  iframe.src = `/dashboard/invoices/${invoiceId}/print?embed=1&_=${Date.now()}`;
+
+  const done = new Promise<HTMLDivElement>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timed out loading print view')), 20000);
+    iframe.onload = () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!doc) throw new Error('No iframe document');
+        // Wait a tick for fonts/styles
+        setTimeout(() => {
+          const root = doc.getElementById('print-root') as HTMLDivElement | null;
+          if (!root) {
+            clearTimeout(timeout);
+            reject(new Error('Printable root not found'));
+            return;
+          }
+          clearTimeout(timeout);
+          resolve(root);
+        }, 150);
+      } catch (e) {
+        reject(e as any);
+      }
+    };
+    iframe.onerror = () => reject(new Error('Failed loading print view'));
+  });
+
+  document.body.appendChild(iframe);
+  try {
+    const root = await done;
+    // Use html2canvas to rasterize the element
+    const canvas = await html2canvas(root, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+      windowWidth: root.scrollWidth,
+      windowHeight: root.scrollHeight,
+    });
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    // Prepare jsPDF page with A4 size in mm
+    const jsPDF = await getJsPdf();
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10; // mm
+    const printableWidth = pageWidth - margin * 2;
+    const printableHeight = pageHeight - margin * 2;
+
+    // Image dimensions in px
+    const imgPxWidth = canvas.width;
+    const imgPxHeight = canvas.height;
+    // Convert px to mm at 96dpi: 1in = 25.4mm, 96px = 1in => 1px = 25.4/96 mm
+    const pxToMm = 25.4 / 96;
+    const imgMmWidth = imgPxWidth * pxToMm;
+    const imgMmHeight = imgPxHeight * pxToMm;
+
+    // Scale to fit within printable area, preserving aspect ratio
+    const scale = Math.min(printableWidth / imgMmWidth, printableHeight / imgMmHeight);
+    const renderWidth = imgMmWidth * scale;
+    const renderHeight = imgMmHeight * scale;
+    const x = (pageWidth - renderWidth) / 2;
+    const y = (pageHeight - renderHeight) / 2;
+
+    pdf.addImage(imgData, 'JPEG', x, y, renderWidth, renderHeight, undefined, 'FAST');
+    return new Blob([pdf.output('arraybuffer')], { type: 'application/pdf' });
+  } finally {
+    iframe.remove();
+  }
 }

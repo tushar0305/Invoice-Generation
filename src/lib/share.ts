@@ -1,7 +1,7 @@
 import type { Invoice, InvoiceItem, UserSettings } from './definitions';
 import { format } from 'date-fns';
 import { formatCurrency } from './utils';
-import { generateInvoicePdf } from './pdf';
+import { generateInvoicePdf, generatePdfFromPrintPage } from './pdf';
 
 export function composeWhatsAppInvoiceMessage(
   invoice: Invoice,
@@ -58,8 +58,17 @@ export async function shareInvoicePdf(
   const message = composeWhatsAppInvoiceMessage(invoice, settings || undefined);
 
   try {
-    // Generate the PDF as a Blob in-memory
-    const pdfBlob = await generateInvoicePdf({ invoice, items, settings: settings || undefined });
+    // Prefer an exact PDF that matches the print layout by capturing the print route
+    let pdfBlob: Blob | null = null;
+    try {
+      if (invoice.id) {
+        pdfBlob = await generatePdfFromPrintPage(invoice.id);
+      }
+    } catch {}
+    // Fallback to programmatic generator if capture fails
+    if (!pdfBlob) {
+      pdfBlob = await generateInvoicePdf({ invoice, items, settings: settings || undefined });
+    }
     const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
     const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
@@ -82,6 +91,34 @@ export async function shareInvoicePdf(
     return false;
   } catch (err) {
     // Fallback 2: on any error, just open WhatsApp with text
+    openWhatsAppWithText(message);
+    return false;
+  }
+}
+
+// Share by invoiceId only (loads the print route and captures it). Optionally include invoice/settings for message text.
+export async function shareInvoicePdfById(
+  invoiceId: string,
+  invoiceForMessage?: Invoice,
+  settings?: Partial<UserSettings> | null
+) {
+  if (typeof window === 'undefined') throw new Error('Sharing is only available in the browser');
+  const message = invoiceForMessage
+    ? composeWhatsAppInvoiceMessage(invoiceForMessage, settings || undefined)
+    : `Invoice ${invoiceId}`;
+  try {
+    const pdfBlob = await generatePdfFromPrintPage(invoiceId);
+    const filename = `Invoice-${invoiceForMessage?.invoiceNumber || invoiceId}.pdf`;
+    const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+    const navAny = navigator as any;
+    const canShareFiles = !!(navAny?.canShare ? navAny.canShare({ files: [pdfFile] }) : navAny?.share);
+    if (canShareFiles && navAny?.share) {
+      await navAny.share({ title: filename, text: message, files: [pdfFile] });
+      return true;
+    }
+    openWhatsAppWithText(message);
+    return false;
+  } catch {
     openWhatsAppWithText(message);
     return false;
   }

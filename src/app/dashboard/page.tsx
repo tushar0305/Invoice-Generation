@@ -22,7 +22,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 import { format, subDays, startOfDay, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { useCollection, useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, getFirestore, orderBy } from 'firebase/firestore';
-import { composeWhatsAppInvoiceMessage, openWhatsAppWithText } from '@/lib/share';
+import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdfById } from '@/lib/share';
 import type { UserSettings } from '@/lib/definitions';
 import { doc } from 'firebase/firestore';
 
@@ -358,9 +358,13 @@ export default function DashboardPage() {
                             <Button
                               size="sm"
                               variant="secondary"
-                              onClick={() => {
-                                const msg = composeWhatsAppInvoiceMessage(inv, settings || undefined);
-                                openWhatsAppWithText(msg);
+                              onClick={async () => {
+                                const ok = await shareInvoicePdfById(inv.id, inv, settings || undefined);
+                                if (!ok) {
+                                  // Non-blocking toast; still shared as text
+                                  // useToast not in this scope; quick alert fallback
+                                  // Optionally wire a dedicated toast here in future refactor
+                                }
                               }}
                               title="Send WhatsApp reminder"
                             >

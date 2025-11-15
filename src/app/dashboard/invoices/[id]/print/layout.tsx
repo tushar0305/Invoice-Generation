@@ -58,7 +58,7 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
         .totals td { border: none; padding: 6px 8px; }
         .totals tr:last-child td { border-top: 2px solid #111111; padding-top: 10px; }
         .grand { font-size: 16px; font-weight: 800; color: #111111; }
-        .signature-section { text-align: right; padding-bottom: 265px;}
+        .signature-section { text-align: right; padding-bottom: 190px;}
         
         @media print {
           nav, header:not(.header), aside, [role="navigation"], [data-sidebar], .sidebar, button, a[href*="dashboard"] { 

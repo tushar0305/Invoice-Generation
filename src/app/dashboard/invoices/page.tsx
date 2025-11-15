@@ -40,7 +40,7 @@ import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-colle
 import { format, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import type { UserSettings } from '@/lib/definitions';
-import { composeWhatsAppInvoiceMessage, openWhatsAppWithText } from '@/lib/share';
+import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdfById } from '@/lib/share';
 
 
 export default function InvoicesPage() {
@@ -353,9 +353,11 @@ export default function InvoicesPage() {
                                           Edit
                                       </Link>
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="cursor-pointer flex items-center" onClick={() => {
-                                    const msg = composeWhatsAppInvoiceMessage(invoice, settings || undefined);
-                                    openWhatsAppWithText(msg);
+                                  <DropdownMenuItem className="cursor-pointer flex items-center" onClick={async () => {
+                                    const ok = await shareInvoicePdfById(invoice.id, invoice, settings || undefined);
+                                    if (!ok) {
+                                      toast({ title: 'Sharing fallback used', description: 'Opened WhatsApp with a text summary.' });
+                                    }
                                   }}>
                                     <Send className="mr-2 h-4 w-4" />
                                     Share WhatsApp

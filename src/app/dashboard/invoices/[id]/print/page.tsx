@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useParams, notFound } from 'next/navigation';
+import { useParams, notFound, useSearchParams } from 'next/navigation';
 import type { Invoice, InvoiceItem, UserSettings } from '@/lib/definitions';
 import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, getFirestore } from 'firebase/firestore';
@@ -50,6 +50,7 @@ function f2(n: number) {
 export default function PrintInvoicePage() {
     const params = useParams();
     const id = params.id as string;
+    const search = useSearchParams();
     const firestore = getFirestore();
     const printTriggered = useRef(false);
 
@@ -69,10 +70,13 @@ export default function PrintInvoicePage() {
 
     useEffect(() => {
         if (!isLoading && invoice && items && !printTriggered.current) {
+            // Skip auto print when embedding this page inside an iframe for PDF capture
+            const isEmbed = search?.get('embed') === '1';
+            if (isEmbed) return;
             printTriggered.current = true;
             setTimeout(() => window.print(), 500);
         }
-    }, [isLoading, invoice, items]);
+    }, [isLoading, invoice, items, search]);
 
     if (isLoading) {
         return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -107,7 +111,7 @@ export default function PrintInvoicePage() {
     };
 
     return (
-        <>
+        <div id="print-root">
             <div className="watermark"><img src={shopProfile.logoUrl} alt="Watermark" /></div>
             <div className="header">
                 <div className="logo-section">
@@ -210,14 +214,13 @@ export default function PrintInvoicePage() {
             </div>
 
             <div className="footer" style={{ marginTop: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div style={{ color: '#666666' }}>Thank you for your business!</div>
+                <div style={{ color: '#666666' }}>Thank you for shopping with us!</div>
                 <div className="signature-section">
-                    <div><strong>FOR {shopProfile.name}</strong></div>
                     <div style={{ marginTop: 40, borderTop: '1px solid #d1d5db', width: 200, marginLeft: 'auto', paddingTop: 8 }}>
                         Authorized Signatory
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

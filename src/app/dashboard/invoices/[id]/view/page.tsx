@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, getFirestore, updateDoc, collection } from 'firebase/firestore';
-import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdf } from '@/lib/share';
+import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdfById } from '@/lib/share';
 import type { UserSettings } from '@/lib/definitions';
 
 
@@ -165,10 +165,10 @@ export default function ViewInvoicePage() {
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                                         <Button
                                             variant="outline"
-                                            onClick={async () => {
-                                                if (!invoice || !items) return;
-                                                // Try direct PDF share (mobile native share sheet)
-                                                const ok = await shareInvoicePdf(invoice, items, settings || undefined);
+                                                                    onClick={async () => {
+                                                                        if (!invoice) return;
+                                                                        // Share an exact PDF captured from the print layout via iframe
+                                                                        const ok = await shareInvoicePdfById(invoice.id, invoice, settings || undefined);
                                                 if (!ok) {
                                                     // Fallback already opened WhatsApp with text; let the user know
                                                     toast({
