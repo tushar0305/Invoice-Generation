@@ -14,6 +14,8 @@ export type Invoice = {
   invoiceNumber: string; // user-facing id
   customerName: string;
   customerAddress: string;
+  customerState?: string;
+  customerPincode?: string;
   customerPhone: string;
   invoiceDate: string; // YYYY-MM-DD
   discount: number; // as a currency value
@@ -35,6 +37,8 @@ export type UserSettings = {
   gstNumber?: string; // GST identification number
   panNumber?: string; // PAN number
   address?: string; // Shop address / location
+  state?: string;   // State / Region
+  pincode?: string; // Postal code / PIN
   phoneNumber?: string; // Contact phone number
   email?: string; // Contact email (defaults to auth email, not editable in UI)
 };

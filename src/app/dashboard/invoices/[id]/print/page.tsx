@@ -17,6 +17,8 @@ const DEFAULT_SHOP = {
     logoUrl: '/img/logo.jpeg',
     phoneNumber: '',
     email: '',
+    state: '',
+    pincode: '',
 };
 
 function toWords(num: number): string {
@@ -79,7 +81,8 @@ export default function PrintInvoicePage() {
         notFound();
     }
 
-    const subtotal = items.reduce((acc, item) => acc + (item.netWeight * item.rate) + item.making, 0);
+    // Making charge now applied per net gram basis
+    const subtotal = items.reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
     const totalBeforeTax = subtotal - invoice.discount;
     // Use new sgst/cgst fields, fallback to tax/2 for backward compatibility
     const cgstRate = invoice.cgst ?? ((invoice.tax || 0) / 2);
@@ -94,6 +97,8 @@ export default function PrintInvoicePage() {
     const shopProfile = {
         name: settings?.shopName || DEFAULT_SHOP.shopName,
         address: settings?.address || DEFAULT_SHOP.address,
+        state: settings?.state || DEFAULT_SHOP.state,
+        pincode: settings?.pincode || DEFAULT_SHOP.pincode,
         gst: settings?.gstNumber || DEFAULT_SHOP.gstNumber,
         pan: settings?.panNumber || DEFAULT_SHOP.panNumber,
         phone: settings?.phoneNumber || DEFAULT_SHOP.phoneNumber,
@@ -103,13 +108,19 @@ export default function PrintInvoicePage() {
 
     return (
         <>
-            {/* Watermark removed per user request */}
+            <div className="watermark"><img src={shopProfile.logoUrl} alt="Watermark" /></div>
             <div className="header">
                 <div className="logo-section">
                     <div className="shop-info">
                         <div className="shop-name">{shopProfile.name}</div>
                                                 <div className="shop-details" style={{ fontSize: 12 }}>
-                                                        <div style={{ color: '#333', marginBottom: 4 }}>{shopProfile.address}</div>
+                                                                                                                                                                        <div style={{ color: '#333', marginBottom: 4 }}>{shopProfile.address}</div>
+                                                                                                                                                                        {shopProfile.state && (
+                                                                                                                                                                            <div style={{ color: '#333', marginBottom: 4 }}>{shopProfile.state}</div>
+                                                                                                                                                                        )}
+                                                                                                                                                                        {shopProfile.pincode && (
+                                                                                                                                                                            <div style={{ color: '#333', marginBottom: 4 }}>{shopProfile.pincode}</div>
+                                                                                                                                                                        )}
                                                         {(shopProfile.phone || shopProfile.email) && (
                                                                 <>
                                                                         {shopProfile.phone && (
@@ -143,6 +154,12 @@ export default function PrintInvoicePage() {
                 {invoice.customerAddress && (
                     <div style={{ color: '#333', marginBottom: 4 }}>{invoice.customerAddress}</div>
                 )}
+                {(invoice as any).customerState && (
+                    <div style={{ color: '#333', marginBottom: 4 }}>{(invoice as any).customerState}</div>
+                )}
+                {(invoice as any).customerPincode && (
+                    <div style={{ color: '#333', marginBottom: 4 }}>{(invoice as any).customerPincode}</div>
+                )}
                 {invoice.customerPhone && (
                     <div style={{ color: '#333' }}>Phone: {invoice.customerPhone}</div>
                 )}
@@ -168,8 +185,8 @@ export default function PrintInvoicePage() {
                             <td className="right">{f2(item.grossWeight)}</td>
                             <td className="right">{f2(item.netWeight)}</td>
                             <td className="right">₹ {f2(item.rate)}</td>
-                            <td className="right">₹ {f2(item.making)}</td>
-                            <td className="right">₹ {f2((item.netWeight * item.rate) + item.making)}</td>
+                            <td className="right">₹ {f2(item.netWeight * item.making)}</td>
+                            <td className="right">₹ {f2((item.netWeight * item.rate) + (item.netWeight * item.making))}</td>
                         </tr>
                     ))}
                 </tbody>

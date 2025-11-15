@@ -47,9 +47,12 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
         .terms { font-size: 9px; color: #666; }
         .terms h4 { margin: 0 0 5px 0; font-weight: 700; color: #333; }
         .terms p { margin: 0; }
-        .signature { text-align: center; }
-        .signature p { margin: 0; font-size: 11px; }
-        .signature-box { height: 50px; margin-bottom: 5px; }
+  .signature { text-align: center; }
+  .signature p { margin: 0; font-size: 11px; }
+  /* Remove any empty signature box that renders as a colored rectangle in PDFs */
+  .signature-box { height: 0; margin: 0; border: none; background: transparent !important; }
+  /* Ensure any summary highlight backgrounds do not appear as boxes in PDF exports */
+  .summary-row.grand-total { background-color: transparent; color: #800000; border-top: 2px solid #D4AF37; }
 
         @media print {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

@@ -25,6 +25,8 @@ const settingsFormSchema = z.object({
   gstNumber: z.string().trim().optional(),
   panNumber: z.string().trim().optional(),
   address: z.string().trim().optional(),
+  state: z.string().trim().optional(),
+  pincode: z.string().trim().optional(),
   phoneNumber: z.string().trim().optional(),
   // email is not part of the form schema anymore
 });
@@ -54,6 +56,8 @@ export default function SettingsPage() {
   gstNumber: '',
   panNumber: '',
   address: '',
+  state: '',
+  pincode: '',
   phoneNumber: '',
     },
   });
@@ -67,6 +71,8 @@ export default function SettingsPage() {
         gstNumber: settings.gstNumber || '',
         panNumber: settings.panNumber || '',
         address: settings.address || '',
+        state: settings.state || '',
+        pincode: settings.pincode || '',
         phoneNumber: settings.phoneNumber || '',
       });
     }
@@ -90,6 +96,8 @@ export default function SettingsPage() {
       gstNumber: data.gstNumber || '',
       panNumber: data.panNumber || '',
       address: data.address || '',
+      state: data.state || '',
+      pincode: data.pincode || '',
       phoneNumber: data.phoneNumber || '',
       email: user.email || '', // always use the current user's email
     };
@@ -148,6 +156,22 @@ export default function SettingsPage() {
                           <FormMessage />
                         </FormItem>
                       )} />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <FormField control={form.control} name="state" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
+                            <FormControl><Input placeholder="e.g., Rajasthan" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="pincode" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Pincode</FormLabel>
+                            <FormControl><Input placeholder="e.g., 302001" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <FormField control={form.control} name="phoneNumber" render={({ field }) => (
                           <FormItem>

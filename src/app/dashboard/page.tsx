@@ -19,7 +19,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Line } from 'recharts';
-import { format, subDays, startOfDay, isWithinInterval } from 'date-fns';
+import { format, subDays, startOfDay, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { useCollection, useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, getFirestore, orderBy } from 'firebase/firestore';
 import { composeWhatsAppInvoiceMessage, openWhatsAppWithText } from '@/lib/share';
@@ -57,7 +57,7 @@ export default function DashboardPage() {
   }, [invoices]);
 
   const {
-    totalPaidAllTime,
+    totalPaidThisMonth,
     totalCustomers,
     paidInvoicesAllTime,
     outstandingDueAmount,
@@ -67,7 +67,7 @@ export default function DashboardPage() {
   } = useMemo(() => {
     if (isLoading || !invoices) {
       return {
-        totalPaidAllTime: 0,
+        totalPaidThisMonth: 0,
         totalCustomers: 0,
         paidInvoicesAllTime: 0,
         outstandingDueAmount: 0,
@@ -78,7 +78,13 @@ export default function DashboardPage() {
     }
     const paid = invoices.filter((inv) => inv.status === 'paid');
     const due = invoices.filter((inv) => inv.status === 'due');
-    const totalPaidAllTime = paid.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    // Restrict revenue to current month only
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    const inMonth = (d: Date) => isWithinInterval(d, { start: monthStart, end: monthEnd });
+    const paidThisMonth = paid.filter((inv) => inMonth(new Date(inv.invoiceDate)));
+    const totalPaidThisMonth = paidThisMonth.reduce((sum, inv) => sum + inv.grandTotal, 0);
     const paidInvoicesAllTime = paid.length;
     const totalCustomers = new Set(invoices.map((inv) => inv.customerName)).size;
     const outstandingDueAmount = due.reduce((sum, inv) => sum + inv.grandTotal, 0);
@@ -97,7 +103,7 @@ export default function DashboardPage() {
     const paid7Count = paid7.length;
     const paidPrev7Count = paidPrev7.length;
     const paid7dChangePct = paidPrev7Count === 0 ? (paid7Count > 0 ? 100 : null) : ((paid7Count - paidPrev7Count) / paidPrev7Count) * 100;
-    return { totalPaidAllTime, totalCustomers, paidInvoicesAllTime, outstandingDueAmount, outstandingDueCount, sales7dChangePct, paid7dChangePct };
+    return { totalPaidThisMonth, totalCustomers, paidInvoicesAllTime, outstandingDueAmount, outstandingDueCount, sales7dChangePct, paid7dChangePct };
   }, [invoices, isLoading]);
 
   const customerData = useMemo(() => {
@@ -161,9 +167,9 @@ export default function DashboardPage() {
                       <Skeleton className="h-8 w-3/4" />
                     ) : (
                       <>
-                        <div className="text-2xl font-bold">{formatCurrency(totalPaidAllTime)}</div>
+                        <div className="text-2xl font-bold">{formatCurrency(totalPaidThisMonth)}</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          Paid sales, all-time
+                          Paid sales, this month
                           <span className="mx-2">•</span>
                           <span>
                             7d: {sales7dChangePct === null ? '—' : `${sales7dChangePct >= 0 ? '+' : ''}${sales7dChangePct.toFixed(0)}%`}

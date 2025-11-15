@@ -9,7 +9,25 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
         @page { size: A4; margin: 15mm; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; color: #111111; line-height: 1.5; }
         
-        /* Watermark removed per user request (brown box) */
+        .watermark { 
+          position: fixed; 
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.05; 
+          z-index: 0; 
+          pointer-events: none;
+          overflow: hidden;
+        }
+        .watermark img { 
+          width: auto; 
+          height: 750px; 
+          filter: grayscale(100%) contrast(80%);
+        }
         .header { 
           display: flex; 
           justify-content: space-between; 
@@ -20,10 +38,10 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
           z-index: 1;
         }
         .logo-section { 
-          min-width: 60%; 
+          min-width: 60%;
           padding-right: 20px;
         }
-        .logo-img { display: none; }
+        .logo-img { display: none;}
         .shop-info { flex: 1; }
         .shop-name { font-size: 22px; font-weight: 800; color: #111111; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .3px; }
         .shop-details { margin-top: 2px; }
@@ -40,8 +58,7 @@ export default function PrintLayout({ children }: { children: React.ReactNode })
         .totals td { border: none; padding: 6px 8px; }
         .totals tr:last-child td { border-top: 2px solid #111111; padding-top: 10px; }
         .grand { font-size: 16px; font-weight: 800; color: #111111; }
-        .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #d1d5db; display: flex; justify-content: space-between; font-size: 10px; color: #444444; }
-        .signature-section { text-align: right; }
+        .signature-section { text-align: right; padding-bottom: 265px;}
         
         @media print {
           nav, header:not(.header), aside, [role="navigation"], [data-sidebar], .sidebar, button, a[href*="dashboard"] { 

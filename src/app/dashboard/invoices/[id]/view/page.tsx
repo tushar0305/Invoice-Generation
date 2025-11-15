@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, getFirestore, updateDoc, collection } from 'firebase/firestore';
-import { composeWhatsAppInvoiceMessage, openWhatsAppWithText } from '@/lib/share';
+import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdf } from '@/lib/share';
 import type { UserSettings } from '@/lib/definitions';
 
 
@@ -142,7 +142,7 @@ export default function ViewInvoicePage() {
     }
     
         const { subtotal, sgstAmount, cgstAmount, taxAmount, grandTotal } = (() => {
-        const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + item.making, 0);
+            const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
         const totalBeforeTax = subtotal - invoice.discount;
         const sgstRate = invoice.sgst ?? ((invoice.tax || 0) / 2);
         const cgstRate = invoice.cgst ?? ((invoice.tax || 0) / 2);
@@ -162,14 +162,24 @@ export default function ViewInvoicePage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Invoices
                 </Button>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => {
-                        if (!invoice) return;
-                        const msg = composeWhatsAppInvoiceMessage(invoice, settings || undefined);
-                        openWhatsAppWithText(msg);
-                    }}>
-                        <Send className="mr-2 h-4 w-4" /> Share
-                    </Button>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                        <Button
+                                            variant="outline"
+                                            onClick={async () => {
+                                                if (!invoice || !items) return;
+                                                // Try direct PDF share (mobile native share sheet)
+                                                const ok = await shareInvoicePdf(invoice, items, settings || undefined);
+                                                if (!ok) {
+                                                    // Fallback already opened WhatsApp with text; let the user know
+                                                    toast({
+                                                        title: 'Sharing fallback used',
+                                                        description: 'Your device/browser does not support sharing files directly. Opened WhatsApp with a text summary instead.',
+                                                    });
+                                                }
+                                            }}
+                                        >
+                                                <Send className="mr-2 h-4 w-4" /> Share
+                                        </Button>
                     {invoice.status === 'due' ? (
                         <Button onClick={() => handleStatusChange('paid')} disabled={isPending}>
                             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
@@ -197,29 +207,41 @@ export default function ViewInvoicePage() {
             <div id="print-area">
             <Card>
                 <CardHeader>
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                                                                        <div>
-                                                                                <CardTitle className="text-3xl font-bold text-primary font-headline">{settings?.shopName || 'Jewellers Store'}</CardTitle>
-                                                                                <p className="text-sm text-muted-foreground">{settings?.address || 'Address Not Set'}</p>
-                                                                                <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
-                                                                                    <span><strong>GST:</strong> {settings?.gstNumber || 'GST Not Set'}</span>
-                                                                                    <span><strong>PAN:</strong> {settings?.panNumber || 'PAN Not Set'}</span>
-                                                                                    {settings?.phoneNumber && <span><strong>Phone:</strong> {settings.phoneNumber}</span>}
-                                                                                    {(settings?.email || '') && <span><strong>Email:</strong> {settings?.email}</span>}
-                                                                                </div>
-                                                                        </div>
-                        <div className="text-left sm:text-right">
-                             <h2 className="text-2xl font-semibold">Invoice #{invoice.invoiceNumber}</h2>
-                             <p className="text-sm text-muted-foreground">Date: {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
-                        </div>
-                    </div>
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                                            <div>
+                                                <CardTitle className="text-3xl font-bold text-primary font-headline">{settings?.shopName || 'Jewellers Store'}</CardTitle>
+                                                                                                                                                <p className="text-sm text-muted-foreground">{settings?.address || 'Address Not Set'}</p>
+                                                                                                                                                {settings?.state && (
+                                                                                                                                                    <p className="text-sm text-muted-foreground">{settings.state}</p>
+                                                                                                                                                )}
+                                                                                                                                                {settings?.pincode && (
+                                                                                                                                                    <p className="text-sm text-muted-foreground">{settings.pincode}</p>
+                                                                                                                                                )}
+                                                                                                <div className="mt-1 text-xs text-muted-foreground space-y-1">
+                                                    {settings?.phoneNumber && <div><strong>Phone:</strong> {settings.phoneNumber}</div>}
+                                                    {(settings?.email || '') && <div><strong>Email:</strong> {settings?.email}</div>}
+                                                </div>
+                                            </div>
+                                            <div className="text-left sm:text-right">
+                                                <h2 className="text-2xl font-semibold">Invoice #{invoice.invoiceNumber}</h2>
+                                                <p className="text-sm text-muted-foreground"><strong>GST:</strong> {settings?.gstNumber || 'GST Not Set'}</p>
+                                                <p className="text-sm text-muted-foreground"><strong>PAN:</strong> {settings?.panNumber || 'PAN Not Set'}</p>
+                                                <p className="text-sm text-muted-foreground"><strong>DATE:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
+                                            </div>
+                                        </div>
                 </CardHeader>
                 <CardContent>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
                         <div>
                             <h3 className="font-semibold text-gray-600 mb-1">Bill To:</h3>
                             <p className="font-bold text-lg">{invoice.customerName}</p>
-                            <p className="text-muted-foreground">{invoice.customerAddress}</p>
+                                                                                    <p className="text-muted-foreground">{invoice.customerAddress}</p>
+                                                                                    {(invoice as any).customerState && (
+                                                                                        <p className="text-muted-foreground">{(invoice as any).customerState}</p>
+                                                                                    )}
+                                                                                    {(invoice as any).customerPincode && (
+                                                                                        <p className="text-muted-foreground">{(invoice as any).customerPincode}</p>
+                                                                                    )}
                             <p className="text-muted-foreground">{invoice.customerPhone}</p>
                         </div>
                         <div className="flex sm:justify-end items-start">
@@ -245,8 +267,8 @@ export default function ViewInvoicePage() {
                                     <TableCell className="font-medium">{item.description}</TableCell>
                                     <TableCell className="text-center">{item.netWeight}</TableCell>
                                     <TableCell className="text-right">{formatCurrency(item.rate)}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(item.making)}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency((item.netWeight * item.rate) + item.making)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(item.netWeight * item.making)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency((item.netWeight * item.rate) + (item.netWeight * item.making))}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, PlusCircle, Sparkles, Trash2, ArrowLeft } from 'lucide-react';
+import { CalendarIcon, Loader2, PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { generateDescriptionAction } from '@/lib/actions';
+// AI description removed
 import type { Invoice, InvoiceItem, UserSettings } from '@/lib/definitions';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -30,6 +30,8 @@ import { getFirestore, doc, writeBatch, collection, getDocs, query, where, serve
 const formSchema = z.object({
   customerName: z.string().min(2, 'Customer name is required'),
   customerAddress: z.string().min(5, 'Customer address is required'),
+  customerState: z.string().trim().optional().default(''),
+  customerPincode: z.string().trim().optional().default(''),
   customerPhone: z.string().min(10, 'A valid phone number is required'),
   invoiceDate: z.date({ required_error: 'Invoice date is required' }),
   items: z.array(z.object({
@@ -57,24 +59,37 @@ async function getNextInvoiceNumber(firestore: any, userId: string): Promise<str
     const invoicesColRef = collection(firestore, 'invoices');
     const q = query(invoicesColRef, where('userId', '==', userId));
     const querySnapshot = await getDocs(q);
-    let latestInvoiceNumber = 0;
-    querySnapshot.forEach(doc => {
-      const docData = doc.data();
-      if(docData.invoiceNumber) {
-        const numPart = parseInt(docData.invoiceNumber.split('-')[2]);
-        if(numPart > latestInvoiceNumber) {
-            latestInvoiceNumber = numPart;
+    const currentYear = new Date().getFullYear();
+    let latestSeqForYear = 0;
+
+    // Support both old (INV-YYYY-###) and new (INVYYYY###) formats while computing sequence for current year only
+    const NEW_FMT = /^INV(\d{4})(\d+)$/;        // e.g., INV2025001
+    const OLD_FMT = /^INV-(\d{4})-(\d+)$/;      // e.g., INV-2024-001
+
+    querySnapshot.forEach(snap => {
+      const data = snap.data();
+      const invNum: string | undefined = data?.invoiceNumber;
+      if (!invNum || typeof invNum !== 'string') return;
+
+      let match: RegExpExecArray | null = null;
+      if ((match = NEW_FMT.exec(invNum)) || (match = OLD_FMT.exec(invNum))) {
+        const year = parseInt(match[1], 10);
+        const seq = parseInt(match[2], 10);
+        if (year === currentYear && !Number.isNaN(seq)) {
+          latestSeqForYear = Math.max(latestSeqForYear, seq);
         }
       }
     });
 
-    const nextNumber = latestInvoiceNumber + 1;
-    return `INV-2024-${String(nextNumber).padStart(3, '0')}`;
+    const nextSeq = latestSeqForYear + 1;
+    // Keep 3-digit padding for readability while matching requested format INV{YEAR}{SEQUENCE}
+    return `INV${currentYear}${String(nextSeq).padStart(3, '0')}`;
 }
 
 const calculateTotals = (items: InvoiceFormValues['items'], discount: number, sgst: number, cgst: number) => {
     const subtotal = items.reduce((acc, item) => {
-      const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + (Number(item.making) || 0);
+      // Making charges are per net gram basis
+      const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + ((Number(item.netWeight) || 0) * (Number(item.making) || 0));
       return acc + itemTotal;
     }, 0);
     const totalBeforeTax = subtotal - (discount || 0);
@@ -88,9 +103,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiKeywords, setAiKeywords] = useState('');
-  const [aiTargetIndex, setAiTargetIndex] = useState<number | null>(null);
+  // AI state removed
   const { user } = useUser();
   const firestore = getFirestore();
 
@@ -108,13 +121,17 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         items: invoice.items.map(item => ({...item, purity: item.purity as InvoiceFormValues['items'][number]['purity']})),
         sgst: (invoice as any).sgst ?? 1.5,
         cgst: (invoice as any).cgst ?? 1.5,
+        customerState: (invoice as any).customerState || '',
+        customerPincode: (invoice as any).customerPincode || '',
       }
     : {
         customerName: '',
         customerAddress: '',
+        customerState: '',
+        customerPincode: '',
         customerPhone: '',
         invoiceDate: new Date(),
-        items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 }],
+  items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 }],
         discount: 0,
         sgst: 1.5,
         cgst: 1.5,
@@ -251,19 +268,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     });
   }
 
-  const handleGenerateDescription = async () => {
-    if (aiTargetIndex === null || !aiKeywords) return;
-    setAiLoading(true);
-    const result = await generateDescriptionAction(aiKeywords);
-    if (result.description) {
-      form.setValue(`items.${aiTargetIndex}.description`, result.description, { shouldValidate: true });
-      setAiTargetIndex(null);
-      setAiKeywords('');
-    } else {
-      toast({ variant: 'destructive', title: 'AI Error', description: result.error });
-    }
-    setAiLoading(false);
-  };
+  // AI handler removed
 
   return (
     <Form {...form}>
@@ -298,7 +303,21 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                 <FormField control={form.control} name="customerAddress" render={({ field }) => (
                   <FormItem className="sm:col-span-2">
                     <FormLabel>Address</FormLabel>
-                    <FormControl><Textarea placeholder="Full customer address" {...field} /></FormControl>
+                    <FormControl><Textarea placeholder="Address line" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="customerState" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl><Input placeholder="e.g., Rajasthan" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="customerPincode" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pincode</FormLabel>
+                    <FormControl><Input placeholder="e.g., 302001" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -328,39 +347,13 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                             <TableBody>
                                 {fields.map((field, index) => {
                                     const item = watchedItems[index];
-                                    const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + (Number(item.making) || 0);
+                                    const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + ((Number(item.netWeight) || 0) * (Number(item.making) || 0));
                                     return (
                                         <TableRow key={field.id}>
                                             <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (
                                                 <FormItem>
-                                                    <div className="flex items-center gap-1">
-                                                    <Textarea placeholder="Item description" {...field} className="min-h-0 h-10 min-w-[200px] md:min-w-[250px]"/>
-                                                    <Dialog onOpenChange={(open) => !open && setAiTargetIndex(null)}>
-                                                        <DialogTrigger asChild>
-                                                        <Button type="button" variant="ghost" size="icon" className="shrink-0 text-accent" onClick={() => setAiTargetIndex(index)}>
-                                                            <Sparkles className="h-4 w-4" />
-                                                        </Button>
-                                                        </DialogTrigger>
-                                                        <DialogContent>
-                                                            <DialogHeader>
-                                                                <DialogTitle>Generate Item Description</DialogTitle>
-                                                            </DialogHeader>
-                                                            <div className="space-y-4">
-                                                                <p>Enter keywords to generate a description for your jewellery item.</p>
-                                                                <Input 
-                                                                placeholder="e.g., gold ring 22k diamond"
-                                                                value={aiKeywords}
-                                                                onChange={(e) => setAiKeywords(e.target.value)}
-                                                                />
-                                                                <Button onClick={handleGenerateDescription} disabled={aiLoading || !aiKeywords} className="w-full">
-                                                                {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                                                                Generate with AI
-                                                                </Button>
-                                                            </div>
-                                                        </DialogContent>
-                                                    </Dialog>
-                                                    </div>
+                          <Textarea placeholder="Item description" {...field} className="min-h-0 h-10 min-w-[200px] md:min-w-[250px]"/>
                                                     <FormMessage />
                                                 </FormItem>
                                                 )} />
@@ -390,22 +383,22 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                             </TableCell>
                                             <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.grossWeight`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="g" {...field} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input type="number" placeholder="g" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                             </TableCell>
                                             <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.netWeight`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="g" {...field} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input type="number" placeholder="g" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                             </TableCell>
                                             <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="Rate" {...field} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input type="number" placeholder="Rate" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                             </TableCell>
                                             <TableCell>
                                                 <FormField control={form.control} name={`items.${index}.making`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" placeholder="Charges" {...field} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormControl><Input type="number" placeholder="Charges" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} className="min-w-[70px] md:min-w-[90px]" /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                             </TableCell>
                                             <TableCell className="text-right font-medium">{formatCurrency(itemTotal)}</TableCell>
@@ -425,41 +418,15 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                      <div className="md:hidden space-y-4">
                         {fields.map((field, index) => {
                              const item = watchedItems[index];
-                             const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + (Number(item.making) || 0);
+                             const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + ((Number(item.netWeight) || 0) * (Number(item.making) || 0));
                              return (
                                 <div key={field.id} className="border rounded-lg p-4 space-y-4">
                                     <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Description</FormLabel>
-                                            <div className="flex items-center gap-1">
-                                                <FormControl>
-                                                    <Textarea placeholder="Item description" {...field} />
-                                                </FormControl>
-                                                <Dialog onOpenChange={(open) => !open && setAiTargetIndex(null)}>
-                                                    <DialogTrigger asChild>
-                                                    <Button type="button" variant="ghost" size="icon" className="shrink-0 text-accent" onClick={() => setAiTargetIndex(index)}>
-                                                        <Sparkles className="h-4 w-4" />
-                                                    </Button>
-                                                    </DialogTrigger>
-                                                    <DialogContent>
-                                                        <DialogHeader>
-                                                            <DialogTitle>Generate Item Description</DialogTitle>
-                                                        </DialogHeader>
-                                                        <div className="space-y-4">
-                                                            <p>Enter keywords to generate a description for your jewellery item.</p>
-                                                            <Input 
-                                                            placeholder="e.g., gold ring 22k diamond"
-                                                            value={aiKeywords}
-                                                            onChange={(e) => setAiKeywords(e.target.value)}
-                                                            />
-                                                            <Button onClick={handleGenerateDescription} disabled={aiLoading || !aiKeywords} className="w-full">
-                                                            {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                                                            Generate with AI
-                                                            </Button>
-                                                        </div>
-                                                    </DialogContent>
-                                                </Dialog>
-                                            </div>
+                      <FormControl>
+                        <Textarea placeholder="Item description" {...field} />
+                      </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
@@ -486,18 +453,18 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                               <FormMessage />
                                             </FormItem>
                                         )} />
-                                        <FormField control={form.control} name={`items.${index}.grossWeight`} render={({ field }) => (
-                                            <FormItem><FormLabel>Gross Wt</FormLabel><FormControl><Input type="number" placeholder="g" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`items.${index}.netWeight`} render={({ field }) => (
-                                            <FormItem><FormLabel>Net Wt</FormLabel><FormControl><Input type="number" placeholder="g" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
-                                            <FormItem><FormLabel>Rate</FormLabel><FormControl><Input type="number" placeholder="Rate" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`items.${index}.making`} render={({ field }) => (
-                                            <FormItem><FormLabel>Making Charges</FormLabel><FormControl><Input type="number" placeholder="Charges" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
+                    <FormField control={form.control} name={`items.${index}.grossWeight`} render={({ field }) => (
+                      <FormItem><FormLabel>Gross Wt</FormLabel><FormControl><Input type="number" placeholder="g" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name={`items.${index}.netWeight`} render={({ field }) => (
+                      <FormItem><FormLabel>Net Wt</FormLabel><FormControl><Input type="number" placeholder="g" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
+                      <FormItem><FormLabel>Rate</FormLabel><FormControl><Input type="number" placeholder="Rate" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name={`items.${index}.making`} render={({ field }) => (
+                      <FormItem><FormLabel>Making Charges</FormLabel><FormControl><Input type="number" placeholder="Charges" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                    )} />
                                     </div>
                                     <div className="flex justify-between items-center pt-2 border-t">
                                         <span className="font-medium">Amount: {formatCurrency(itemTotal)}</span>
@@ -511,7 +478,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                     </div>
 
 
-                    <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 })}>
+          <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 })}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                     </Button>
                 </CardContent>
@@ -578,7 +545,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                       <FormItem>
                           <div className="flex items-center justify-between">
                               <FormLabel>Discount</FormLabel>
-                              <FormControl><Input type="number" className="w-32 text-right" {...field} /></FormControl>
+                              <FormControl><Input type="number" className="w-32 text-right" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} /></FormControl>
                           </div>
                            <FormMessage />
                       </FormItem>
@@ -588,7 +555,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                         <FormItem className="flex-1">
                             <div className="flex items-center justify-between">
                               <FormLabel>SGST (%)</FormLabel>
-                              <FormControl><Input type="number" className="w-20 text-right" {...field} /></FormControl>
+                              <FormControl><Input type="number" className="w-20 text-right" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} /></FormControl>
                             </div>
                             <FormMessage />
                         </FormItem>
@@ -597,7 +564,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                         <FormItem className="flex-1">
                             <div className="flex items-center justify-between">
                               <FormLabel>CGST (%)</FormLabel>
-                              <FormControl><Input type="number" className="w-20 text-right" {...field} /></FormControl>
+                              <FormControl><Input type="number" className="w-20 text-right" value={field.value === 0 ? '' : field.value} onChange={(e)=> field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} /></FormControl>
                             </div>
                             <FormMessage />
                         </FormItem>
