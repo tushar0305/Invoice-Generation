@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
-import { Loader2, Printer, Edit, ArrowLeft, CheckCircle, Clock } from 'lucide-react';
+import { Loader2, Printer, Edit, ArrowLeft, CheckCircle, Clock, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, getFirestore, updateDoc, collection } from 'firebase/firestore';
+import { composeWhatsAppInvoiceMessage, openWhatsAppWithText } from '@/lib/share';
 import type { UserSettings } from '@/lib/definitions';
 
 
@@ -162,6 +163,13 @@ export default function ViewInvoicePage() {
                     Back to Invoices
                 </Button>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => {
+                        if (!invoice) return;
+                        const msg = composeWhatsAppInvoiceMessage(invoice, settings || undefined);
+                        openWhatsAppWithText(msg);
+                    }}>
+                        <Send className="mr-2 h-4 w-4" /> Share
+                    </Button>
                     {invoice.status === 'due' ? (
                         <Button onClick={() => handleStatusChange('paid')} disabled={isPending}>
                             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}

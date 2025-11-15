@@ -36,6 +36,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { MobileBottomNav } from '@/components/mobile-bottom-nav';
+import { FloatingNewInvoiceButton } from '@/components/floating-new-invoice';
 
 function UserNav() {
   const { user } = useUser();
@@ -217,7 +219,9 @@ function DashboardLayoutInternal({
             </h1>
           </div>
         </header>
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
+        <FloatingNewInvoiceButton />
+        <MobileBottomNav />
       </SidebarInset>
     </AuthWrapper>
   );

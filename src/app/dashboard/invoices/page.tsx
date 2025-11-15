@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Search, MoreHorizontal, FilePlus2, Edit, Printer, Eye, Trash2, Loader2, Calendar as CalendarIcon, Download } from 'lucide-react';
+import { Search, MoreHorizontal, FilePlus2, Edit, Printer, Eye, Trash2, Loader2, Calendar as CalendarIcon, Download, Send } from 'lucide-react';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,11 +34,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useMemoFirebase } from '@/firebase';
+import { useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, getFirestore, writeBatch, doc, getDocs, orderBy } from 'firebase/firestore';
 import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
 import { format, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
+import type { UserSettings } from '@/lib/definitions';
+import { composeWhatsAppInvoiceMessage, openWhatsAppWithText } from '@/lib/share';
 
 
 export default function InvoicesPage() {
@@ -54,6 +56,13 @@ export default function InvoicesPage() {
 
   const { user } = useUser();
   const firestore = getFirestore();
+
+  // Load user settings once for shop info in share text
+  const settingsRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'userSettings', user.uid);
+  }, [firestore, user]);
+  const { data: settings } = useDoc<UserSettings>(settingsRef);
 
   const invoicesQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -343,6 +352,13 @@ export default function InvoicesPage() {
                                           <Edit className="mr-2 h-4 w-4" />
                                           Edit
                                       </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="cursor-pointer flex items-center" onClick={() => {
+                                    const msg = composeWhatsAppInvoiceMessage(invoice, settings || undefined);
+                                    openWhatsAppWithText(msg);
+                                  }}>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Share WhatsApp
                                   </DropdownMenuItem>
                   <DropdownMenuItem className="cursor-pointer flex items-center" onClick={() => handlePrintNavigate(invoice.id)}>
                     <Printer className="mr-2 h-4 w-4" />

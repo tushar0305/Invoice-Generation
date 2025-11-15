@@ -13,15 +13,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard, Plus } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard, Plus, ArrowUpRight, ArrowDownRight, MessageCircle } from 'lucide-react';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { format, subDays } from 'date-fns';
-import { useCollection, useUser, useMemoFirebase } from '@/firebase';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Line } from 'recharts';
+import { format, subDays, startOfDay, isWithinInterval } from 'date-fns';
+import { useCollection, useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, getFirestore, orderBy } from 'firebase/firestore';
+import { composeWhatsAppInvoiceMessage, openWhatsAppWithText } from '@/lib/share';
+import type { UserSettings } from '@/lib/definitions';
+import { doc } from 'firebase/firestore';
 
 
 type CustomerStats = {
@@ -40,18 +43,84 @@ export default function DashboardPage() {
 
   const { data: invoices, isLoading } = useCollection<Invoice>(invoicesQuery);
 
+  // Load user settings for share messages
+  const settingsRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'userSettings', user.uid);
+  }, [firestore, user]);
+  const { data: settings } = useDoc<UserSettings>(settingsRef);
+
 
   const recentInvoices = useMemo(() => {
     if (!invoices) return [];
     return [...invoices].sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()).slice(0, 5);
   }, [invoices]);
 
-  const { totalSales, totalCustomers, paidInvoicesCount } = useMemo(() => {
-    if (isLoading || !invoices) return { totalSales: 0, totalCustomers: 0, paidInvoicesCount: 0 };
-    const paidInvoices = invoices.filter(inv => inv.status === 'paid');
-    const totalSales = paidInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
-    const totalCustomers = new Set(invoices.map(inv => inv.customerName)).size;
-    return { totalSales, totalCustomers, paidInvoicesCount: paidInvoices.length };
+  const {
+    totalSales7d,
+    sales7dChangePct,
+    totalCustomers,
+    paidInvoices7d,
+    paid7dChangePct,
+    outstandingDueAmount,
+    outstandingDueCount,
+  } = useMemo(() => {
+    if (isLoading || !invoices) {
+      return {
+        totalSales7d: 0,
+        sales7dChangePct: null as number | null,
+        totalCustomers: 0,
+        paidInvoices7d: 0,
+        paid7dChangePct: null as number | null,
+        outstandingDueAmount: 0,
+        outstandingDueCount: 0,
+      };
+    }
+
+    const today = startOfDay(new Date());
+    const start7 = subDays(today, 6); // inclusive window: today and previous 6 days
+    const prevStart7 = subDays(start7, 7);
+    const prevEnd7 = subDays(start7, 1);
+
+    const inWindow = (d: Date, start: Date, end: Date) =>
+      isWithinInterval(d, { start, end });
+
+    const paid = invoices.filter((inv) => inv.status === 'paid');
+    const due = invoices.filter((inv) => inv.status === 'due');
+
+    const paid7 = paid.filter((inv) =>
+      inWindow(new Date(inv.invoiceDate), start7, today)
+    );
+    const paidPrev7 = paid.filter((inv) =>
+      inWindow(new Date(inv.invoiceDate), prevStart7, prevEnd7)
+    );
+
+    const totalSales7d = paid7.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const prevSales7d = paidPrev7.reduce((sum, inv) => sum + inv.grandTotal, 0);
+
+    const sales7dChangePct = prevSales7d === 0
+      ? (totalSales7d > 0 ? 100 : null)
+      : ((totalSales7d - prevSales7d) / prevSales7d) * 100;
+
+    const paidInvoices7d = paid7.length;
+    const paidPrev7Count = paidPrev7.length;
+    const paid7dChangePct = paidPrev7Count === 0
+      ? (paidInvoices7d > 0 ? 100 : null)
+      : ((paidInvoices7d - paidPrev7Count) / paidPrev7Count) * 100;
+
+    const totalCustomers = new Set(invoices.map((inv) => inv.customerName)).size;
+    const outstandingDueAmount = due.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const outstandingDueCount = due.length;
+
+    return {
+      totalSales7d,
+      sales7dChangePct,
+      totalCustomers,
+      paidInvoices7d,
+      paid7dChangePct,
+      outstandingDueAmount,
+      outstandingDueCount,
+    };
   }, [invoices, isLoading]);
 
   const customerData = useMemo(() => {
@@ -87,28 +156,52 @@ export default function DashboardPage() {
         return acc;
       }, {} as Record<string, number>);
 
-    return last30Days.map(date => ({
+    const values = last30Days.map(d => salesByDay[d] || 0);
+    const ma7 = values.map((_, idx) => {
+      const start = Math.max(0, idx - 6);
+      const slice = values.slice(start, idx + 1);
+      const sum = slice.reduce((s, v) => s + v, 0);
+      return sum / slice.length;
+    });
+
+    return last30Days.map((date, i) => ({
       date: format(new Date(date), 'MMM dd'),
-      sales: salesByDay[date] || 0
+      sales: values[i] || 0,
+      ma7: ma7[i] || 0,
     }));
   }, [invoices, isLoading]);
 
   return (
     <div className="space-y-6">
-      {/* Floating quick-add invoice button for frequent use */}
-      <Link href="/dashboard/invoices/new" className="fixed z-40 bottom-6 right-6 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-[0.97] transition px-5 py-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary">
-        <Plus className="h-4 w-4" />
-        New Invoice
-      </Link>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* FAB is now globally rendered in layout across pages */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                    <CardTitle className="text-sm font-medium">Revenue (7d)</CardTitle>
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(totalSales)}</div>}
-                    <p className="text-xs text-muted-foreground">Total sales from paid invoices</p>
+                    {isLoading ? (
+                      <Skeleton className="h-8 w-3/4" />
+                    ) : (
+                      <div className="flex items-baseline gap-2">
+                        <div className="text-2xl font-bold">{formatCurrency(totalSales7d)}</div>
+                        {sales7dChangePct === null ? (
+                          <span className="text-xs text-muted-foreground">vs prev 7d —</span>
+                        ) : sales7dChangePct >= 0 ? (
+                          <span className="text-xs text-green-600 flex items-center gap-1">
+                            <ArrowUpRight className="h-3 w-3" />
+                            {sales7dChangePct.toFixed(0)}%
+                          </span>
+                        ) : (
+                          <span className="text-xs text-red-600 flex items-center gap-1">
+                            <ArrowDownRight className="h-3 w-3" />
+                            {Math.abs(sales7dChangePct).toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">Paid sales, last 7 days</p>
                 </CardContent>
             </Card>
              <Card>
@@ -123,12 +216,45 @@ export default function DashboardPage() {
             </Card>
              <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
+                    <CardTitle className="text-sm font-medium">Paid Invoices (7d)</CardTitle>
                     <CreditCard className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{paidInvoicesCount}</div>}
+                    {isLoading ? (
+                      <Skeleton className="h-8 w-1/4" />
+                    ) : (
+                      <div className="flex items-baseline gap-2">
+                        <div className="text-2xl font-bold">{paidInvoices7d}</div>
+                        {paid7dChangePct === null ? (
+                          <span className="text-xs text-muted-foreground">vs prev 7d —</span>
+                        ) : paid7dChangePct >= 0 ? (
+                          <span className="text-xs text-green-600 flex items-center gap-1">
+                            <ArrowUpRight className="h-3 w-3" />
+                            {paid7dChangePct.toFixed(0)}%
+                          </span>
+                        ) : (
+                          <span className="text-xs text-red-600 flex items-center gap-1">
+                            <ArrowDownRight className="h-3 w-3" />
+                            {Math.abs(paid7dChangePct).toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
                      <p className="text-xs text-muted-foreground">Out of {invoices?.length || 0} total invoices</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Outstanding Due</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                      <Skeleton className="h-8 w-3/4" />
+                    ) : (
+                      <div className="text-2xl font-bold">{formatCurrency(outstandingDueAmount)}</div>
+                    )}
+                    <p className="text-xs text-muted-foreground">{outstandingDueCount} invoice(s) due</p>
                 </CardContent>
             </Card>
         </div>
@@ -165,18 +291,19 @@ export default function DashboardPage() {
                         axisLine={false}
                         width={60}
                     />
-                    <Tooltip
-                        contentStyle={{ 
-                            backgroundColor: 'hsl(var(--background))', 
-                            borderColor: 'hsl(var(--border))',
-                            borderRadius: '6px',
-                            padding: '8px 12px'
-                        }}
-                        labelStyle={{ color: 'hsl(var(--foreground))', fontSize: 12 }}
-                        itemStyle={{ fontSize: 12 }}
-                        formatter={(value) => [formatCurrency(value as number), 'Sales']}
-                    />
-                    <Area type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
+          <Tooltip
+            contentStyle={{ 
+              backgroundColor: 'hsl(var(--background))', 
+              borderColor: 'hsl(var(--border))',
+              borderRadius: '6px',
+              padding: '8px 12px'
+            }}
+            labelStyle={{ color: 'hsl(var(--foreground))', fontSize: 12 }}
+            itemStyle={{ fontSize: 12 }}
+            formatter={(value, name) => [formatCurrency(value as number), name === 'sales' ? 'Sales' : '7d Avg']}
+          />
+          <Area type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
+          <Line type="monotone" dataKey="ma7" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} name="7d Avg" />
                 </AreaChart>
             </ResponsiveContainer>
            )}
@@ -210,6 +337,74 @@ export default function DashboardPage() {
                 </ul>
             ) : (
                 <p className="text-sm text-muted-foreground text-center h-24 flex items-center justify-center">No customer data available.</p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Due Invoices</CardTitle>
+            <CardDescription>Oldest unpaid invoices first.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={`skel-due-${i}`} className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              (() => {
+                const dueInvoices = (invoices || [])
+                  .filter((inv) => inv.status === 'due')
+                  .sort((a, b) => new Date(a.invoiceDate).getTime() - new Date(b.invoiceDate).getTime())
+                  .slice(0, 5);
+                if (dueInvoices.length === 0) {
+                  return (
+                    <p className="text-sm text-muted-foreground text-center h-24 flex items-center justify-center">No due invoices. 🎉</p>
+                  );
+                }
+                const today = startOfDay(new Date());
+                return (
+                  <ul className="space-y-3">
+                    {dueInvoices.map((inv) => {
+                      const ageDays = Math.max(0, Math.floor((today.getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 60 * 60 * 24)));
+                      const severity = ageDays > 7 ? 'over' : ageDays >= 3 ? 'warn' : 'ok';
+                      return (
+                        <li key={inv.id} className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">{inv.customerName}</span>
+                              <Badge variant="secondary">{inv.invoiceNumber}</Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground">{format(new Date(inv.invoiceDate), 'dd MMM yyyy')} • {formatCurrency(inv.grandTotal)} • <span className={severity === 'over' ? 'text-red-600' : severity === 'warn' ? 'text-yellow-600' : ''}>Aged {ageDays}d</span></div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Link href={`/dashboard/invoices/${inv.id}/view`}>
+                              <Button size="sm" variant="ghost">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                const msg = composeWhatsAppInvoiceMessage(inv, settings || undefined);
+                                openWhatsAppWithText(msg);
+                              }}
+                              title="Send WhatsApp reminder"
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                );
+              })()
             )}
           </CardContent>
         </Card>
