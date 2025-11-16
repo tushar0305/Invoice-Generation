@@ -58,17 +58,30 @@ export async function shareInvoicePdf(
   const message = composeWhatsAppInvoiceMessage(invoice, settings || undefined);
 
   try {
-    // Prefer an exact PDF that matches the print layout by capturing the print route
+    // Use print page capture as the primary method to match the print layout exactly
     let pdfBlob: Blob | null = null;
     try {
       if (invoice.id) {
         pdfBlob = await generatePdfFromPrintPage(invoice.id);
       }
-    } catch {}
-    // Fallback to programmatic generator if capture fails
-    if (!pdfBlob) {
-      pdfBlob = await generateInvoicePdf({ invoice, items, settings: settings || undefined });
+    } catch (err) {
+      console.error('Print page capture failed:', err);
     }
+    
+    // Fallback to programmatic generation if print page capture fails
+    if (!pdfBlob) {
+      try {
+        pdfBlob = await generateInvoicePdf({ invoice, items, settings: settings || undefined });
+      } catch (err) {
+        console.error('Programmatic PDF generation failed:', err);
+      }
+    }
+    
+    // If still no PDF, throw error
+    if (!pdfBlob) {
+      throw new Error('Failed to generate PDF');
+    }
+    
     const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
     const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
@@ -90,6 +103,7 @@ export async function shareInvoicePdf(
     openWhatsAppWithText(message);
     return false;
   } catch (err) {
+    console.error('Failed to share PDF natively:', err); // Log the error
     // Fallback 2: on any error, just open WhatsApp with text
     openWhatsAppWithText(message);
     return false;
@@ -118,7 +132,8 @@ export async function shareInvoicePdfById(
     }
     openWhatsAppWithText(message);
     return false;
-  } catch {
+  } catch (err) {
+    console.error('Failed to share PDF by ID natively:', err); // Log the error
     openWhatsAppWithText(message);
     return false;
   }

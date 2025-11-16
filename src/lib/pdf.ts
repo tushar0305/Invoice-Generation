@@ -106,17 +106,6 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
   doc.setFontSize(12);
   doc.text(`Grand Total: ${formatCurrency(grandTotal)}`, 14, cursorY); cursorY += 8;
 
-  // Watermark (faint, rotated if supported)
-  doc.saveGraphicsState?.();
-  try {
-    doc.setTextColor(220);
-    doc.setFontSize(60);
-    (doc as any).text((settings?.shopName || 'INVOICE').toUpperCase(), pageWidth / 2, pageHeight / 2, { align: 'center', angle: 45 });
-  } catch {
-    doc.text((settings?.shopName || 'INVOICE').toUpperCase(), pageWidth / 2, pageHeight / 2, { align: 'center' });
-  }
-  doc.restoreGraphicsState?.();
-
   return new Blob([doc.output('arraybuffer')], { type: 'application/pdf' });
 }
 
@@ -134,6 +123,7 @@ export async function generatePdfFromPrintPage(invoiceId: string): Promise<Blob>
   iframe.style.width = '1024px';
   iframe.style.height = '1448px'; // Roughly A4 px at 96dpi
   iframe.style.visibility = 'hidden';
+  iframe.style.display = 'block';
   iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms');
   iframe.src = `/dashboard/invoices/${invoiceId}/print?embed=1&_=${Date.now()}`;
 
@@ -153,7 +143,7 @@ export async function generatePdfFromPrintPage(invoiceId: string): Promise<Blob>
           }
           clearTimeout(timeout);
           resolve(root);
-        }, 150);
+        }, 2000);
       } catch (e) {
         reject(e as any);
       }
@@ -164,14 +154,16 @@ export async function generatePdfFromPrintPage(invoiceId: string): Promise<Blob>
   document.body.appendChild(iframe);
   try {
     const root = await done;
+    
     // Use html2canvas to rasterize the element
     const canvas = await html2canvas(root, {
       scale: 2,
       backgroundColor: '#ffffff',
       useCORS: true,
       logging: false,
-      windowWidth: root.scrollWidth,
-      windowHeight: root.scrollHeight,
+      allowTaint: true,
+      windowWidth: root.offsetWidth || root.scrollWidth,
+      windowHeight: root.offsetHeight || root.scrollHeight,
     });
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
 

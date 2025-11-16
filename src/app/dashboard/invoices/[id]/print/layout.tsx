@@ -1,74 +1,64 @@
 'use client';
 
 import React from 'react';
+import './print.css';
 
 export default function PrintLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <style jsx global>{`
-        @page { size: A4; margin: 15mm; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; color: #111111; line-height: 1.5; }
-        
-        .watermark { 
-          position: fixed; 
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0.05; 
-          z-index: 0; 
-          pointer-events: none;
-          overflow: hidden;
-        }
-        .watermark img { 
-          width: auto; 
-          height: 750px; 
-          filter: grayscale(100%) contrast(80%);
-        }
-        .header { 
-          display: flex; 
-          justify-content: space-between; 
-          align-items: flex-start; 
-          margin-bottom: 30px; 
-          padding-bottom: 12px; 
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+        @page { size: A4; margin: 0; }
+        .invoice-container {
+          font-family: 'Roboto', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          color: #333;
+          font-size: 11px;
+          line-height: 1.5;
+          width: 100%;
+          margin: 0;
+          max-width: 210mm;
           position: relative;
-          z-index: 1;
+          background: #fff;
         }
-        .logo-section { 
-          min-width: 60%;
-          padding-right: 20px;
-        }
-        .logo-img { display: none;}
-        .shop-info { flex: 1; }
-        .shop-name { font-size: 22px; font-weight: 800; color: #111111; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .3px; }
-        .shop-details { margin-top: 2px; }
-        .muted { color: #444444; font-size: 10px; }
-        .invoice-info { text-align: right; }
-        .invoice-info div { margin-bottom: 4px; }
-        .invoice-title { font-size: 22px; font-weight: 800; color: #111111; margin-bottom: 6px; text-transform: uppercase; }
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        th, td { border: 1px solid #d1d5db; padding: 10px 8px; text-align: left; }
-        th { background: #f3f4f6; font-weight: 700; color: #111111; font-size: 10px; text-transform: uppercase; }
-        td { font-size: 10px; color: #111111; }
-        .right { text-align: right; }
-        .totals { width: 50%; margin-left: auto; margin-top: 0; }
-        .totals td { border: none; padding: 6px 8px; }
-        .totals tr:last-child td { border-top: 2px solid #111111; padding-top: 10px; }
-        .grand { font-size: 16px; font-weight: 800; color: #111111; }
-        .signature-section { text-align: right; padding-bottom: 190px;}
-        
+        .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .header-left { max-width: 60%; }
+        .header-right { text-align: right; }
+        .shop-name { font-size: 24px; font-weight: 700; color: #800000; margin: 0 0 5px 0; text-transform: uppercase; }
+        .header-left p { margin: 0; font-size: 11px; color: #444; }
+        .header-right h2 { font-size: 16px; font-weight: 700; margin: 0 0 10px 0; }
+        .header-right p { margin: 2px 0; font-size: 11px; }
+        .separator { border-top: 2px solid #D4AF37; margin: 15px 0; }
+        .customer-details { margin-bottom: 15px; }
+        .customer-details h3 { margin: 0 0 5px 0; font-size: 12px; font-weight: 700; color: #800000; text-transform: uppercase; }
+        .customer-details p { margin: 1px 0; }
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .items-table th, .items-table td { border: 1px solid #e5e7eb; padding: 8px 10px; }
+        .items-table th { background-color: #f9fafb; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
+        .items-table .text-right { text-align: right; }
+        .summary-section { display: flex; justify-content: flex-end; margin-top: 10px; margin-bottom: 20px; }
+        .summary-details { width: 45%; max-width: 350px; }
+        .summary-row { display: flex; justify-content: space-between; padding: 7px 10px; border-bottom: 1px solid #eee; }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-row.grand-total { font-size: 16px; font-weight: 700; background-color: transparent; color: #800000; border-top: 2px solid #D4AF37; padding: 10px; border-radius: 0 0 4px 4px; }
+        .words-section { padding: 15px; border-top: 1px dashed #ccc; border-bottom: 1px dashed #ccc; margin-bottom: 30px; font-size: 12px; }
+        .words-section p { margin: 0; font-style: italic; }
+        .invoice-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 50px; }
+        .terms { font-size: 9px; color: #666; }
+        .terms h4 { margin: 0 0 5px 0; font-weight: 700; color: #333; }
+        .terms p { margin: 0; }
+        .signature { text-align: center; }
+        .signature p { margin: 0; font-size: 11px; }
+        .signature-box { height: 0; margin: 0; border: none; background: transparent !important; }
+
         @media print {
-          nav, header:not(.header), aside, [role="navigation"], [data-sidebar], .sidebar, button, a[href*="dashboard"] { 
-            display: none !important; 
-          }
-          body > div:first-child > div:first-child { display: none !important; }
-          main { padding: 0 !important; margin: 0 !important; }
+          body { -webkit-print-color-adjust: auto; print-color-adjust: auto; }
+          .invoice-container { box-shadow: none; margin: 0; max-width: 100%; border-radius: 0; padding: 20mm 15mm; }
+          .signature-box { display: none !important; }
         }
       `}</style>
-      <div style={{ fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif', fontSize: 11, color: '#111111', lineHeight: 1.5, padding: '20px', background: '#fff' }}>
+      <div id="print-root">
         {children}
       </div>
     </>

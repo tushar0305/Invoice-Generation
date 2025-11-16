@@ -8,13 +8,11 @@ import { doc, collection, getFirestore } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
-// Default shop profile values when user hasn't configured settings yet.
 const DEFAULT_SHOP = {
     shopName: 'Jewellers Store',
     address: 'Address Not Set',
     gstNumber: 'GST Not Set',
     panNumber: 'PAN Not Set',
-    logoUrl: '/img/logo.jpeg',
     phoneNumber: '',
     email: '',
     state: '',
@@ -59,10 +57,10 @@ export default function PrintInvoicePage() {
 
     // Once we know the invoice owner, load user settings for dynamic shop profile.
     const settingsRef = useMemoFirebase(() => {
-        if (!invoice) return null;
+        if (!invoice?.userId) return null;
         return doc(firestore, 'userSettings', invoice.userId);
-    }, [firestore, invoice]);
-    const { data: settings } = useDoc<UserSettings>(settingsRef);
+    }, [firestore, invoice?.userId]);
+    const { data: settings, isLoading: loadingSettings } = useDoc<UserSettings>(settingsRef);
     const itemsRef = useMemoFirebase(() => collection(firestore, `invoices/${id}/invoiceItems`), [firestore, id]);
     const { data: items, isLoading: loadingItems } = useCollection<InvoiceItem>(itemsRef);
 
@@ -107,118 +105,116 @@ export default function PrintInvoicePage() {
         pan: settings?.panNumber || DEFAULT_SHOP.panNumber,
         phone: settings?.phoneNumber || DEFAULT_SHOP.phoneNumber,
         email: settings?.email || DEFAULT_SHOP.email,
-        logoUrl: DEFAULT_SHOP.logoUrl,
     };
 
     return (
-        <div id="print-root">
-            <div className="watermark"><img src={shopProfile.logoUrl} alt="Watermark" /></div>
-            <div className="header">
-                <div className="logo-section">
-                    <div className="shop-info">
-                        <div className="shop-name">{shopProfile.name}</div>
-                                                <div className="shop-details" style={{ fontSize: 12 }}>
-                                                                                                                                                                        <div style={{ color: '#333', marginBottom: 4 }}>{shopProfile.address}</div>
-                                                                                                                                                                        {shopProfile.state && (
-                                                                                                                                                                            <div style={{ color: '#333', marginBottom: 4 }}>{shopProfile.state}</div>
-                                                                                                                                                                        )}
-                                                                                                                                                                        {shopProfile.pincode && (
-                                                                                                                                                                            <div style={{ color: '#333', marginBottom: 4 }}>{shopProfile.pincode}</div>
-                                                                                                                                                                        )}
-                                                        {(shopProfile.phone || shopProfile.email) && (
-                                                                <>
-                                                                        {shopProfile.phone && (
-                                                                            <div style={{ color: '#333', marginBottom: 4 }}>
-                                                                                <strong>Phone:</strong> {shopProfile.phone}
-                                                                            </div>
-                                                                        )}
-                                                                        {shopProfile.email && (
-                                                                            <div style={{ color: '#333' }}>
-                                                                                <strong>Email:</strong> {shopProfile.email}
-                                                                            </div>
-                                                                        )}
-                                                                </>
-                                                        )}
-                                                </div>
-                    </div>
+        <div className="invoice-container">
+            <div className="invoice-header">
+                <div className="header-left">
+                    <div className="shop-name">{shopProfile.name}</div>
+                    <p>{shopProfile.address}</p>
+                    {shopProfile.state && <p>{shopProfile.state} - {shopProfile.pincode}</p>}
+                    {shopProfile.phone && <p><strong>Phone:</strong> {shopProfile.phone}</p>}
+                    {shopProfile.email && <p><strong>Email:</strong> {shopProfile.email}</p>}
                 </div>
-                <div className="invoice-info">
-                    <div className="invoice-title">TAX INVOICE</div>
-                    <div><strong>Invoice No:</strong> {invoice.invoiceNumber}</div>
-                    <div><strong>GSTIN:</strong> {shopProfile.gst}</div>
-                    <div><strong>PAN:</strong> {shopProfile.pan}</div>
-                    <div><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</div>
+                <div className="header-right">
+                    <h2>TAX INVOICE</h2>
+                    <p><strong>Invoice No:</strong> {invoice.invoiceNumber}</p>
+                    <p><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
+                    <p><strong>GSTIN:</strong> {shopProfile.gst}</p>
+                    <p><strong>PAN:</strong> {shopProfile.pan}</p>
                 </div>
             </div>
 
-            <div style={{ borderTop: '1px solid #d1d5db', marginTop: 20 }}></div>
-            <div style={{ borderBottom: '2px solid #d1d5db', margin: '5px 0', padding: '15px 0' }}>
-                <div style={{ fontWeight: 700, textTransform: 'uppercase' as const, fontSize: 15, letterSpacing: '.04em', marginBottom: 12 }}>Buyer Details</div>
-                <div style={{ fontSize: 14, marginBottom: 4 }}><strong>{invoice.customerName}</strong></div>
-                {invoice.customerAddress && (
-                    <div style={{ color: '#333', marginBottom: 4 }}>{invoice.customerAddress}</div>
-                )}
-                {(invoice as any).customerState && (
-                    <div style={{ color: '#333', marginBottom: 4 }}>{(invoice as any).customerState}</div>
-                )}
-                {(invoice as any).customerPincode && (
-                    <div style={{ color: '#333', marginBottom: 4 }}>{(invoice as any).customerPincode}</div>
-                )}
-                {invoice.customerPhone && (
-                    <div style={{ color: '#333' }}>Phone: {invoice.customerPhone}</div>
-                )}
+            <div className="separator"></div>
+
+            <div className="customer-details">
+                <h3>Bill To</h3>
+                <p><strong>{invoice.customerName}</strong></p>
+                {invoice.customerAddress && <p>{invoice.customerAddress}</p>}
+                {(invoice as any).customerState && <p>{(invoice as any).customerState}</p>}
+                {(invoice as any).customerPincode && <p>{(invoice as any).customerPincode}</p>}
+                {invoice.customerPhone && <p><strong>Phone:</strong> {invoice.customerPhone}</p>}
             </div>
 
-            <table>
+            <table className="items-table">
                 <thead>
                     <tr>
+                        <th>#</th>
                         <th>Description</th>
                         <th>Purity</th>
-                        <th className="right">Gross Wt</th>
-                        <th className="right">Net Wt</th>
-                        <th className="right">Rate</th>
-                        <th className="right">Making</th>
-                        <th className="right">Amount</th>
+                        <th className="text-right">Gross Wt</th>
+                        <th className="text-right">Net Wt</th>
+                        <th className="text-right">Rate</th>
+                        <th className="text-right">Making</th>
+                        <th className="text-right">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {items.map(item => (
-                        <tr key={item.id}>
-                            <td>{item.description}</td>
-                            <td>{item.purity}</td>
-                            <td className="right">{f2(item.grossWeight)}</td>
-                            <td className="right">{f2(item.netWeight)}</td>
-                            <td className="right">₹ {f2(item.rate)}</td>
-                            <td className="right">₹ {f2(item.netWeight * item.making)}</td>
-                            <td className="right">₹ {f2((item.netWeight * item.rate) + (item.netWeight * item.making))}</td>
-                        </tr>
-                    ))}
+                    {items.map((item, idx) => {
+                        const makingTotal = item.netWeight * item.making;
+                        const lineTotal = (item.netWeight * item.rate) + makingTotal;
+                        return (
+                            <tr key={item.id}>
+                                <td>{idx + 1}</td>
+                                <td>{item.description}</td>
+                                <td>{item.purity}</td>
+                                <td className="text-right">{f2(item.grossWeight)}</td>
+                                <td className="text-right">{f2(item.netWeight)}</td>
+                                <td className="text-right">₹ {f2(item.rate)}</td>
+                                <td className="text-right">₹ {f2(makingTotal)}</td>
+                                <td className="text-right">₹ {f2(lineTotal)}</td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
 
-            <table className="totals">
-                <tbody>
-                    <tr><td className="right">Subtotal:</td><td className="right">₹ {f2(subtotal)}</td></tr>
-                    <tr><td className="right">CGST ({f2(cgstRate)}%):</td><td className="right">₹ {f2(cgst)}</td></tr>
-                    <tr><td className="right">SGST ({f2(sgstRate)}%):</td><td className="right">₹ {f2(sgst)}</td></tr>
-                    <tr><td className="right">Round Off:</td><td className="right">₹ {f2(roundOff)}</td></tr>
-                    <tr><td className="right grand">Grand Total:</td><td className="right grand">₹ {f2(finalAmount)}</td></tr>
-                </tbody>
-            </table>
-
-            <div style={{ marginTop: 20, padding: '15px 0', borderTop: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db' }}>
-                <div style={{ fontSize: 12 }}>
-                    <strong>Amount in Words:</strong>{' '}
-                    <span style={{ color: '#333' }}>{toWords(finalAmount)} Rupees Only</span>
+            <div className="summary-section">
+                <div className="summary-details">
+                    <div className="summary-row">
+                        <span>Subtotal:</span>
+                        <span>₹ {f2(subtotal)}</span>
+                    </div>
+                    {invoice.discount > 0 && (
+                        <div className="summary-row">
+                            <span>Discount:</span>
+                            <span>-₹ {f2(invoice.discount)}</span>
+                        </div>
+                    )}
+                    <div className="summary-row">
+                        <span>CGST ({f2(cgstRate)}%):</span>
+                        <span>₹ {f2(cgst)}</span>
+                    </div>
+                    <div className="summary-row">
+                        <span>SGST ({f2(sgstRate)}%):</span>
+                        <span>₹ {f2(sgst)}</span>
+                    </div>
+                    {roundOff !== 0 && (
+                        <div className="summary-row">
+                            <span>Round Off:</span>
+                            <span>₹ {f2(roundOff)}</span>
+                        </div>
+                    )}
+                    <div className="summary-row grand-total">
+                        <span>Grand Total:</span>
+                        <span>₹ {f2(finalAmount)}</span>
+                    </div>
                 </div>
             </div>
 
-            <div className="footer" style={{ marginTop: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div style={{ color: '#666666' }}>Thank you for shopping with us!</div>
-                <div className="signature-section">
-                    <div style={{ marginTop: 40, borderTop: '1px solid #d1d5db', width: 200, marginLeft: 'auto', paddingTop: 8 }}>
-                        Authorized Signatory
-                    </div>
+            <div className="words-section">
+                <p><strong>Amount in Words:</strong> {toWords(finalAmount)} Rupees Only</p>
+            </div>
+
+            <div className="invoice-footer">
+                <div className="terms">
+                    <h4>Terms & Conditions</h4>
+                    <p>Thank you for shopping with us!</p>
+                </div>
+                <div className="signature">
+                    <div className="signature-box"></div>
+                    <p>Authorized Signatory</p>
                 </div>
             </div>
         </div>
