@@ -110,13 +110,21 @@ export async function shareInvoicePdf(
   }
 }
 
+let isSharing = false; // Add a global or module-level flag
+
 // Share by invoiceId only (loads the print route and captures it). Optionally include invoice/settings for message text.
 export async function shareInvoicePdfById(
   invoiceId: string,
   invoiceForMessage?: Invoice,
   settings?: Partial<UserSettings> | null
 ) {
-  if (typeof window === 'undefined') throw new Error('Sharing is only available in the browser');
+  if (isSharing) {
+    console.warn('Share operation already in progress');
+    return false; // Prevent concurrent share requests
+  }
+
+  isSharing = true; // Set the flag to true when starting a share operation
+
   const message = invoiceForMessage
     ? composeWhatsAppInvoiceMessage(invoiceForMessage, settings || undefined)
     : `Invoice ${invoiceId}`;
@@ -133,9 +141,11 @@ export async function shareInvoicePdfById(
     openWhatsAppWithText(message);
     return false;
   } catch (err) {
-    console.error('Failed to share PDF by ID natively:', err); // Log the error
+    console.error('Failed to share PDF by ID natively:', err);
     openWhatsAppWithText(message);
     return false;
+  } finally {
+    isSharing = false; // Reset the flag after the operation completes
   }
 }
 

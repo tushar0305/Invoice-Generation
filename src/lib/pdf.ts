@@ -133,18 +133,23 @@ export async function generatePdfFromPrintPage(invoiceId: string): Promise<Blob>
       try {
         const doc = iframe.contentDocument || iframe.contentWindow?.document;
         if (!doc) throw new Error('No iframe document');
+        console.log('Iframe document loaded:', doc);
+
         // Wait a tick for fonts/styles
         setTimeout(() => {
           const root = doc.getElementById('print-root') as HTMLDivElement | null;
           if (!root) {
+            console.error('Printable root not found in iframe document:', doc);
             clearTimeout(timeout);
             reject(new Error('Printable root not found'));
             return;
           }
+          console.log('Printable root found:', root);
           clearTimeout(timeout);
           resolve(root);
-        }, 2000);
+        }, 4000); // Increased timeout to 4 seconds
       } catch (e) {
+        console.error('Error loading iframe content:', e);
         reject(e as any);
       }
     };
@@ -154,7 +159,7 @@ export async function generatePdfFromPrintPage(invoiceId: string): Promise<Blob>
   document.body.appendChild(iframe);
   try {
     const root = await done;
-    
+
     // Use html2canvas to rasterize the element
     const canvas = await html2canvas(root, {
       scale: 2,

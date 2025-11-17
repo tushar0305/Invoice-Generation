@@ -1,6 +1,6 @@
 @page {
   size: A4;
-  margin: 15mm;
+  margin: 5mm; /* Significantly reduced top margin to address blank space */
 }
 
 body {
@@ -16,30 +16,9 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 11px;
   color: #111111;
-  line-height: 1.5;
-  padding: 20px;
-  background: #fff;
-}
-
-.watermark {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.05;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.watermark img {
-  width: auto;
-  height: 750px;
-  filter: grayscale(100%) contrast(80%);
+  line-height: 1.8; /* Increased line height to prevent overlapping */
+  padding: 10mm; /* Reduced top padding to minimize blank space */
+  padding-top: 2mm; /* Further reduced top padding */
 }
 
 .header {
@@ -99,20 +78,22 @@ body {
   text-transform: uppercase;
 }
 
-table {
-  width: 100%;
+.table {
+  width: 100%; /* Ensure the table spans the full width */
   border-collapse: collapse;
   margin-top: 12px;
+  table-layout: fixed; /* Fixed layout for consistent column widths */
 }
 
-th,
-td {
+.table th,
+.table td {
   border: 1px solid #d1d5db;
-  padding: 10px 8px;
+  padding: 10px; /* Increased padding for better spacing */
   text-align: left;
+  word-wrap: break-word; /* Ensure content wraps within cells */
 }
 
-th {
+.table th {
   background: #f3f4f6;
   font-weight: 700;
   color: #111111;
@@ -120,7 +101,7 @@ th {
   text-transform: uppercase;
 }
 
-td {
+.table td {
   font-size: 10px;
   color: #111111;
 }
@@ -132,7 +113,7 @@ td {
 .totals {
   width: 50%;
   margin-left: auto;
-  margin-top: 0;
+  margin-top: 12px;
 }
 
 .totals td {
