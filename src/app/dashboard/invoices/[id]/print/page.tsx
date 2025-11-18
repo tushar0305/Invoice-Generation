@@ -5,6 +5,7 @@ import { useParams, notFound, useSearchParams } from 'next/navigation';
 import type { Invoice, InvoiceItem, UserSettings } from '@/lib/definitions';
 import { supabase } from '@/supabase/client';
 import { Loader2 } from 'lucide-react';
+import InvoicePdfTemplate from '@/components/invoice-pdf-template';
 import { format } from 'date-fns';
 
 const DEFAULT_SHOP = {
@@ -207,115 +208,8 @@ export default function PrintInvoicePage() {
     };
 
     return (
-        <div id="print-root" className="invoice-container">
-            <div className="invoice-header">
-                <div className="header-left">
-                    <div className="shop-name">{shopProfile.name}</div>
-                    <p>{shopProfile.address}</p>
-                    {shopProfile.state && <p>{shopProfile.state} - {shopProfile.pincode}</p>}
-                    {shopProfile.phone && <p><strong>Phone:</strong> {shopProfile.phone}</p>}
-                    {shopProfile.email && <p><strong>Email:</strong> {shopProfile.email}</p>}
-                </div>
-                <div className="header-right">
-                    <h2>TAX INVOICE</h2>
-                    <p><strong>Invoice No:</strong> {invoice.invoiceNumber}</p>
-                    <p><strong>Date:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
-                    <p><strong>GSTIN:</strong> {shopProfile.gst}</p>
-                    <p><strong>PAN:</strong> {shopProfile.pan}</p>
-                </div>
-            </div>
-
-            <div className="separator"></div>
-
-            <div className="customer-details">
-                <h3>Bill To</h3>
-                <p><strong>{invoice.customerName}</strong></p>
-                {invoice.customerAddress && <p>{invoice.customerAddress}</p>}
-                {invoice.customerState && <p>{invoice.customerState}</p>}
-                {invoice.customerPincode && <p>{invoice.customerPincode}</p>}
-                {invoice.customerPhone && <p><strong>Phone:</strong> {invoice.customerPhone}</p>}
-            </div>
-
-            <table className="items-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Description</th>
-                        <th>Purity</th>
-                        <th className="text-right">Gross Wt</th>
-                        <th className="text-right">Net Wt</th>
-                        <th className="text-right">Rate</th>
-                        <th className="text-right">Making</th>
-                        <th className="text-right">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {safeItems.map((item, idx) => {
-                        const makingTotal = item.netWeight * item.making;
-                        const lineTotal = (item.netWeight * item.rate) + makingTotal;
-                        return (
-                            <tr key={item.id}>
-                                <td>{idx + 1}</td>
-                                <td>{item.description}</td>
-                                <td>{item.purity}</td>
-                                <td className="text-right">{f2(item.grossWeight)}</td>
-                                <td className="text-right">{f2(item.netWeight)}</td>
-                                <td className="text-right">₹ {f2(item.rate)}</td>
-                                <td className="text-right">₹ {f2(makingTotal)}</td>
-                                <td className="text-right">₹ {f2(lineTotal)}</td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
-
-            <div className="summary-section">
-                <div className="summary-details">
-                    <div className="summary-row">
-                        <span>Subtotal:</span>
-                        <span>₹ {f2(subtotal)}</span>
-                    </div>
-                    {invoice.discount > 0 && (
-                        <div className="summary-row">
-                            <span>Discount:</span>
-                            <span>-₹ {f2(invoice.discount)}</span>
-                        </div>
-                    )}
-                    <div className="summary-row">
-                        <span>CGST ({f2(cgstRate)}%):</span>
-                        <span>₹ {f2(cgst)}</span>
-                    </div>
-                    <div className="summary-row">
-                        <span>SGST ({f2(sgstRate)}%):</span>
-                        <span>₹ {f2(sgst)}</span>
-                    </div>
-                    {roundOff !== 0 && (
-                        <div className="summary-row">
-                            <span>Round Off:</span>
-                            <span>₹ {f2(roundOff)}</span>
-                        </div>
-                    )}
-                    <div className="summary-row grand-total">
-                        <span>Grand Total:</span>
-                        <span>₹ {f2(finalAmount)}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="words-section">
-                <p><strong>Amount in Words:</strong> {toWords(finalAmount)} Rupees Only</p>
-            </div>
-
-            <div className="invoice-footer">
-                <div className="terms">
-                    <h4>Terms & Conditions</h4>
-                    <p>Thank you for shopping with us!</p>
-                </div>
-                <div className="signature">
-                    <div className="signature-box"></div>
-                    <p>Authorized Signatory</p>
-                </div>
-            </div>
-        </div>
+      <div id="print-root" className="invoice-container">
+        <InvoicePdfTemplate invoice={invoice} items={safeItems} settings={settings} />
+      </div>
     );
 }

@@ -1,7 +1,8 @@
 import type { Invoice, InvoiceItem, UserSettings } from './definitions';
 import { format } from 'date-fns';
 import { formatCurrency } from './utils';
-import { generateInvoicePdf, generatePdfFromPrintPage } from './pdf';
+import { generateInvoicePdfTailwind } from './pdf';
+import { supabase } from '@/supabase/client';
 
 export function composeWhatsAppInvoiceMessage(
   invoice: Invoice,
@@ -58,29 +59,7 @@ export async function shareInvoicePdf(
   const message = composeWhatsAppInvoiceMessage(invoice, settings || undefined);
 
   try {
-    // Use print page capture as the primary method to match the print layout exactly
-    let pdfBlob: Blob | null = null;
-    try {
-      if (invoice.id) {
-        pdfBlob = await generatePdfFromPrintPage(invoice.id);
-      }
-    } catch (err) {
-      console.error('Print page capture failed:', err);
-    }
-    
-    // Fallback to programmatic generation if print page capture fails
-    if (!pdfBlob) {
-      try {
-        pdfBlob = await generateInvoicePdf({ invoice, items, settings: settings || undefined });
-      } catch (err) {
-        console.error('Programmatic PDF generation failed:', err);
-      }
-    }
-    
-    // If still no PDF, throw error
-    if (!pdfBlob) {
-      throw new Error('Failed to generate PDF');
-    }
+    const pdfBlob = await generateInvoicePdfTailwind({ invoice, items, settings: settings || undefined });
     
     const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
     const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
@@ -129,8 +108,76 @@ export async function shareInvoicePdfById(
     ? composeWhatsAppInvoiceMessage(invoiceForMessage, settings || undefined)
     : `Invoice ${invoiceId}`;
   try {
-    const pdfBlob = await generatePdfFromPrintPage(invoiceId);
-    const filename = `Invoice-${invoiceForMessage?.invoiceNumber || invoiceId}.pdf`;
+    // Fetch invoice, items and settings; then render Tailwind template PDF
+    const { data: inv, error: invErr } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('id', invoiceId)
+      .single();
+    if (invErr || !inv) throw new Error('Invoice not found');
+
+    const { data: its, error: itErr } = await supabase
+      .from('invoice_items')
+      .select('*')
+      .eq('invoice_id', invoiceId)
+      .order('id');
+    if (itErr) throw itErr;
+
+    const invoice: Invoice = {
+      id: inv.id,
+      userId: inv.user_id,
+      invoiceNumber: inv.invoice_number,
+      customerName: inv.customer_name,
+      customerAddress: inv.customer_address || '',
+      customerState: inv.customer_state || '',
+      customerPincode: inv.customer_pincode || '',
+      customerPhone: inv.customer_phone || '',
+      invoiceDate: inv.invoice_date,
+      discount: Number(inv.discount) || 0,
+      sgst: Number(inv.sgst) || 0,
+      cgst: Number(inv.cgst) || 0,
+      status: inv.status,
+      grandTotal: Number(inv.grand_total) || 0,
+      createdAt: inv.created_at,
+      updatedAt: inv.updated_at,
+    };
+    const items: InvoiceItem[] = (its ?? []).map((r: any) => ({
+      id: r.id,
+      description: r.description,
+      purity: r.purity,
+      grossWeight: Number(r.gross_weight) || 0,
+      netWeight: Number(r.net_weight) || 0,
+      rate: Number(r.rate) || 0,
+      making: Number(r.making) || 0,
+    }));
+
+    let resolvedSettings: Partial<UserSettings> | null = settings || null;
+    if (!resolvedSettings) {
+      const { data: userSettings } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', inv.user_id)
+        .single();
+      if (userSettings) {
+        resolvedSettings = {
+          id: userSettings.user_id,
+          userId: userSettings.user_id,
+          cgstRate: Number(userSettings.cgst_rate) || 0,
+          sgstRate: Number(userSettings.sgst_rate) || 0,
+          shopName: userSettings.shop_name || 'Jewellers Store',
+          gstNumber: userSettings.gst_number || '',
+          panNumber: userSettings.pan_number || '',
+          address: userSettings.address || '',
+          state: userSettings.state || '',
+          pincode: userSettings.pincode || '',
+          phoneNumber: userSettings.phone_number || '',
+          email: userSettings.email || '',
+        } as Partial<UserSettings>;
+      }
+    }
+
+    const pdfBlob = await generateInvoicePdfTailwind({ invoice, items, settings: resolvedSettings || undefined });
+    const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
     const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
     const navAny = navigator as any;
     const canShareFiles = !!(navAny?.canShare ? navAny.canShare({ files: [pdfFile] }) : navAny?.share);
