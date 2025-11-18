@@ -56,9 +56,13 @@ export async function generateInvoicePdfTailwind({ invoice, items, settings }: G
   container.style.left = '-10000px';
   container.style.top = '0';
   container.style.width = '794px'; // ~210mm at 96dpi
+  container.style.minWidth = '794px'; // Ensure minimum width
+  container.style.maxWidth = '794px'; // Prevent expansion
   container.style.background = '#ffffff';
   container.style.padding = '0';
   container.style.margin = '0';
+  container.style.overflow = 'hidden'; // Prevent overflow issues
+  container.style.boxSizing = 'border-box';
   container.setAttribute('data-invoice-pdf-root', '1');
 
   document.body.appendChild(container);
@@ -82,7 +86,8 @@ export async function generateInvoicePdfTailwind({ invoice, items, settings }: G
       backgroundColor: '#ffffff',
       useCORS: true,
       logging: false,
-      windowWidth: container.scrollWidth,
+      width: 794, // Force fixed width for consistent rendering
+      windowWidth: 794, // Force viewport width for rendering
       windowHeight: container.scrollHeight,
     });
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -97,17 +102,26 @@ export async function generateInvoicePdfTailwind({ invoice, items, settings }: G
 
     const imgPxWidth = canvas.width;
     const imgPxHeight = canvas.height;
-    const pxToMm = 25.4 / 96;
-    const imgMmWidth = imgPxWidth * pxToMm;
-    const imgMmHeight = imgPxHeight * pxToMm;
+    
+    // Calculate aspect ratio
+    const aspectRatio = imgPxHeight / imgPxWidth;
+    
+    // Fit to page width with margins
+    const renderWidth = printableWidth;
+    const renderHeight = renderWidth * aspectRatio;
+    
+    // If height exceeds page, scale down proportionally
+    let finalWidth = renderWidth;
+    let finalHeight = renderHeight;
+    if (finalHeight > printableHeight) {
+      finalHeight = printableHeight;
+      finalWidth = finalHeight / aspectRatio;
+    }
+    
+    const x = margin;
+    const y = margin;
 
-    const scale = Math.min(printableWidth / imgMmWidth, printableHeight / imgMmHeight);
-    const renderWidth = imgMmWidth * scale;
-    const renderHeight = imgMmHeight * scale;
-    const x = margin; // Align to left margin instead of centering
-    const y = margin; // Align to top margin instead of centering
-
-    pdf.addImage(imgData, 'JPEG', x, y, renderWidth, renderHeight, undefined, 'FAST');
+    pdf.addImage(imgData, 'JPEG', x, y, finalWidth, finalHeight, undefined, 'FAST');
     return new Blob([pdf.output('arraybuffer')], { type: 'application/pdf' });
   } finally {
     try {

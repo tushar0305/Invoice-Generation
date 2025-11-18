@@ -105,7 +105,7 @@ export default function InvoicePdfTemplate({ invoice, items, settings }: Props) 
   return (
     <div
       className="mx-auto w-full max-w-[210mm] bg-white text-[#111] text-[10px] leading-[1.5] p-4 font-sans"
-      style={{ boxSizing: 'border-box' }}
+      style={{ boxSizing: 'border-box', width: '100%', maxWidth: '210mm' }}
     >
       {/* Header */}
       <div className="flex items-start justify-between pb-3">
@@ -169,17 +169,17 @@ export default function InvoicePdfTemplate({ invoice, items, settings }: Props) 
       </div>
 
       {/* Items table */}
-      <table className="table w-full table-auto border-collapse">
+      <table className="table w-full table-auto border-collapse" style={{ tableLayout: 'auto', width: '100%' }}>
         <thead>
           <tr>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide">#</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide">Description</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide">Purity</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide">Gross Wt</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide">Net Wt</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide">Rate</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide">Making</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide">Amount</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide" style={{ width: '5%' }}>#</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide" style={{ width: '25%' }}>Description</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide" style={{ width: '10%' }}>Purity</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '12.5%' }}>Gross Wt</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '12.5%' }}>Net Wt</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '10%' }}>Rate</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '10%' }}>Making</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '15%' }}>Amount</th>
           </tr>
         </thead>
         <tbody>
