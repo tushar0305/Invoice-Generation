@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, notFound, useSearchParams } from 'next/navigation';
 import type { Invoice, InvoiceItem, UserSettings } from '@/lib/definitions';
-import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, getFirestore } from 'firebase/firestore';
+import { supabase } from '@/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -49,22 +48,110 @@ export default function PrintInvoicePage() {
     const params = useParams();
     const id = params.id as string;
     const search = useSearchParams();
-    const firestore = getFirestore();
     const printTriggered = useRef(false);
+        const [invoice, setInvoice] = useState<Invoice | null>(null);
+        const [items, setItems] = useState<InvoiceItem[] | null>(null);
+        const [loading, setLoading] = useState(true);
+        const [settings, setSettings] = useState<UserSettings | null>(null);
 
-    const invoiceRef = useMemoFirebase(() => doc(firestore, 'invoices', id), [firestore, id]);
-    const { data: invoice, isLoading: loadingInvoice } = useDoc<Invoice>(invoiceRef);
+        useEffect(() => {
+                let cancelled = false;
+                async function load() {
+                        setLoading(true);
 
-    // Once we know the invoice owner, load user settings for dynamic shop profile.
-    const settingsRef = useMemoFirebase(() => {
-        if (!invoice?.userId) return null;
-        return doc(firestore, 'userSettings', invoice.userId);
-    }, [firestore, invoice?.userId]);
-    const { data: settings, isLoading: loadingSettings } = useDoc<UserSettings>(settingsRef);
-    const itemsRef = useMemoFirebase(() => collection(firestore, `invoices/${id}/invoiceItems`), [firestore, id]);
-    const { data: items, isLoading: loadingItems } = useCollection<InvoiceItem>(itemsRef);
+                        // Fetch invoice first to get user_id
+                        const { data: inv, error: invErr } = await supabase
+                            .from('invoices')
+                            .select('*')
+                            .eq('id', id)
+                            .single();
 
-    const isLoading = loadingInvoice || loadingItems;
+                        if (invErr || !inv) {
+                            setInvoice(null);
+                            setItems(null);
+                            setLoading(false);
+                            return;
+                        }
+
+                        // Fetch user settings using user_id from invoice
+                        const { data: userSettings, error: settingsErr } = await supabase
+                            .from('user_settings')
+                            .select('*')
+                            .eq('user_id', inv.user_id)
+                            .single();
+
+                        if (!cancelled) {
+                            if (settingsErr) {
+                                console.error('Error fetching user settings:', settingsErr);
+                                setSettings(null);
+                            } else if (userSettings) {
+                                setSettings({
+                                    id: userSettings.user_id,
+                                    userId: userSettings.user_id,
+                                    cgstRate: Number(userSettings.cgst_rate) || 0,
+                                    sgstRate: Number(userSettings.sgst_rate) || 0,
+                                    shopName: userSettings.shop_name || 'Jewellers Store',
+                                    gstNumber: userSettings.gst_number || '',
+                                    panNumber: userSettings.pan_number || '',
+                                    address: userSettings.address || '',
+                                    state: userSettings.state || '',
+                                    pincode: userSettings.pincode || '',
+                                    phoneNumber: userSettings.phone_number || '',
+                                    email: userSettings.email || '',
+                                });
+                            }
+
+                            // Map invoice data
+                            const mappedInv: Invoice = {
+                                id: inv.id,
+                                userId: inv.user_id,
+                                invoiceNumber: inv.invoice_number,
+                                customerName: inv.customer_name,
+                                customerAddress: inv.customer_address || '',
+                                customerState: inv.customer_state || '',
+                                customerPincode: inv.customer_pincode || '',
+                                customerPhone: inv.customer_phone || '',
+                                invoiceDate: inv.invoice_date,
+                                discount: Number(inv.discount) || 0,
+                                sgst: Number(inv.sgst) || 0,
+                                cgst: Number(inv.cgst) || 0,
+                                status: inv.status,
+                                grandTotal: Number(inv.grand_total) || 0,
+                                createdAt: inv.created_at,
+                                updatedAt: inv.updated_at,
+                            };
+                            setInvoice(mappedInv);
+
+                            // Fetch invoice items
+                            const { data: its, error: itErr } = await supabase
+                                .from('invoice_items')
+                                .select('*')
+                                .eq('invoice_id', id)
+                                .order('id');
+                            if (itErr) {
+                                console.error('Error fetching invoice items:', itErr);
+                                setItems([]);
+                            } else {
+                                const mappedItems: InvoiceItem[] = (its ?? []).map((r: any) => ({
+                                    id: r.id,
+                                    description: r.description,
+                                    purity: r.purity,
+                                    grossWeight: Number(r.gross_weight) || 0,
+                                    netWeight: Number(r.net_weight) || 0,
+                                    rate: Number(r.rate) || 0,
+                                    making: Number(r.making) || 0,
+                                }));
+                                setItems(mappedItems);
+                            }
+                        }
+
+                        setLoading(false);
+                }
+                load();
+                return () => { cancelled = true; };
+        }, [id]);
+
+        const isLoading = loading;
 
     useEffect(() => {
         if (!isLoading && invoice && items && !printTriggered.current) {
@@ -76,15 +163,27 @@ export default function PrintInvoicePage() {
         }
     }, [isLoading, invoice, items, search]);
 
+    useEffect(() => {
+        console.log('Invoice ID:', id);
+    }, [id]);
+
     if (isLoading) {
         return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
-    if (!invoice || !items) {
-        notFound();
+    if (!invoice) {
+        return (
+            <div id="print-root" className="invoice-container flex h-screen items-center justify-center">
+                <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Invoice not found or you don't have access.</p>
+                </div>
+            </div>
+        );
     }
+    // Ensure items is a list for rendering
+    const safeItems = items ?? [];
 
     // Making charge now applied per net gram basis
-    const subtotal = items.reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
+    const subtotal = safeItems.reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
     const totalBeforeTax = subtotal - invoice.discount;
     // Use new sgst/cgst fields, fallback to tax/2 for backward compatibility
     const cgstRate = invoice.cgst ?? ((invoice.tax || 0) / 2);
@@ -108,7 +207,7 @@ export default function PrintInvoicePage() {
     };
 
     return (
-        <div className="invoice-container">
+        <div id="print-root" className="invoice-container">
             <div className="invoice-header">
                 <div className="header-left">
                     <div className="shop-name">{shopProfile.name}</div>
@@ -132,8 +231,8 @@ export default function PrintInvoicePage() {
                 <h3>Bill To</h3>
                 <p><strong>{invoice.customerName}</strong></p>
                 {invoice.customerAddress && <p>{invoice.customerAddress}</p>}
-                {(invoice as any).customerState && <p>{(invoice as any).customerState}</p>}
-                {(invoice as any).customerPincode && <p>{(invoice as any).customerPincode}</p>}
+                {invoice.customerState && <p>{invoice.customerState}</p>}
+                {invoice.customerPincode && <p>{invoice.customerPincode}</p>}
                 {invoice.customerPhone && <p><strong>Phone:</strong> {invoice.customerPhone}</p>}
             </div>
 
@@ -151,7 +250,7 @@ export default function PrintInvoicePage() {
                     </tr>
                 </thead>
                 <tbody>
-                    {items.map((item, idx) => {
+                    {safeItems.map((item, idx) => {
                         const makingTotal = item.netWeight * item.making;
                         const lineTotal = (item.netWeight * item.rate) + makingTotal;
                         return (

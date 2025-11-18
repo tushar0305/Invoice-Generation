@@ -20,12 +20,13 @@ import {
   Settings,
   LogOut,
   PlusCircle,
+  Package,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@/components/logo';
 import { AuthWrapper } from '@/components/auth-wrapper';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser } from '@/supabase/provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -38,6 +39,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 import { FloatingNewInvoiceButton } from '@/components/floating-new-invoice';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/supabase/client';
+import type { UserSettings } from '@/lib/definitions';
 
 function UserNav() {
   const { user } = useUser();
@@ -55,9 +59,6 @@ function UserNav() {
       <DropdownMenuTrigger asChild>
         <button className="flex w-full items-center gap-3 rounded-md p-2 text-left text-sm hover:bg-sidebar-accent">
           <Avatar className="h-9 w-9">
-            {user.photoURL && (
-              <AvatarImage src={user.photoURL} alt={user.email ?? ''} />
-            )}
             <AvatarFallback>{fallback}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col truncate">
@@ -83,17 +84,6 @@ function UserNav() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => {
-            router.push('/dashboard/settings');
-            // Ensure mobile drawer closes when navigating to settings
-            setOpenMobile(false);
-          }}
-          className="cursor-pointer"
-        >
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Settings</span>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -142,6 +132,26 @@ function NavMenu() {
                   <span>Customers</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard/stock')}
+                  isActive={pathname === '/dashboard/stock'}
+                  tooltip="Stock"
+                >
+                  <Package />
+                  <span>Stock</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard/settings')}
+                  isActive={pathname === '/dashboard/settings'}
+                  tooltip="Settings"
+                >
+                  <Settings />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <div className="px-2 pt-4">
                 <Button
                   variant="outline"
@@ -165,6 +175,18 @@ function DashboardLayoutInternal({
   const pathname = usePathname();
   const auth = useAuth();
   const router = useRouter();
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const { setOpenMobile, isMobile } = useSidebar();
+
+  useEffect(() => {
+    async function fetchSettings() {
+      const { data, error } = await supabase.from('user_settings').select('*').single();
+      if (!error) {
+        setSettings(data);
+      }
+    }
+    fetchSettings();
+  }, []);
 
   const handleSignOut = async () => {
     await auth.signOut();
@@ -180,6 +202,7 @@ function DashboardLayoutInternal({
       return 'Invoices';
     }
     if (pathname === '/dashboard/customers') return 'Customers';
+    if (pathname === '/dashboard/stock') return 'Stock';
     if (pathname === '/dashboard/settings') return 'Settings';
     return 'Dashboard';
   };
@@ -188,7 +211,14 @@ function DashboardLayoutInternal({
     <AuthWrapper>
       <Sidebar>
         <SidebarHeader>
-          <Logo />
+          <div 
+            onClick={() => isMobile && setOpenMobile(false)}
+            className="cursor-pointer"
+            role="button"
+            aria-label="Close sidebar"
+          >
+            <Logo />
+          </div>
         </SidebarHeader>
         <SidebarContent>
           <NavMenu />
@@ -211,15 +241,7 @@ function DashboardLayoutInternal({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
-          <SidebarTrigger className="md:hidden" />
-          <div className="flex w-full items-center justify-between">
-            <h1 className="font-headline text-lg font-semibold md:text-xl">
-              {getTitle()}
-            </h1>
-          </div>
-        </header>
-        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 pb-20 md:pb-6">{children}</main>
         <FloatingNewInvoiceButton />
         <MobileBottomNav />
       </SidebarInset>

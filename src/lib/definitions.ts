@@ -42,3 +42,20 @@ export type UserSettings = {
   phoneNumber?: string; // Contact phone number
   email?: string; // Contact email (defaults to auth email, not editable in UI)
 };
+
+export type StockItem = {
+  id: string; // Document ID
+  userId: string; // Reference to user who owns this item
+  name: string; // Item name (e.g., "Gold Ring", "Silver Bracelet")
+  description?: string; // Additional description
+  purity: string; // Purity (e.g., "22K", "92.5", "999")
+  basePrice: number; // Base price per unit
+  baseWeight?: number; // Base weight if applicable (e.g., 1 gram, 1 piece)
+  makingChargePerGram: number; // Making charge per gram
+  quantity: number; // Current stock quantity
+  unit: string; // Unit of measurement (e.g., "gram", "piece", "ml")
+  category?: string; // Category for organization (e.g., "Gold", "Silver", "Bronze")
+  isActive: boolean; // Whether this item is available for invoices
+  createdAt?: any;
+  updatedAt?: any;
+};

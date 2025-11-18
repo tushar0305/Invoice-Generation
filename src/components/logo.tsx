@@ -1,6 +1,6 @@
-import { useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, getFirestore } from 'firebase/firestore';
-import type { UserSettings } from '@/lib/definitions';
+import { useEffect, useState } from 'react';
+import { useUser } from '@/supabase/provider';
+import { supabase } from '@/supabase/client';
 
 type LogoProps = {
   generic?: boolean; // when true shows generic brand regardless of user settings
@@ -8,18 +8,29 @@ type LogoProps = {
 
 export function Logo({ generic }: LogoProps) {
   const { user } = useUser();
-  const firestore = getFirestore();
+  const [shopName, setShopName] = useState<string | null>(null);
 
-  const settingsRef = useMemoFirebase(() => {
-    if (!user || generic) return null;
-    return doc(firestore, 'userSettings', user.uid);
-  }, [firestore, user, generic]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!user || generic) { setShopName(null); return; }
+      const { data, error } = await supabase
+        .from('user_settings')
+        .select('shop_name')
+        .eq('user_id', user.uid)
+        .single();
+      if (cancelled) return;
+      if (!error && data) {
+        setShopName(data.shop_name || null);
+      } else {
+        setShopName(null);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [user?.uid, generic]);
 
-  const { data: settings } = useDoc<UserSettings>(settingsRef);
-
-  const brand = generic
-    ? 'Invoice Maker'
-    : (settings?.shopName || 'Jewellers Store');
+  const brand = generic ? 'Invoice Maker' : (shopName || 'Jewellers Store');
 
   return (
     <div className="flex items-center">

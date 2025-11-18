@@ -1,45 +1,263 @@
-# Invoice Generation (Next.js + Firebase)
+# Invoice Generation (Next.js + Supabase)
 
->A production-ready Next.js (App Router) app for creating, managing, and printing invoices with Firebase Auth and Firestore.
+> A production-ready Next.js 15 (App Router) web app for creating, managing, and printing invoices with Supabase authentication and database.
 
 ## Stack
 
-- Next.js 15 (App Router) + React 18 + TypeScript
-- Firebase (Auth, Firestore)
-- Tailwind CSS + shadcn/ui
-- date-fns, lucide-react icons
+- **Frontend**: Next.js 15 (Turbopack), React 18, TypeScript
+- **Backend**: Supabase (PostgreSQL, Auth, Row-Level Security)
+- **UI**: Tailwind CSS + shadcn/ui components
+- **Export**: XLSX (Excel), jsPDF (PDF), WhatsApp sharing
+- **Forms**: React Hook Form + Zod validation
+- **Charts**: Recharts for analytics
 
 ## Prerequisites
 
 - Node.js 18+ and npm
-- Firebase CLI installed and logged in
-	```bash
-	npm i -g firebase-tools
-	firebase login
-	```
+- A free Supabase account (https://app.supabase.com)
 
-## Setup
+## Quick Setup
 
-1) Install dependencies
+### 1. Clone & Install
+
 ```bash
+git clone <repo-url>
+cd Invoice-Generation
 npm install
 ```
 
-2) Environment variables
+### 2. Configure Supabase
 
-- Copy `.env.local.example` to `.env.local` and fill the values from your Firebase project settings (Project settings > General > Your apps).
-- Required client env vars:
-	- `NEXT_PUBLIC_FIREBASE_API_KEY`
-	- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-	- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-	- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-	- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-	- `NEXT_PUBLIC_FIREBASE_APP_ID`
+1. Create a project at https://app.supabase.com
+2. Copy your credentials from **Settings → API**
+3. Create `.env.local` with:
 
-- Optional server-only (Admin SDK) env vars (if/when you add server code):
-	- `FIREBASE_PROJECT_ID`
-	- `FIREBASE_CLIENT_EMAIL`
-	- `FIREBASE_PRIVATE_KEY`
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 3. Create Database Schema
+
+**Option A: Using the Verification Script (Recommended)**
+
+```bash
+node scripts/verify-supabase.js
+```
+
+This will:
+- ✅ Verify your Supabase credentials
+- 📋 Show step-by-step setup instructions
+- 🔗 Provide direct link to your Supabase SQL editor
+
+**Option B: Manual Setup**
+
+1. Open your Supabase project dashboard
+2. Click **SQL Editor** → **New Query**
+3. Copy the entire contents of `docs/supabase.sql`
+4. Paste it into the editor and click **Run**
+
+The script creates:
+- `stock_items` — Inventory management
+- `invoices` — Invoice records
+- `invoice_items` — Individual line items per invoice
+- `user_settings` — Shop configuration & tax rates
+- All Row-Level Security (RLS) policies for data privacy
+
+### 4. Start the Dev Server
+
+```bash
+npm run dev
+```
+
+Open http://localhost:9002 in your browser.
+
+## First Steps
+
+### Sign Up
+
+1. Go to http://localhost:9002/login
+2. Click "Create an account"
+3. Enter email and password
+4. **Check your email for verification link** (check spam folder!)
+5. Click the verification link
+6. Sign in
+
+### Create Stock Items
+
+1. Click **Stock Management** in the sidebar
+2. Click **+ Add Stock** button
+3. Fill in:
+   - Item name (e.g., "Gold Ring 22K")
+   - Purity (e.g., "22K")
+   - Base price
+   - Making charge per gram
+   - Quantity and unit
+4. Click **Save**
+
+### Create Your First Invoice
+
+1. Click **Invoices** → **Create Invoice**
+2. Enter customer details
+3. Click **+ Add Item** and select from your stock
+4. Adjust quantities and rates if needed
+5. Review totals (taxes auto-calculated)
+6. Choose status (Paid / Due)
+7. Click **Create Invoice**
+
+### Configure Settings
+
+1. Click **Settings** in the sidebar
+2. Add shop details:
+   - Shop name
+   - GST/PAN numbers
+   - Address & contact
+   - Default tax rates (CGST/SGST)
+3. Click **Save Settings**
+4. These values auto-populate new invoices
+
+## Features
+
+✨ **Invoice Management**
+- Create, edit, view, and delete invoices
+- Auto-numbered invoices (INV2025001, etc.)
+- Support for SGST/CGST tax calculations
+- Discount support
+
+📦 **Stock Management**
+- Track inventory items
+- Purity and making charge support
+- Quick item selection when creating invoices
+
+📊 **Dashboard**
+- Revenue trends (30-day chart)
+- Outstanding due amounts
+- Top customers by spend
+- Recent invoices
+
+📱 **Multi-Device**
+- Fully responsive design
+- Mobile-friendly invoice creation
+- Print-ready invoice layout
+
+🔗 **Sharing**
+- Export invoices as PDF
+- Share via WhatsApp with auto-formatted message
+- Export all invoices to Excel
+
+🔐 **Security**
+- Supabase Row-Level Security (RLS)
+- User data isolation
+- Email verification
+- Session management
+
+## Build & Deploy
+
+### Production Build
+
+```bash
+npm run build
+npm start
+```
+
+### Deploy to Vercel (Recommended)
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+```
+
+Set environment variables in Vercel project settings:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### Deploy to Other Platforms
+
+Works with any Node.js hosting (Netlify, Railway, Render, etc.)
+
+## Troubleshooting
+
+### "Could not find the table 'public.invoices'"
+
+**Cause**: Schema not created in Supabase  
+**Fix**: Run `node scripts/verify-supabase.js` and follow the instructions to create tables
+
+### "Email not confirmed"
+
+**Cause**: Email verification required  
+**Fix**: Check your email (spam folder!) for Supabase verification link and click it
+
+### "Invalid login credentials"
+
+**Cause**: Wrong email/password  
+**Fix**: Double-check credentials or create a new account
+
+### Schema check banner at bottom right
+
+If you see a warning banner, the tables don't exist yet. Run the setup script above.
+
+## Project Structure
+
+```
+src/
+├── app/                    # Next.js 15 App Router
+│   ├── dashboard/         # Protected dashboard routes
+│   ├── login/            # Auth pages
+│   └── layout.tsx        # Root layout with Supabase provider
+├── components/           # Reusable React components
+│   ├── invoice-form.tsx  # Invoice creation/editing
+│   ├── logo.tsx         # Branding
+│   └── ui/              # shadcn/ui components
+├── hooks/               # Custom React hooks
+│   ├── use-stock-items.tsx
+│   ├── use-toast.ts
+│   └── use-schema-check.tsx
+├── lib/                # Utilities
+│   ├── definitions.ts  # TypeScript types
+│   ├── utils.ts       # Helpers
+│   └── pdf.ts         # PDF generation
+└── supabase/          # Supabase integration
+    ├── client.ts      # Supabase client
+    └── provider.tsx   # Auth context provider
+
+docs/
+├── supabase.sql      # Database schema (run this!)
+└── backend.json      # API reference
+
+scripts/
+├── verify-supabase.js    # Setup verification
+└── setup-supabase.ts     # Schema setup (advanced)
+```
+
+## Available Scripts
+
+```bash
+npm run dev        # Start dev server (Turbopack)
+npm run build      # Production build
+npm start          # Run production server
+npm run lint       # Run ESLint
+npm run typecheck  # TypeScript type checking
+```
+
+## Environment Variables
+
+### Required
+
+- `NEXT_PUBLIC_SUPABASE_URL` — Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key (safe for browser)
+
+### Optional (for advanced features)
+
+- `SUPABASE_SERVICE_ROLE` — For server-side operations (never expose in client)
+
+## API Reference
+
+See `docs/backend.json` for detailed API documentation.
+
+3. Start the app and sign up/sign in from `/login`.
 
 3) Firebase project and services
 

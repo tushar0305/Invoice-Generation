@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { FirebaseClientProvider } from '@/firebase';
+import { SupabaseProvider } from '@/supabase/provider';
 import { AuthWrapper } from '@/components/auth-wrapper';
 
 export const metadata: Metadata = {
@@ -39,12 +39,12 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
-        <FirebaseClientProvider>
-            <AuthWrapper>
-                {children}
-            </AuthWrapper>
-            <Toaster />
-        </FirebaseClientProvider>
+        <SupabaseProvider>
+          <AuthWrapper>
+            {children}
+          </AuthWrapper>
+          <Toaster />
+        </SupabaseProvider>
       </body>
     </html>
   );

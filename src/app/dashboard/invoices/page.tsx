@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -34,9 +34,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, getFirestore, writeBatch, doc, getDocs, orderBy } from 'firebase/firestore';
-import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
+import { useUser } from '@/supabase/provider';
+import { supabase } from '@/supabase/client';
 import { format, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import type { UserSettings } from '@/lib/definitions';
@@ -55,30 +54,57 @@ export default function InvoicesPage() {
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
 
   const { user } = useUser();
-  const firestore = getFirestore();
+  const [invoices, setInvoices] = useState<Invoice[] | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
+  const hasMore = (invoices?.length ?? 0) >= (page + 1) * pageSize;
+  const settings = undefined as any;
 
-  // Load user settings once for shop info in share text
-  const settingsRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'userSettings', user.uid);
-  }, [firestore, user]);
-  const { data: settings } = useDoc<UserSettings>(settingsRef);
-
-  const invoicesQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    
-    let q = query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
-
+  async function loadInvoices(nextPage: number, append = false) {
+    if (!user) { setInvoices([]); setIsLoading(false); return; }
+    setIsLoading(true);
+    const from = nextPage * pageSize;
+    const to = from + pageSize - 1;
+    let q = supabase.from('invoices').select('*').eq('user_id', user.uid).order('created_at', { ascending: false }).range(from, to);
     if (statusFilter !== 'all') {
-        q = query(q, where('status', '==', statusFilter));
+      q = supabase.from('invoices').select('*').eq('user_id', user.uid).eq('status', statusFilter).order('created_at', { ascending: false }).range(from, to);
     }
-    // Note: We keep the list realtime and paginated; date filtering is applied client-side for display.
-    // For exports we fetch full filtered data separately to ensure completeness.
-    
-    return q;
-  }, [firestore, user, statusFilter]);
+    const { data, error } = await q;
+    if (error) {
+      console.error(error);
+      setInvoices([]);
+      setIsLoading(false);
+      return;
+    }
+    const mapped = (data ?? []).map((r: any) => ({
+      id: r.id,
+      userId: r.user_id,
+      invoiceNumber: r.invoice_number,
+      customerName: r.customer_name,
+      customerAddress: r.customer_address || '',
+      customerState: r.customer_state || '',
+      customerPincode: r.customer_pincode || '',
+      customerPhone: r.customer_phone || '',
+      invoiceDate: r.invoice_date,
+      discount: Number(r.discount) || 0,
+      sgst: Number(r.sgst) || 0,
+      cgst: Number(r.cgst) || 0,
+      status: r.status,
+      grandTotal: Number(r.grand_total) || 0,
+    } as Invoice));
+    setInvoices(prev => append && prev ? [...prev, ...mapped] : mapped);
+    setIsLoading(false);
+  }
 
-  const { data: invoices, isLoading, error, loadMore, hasMore } = usePaginatedCollection<Invoice>(invoicesQuery, 10);
+  function loadMore() {
+    const next = page + 1;
+    setPage(next);
+    loadInvoices(next, true);
+  }
+
+  // reload on status filter change or user change
+  useEffect(() => { setPage(0); loadInvoices(0, false); }, [user?.uid, statusFilter]);
 
   const handleDeleteConfirmation = (invoiceId: string) => {
     setInvoiceToDelete(invoiceId);
@@ -90,15 +116,9 @@ export default function InvoicesPage() {
 
     startDeleteTransition(async () => {
       try {
-        const batch = writeBatch(firestore);
-        const invoiceDocRef = doc(firestore, 'invoices', invoiceToDelete);
-        
-        const itemsRef = collection(firestore, `invoices/${invoiceToDelete}/invoiceItems`);
-        const itemsSnap = await getDocs(itemsRef);
-        itemsSnap.forEach(itemDoc => batch.delete(itemDoc.ref));
-        
-        batch.delete(invoiceDocRef);
-        await batch.commit();
+        const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete).eq('user_id', user?.uid || '');
+        if (error) throw error;
+        await loadInvoices(page, false);
 
         toast({
           title: 'Invoice Deleted',
@@ -168,40 +188,39 @@ export default function InvoicesPage() {
     if (!user) return;
     setIsExporting(true);
     try {
-      // Build a query to fetch all matching invoices for export
-      let q = query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
+      let qb = supabase.from('invoices').select('*').eq('user_id', user.uid);
       if (scope === 'filtered') {
-        if (statusFilter !== 'all') {
-          q = query(q, where('status', '==', statusFilter));
-        }
-        if (dateRange?.from || dateRange?.to) {
-          const startStr = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined;
-          const endStr = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : (startStr ?? undefined);
-          if (startStr) {
-            q = query(q, where('invoiceDate', '>=', startStr));
-          }
-          if (endStr) {
-            q = query(q, where('invoiceDate', '<=', endStr));
-          }
-        }
+        if (statusFilter !== 'all') qb = qb.eq('status', statusFilter);
+        if (dateRange?.from) qb = qb.gte('invoice_date', format(dateRange.from, 'yyyy-MM-dd'));
+        if (dateRange?.to ?? dateRange?.from) qb = qb.lte('invoice_date', format(dateRange?.to ?? dateRange.from!, 'yyyy-MM-dd'));
       }
-
-      const snap = await getDocs(q);
-      const rows = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })) as any[];
+      const { data: respData, error: respErr } = await qb;
+      if (respErr) throw respErr;
+      const rows = (respData ?? []).map((r: any) => ({
+        id: r.id,
+        invoiceNumber: r.invoice_number,
+        invoiceDate: r.invoice_date,
+        customerName: r.customer_name,
+        status: r.status,
+        discount: Number(r.discount) || 0,
+        sgst: Number(r.sgst) || 0,
+        cgst: Number(r.cgst) || 0,
+        grandTotal: Number(r.grand_total) || 0,
+      }));
       // Shape data for export
-      const data = rows.map(r => ({
+      const dataRows = rows.map(r => ({
         Invoice: r.invoiceNumber,
         Date: r.invoiceDate,
         Customer: r.customerName,
         Status: r.status,
         Discount: r.discount || 0,
-        SGST: r.sgst ?? (r.tax ? r.tax / 2 : ''),
-        CGST: r.cgst ?? (r.tax ? r.tax / 2 : ''),
+        SGST: r.sgst,
+        CGST: r.cgst,
         GrandTotal: r.grandTotal,
       }));
 
       const XLSX = await import('xlsx');
-      const ws = XLSX.utils.json_to_sheet(data);
+      const ws = XLSX.utils.json_to_sheet(dataRows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Invoices');
       const filename = scope === 'filtered' ? 'invoices_filtered.xlsx' : 'invoices_all.xlsx';

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Table,
@@ -20,11 +20,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Line } from 'recharts';
 import { format, subDays, startOfDay, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
-import { useCollection, useUser, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, getFirestore, orderBy } from 'firebase/firestore';
+import { useUser } from '@/supabase/provider';
+import { supabase } from '@/supabase/client';
 import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdfById } from '@/lib/share';
 import type { UserSettings } from '@/lib/definitions';
-import { doc } from 'firebase/firestore';
+import { ShopSetupBanner } from '@/components/shop-setup-banner';
+import { FirstTimeWelcome } from '@/components/first-time-welcome';
 
 
 type CustomerStats = {
@@ -34,21 +35,73 @@ type CustomerStats = {
 
 export default function DashboardPage() {
   const { user } = useUser();
-  const firestore = getFirestore();
+  const [invoices, setInvoices] = useState<Invoice[] | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
 
-  const invoicesQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
-  }, [firestore, user]);
-
-  const { data: invoices, isLoading } = useCollection<Invoice>(invoicesQuery);
-
-  // Load user settings for share messages
-  const settingsRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'userSettings', user.uid);
-  }, [firestore, user]);
-  const { data: settings } = useDoc<UserSettings>(settingsRef);
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      if (!user) { setInvoices([]); setSettings(null); setIsLoading(false); return; }
+      setIsLoading(true);
+      const [{ data: inv, error: invErr }, { data: setData, error: setErr }] = await Promise.all([
+        supabase
+          .from('invoices')
+          .select('*')
+          .eq('user_id', user.uid),
+        supabase
+          .from('user_settings')
+          .select('*')
+          .eq('user_id', user.uid)
+          .maybeSingle(),
+      ]);
+      if (!active) return;
+      if (invErr) {
+        console.error('Error fetching invoices:', invErr.message || invErr);
+        setInvoices([]);
+      } else {
+        const mapped = (inv ?? []).map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          invoiceNumber: r.invoice_number,
+          customerName: r.customer_name,
+          customerAddress: r.customer_address || '',
+          customerState: r.customer_state || '',
+          customerPincode: r.customer_pincode || '',
+          customerPhone: r.customer_phone || '',
+          invoiceDate: r.invoice_date,
+          discount: Number(r.discount) || 0,
+          sgst: Number(r.sgst) || 0,
+          cgst: Number(r.cgst) || 0,
+          status: r.status,
+          grandTotal: Number(r.grand_total) || 0,
+        } as Invoice));
+        setInvoices(mapped);
+      }
+      if (setErr) {
+        console.error('Error fetching user settings:', setErr.message || setErr);
+        setSettings(null);
+      } else if (setData) {
+        setSettings({
+          id: setData.user_id,
+          userId: setData.user_id,
+          cgstRate: Number(setData.cgst_rate) || 0,
+          sgstRate: Number(setData.sgst_rate) || 0,
+          shopName: setData.shop_name || 'Jewellers Store',
+          gstNumber: setData.gst_number || '',
+          panNumber: setData.pan_number || '',
+          address: setData.address || '',
+          state: setData.state || '',
+          pincode: setData.pincode || '',
+          phoneNumber: setData.phone_number || '',
+          email: setData.email || '',
+        });
+      }
+      setIsLoading(false);
+    };
+    load();
+    return () => { active = false; };
+  }, [user?.uid]);
 
 
   const recentInvoices = useMemo(() => {
@@ -155,6 +208,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* First-time User Welcome */}
+      <FirstTimeWelcome settings={settings} isLoading={isLoading} hasInvoices={invoices && invoices.length > 0} />
+      
+      {/* Shop Setup Banner */}
+      <ShopSetupBanner settings={settings} isLoading={isLoading} />
+      
       {/* FAB is now globally rendered in layout across pages */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>

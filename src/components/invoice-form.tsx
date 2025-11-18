@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { CalendarIcon, Loader2, PlusCircle, Trash2, ArrowLeft, ShoppingCart, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,12 +19,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 // AI description removed
-import type { Invoice, InvoiceItem, UserSettings } from '@/lib/definitions';
+import type { Invoice, InvoiceItem, StockItem, UserSettings } from '@/lib/definitions';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { getFirestore, doc, writeBatch, collection, getDocs, query, where, serverTimestamp, setDoc } from 'firebase/firestore';
+import { useUser } from '@/supabase/provider';
+import { supabase } from '@/supabase/client';
+import { useStockItems } from '@/hooks/use-stock-items';
+import { isShopSetupComplete } from '@/lib/shop-setup';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
 const formSchema = z.object({
@@ -55,35 +58,34 @@ interface InvoiceFormProps {
   invoice?: Invoice & { items: InvoiceItem[] };
 }
 
-async function getNextInvoiceNumber(firestore: any, userId: string): Promise<string> {
-    const invoicesColRef = collection(firestore, 'invoices');
-    const q = query(invoicesColRef, where('userId', '==', userId));
-    const querySnapshot = await getDocs(q);
-    const currentYear = new Date().getFullYear();
-    let latestSeqForYear = 0;
+async function getNextInvoiceNumberSupabase(userId: string): Promise<string> {
+  const currentYear = new Date().getFullYear();
+  // Fetch only the current user's invoices; order desc by created_at for quick scan
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('invoice_number, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1000);
+  if (error) throw new Error(error.message);
 
-    // Support both old (INV-YYYY-###) and new (INVYYYY###) formats while computing sequence for current year only
-    const NEW_FMT = /^INV(\d{4})(\d+)$/;        // e.g., INV2025001
-    const OLD_FMT = /^INV-(\d{4})-(\d+)$/;      // e.g., INV-2024-001
-
-    querySnapshot.forEach(snap => {
-      const data = snap.data();
-      const invNum: string | undefined = data?.invoiceNumber;
-      if (!invNum || typeof invNum !== 'string') return;
-
-      let match: RegExpExecArray | null = null;
-      if ((match = NEW_FMT.exec(invNum)) || (match = OLD_FMT.exec(invNum))) {
-        const year = parseInt(match[1], 10);
-        const seq = parseInt(match[2], 10);
-        if (year === currentYear && !Number.isNaN(seq)) {
-          latestSeqForYear = Math.max(latestSeqForYear, seq);
-        }
+  let latestSeqForYear = 0;
+  const NEW_FMT = /^INV(\d{4})(\d+)$/; // INV2025###
+  const OLD_FMT = /^INV-(\d{4})-(\d+)$/; // legacy support
+  (data ?? []).forEach((row: any) => {
+    const invNum: string | undefined = row?.invoice_number;
+    if (!invNum) return;
+    let match: RegExpExecArray | null = null;
+    if ((match = NEW_FMT.exec(invNum)) || (match = OLD_FMT.exec(invNum))) {
+      const year = parseInt(match[1], 10);
+      const seq = parseInt(match[2], 10);
+      if (year === currentYear && !Number.isNaN(seq)) {
+        latestSeqForYear = Math.max(latestSeqForYear, seq);
       }
-    });
-
-    const nextSeq = latestSeqForYear + 1;
-    // Keep 3-digit padding for readability while matching requested format INV{YEAR}{SEQUENCE}
-    return `INV${currentYear}${String(nextSeq).padStart(3, '0')}`;
+    }
+  });
+  const nextSeq = latestSeqForYear + 1;
+  return `INV${currentYear}${String(nextSeq).padStart(3, '0')}`;
 }
 
 const calculateTotals = (items: InvoiceFormValues['items'], discount: number, sgst: number, cgst: number) => {
@@ -105,14 +107,46 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const [isPending, startTransition] = useTransition();
   // AI state removed
   const { user } = useUser();
-  const firestore = getFirestore();
+  // Load user settings to validate shop setup
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
 
-  const settingsRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'userSettings', user.uid);
-  }, [firestore, user]);
-
-  const { data: settings, isLoading: settingsLoading } = useDoc<UserSettings>(settingsRef);
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!user?.uid) {
+        setSettingsLoading(false);
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from('user_settings')
+          .select('*')
+          .eq('user_id', user.uid)
+          .maybeSingle();
+        if (data) {
+          setSettings({
+            id: data.user_id,
+            userId: data.user_id,
+            cgstRate: Number(data.cgst_rate) || 0,
+            sgstRate: Number(data.sgst_rate) || 0,
+            shopName: data.shop_name || 'Jewellers Store',
+            gstNumber: data.gst_number || '',
+            panNumber: data.pan_number || '',
+            address: data.address || '',
+            state: data.state || '',
+            pincode: data.pincode || '',
+            phoneNumber: data.phone_number || '',
+            email: data.email || user.email || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+    loadSettings();
+  }, [user?.uid]);
 
   const defaultValues: Partial<InvoiceFormValues> = invoice
     ? {
@@ -144,7 +178,11 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     mode: 'onChange',
   });
 
-   useEffect(() => {
+  // Load stock items
+  const { items: stockItems, isLoading: stockLoading } = useStockItems(user?.uid);
+  const [showStockDialog, setShowStockDialog] = useState(false);
+
+  useEffect(() => {
     if (settings && !invoice) { // Only set defaults for new invoices
       form.setValue('sgst', settings.sgstRate ?? 1.5);
       form.setValue('cgst', settings.cgstRate ?? 1.5);
@@ -155,6 +193,21 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     control: form.control,
     name: 'items',
   });
+
+  const handleAddStockItem = (stockItem: StockItem) => {
+    // Add stock item to invoice without applying base price directly
+    // Allow user to manually enter rate and making charge
+    append({
+      id: uuidv4(),
+      description: stockItem.name,
+      purity: stockItem.purity,
+      grossWeight: stockItem.baseWeight || 0,
+      netWeight: stockItem.baseWeight || 0,
+      rate: 0, // User must enter rate manually
+      making: stockItem.makingChargePerGram || 0,
+    });
+    setShowStockDialog(false);
+  };
 
   const watchedItems = form.watch('items');
   const watchedDiscount = form.watch('discount');
@@ -171,83 +224,108 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
     startTransition(async () => {
       try {
-        const batch = writeBatch(firestore);
-        const invoiceId = invoice?.id ?? doc(collection(firestore, 'invoices')).id;
-        const invoiceRef = doc(firestore, 'invoices', invoiceId);
-        
         const { items, ...invoiceMainData } = data;
-
         const { grandTotal: finalGrandTotal } = calculateTotals(items, data.discount, data.sgst, data.cgst);
-        
-        const invoicePayload = {
-            ...invoiceMainData,
-            invoiceDate: format(data.invoiceDate, 'yyyy-MM-dd'),
-            grandTotal: finalGrandTotal,
-        };
 
-    if (invoice) { // This is an UPDATE
-             batch.update(invoiceRef, {
-                ...invoicePayload,
-                updatedAt: serverTimestamp(),
-            });
-
-      // For existing invoices, fetch current items to handle deletions
-      const currentItemsSnapshot = await getDocs(collection(firestore, `invoices/${invoiceId}/invoiceItems`));
-      const currentItemIds = new Set(currentItemsSnapshot.docs.map(doc => doc.id));
-      const newItemIds = new Set(items.map(item => item.id));
-
-      // Delete items that were removed
-      currentItemIds.forEach(id => {
-        if (!newItemIds.has(id)) {
-          const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, id);
-          batch.delete(itemRef);
-        }
-      });
-        } else { // This is a CREATE
-            const invoiceNumber = await getNextInvoiceNumber(firestore, user.uid);
-            // Create the parent invoice FIRST so security rules for subcollection writes pass.
-            await setDoc(invoiceRef, {
-                ...invoicePayload,
-                id: invoiceId,
-                userId: user.uid,
-                invoiceNumber: invoiceNumber,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-            });
-
-            // Now create items in a separate batch after parent exists
-            const itemsBatch = writeBatch(firestore);
-            items.forEach((item) => {
-                const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
-                itemsBatch.set(itemRef, {
-                  ...item,
-                  grossWeight: Number(item.grossWeight) || 0,
-                  netWeight: Number(item.netWeight) || 0,
-                  rate: Number(item.rate) || 0,
-                  making: Number(item.making) || 0,
-                });
-            });
-            await itemsBatch.commit();
-        }
-
-        // For UPDATE flow, set/update all items in the same batch
         if (invoice) {
-          items.forEach((item) => {
-              const itemRef = doc(firestore, `invoices/${invoiceId}/invoiceItems`, item.id);
-              batch.set(itemRef, {
-                ...item,
-                // Ensure all numeric fields are stored as numbers
-                grossWeight: Number(item.grossWeight) || 0,
-                netWeight: Number(item.netWeight) || 0,
-                rate: Number(item.rate) || 0,
-                making: Number(item.making) || 0,
-              });
-          });
-        }
-        
-        // Commit only for UPDATE path; CREATE already committed above
-        if (invoice) {
-          await batch.commit();
+          // UPDATE existing invoice
+          const invoiceId = invoice.id;
+          const { error: invErr } = await supabase
+            .from('invoices')
+            .update({
+              customer_name: invoiceMainData.customerName,
+              customer_address: invoiceMainData.customerAddress,
+              customer_state: invoiceMainData.customerState,
+              customer_pincode: invoiceMainData.customerPincode,
+              customer_phone: invoiceMainData.customerPhone,
+              invoice_date: format(invoiceMainData.invoiceDate, 'yyyy-MM-dd'),
+              discount: invoiceMainData.discount,
+              sgst: invoiceMainData.sgst,
+              cgst: invoiceMainData.cgst,
+              status: invoiceMainData.status,
+              grand_total: finalGrandTotal,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', invoiceId)
+            .eq('user_id', user.uid);
+          if (invErr) throw invErr;
+
+          // Fetch existing items to determine deletions
+          const { data: existingItems, error: itemsFetchErr } = await supabase
+            .from('invoice_items')
+            .select('id')
+            .eq('invoice_id', invoiceId);
+          if (itemsFetchErr) throw itemsFetchErr;
+          const existingIds = new Set((existingItems ?? []).map((r: any) => r.id));
+          const newIds = new Set(items.map(i => i.id));
+          const toDelete = [...existingIds].filter(id => !newIds.has(id));
+          if (toDelete.length > 0) {
+            const { error: delErr } = await supabase
+              .from('invoice_items')
+              .delete()
+              .in('id', toDelete);
+            if (delErr) throw delErr;
+          }
+          // Upsert items
+          const upsertRows = items.map(i => ({
+            id: i.id,
+            invoice_id: invoiceId,
+            description: i.description,
+            purity: i.purity,
+            gross_weight: Number(i.grossWeight) || 0,
+            net_weight: Number(i.netWeight) || 0,
+            rate: Number(i.rate) || 0,
+            making: Number(i.making) || 0,
+          }));
+          if (upsertRows.length > 0) {
+            const { error: upErr } = await supabase
+              .from('invoice_items')
+              .upsert(upsertRows, { onConflict: 'id' });
+            if (upErr) throw upErr;
+          }
+          var invoiceIdToNavigate = invoiceId;
+        } else {
+          // CREATE new invoice
+          const invoiceNumber = await getNextInvoiceNumberSupabase(user.uid);
+          const { data: insertInv, error: insErr } = await supabase
+            .from('invoices')
+            .insert([{
+              user_id: user.uid,
+              invoice_number: invoiceNumber,
+              customer_name: invoiceMainData.customerName,
+              customer_address: invoiceMainData.customerAddress,
+              customer_state: invoiceMainData.customerState,
+              customer_pincode: invoiceMainData.customerPincode,
+              customer_phone: invoiceMainData.customerPhone,
+              invoice_date: format(invoiceMainData.invoiceDate, 'yyyy-MM-dd'),
+              discount: invoiceMainData.discount,
+              sgst: invoiceMainData.sgst,
+              cgst: invoiceMainData.cgst,
+              status: invoiceMainData.status,
+              grand_total: finalGrandTotal,
+            }])
+            .select('id')
+            .single();
+          if (insErr) throw insErr;
+          const newInvoiceId = (insertInv as any).id as string;
+          // Insert items
+          const rows = items.map(i => ({
+            id: i.id,
+            invoice_id: newInvoiceId,
+            description: i.description,
+            purity: i.purity,
+            gross_weight: Number(i.grossWeight) || 0,
+            net_weight: Number(i.netWeight) || 0,
+            rate: Number(i.rate) || 0,
+            making: Number(i.making) || 0,
+          }));
+          if (rows.length > 0) {
+            const { error: insItemsErr } = await supabase
+              .from('invoice_items')
+              .insert(rows);
+            if (insItemsErr) throw insItemsErr;
+          }
+          var invoiceIdToNavigate = newInvoiceId;
         }
         
         toast({
@@ -255,7 +333,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           description: `Redirecting to view invoice...`,
         });
         
-        router.push(`/dashboard/invoices/${invoiceId}/view`);
+        router.push(`/dashboard/invoices/${invoiceIdToNavigate}/view`);
 
       } catch (error) {
         console.error("Failed to save invoice:", error);
@@ -270,9 +348,30 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
   // AI handler removed
 
+  const isShopSetupValid = isShopSetupComplete(settings);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Shop Setup Warning */}
+        {!isShopSetupValid && !settingsLoading && (
+          <Alert variant="destructive" className="border-red-300 bg-red-50">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Shop Setup Required</AlertTitle>
+            <AlertDescription>
+              Please complete your shop setup before creating invoices. This ensures your shop details appear on generated invoices.
+              <Button 
+                type="button" 
+                variant="link" 
+                className="mt-2 h-auto p-0 text-red-700 hover:text-red-900"
+                onClick={() => router.push('/dashboard/settings')}
+              >
+                Go to Settings →
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex items-center gap-4">
           <Button type="button" variant="outline" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -481,6 +580,48 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 })}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                     </Button>
+
+                    {stockItems && stockItems.length > 0 && (
+                      <Dialog open={showStockDialog} onOpenChange={setShowStockDialog}>
+                        <DialogTrigger asChild>
+                          <Button type="button" variant="secondary" size="sm" className="mt-2 ml-2">
+                            <ShoppingCart className="mr-2 h-4 w-4" /> From Stock
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Select Stock Item</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-2">
+                            {stockLoading ? (
+                              <p className="text-muted-foreground">Loading stock items...</p>
+                            ) : stockItems.length === 0 ? (
+                              <p className="text-muted-foreground">No stock items available</p>
+                            ) : (
+                              <div className="grid gap-3">
+                                {stockItems.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer transition"
+                                    onClick={() => handleAddStockItem(item)}
+                                  >
+                                    <div className="flex-1">
+                                      <p className="font-medium">{item.name}</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        Purity: {item.purity} | Unit: {item.unit} | Available: {item.quantity} | Making: ₹{item.makingChargePerGram.toFixed(2)}/unit
+                                      </p>
+                                    </div>
+                                    <Button type="button" size="sm" variant="ghost">
+                                      <PlusCircle className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                 </CardContent>
             </Card>
 
@@ -577,9 +718,9 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
               </CardFooter>
             </Card>
             
-            <Button type="submit" className="w-full" disabled={isPending || settingsLoading}>
+            <Button type="submit" className="w-full" disabled={isPending || settingsLoading || !isShopSetupValid}>
               {(isPending || settingsLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {invoice ? 'Update' : 'Create'} Invoice
+              {!isShopSetupValid ? 'Complete Shop Setup' : (invoice ? 'Update' : 'Create') + ' Invoice'}
             </Button>
           </div>
         </div>

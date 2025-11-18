@@ -137,9 +137,10 @@ export async function generatePdfFromPrintPage(invoiceId: string): Promise<Blob>
 
         // Wait a tick for fonts/styles
         setTimeout(() => {
+          console.log('Document content:', doc.body.innerHTML);
           const root = doc.getElementById('print-root') as HTMLDivElement | null;
           if (!root) {
-            console.error('Printable root not found in iframe document:', doc);
+            console.error('Printable root not found in iframe document:', doc.body.innerHTML);
             clearTimeout(timeout);
             reject(new Error('Printable root not found'));
             return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useEffect } from 'react';
+import { useTransition, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
@@ -13,8 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getFirestore, updateDoc, collection } from 'firebase/firestore';
+import { supabase } from '@/supabase/client';
+import { useUser } from '@/supabase/provider';
 import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdfById } from '@/lib/share';
 import type { UserSettings } from '@/lib/definitions';
 
@@ -66,25 +66,99 @@ export default function ViewInvoicePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { toast } = useToast();
-    const firestore = getFirestore();
+        const { user } = useUser();
+        const [invoice, setInvoice] = useState<Invoice | null>(null);
+        const [items, setItems] = useState<InvoiceItem[] | null>(null);
+        const [settings, setSettings] = useState<UserSettings | null>(null);
+        const [loading, setLoading] = useState(true);
 
-    const invoiceRef = useMemoFirebase(() => doc(firestore, 'invoices', id), [firestore, id]);
-    const { data: invoice, isLoading: loadingInvoice } = useDoc<Invoice>(invoiceRef);
-    const settingsRef = useMemoFirebase(() => {
-        if (!invoice) return null;
-        return doc(firestore, 'userSettings', invoice.userId);
-    }, [firestore, invoice]);
-    const { data: settings } = useDoc<UserSettings>(settingsRef);
-
-    const itemsRef = useMemoFirebase(() => collection(firestore, `invoices/${id}/invoiceItems`), [firestore, id]);
-    const { data: items, isLoading: loadingItems } = useCollection<InvoiceItem>(itemsRef);
+        useEffect(() => {
+                let cancelled = false;
+                async function load() {
+                        setLoading(true);
+                        const { data: inv, error: invErr } = await supabase
+                            .from('invoices')
+                            .select('*')
+                            .eq('id', id)
+                            .single();
+                        if (invErr) { setInvoice(null); setItems(null); setLoading(false); return; }
+                        
+                        // Fetch user settings using the user_id from the invoice
+                        const { data: userSettings, error: settingsErr } = await supabase
+                            .from('user_settings')
+                            .select('*')
+                            .eq('user_id', inv.user_id)
+                            .single();
+                        
+                        if (!settingsErr && userSettings) {
+                            setSettings({
+                                id: userSettings.user_id,
+                                userId: userSettings.user_id,
+                                cgstRate: Number(userSettings.cgst_rate) || 0,
+                                sgstRate: Number(userSettings.sgst_rate) || 0,
+                                shopName: userSettings.shop_name || 'Jewellers Store',
+                                gstNumber: userSettings.gst_number || '',
+                                panNumber: userSettings.pan_number || '',
+                                address: userSettings.address || '',
+                                state: userSettings.state || '',
+                                pincode: userSettings.pincode || '',
+                                phoneNumber: userSettings.phone_number || '',
+                                email: userSettings.email || '',
+                            });
+                        }
+                        
+                        const mappedInv: Invoice = {
+                            id: inv.id,
+                            userId: inv.user_id,
+                            invoiceNumber: inv.invoice_number,
+                            customerName: inv.customer_name,
+                            customerAddress: inv.customer_address || '',
+                            customerState: inv.customer_state || '',
+                            customerPincode: inv.customer_pincode || '',
+                            customerPhone: inv.customer_phone || '',
+                            invoiceDate: inv.invoice_date,
+                            discount: Number(inv.discount) || 0,
+                            sgst: Number(inv.sgst) || 0,
+                            cgst: Number(inv.cgst) || 0,
+                            status: inv.status,
+                            grandTotal: Number(inv.grand_total) || 0,
+                        } as Invoice;
+                        const { data: its, error: itErr } = await supabase
+                            .from('invoice_items')
+                            .select('*')
+                            .eq('invoice_id', id)
+                            .order('id');
+                        if (itErr) { setInvoice(mappedInv); setItems([]); setLoading(false); return; }
+                        const mappedItems: InvoiceItem[] = (its ?? []).map((r: any) => ({
+                            id: r.id,
+                            description: r.description,
+                            purity: r.purity,
+                            grossWeight: Number(r.gross_weight) || 0,
+                            netWeight: Number(r.net_weight) || 0,
+                            rate: Number(r.rate) || 0,
+                            making: Number(r.making) || 0,
+                        }));
+                        if (!cancelled) {
+                            setInvoice(mappedInv);
+                            setItems(mappedItems);
+                            setLoading(false);
+                        }
+                }
+                load();
+                return () => { cancelled = true; };
+        }, [id]);
     
     const handleStatusChange = (status: 'paid' | 'due') => {
         if (!invoice) return;
 
         startTransition(async () => {
             try {
-                await updateDoc(invoiceRef, { status });
+                const { error } = await supabase
+                  .from('invoices')
+                  .update({ status })
+                  .eq('id', invoice.id)
+                  .eq('user_id', invoice.userId);
+                if (error) throw error;
                 toast({
                     title: 'Status Updated',
                     description: `Invoice marked as ${status}.`,
@@ -99,7 +173,7 @@ export default function ViewInvoicePage() {
         });
     };
     
-        const isLoading = loadingInvoice || loadingItems;
+        const isLoading = loading;
 
         // Auto-trigger print when arriving with ?print=1 once data is ready.
         // Keep hook unconditionally positioned before any early return to preserve hook order.

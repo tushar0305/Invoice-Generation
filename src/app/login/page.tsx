@@ -4,11 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from 'firebase/auth';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/supabase/provider';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -53,17 +49,25 @@ export default function LoginPage() {
     },
   });
 
-  function getFirebaseAuthErrorMessage(errorCode: string): string {
+  function getAuthErrorMessage(errorCode: string): string {
     switch (errorCode) {
       case 'auth/invalid-email':
-        return 'The email address is not valid.';
+        return 'The email address format is not valid.';
+      case 'email_not_confirmed':
+        return 'Please confirm your email. Check your inbox (and spam) for the verification link.';
+      case 'invalid_credentials':
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential':
+      case 'invalid_grant':
+        return 'Invalid credentials. Please check your email and password.';
       case 'auth/user-disabled':
         return 'This user account has been disabled.';
       case 'auth/user-not-found':
         return 'No user found with this email. Please contact admin.';
-      case 'auth/wrong-password':
-      case 'auth/invalid-credential':
-        return 'Invalid credentials. Please check your email and password.';
+      case 'weak_password':
+        return 'Password is too weak. Please choose a stronger one.';
+      case 'rate_limited':
+        return 'Too many attempts. Please wait a moment and try again.';
       default:
         return 'An unexpected error occurred. Please try again.';
     }
@@ -73,18 +77,18 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       if (mode === 'signin') {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
+        await auth.signInWithEmailAndPassword(values.email, values.password);
         toast({ title: 'Signed In', description: "You're now logged in." });
       } else {
-        await createUserWithEmailAndPassword(auth, values.email, values.password);
-        toast({ title: 'Account Created', description: 'Your account is ready. You are now signed in.' });
+        await auth.createUserWithEmailAndPassword(values.email, values.password);
+        toast({ title: 'Account Created', description: 'Account created. Please verify your email before signing in.' });
       }
     } catch (error: any) {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: mode === 'signin' ? 'Authentication Error' : 'Signup Error',
-        description: getFirebaseAuthErrorMessage(error.code),
+        title: mode === 'signin' ? 'Authentication Error' : 'Signup Notice',
+        description: getAuthErrorMessage(error.code || error?.message || ''),
       });
     } finally {
       setIsSubmitting(false);

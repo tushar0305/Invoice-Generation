@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, FileText, Users, Settings, Plus } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, Package, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function MobileBottomNav() {
@@ -18,6 +18,7 @@ export function MobileBottomNav() {
     { href: '/dashboard', label: 'Home', icon: LayoutDashboard, active: isActive('/dashboard') && pathname === '/dashboard' },
     { href: '/dashboard/invoices', label: 'Invoices', icon: FileText, active: isActive('/dashboard/invoices', true) },
     { href: '/dashboard/customers', label: 'Customers', icon: Users, active: isActive('/dashboard/customers') },
+    { href: '/dashboard/stock', label: 'Stock', icon: Package, active: isActive('/dashboard/stock') },
     { href: '/dashboard/settings', label: 'Settings', icon: Settings, active: isActive('/dashboard/settings') },
   ];
 
@@ -28,7 +29,7 @@ export function MobileBottomNav() {
           className="overflow-hidden rounded-t-2xl border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-lg"
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0px)' }}
         >
-          <ul className="grid grid-cols-4 items-center justify-between">
+          <ul className="grid grid-cols-5 items-center justify-between">
             {items.map((item) => (
               <li
                 key={item.href}
