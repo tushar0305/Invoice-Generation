@@ -7,7 +7,7 @@
     "setup": "node scripts/verify-supabase.js",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "NODE_ENV=production next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
@@ -43,6 +43,7 @@
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^12.23.24",
     "genkit": "^1.20.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.3",

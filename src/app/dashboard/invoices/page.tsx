@@ -239,24 +239,24 @@ export default function InvoicesPage() {
 
   return (
     <>
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
             <CardTitle>All Invoices</CardTitle>
             <CardDescription>A list of all your invoices.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-            <div className="relative w-full sm:flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by customer or invoice number..."
-                className="pl-10 w-full sm:max-w-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+              <div className="relative w-full sm:flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by customer or invoice number..."
+                  className="pl-10 w-full sm:max-w-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="justify-start gap-2 w-full sm:w-auto">
@@ -287,14 +287,14 @@ export default function InvoicesPage() {
                   </PopoverContent>
                 </Popover>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="due">Due</SelectItem>
-                    </SelectContent>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="due">Due</SelectItem>
+                  </SelectContent>
                 </Select>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -309,116 +309,117 @@ export default function InvoicesPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button asChild className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
-                <Link href="/dashboard/invoices/new">
+                  <Link href="/dashboard/invoices/new">
                     <FilePlus2 className="mr-2 h-4 w-4" />
-                    Create Invoice
-                </Link>
-                </Button>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="w-[50px] text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading && filteredInvoices.length === 0 ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={`skeleton-${i}`}>
-                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-5 w-28 ml-auto" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
-                      </TableRow>
-                  ))
-                ) : filteredInvoices.length > 0 ? (
-                  filteredInvoices.map(invoice => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                      <TableCell>{invoice.customerName}</TableCell>
-                       <TableCell>{new Date(invoice.invoiceDate).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'} className={invoice.status === 'paid' ? 'bg-green-600/80' : ''}>
-                          {invoice.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{formatCurrency(invoice.grandTotal)}</TableCell>
-                      <TableCell className="text-right">
-                          <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                  <DropdownMenuItem asChild>
-                                      <Link href={`/dashboard/invoices/${invoice.id}/view`} className="cursor-pointer flex items-center">
-                                          <Eye className="mr-2 h-4 w-4" />
-                                          View
-                                      </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem asChild>
-                                      <Link href={`/dashboard/invoices/${invoice.id}/edit`} className="cursor-pointer flex items-center">
-                                          <Edit className="mr-2 h-4 w-4" />
-                                          Edit
-                                      </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem className="cursor-pointer flex items-center" onClick={async () => {
-                                    const ok = await shareInvoicePdfById(invoice.id, invoice, settings || undefined);
-                                    if (!ok) {
-                                      toast({ title: 'Sharing fallback used', description: 'Opened WhatsApp with a text summary.' });
-                                    }
-                                  }}>
-                                    <Send className="mr-2 h-4 w-4" />
-                                    Share WhatsApp
-                                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer flex items-center" onClick={() => handlePrintNavigate(invoice.id)}>
-                    <Printer className="mr-2 h-4 w-4" />
-                    Print
-                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
-                                    className="cursor-pointer flex items-center text-red-600 focus:text-red-600 focus:bg-red-50"
-                                    onClick={() => handleDeleteConfirmation(invoice.id)}
-                                  >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
-                                  </DropdownMenuItem>
-                              </DropdownMenuContent>
-                          </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
-                      No invoices found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-           {hasMore && (
-              <div className="mt-6 flex justify-center">
-                <Button onClick={loadMore} disabled={isLoading}>
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Load More'}
+                    New Invoice
+                  </Link>
                 </Button>
               </div>
-            )}
-        </CardContent>
-      </Card>
-    </div>
-    <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="rounded-md border border-white/10 overflow-hidden hidden md:block">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow className="hover:bg-transparent border-b-white/10">
+                    <TableHead className="text-primary">Invoice #</TableHead>
+                    <TableHead className="text-primary">Date</TableHead>
+                    <TableHead className="text-primary">Customer</TableHead>
+                    <TableHead className="text-primary">Status</TableHead>
+                    <TableHead className="text-right text-primary">Amount</TableHead>
+                    <TableHead className="text-right text-primary">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredInvoices.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                        No invoices found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredInvoices.map((invoice) => (
+                      <TableRow
+                        key={invoice.id}
+                        className="hover:bg-white/5 border-b-white/5 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/dashboard/invoices/${invoice.id}/view`)}
+                      >
+                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                        <TableCell>{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
+                        <TableCell>{invoice.customerName}</TableCell>
+                        <TableCell>
+                          <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'}>
+                            {invoice.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-gold-400">₹{invoice.grandTotal.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" onClick={() => handlePrintNavigate(invoice.id)}>
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-white/10">
+              {isLoading ? (
+                <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
+              ) : filteredInvoices.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">No invoices found.</div>
+              ) : (
+                filteredInvoices.map((invoice) => (
+                  <div key={invoice.id} className="p-4 space-y-3 hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer" onClick={() => router.push(`/dashboard/invoices/${invoice.id}/view`)}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-lg">{invoice.invoiceNumber}</h3>
+                        <div className="text-sm text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</div>
+                      </div>
+                      <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'}>
+                        {invoice.status}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Customer</div>
+                        <div className="font-medium">{invoice.customerName}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-muted-foreground">Amount</div>
+                        <div className="font-bold text-gold-400">₹{invoice.grandTotal.toFixed(2)}</div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="sm" onClick={() => handlePrintNavigate(invoice.id)}>
+                        <Printer className="h-4 w-4 mr-2" /> Print
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>

@@ -4,114 +4,125 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '@/supabase/provider';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { Logo } from '@/components/logo';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-const formSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address.' }),
-  password: z
-    .string()
-    .min(6, { message: 'Password must be at least 6 characters.' }),
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/supabase/client';
+import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
+
+const authSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+type AuthFormValues = z.infer<typeof authSchema>;
+
 export default function LoginPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const auth = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const router = useRouter();
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<AuthFormValues>({
+    resolver: zodResolver(authSchema),
     defaultValues: {
       email: '',
       password: '',
     },
   });
 
-  function getAuthErrorMessage(errorCode: string): string {
-    switch (errorCode) {
-      case 'auth/invalid-email':
-        return 'The email address format is not valid.';
-      case 'email_not_confirmed':
-        return 'Please confirm your email. Check your inbox (and spam) for the verification link.';
-      case 'invalid_credentials':
-      case 'auth/wrong-password':
-      case 'auth/invalid-credential':
-      case 'invalid_grant':
-        return 'Invalid credentials. Please check your email and password.';
-      case 'auth/user-disabled':
-        return 'This user account has been disabled.';
-      case 'auth/user-not-found':
-        return 'No user found with this email. Please contact admin.';
-      case 'weak_password':
-        return 'Password is too weak. Please choose a stronger one.';
-      case 'rate_limited':
-        return 'Too many attempts. Please wait a moment and try again.';
-      default:
-        return 'An unexpected error occurred. Please try again.';
-    }
-  }
-
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
+  async function onSubmit(data: AuthFormValues) {
+    setIsLoading(true);
     try {
-      if (mode === 'signin') {
-        await auth.signInWithEmailAndPassword(values.email, values.password);
-        toast({ title: 'Signed In', description: "You're now logged in." });
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+        });
+        if (error) throw error;
+        toast({
+          title: 'Account created!',
+          description: 'Please check your email to verify your account.',
+        });
       } else {
-        await auth.createUserWithEmailAndPassword(values.email, values.password);
-        toast({ title: 'Account Created', description: 'Account created. Please verify your email before signing in.' });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: data.password,
+        });
+        if (error) throw error;
+        toast({
+          title: 'Welcome back!',
+          description: 'Successfully logged in.',
+        });
+        router.push('/dashboard');
       }
     } catch (error: any) {
-      console.error(error);
       toast({
         variant: 'destructive',
-        title: mode === 'signin' ? 'Authentication Error' : 'Signup Notice',
-        description: getAuthErrorMessage(error.code || error?.message || ''),
+        title: 'Authentication Error',
+        description: error.message || 'Something went wrong. Please try again.',
       });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <Logo generic />
+    <div className="min-h-screen w-full flex">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex w-1/2 bg-primary relative overflow-hidden items-center justify-center text-primary-foreground">
+        <div className="absolute inset-0 bg-[url('/patterns/grid.svg')] opacity-10"></div>
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-gold-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gold-500/10 rounded-full blur-3xl"></div>
+
+        <div className="relative z-10 p-12 max-w-lg">
+          <FadeIn>
+            <div className="mb-8">
+              {/* Logo Placeholder */}
+              <div className="h-16 w-16 bg-gold-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-gold-500/20">
+                <span className="text-3xl font-heading font-bold text-primary">SJ</span>
+              </div>
+              <h1 className="text-5xl font-heading font-bold mb-6 leading-tight">
+                Manage Your Jewellery Business with <span className="text-gold-400">Elegance</span>
+              </h1>
+              <p className="text-lg text-primary-foreground/80 leading-relaxed">
+                Create professional invoices, track stock, and manage customers with a platform designed for modern jewellers.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 mt-12">
+              <div className="p-4 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10">
+                <h3 className="font-bold text-gold-400 mb-1">Smart Invoicing</h3>
+                <p className="text-sm opacity-80">Generate GST-compliant invoices in seconds.</p>
+              </div>
+              <div className="p-4 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10">
+                <h3 className="font-bold text-gold-400 mb-1">Stock Management</h3>
+                <p className="text-sm opacity-80">Track gold rates and inventory effortlessly.</p>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </div>
+
+      {/* Right Side - Form */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-background">
+        <MotionWrapper className="w-full max-w-md space-y-8">
+          <div className="text-center lg:text-left">
+            <h2 className="text-3xl font-heading font-bold tracking-tight">
+              {isSignUp ? 'Create an account' : 'Welcome back'}
+            </h2>
+            <p className="text-muted-foreground mt-2">
+              {isSignUp ? 'Enter your details to get started.' : 'Enter your credentials to access your account.'}
+            </p>
           </div>
-          <CardTitle className="text-2xl">
-            {mode === 'signin' ? 'Welcome Back' : 'Create Account'}
-          </CardTitle>
-          <CardDescription>
-            {mode === 'signin' ? 'Enter your credentials to access your dashboard.' : 'Sign up with email and password to start.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="email"
@@ -119,11 +130,10 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="name@example.com"
-                        type="email"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input placeholder="name@example.com" className="pl-10 h-11" {...field} />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -137,65 +147,37 @@ export default function LoginPage() {
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Input
-                          placeholder="••••••••"
-                          type={showPassword ? 'text' : 'password'}
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
-                          onClick={() => setShowPassword((prev) => !prev)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input type="password" placeholder="••••••••" className="pl-10 h-11" {...field} />
                       </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {mode === 'signin' ? 'Sign In' : 'Sign Up'}
+
+              <Button type="submit" className="w-full h-11 text-base shadow-lg" disabled={isLoading} variant="premium">
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSignUp ? 'Sign Up' : 'Sign In'}
+                {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
-              <div className="text-center text-sm text-muted-foreground">
-                {mode === 'signin' ? (
-                  <>
-                    New here?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setMode('signup')}
-                      className="text-primary hover:underline"
-                    >
-                      Create an account
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setMode('signin')}
-                      className="text-primary hover:underline"
-                    >
-                      Sign in
-                    </button>
-                  </>
-                )}
-              </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+
+          <div className="text-center text-sm">
+            <span className="text-muted-foreground">
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+            </span>{' '}
+            <Button
+              variant="link"
+              className="p-0 h-auto font-semibold text-primary hover:text-primary/80"
+              onClick={() => setIsSignUp(!isSignUp)}
+            >
+              {isSignUp ? 'Sign in' : 'Sign up'}
+            </Button>
+          </div>
+        </MotionWrapper>
+      </div>
     </div>
   );
 }

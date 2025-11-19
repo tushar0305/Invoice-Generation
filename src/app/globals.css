@@ -4,73 +4,95 @@
 
 @layer base {
   :root {
-    --background: 45 20% 97%; /* #FAF9F6 */
+    /* Midnight Gold - Light Mode (Elegant Cream & Navy) */
+    --background: 40 20% 97%;
+    /* Creamy White */
     --foreground: 224 71% 4%;
-    --card: 45 20% 97%;
+    /* Midnight Blue */
+
+    --card: 0 0% 100%;
     --card-foreground: 224 71% 4%;
-    --popover: 45 20% 97%;
+
+    --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
-    --primary: 0 100% 25%; /* #800000 */
-    --primary-foreground: 60 93% 98%;
-    --secondary: 0 0% 94%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 94%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 45 65% 51%; /* #D4AF37 */
-    --accent-foreground: 240 10% 3.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 45 65% 51%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 0 100% 25%;
-    --sidebar-primary-foreground: 60 93% 98%;
-    --sidebar-accent: 0 0% 92%;
-    --sidebar-accent-foreground: 0 100% 25%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 45 65% 51%;
+
+    --primary: 224 64% 12%;
+    /* Deep Navy */
+    --primary-foreground: 45 93% 47%;
+    /* Gold Text */
+
+    --secondary: 45 30% 90%;
+    /* Soft Gold/Beige */
+    --secondary-foreground: 224 71% 4%;
+
+    --muted: 220 14% 90%;
+    --muted-foreground: 220 8% 46%;
+
+    --accent: 45 93% 47%;
+    /* Gold */
+    --accent-foreground: 224 71% 4%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 13% 85%;
+    --input: 220 13% 85%;
+    --ring: 224 64% 12%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 40 20% 97%;
+    --sidebar-foreground: 224 71% 4%;
+    --sidebar-primary: 224 64% 12%;
+    --sidebar-primary-foreground: 45 93% 47%;
+    --sidebar-accent: 45 30% 90%;
+    --sidebar-accent-foreground: 224 71% 4%;
+    --sidebar-border: 220 13% 85%;
+    --sidebar-ring: 224 64% 12%;
   }
+
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 100% 35%; /* Lighter maroon */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 45 65% 51%; /* Gold */
-    --accent-foreground: 240 10% 3.9%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 45 65% 51%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 10% 3.9%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 0 100% 35%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 14.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 14.9%;
-    --sidebar-ring: 45 65% 51%;
+    /* Midnight Gold - Dark Mode (The Main Attraction) */
+    --background: 224 71% 4%;
+    /* Deepest Midnight */
+    --foreground: 210 40% 98%;
+
+    --card: 224 71% 6%;
+    /* Slightly lighter midnight */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 45 93% 47%;
+    /* Vibrant Gold */
+    --primary-foreground: 224 71% 4%;
+    /* Midnight Text */
+
+    --secondary: 217 19% 27%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 19% 27%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 45 93% 47%;
+    --accent-foreground: 224 71% 4%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 19% 27%;
+    --input: 217 19% 27%;
+    --ring: 45 93% 47%;
+
+    --sidebar-background: 224 71% 4%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 45 93% 47%;
+    --sidebar-primary-foreground: 224 71% 4%;
+    --sidebar-accent: 217 19% 27%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 19% 27%;
+    --sidebar-ring: 45 93% 47%;
   }
 }
 
@@ -78,8 +100,32 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-background/60 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  .glass-card {
+    @apply bg-card/40 backdrop-blur-md border border-white/5 shadow-lg hover:shadow-gold-500/10 transition-all duration-300;
+  }
+
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37];
+  }
+
+  .bg-mesh {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(at 0% 0%, hsla(45, 93%, 47%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(224, 64%, 12%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(45, 93%, 47%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(224, 64%, 12%, 0.15) 0px, transparent 50%);
   }
 }
 
@@ -111,20 +157,24 @@ body {
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Ensure forms don't overflow */
   form {
     width: 100%;
     overflow-x: hidden;
   }
-  
+
   /* Fix sidebar on mobile WebView */
   [data-sidebar] {
     max-width: 100vw !important;
   }
-  
+
   /* Touch target improvements */
-  button, a, input, select, textarea {
+  button,
+  a,
+  input,
+  select,
+  textarea {
     min-height: 44px;
   }
 }

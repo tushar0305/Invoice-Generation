@@ -55,6 +55,8 @@ const stockItemSchema = z.object({
 
 type StockItemFormValues = z.infer<typeof stockItemSchema>;
 
+import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
+
 export default function StockPage() {
   const { toast } = useToast();
   const { user, isUserLoading: userLoading } = useUser();
@@ -104,10 +106,10 @@ export default function StockPage() {
       name: '',
       description: '',
       purity: '22K',
-      basePrice: undefined as any,
-      baseWeight: undefined as any,
-      makingChargePerGram: undefined as any,
-      quantity: undefined as any,
+      basePrice: '' as any,
+      baseWeight: '' as any,
+      makingChargePerGram: '' as any,
+      quantity: '' as any,
       unit: 'gram',
       category: '',
       isActive: true,
@@ -210,10 +212,10 @@ export default function StockPage() {
   const isLoading = userLoading || itemsLoading;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <MotionWrapper className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Stock Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold tracking-tight text-primary">Stock Management</h1>
           <p className="text-muted-foreground text-sm sm:text-base mt-1 sm:mt-2">Manage your jewelry inventory</p>
         </div>
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -221,14 +223,14 @@ export default function StockPage() {
             <Button onClick={() => {
               setEditingItem(null);
               form.reset();
-            }} className="w-full sm:w-auto">
+            }} className="w-full sm:w-auto" variant="premium">
               <Plus className="mr-2 h-4 w-4" />
               Add Item
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto sm:max-h-[85vh]">
             <DialogHeader className="pb-3">
-              <DialogTitle className="text-lg sm:text-xl">{editingItem ? 'Edit Stock Item' : 'Add New Stock Item'}</DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl font-heading text-primary">{editingItem ? 'Edit Stock Item' : 'Add New Stock Item'}</DialogTitle>
               <DialogDescription className="text-xs sm:text-sm">
                 {editingItem ? 'Update the stock item details' : 'Enter details for a new stock item'}
               </DialogDescription>
@@ -327,51 +329,51 @@ export default function StockPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantity *</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="Enter quantity" {...field} />
-                      </FormControl>
-                      <FormDescription className="text-xs">Current stock quantity</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantity *</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="Enter quantity" {...field} />
+                        </FormControl>
+                        <FormDescription className="text-xs">Current stock quantity</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unit *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="gram, piece, ml" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
-                  name="unit"
+                  name="baseWeight"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit *</FormLabel>
+                      <FormLabel>Base Weight (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="gram, piece, ml" {...field} />
+                        <Input type="number" placeholder="Enter weight if applicable" {...field} />
                       </FormControl>
+                      <FormDescription className="text-xs">Default weight per item (if applicable)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="baseWeight"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Base Weight (Optional)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="Enter weight if applicable" {...field} />
-                    </FormControl>
-                    <FormDescription className="text-xs">Default weight per item (if applicable)</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />                <DialogFooter>
-                  <Button type="submit" disabled={isPending}>
+                />                <DialogFooter>
+                  <Button type="submit" disabled={isPending} variant="premium">
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {editingItem ? 'Update Item' : 'Add Item'}
                   </Button>
@@ -382,17 +384,17 @@ export default function StockPage() {
         </Dialog>
       </div>
 
-      <Card className="shadow-sm">
+      <Card className="glass-card border-t-4 border-t-primary">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg sm:text-xl">Stock Items</CardTitle>
+          <CardTitle className="text-xl sm:text-2xl font-heading text-primary">Stock Items</CardTitle>
           <CardDescription className="text-xs sm:text-sm">View and manage your jewelry inventory</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full bg-white/10" />
+              <Skeleton className="h-12 w-full bg-white/10" />
+              <Skeleton className="h-12 w-full bg-white/10" />
             </div>
           ) : !stockItems || stockItems.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -400,76 +402,120 @@ export default function StockPage() {
               <p className="text-sm sm:text-base">No stock items yet. Add your first item to get started.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto -mx-6 sm:mx-0">
-              <div className="inline-block min-w-full align-middle">
-                <div className="overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="font-semibold min-w-[140px] pl-6 sm:pl-4">Name</TableHead>
-                    <TableHead className="font-semibold min-w-[70px] hidden sm:table-cell">Purity</TableHead>
-                    <TableHead className="font-semibold min-w-[80px]">Qty</TableHead>
-                    <TableHead className="font-semibold hidden sm:table-cell min-w-[60px]">Unit</TableHead>
-                    <TableHead className="font-semibold text-right min-w-[90px]">Price</TableHead>
-                    <TableHead className="font-semibold text-right hidden md:table-cell min-w-[90px]">Making</TableHead>
-                    <TableHead className="font-semibold hidden lg:table-cell min-w-[100px]">Category</TableHead>
-                    <TableHead className="text-right font-semibold min-w-[90px] pr-6 sm:pr-4">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stockItems.map((item) => (
-                    <TableRow key={item.id} className={!item.isActive ? 'opacity-50' : 'hover:bg-muted/30'}>
-                      <TableCell className="font-medium pl-6 sm:pl-4">
-                        <div className="flex flex-col">
-                          <span className="truncate max-w-[120px] sm:max-w-none">{item.name}</span>
-                          <span className="text-xs text-muted-foreground sm:hidden">{item.purity}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">{item.purity}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="flex flex-col sm:flex-row sm:items-center">
-                          <span className="font-medium">{item.quantity}</span>
-                          <span className="text-xs text-muted-foreground sm:hidden">{item.unit}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-muted-foreground">{item.unit}</TableCell>
-                      <TableCell className="text-right font-medium text-sm sm:text-base">₹{item.basePrice.toFixed(0)}</TableCell>
-                      <TableCell className="text-right hidden md:table-cell text-sm sm:text-base">₹{item.makingChargePerGram.toFixed(0)}</TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <span className="text-xs bg-muted px-2 py-1 rounded">{item.category || '-'}</span>
-                      </TableCell>
-                      <TableCell className="text-right pr-6 sm:pr-4">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(item)}
-                            disabled={isPending}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(item.id)}
-                            disabled={isPending}
-                            className="text-destructive h-8 w-8 p-0"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <>
+              <div className="rounded-md border border-white/10 overflow-hidden hidden md:block">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow className="hover:bg-transparent border-b-white/10">
+                        <TableHead className="font-semibold min-w-[140px] pl-6 sm:pl-4 text-primary">Name</TableHead>
+                        <TableHead className="font-semibold min-w-[70px] hidden sm:table-cell text-primary">Purity</TableHead>
+                        <TableHead className="font-semibold min-w-[80px] text-primary">Qty</TableHead>
+                        <TableHead className="font-semibold hidden sm:table-cell min-w-[60px] text-primary">Unit</TableHead>
+                        <TableHead className="font-semibold text-right min-w-[90px] text-primary">Price</TableHead>
+                        <TableHead className="font-semibold text-right hidden md:table-cell min-w-[90px] text-primary">Making</TableHead>
+                        <TableHead className="font-semibold hidden lg:table-cell min-w-[100px] text-primary">Category</TableHead>
+                        <TableHead className="text-right font-semibold min-w-[90px] pr-6 sm:pr-4 text-primary">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stockItems.map((item) => (
+                        <TableRow key={item.id} className={!item.isActive ? 'opacity-50 border-b-white/5' : 'hover:bg-white/5 border-b-white/5 transition-colors'}>
+                          <TableCell className="font-medium pl-6 sm:pl-4">
+                            <div className="flex flex-col">
+                              <span className="truncate max-w-[120px] sm:max-w-none">{item.name}</span>
+                              <span className="text-xs text-muted-foreground sm:hidden">{item.purity}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">{item.purity}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <div className="flex flex-col sm:flex-row sm:items-center">
+                              <span className="font-medium">{item.quantity}</span>
+                              <span className="text-xs text-muted-foreground sm:hidden">{item.unit}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-muted-foreground">{item.unit}</TableCell>
+                          <TableCell className="text-right font-medium text-sm sm:text-base">₹{item.basePrice.toFixed(0)}</TableCell>
+                          <TableCell className="text-right hidden md:table-cell text-sm sm:text-base">₹{item.makingChargePerGram.toFixed(0)}</TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            <span className="text-xs bg-muted px-2 py-1 rounded">{item.category || '-'}</span>
+                          </TableCell>
+                          <TableCell className="text-right pr-6 sm:pr-4">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(item)}
+                                disabled={isPending}
+                                className="h-8 w-8 p-0 hover:text-primary"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(item.id)}
+                                disabled={isPending}
+                                className="text-destructive h-8 w-8 p-0 hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
-            </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden divide-y divide-white/10">
+                {stockItems.map((item) => (
+                  <div key={item.id} className={`p-4 space-y-3 hover:bg-white/5 active:bg-white/10 transition-colors ${!item.isActive ? 'opacity-50' : ''}`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-lg">{item.name}</h3>
+                        <div className="text-sm text-muted-foreground">{item.purity} • {item.category || 'No Category'}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-gold-400">₹{item.basePrice.toFixed(0)}</div>
+                        <div className="text-xs text-muted-foreground">+ ₹{item.makingChargePerGram.toFixed(0)} making</div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                      <div className="text-sm font-medium">
+                        Qty: {item.quantity} <span className="text-muted-foreground text-xs">{item.unit}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(item)}
+                          disabled={isPending}
+                          className="h-8 w-8 p-0 hover:text-primary"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(item.id)}
+                          disabled={isPending}
+                          className="text-destructive h-8 w-8 p-0 hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
-    </div>
+    </MotionWrapper>
   );
 }

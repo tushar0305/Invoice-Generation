@@ -29,7 +29,7 @@ function toWords(num: number): string {
         let digit = n % 10;
         return b[Math.floor(n / 10)] + (digit ? '-' : '') + a[digit];
     }
-    
+
     if (num === 0) return 'zero';
     let str = '';
     const crores = Math.floor(num / 10000000);
@@ -66,105 +66,105 @@ export default function ViewInvoicePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { toast } = useToast();
-        const { user } = useUser();
-        const [invoice, setInvoice] = useState<Invoice | null>(null);
-        const [items, setItems] = useState<InvoiceItem[] | null>(null);
-        const [settings, setSettings] = useState<UserSettings | null>(null);
-        const [loading, setLoading] = useState(true);
+    const { user } = useUser();
+    const [invoice, setInvoice] = useState<Invoice | null>(null);
+    const [items, setItems] = useState<InvoiceItem[] | null>(null);
+    const [settings, setSettings] = useState<UserSettings | null>(null);
+    const [loading, setLoading] = useState(true);
 
-        useEffect(() => {
-                let cancelled = false;
-                async function load() {
-                        setLoading(true);
-                        const { data: inv, error: invErr } = await supabase
-                            .from('invoices')
-                            .select('*')
-                            .eq('id', id)
-                            .single();
-                        if (invErr) { setInvoice(null); setItems(null); setLoading(false); return; }
-                        
-                        // Fetch user settings using the user_id from the invoice
-                        const { data: userSettings, error: settingsErr } = await supabase
-                            .from('user_settings')
-                            .select('*')
-                            .eq('user_id', inv.user_id)
-                            .single();
-                        
-                        if (!settingsErr && userSettings) {
-                            setSettings({
-                                id: userSettings.user_id,
-                                userId: userSettings.user_id,
-                                cgstRate: Number(userSettings.cgst_rate) || 0,
-                                sgstRate: Number(userSettings.sgst_rate) || 0,
-                                shopName: userSettings.shop_name || 'Jewellers Store',
-                                gstNumber: userSettings.gst_number || '',
-                                panNumber: userSettings.pan_number || '',
-                                address: userSettings.address || '',
-                                state: userSettings.state || '',
-                                pincode: userSettings.pincode || '',
-                                phoneNumber: userSettings.phone_number || '',
-                                email: userSettings.email || '',
-                            });
-                        }
-                        
-                        const mappedInv: Invoice = {
-                            id: inv.id,
-                            userId: inv.user_id,
-                            invoiceNumber: inv.invoice_number,
-                            customerName: inv.customer_name,
-                            customerAddress: inv.customer_address || '',
-                            customerState: inv.customer_state || '',
-                            customerPincode: inv.customer_pincode || '',
-                            customerPhone: inv.customer_phone || '',
-                            invoiceDate: inv.invoice_date,
-                            discount: Number(inv.discount) || 0,
-                            sgst: Number(inv.sgst) || 0,
-                            cgst: Number(inv.cgst) || 0,
-                            status: inv.status,
-                            grandTotal: Number(inv.grand_total) || 0,
-                        } as Invoice;
-                        const { data: its, error: itErr } = await supabase
-                            .from('invoice_items')
-                            .select('*')
-                            .eq('invoice_id', id)
-                            .order('id');
-                        if (itErr) { setInvoice(mappedInv); setItems([]); setLoading(false); return; }
-                        const mappedItems: InvoiceItem[] = (its ?? []).map((r: any) => ({
-                            id: r.id,
-                            description: r.description,
-                            purity: r.purity,
-                            grossWeight: Number(r.gross_weight) || 0,
-                            netWeight: Number(r.net_weight) || 0,
-                            rate: Number(r.rate) || 0,
-                            making: Number(r.making) || 0,
-                        }));
-                        if (!cancelled) {
-                            setInvoice(mappedInv);
-                            setItems(mappedItems);
-                            setLoading(false);
-                        }
-                }
-                load();
-                return () => { cancelled = true; };
-        }, [id]);
-    
+    useEffect(() => {
+        let cancelled = false;
+        async function load() {
+            setLoading(true);
+            const { data: inv, error: invErr } = await supabase
+                .from('invoices')
+                .select('*')
+                .eq('id', id)
+                .single();
+            if (invErr) { setInvoice(null); setItems(null); setLoading(false); return; }
+
+            // Fetch user settings using the user_id from the invoice
+            const { data: userSettings, error: settingsErr } = await supabase
+                .from('user_settings')
+                .select('*')
+                .eq('user_id', inv.user_id)
+                .single();
+
+            if (!settingsErr && userSettings) {
+                setSettings({
+                    id: userSettings.user_id,
+                    userId: userSettings.user_id,
+                    cgstRate: Number(userSettings.cgst_rate) || 0,
+                    sgstRate: Number(userSettings.sgst_rate) || 0,
+                    shopName: userSettings.shop_name || 'Jewellers Store',
+                    gstNumber: userSettings.gst_number || '',
+                    panNumber: userSettings.pan_number || '',
+                    address: userSettings.address || '',
+                    state: userSettings.state || '',
+                    pincode: userSettings.pincode || '',
+                    phoneNumber: userSettings.phone_number || '',
+                    email: userSettings.email || '',
+                });
+            }
+
+            const mappedInv: Invoice = {
+                id: inv.id,
+                userId: inv.user_id,
+                invoiceNumber: inv.invoice_number,
+                customerName: inv.customer_name,
+                customerAddress: inv.customer_address || '',
+                customerState: inv.customer_state || '',
+                customerPincode: inv.customer_pincode || '',
+                customerPhone: inv.customer_phone || '',
+                invoiceDate: inv.invoice_date,
+                discount: Number(inv.discount) || 0,
+                sgst: Number(inv.sgst) || 0,
+                cgst: Number(inv.cgst) || 0,
+                status: inv.status,
+                grandTotal: Number(inv.grand_total) || 0,
+            } as Invoice;
+            const { data: its, error: itErr } = await supabase
+                .from('invoice_items')
+                .select('*')
+                .eq('invoice_id', id)
+                .order('id');
+            if (itErr) { setInvoice(mappedInv); setItems([]); setLoading(false); return; }
+            const mappedItems: InvoiceItem[] = (its ?? []).map((r: any) => ({
+                id: r.id,
+                description: r.description,
+                purity: r.purity,
+                grossWeight: Number(r.gross_weight) || 0,
+                netWeight: Number(r.net_weight) || 0,
+                rate: Number(r.rate) || 0,
+                making: Number(r.making) || 0,
+            }));
+            if (!cancelled) {
+                setInvoice(mappedInv);
+                setItems(mappedItems);
+                setLoading(false);
+            }
+        }
+        load();
+        return () => { cancelled = true; };
+    }, [id]);
+
     const handleStatusChange = (status: 'paid' | 'due') => {
         if (!invoice) return;
 
         startTransition(async () => {
             try {
                 const { error } = await supabase
-                  .from('invoices')
-                  .update({ status })
-                  .eq('id', invoice.id)
-                  .eq('user_id', invoice.userId);
+                    .from('invoices')
+                    .update({ status })
+                    .eq('id', invoice.id)
+                    .eq('user_id', invoice.userId);
                 if (error) throw error;
                 toast({
                     title: 'Status Updated',
                     description: `Invoice marked as ${status}.`,
                 });
             } catch (error) {
-                 toast({
+                toast({
                     variant: 'destructive',
                     title: 'Error',
                     description: 'Failed to update invoice status.',
@@ -172,51 +172,51 @@ export default function ViewInvoicePage() {
             }
         });
     };
-    
-        const isLoading = loading;
 
-        // Auto-trigger print when arriving with ?print=1 once data is ready.
-        // Keep hook unconditionally positioned before any early return to preserve hook order.
-        useEffect(() => {
-            if (!isLoading && invoice && items && searchParams?.get('print') === '1') {
-                setTimeout(() => {
-                    window.print();
-                    // Clean URL so back/refresh doesn't re-print
-                    router.replace(`/dashboard/invoices/${id}/view`);
-                }, 300);
-            }
-        }, [isLoading, invoice, items, searchParams, router, id]);
+    const isLoading = loading;
 
-        // Tweak document title during print to minimize header content if headers/footers are enabled.
-        // Keep this hook above any early returns to preserve hook order.
-        useEffect(() => {
-            if (!invoice) return;
-            const originalTitle = document.title;
-            const before = () => {
-                document.title = `Invoice ${invoice.invoiceNumber}`;
-            };
-            const after = () => {
-                document.title = originalTitle;
-            };
-            window.addEventListener('beforeprint', before);
-            window.addEventListener('afterprint', after);
-            return () => {
-                window.removeEventListener('beforeprint', before);
-                window.removeEventListener('afterprint', after);
-                document.title = originalTitle;
-            };
-        }, [invoice]);
-
-        if (isLoading) {
-                return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    // Auto-trigger print when arriving with ?print=1 once data is ready.
+    // Keep hook unconditionally positioned before any early return to preserve hook order.
+    useEffect(() => {
+        if (!isLoading && invoice && items && searchParams?.get('print') === '1') {
+            setTimeout(() => {
+                window.print();
+                // Clean URL so back/refresh doesn't re-print
+                router.replace(`/dashboard/invoices/${id}/view`);
+            }, 300);
         }
+    }, [isLoading, invoice, items, searchParams, router, id]);
+
+    // Tweak document title during print to minimize header content if headers/footers are enabled.
+    // Keep this hook above any early returns to preserve hook order.
+    useEffect(() => {
+        if (!invoice) return;
+        const originalTitle = document.title;
+        const before = () => {
+            document.title = `Invoice ${invoice.invoiceNumber}`;
+        };
+        const after = () => {
+            document.title = originalTitle;
+        };
+        window.addEventListener('beforeprint', before);
+        window.addEventListener('afterprint', after);
+        return () => {
+            window.removeEventListener('beforeprint', before);
+            window.removeEventListener('afterprint', after);
+            document.title = originalTitle;
+        };
+    }, [invoice]);
+
+    if (isLoading) {
+        return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
 
     if (!invoice) {
         notFound();
     }
-    
-        const { subtotal, sgstAmount, cgstAmount, taxAmount, grandTotal } = (() => {
-            const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
+
+    const { subtotal, sgstAmount, cgstAmount, taxAmount, grandTotal } = (() => {
+        const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
         const totalBeforeTax = subtotal - invoice.discount;
         const sgstRate = invoice.sgst ?? ((invoice.tax || 0) / 2);
         const cgstRate = invoice.cgst ?? ((invoice.tax || 0) / 2);
@@ -227,7 +227,7 @@ export default function ViewInvoicePage() {
         return { subtotal, sgstAmount, cgstAmount, taxAmount, grandTotal };
     })();
 
-            
+
 
     return (
         <div className="space-y-6">
@@ -237,32 +237,32 @@ export default function ViewInvoicePage() {
                     Back to Invoices
                 </Button>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                                        <Button
-                                            variant="outline"
-                                                                    onClick={async () => {
-                                                                        if (!invoice) return;
-                                                                        // Share an exact PDF captured from the print layout via iframe
-                                                                        const ok = await shareInvoicePdfById(invoice.id, invoice, settings || undefined);
-                                                if (!ok) {
-                                                    // Fallback already opened WhatsApp with text; let the user know
-                                                    toast({
-                                                        title: 'Sharing fallback used',
-                                                        description: 'Your device/browser does not support sharing files directly. Opened WhatsApp with a text summary instead.',
-                                                    });
-                                                }
-                                            }}
-                                        >
-                                                <Send className="mr-2 h-4 w-4" /> Share
-                                        </Button>
+                    <Button
+                        variant="outline"
+                        onClick={async () => {
+                            if (!invoice) return;
+                            // Share an exact PDF captured from the print layout via iframe
+                            const ok = await shareInvoicePdfById(invoice.id, invoice, settings || undefined);
+                            if (!ok) {
+                                // Fallback already opened WhatsApp with text; let the user know
+                                toast({
+                                    title: 'Sharing fallback used',
+                                    description: 'Your device/browser does not support sharing files directly. Opened WhatsApp with a text summary instead.',
+                                });
+                            }
+                        }}
+                    >
+                        <Send className="mr-2 h-4 w-4" /> Share
+                    </Button>
                     {invoice.status === 'due' ? (
                         <Button onClick={() => handleStatusChange('paid')} disabled={isPending}>
-                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>}
+                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                             Mark as Paid
                         </Button>
                     ) : (
                         <Button variant="secondary" onClick={() => handleStatusChange('due')} disabled={isPending}>
-                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Clock className="mr-2 h-4 w-4"/>}
-                             Mark as Due
+                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
+                            Mark as Due
                         </Button>
                     )}
                     <Button asChild>
@@ -277,118 +277,120 @@ export default function ViewInvoicePage() {
                     </Button>
                 </div>
             </div>
-            
+
             <div id="print-area">
-            <Card>
-                <CardHeader>
-                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                                            <div>
-                                                <CardTitle className="text-3xl font-bold text-primary font-headline">{settings?.shopName || 'Jewellers Store'}</CardTitle>
-                                                                                                                                                <p className="text-sm text-muted-foreground">{settings?.address || 'Address Not Set'}</p>
-                                                                                                                                                {settings?.state && (
-                                                                                                                                                    <p className="text-sm text-muted-foreground">{settings.state}</p>
-                                                                                                                                                )}
-                                                                                                                                                {settings?.pincode && (
-                                                                                                                                                    <p className="text-sm text-muted-foreground">{settings.pincode}</p>
-                                                                                                                                                )}
-                                                                                                <div className="mt-1 text-xs text-muted-foreground space-y-1">
-                                                    {settings?.phoneNumber && <div><strong>Phone:</strong> {settings.phoneNumber}</div>}
-                                                    {(settings?.email || '') && <div><strong>Email:</strong> {settings?.email}</div>}
-                                                </div>
-                                            </div>
-                                            <div className="text-left sm:text-right">
-                                                <h2 className="text-2xl font-semibold">Invoice #{invoice.invoiceNumber}</h2>
-                                                <p className="text-sm text-muted-foreground"><strong>GST:</strong> {settings?.gstNumber || 'GST Not Set'}</p>
-                                                <p className="text-sm text-muted-foreground"><strong>PAN:</strong> {settings?.panNumber || 'PAN Not Set'}</p>
-                                                <p className="text-sm text-muted-foreground"><strong>DATE:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
-                                            </div>
-                                        </div>
-                </CardHeader>
-                <CardContent>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
-                        <div>
-                            <h3 className="font-semibold text-gray-600 mb-1">Bill To:</h3>
-                            <p className="font-bold text-lg">{invoice.customerName}</p>
-                                                                                    <p className="text-muted-foreground">{invoice.customerAddress}</p>
-                                                                                    {(invoice as any).customerState && (
-                                                                                        <p className="text-muted-foreground">{(invoice as any).customerState}</p>
-                                                                                    )}
-                                                                                    {(invoice as any).customerPincode && (
-                                                                                        <p className="text-muted-foreground">{(invoice as any).customerPincode}</p>
-                                                                                    )}
-                            <p className="text-muted-foreground">{invoice.customerPhone}</p>
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                            <div>
+                                <CardTitle className="text-3xl font-bold text-primary font-headline">{settings?.shopName || 'Jewellers Store'}</CardTitle>
+                                <p className="text-sm text-muted-foreground">{settings?.address || 'Address Not Set'}</p>
+                                {settings?.state && (
+                                    <p className="text-sm text-muted-foreground">{settings.state}</p>
+                                )}
+                                {settings?.pincode && (
+                                    <p className="text-sm text-muted-foreground">{settings.pincode}</p>
+                                )}
+                                <div className="mt-1 text-xs text-muted-foreground space-y-1">
+                                    {settings?.phoneNumber && <div><strong>Phone:</strong> {settings.phoneNumber}</div>}
+                                    {(settings?.email || '') && <div><strong>Email:</strong> {settings?.email}</div>}
+                                </div>
+                            </div>
+                            <div className="text-left sm:text-right">
+                                <h2 className="text-2xl font-semibold">Invoice #{invoice.invoiceNumber}</h2>
+                                <p className="text-sm text-muted-foreground"><strong>GST:</strong> {settings?.gstNumber || 'GST Not Set'}</p>
+                                <p className="text-sm text-muted-foreground"><strong>PAN:</strong> {settings?.panNumber || 'PAN Not Set'}</p>
+                                <p className="text-sm text-muted-foreground"><strong>DATE:</strong> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
+                            </div>
                         </div>
-                        <div className="flex sm:justify-end items-start">
-                             <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'} className={`text-lg px-4 py-1 rounded-full ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                {invoice.status.toUpperCase()}
-                            </Badge>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
+                            <div>
+                                <h3 className="font-semibold text-gray-600 mb-1">Bill To:</h3>
+                                <p className="font-bold text-lg">{invoice.customerName}</p>
+                                <p className="text-muted-foreground">{invoice.customerAddress}</p>
+                                {(invoice as any).customerState && (
+                                    <p className="text-muted-foreground">{(invoice as any).customerState}</p>
+                                )}
+                                {(invoice as any).customerPincode && (
+                                    <p className="text-muted-foreground">{(invoice as any).customerPincode}</p>
+                                )}
+                                <p className="text-muted-foreground">{invoice.customerPhone}</p>
+                            </div>
+                            <div className="flex sm:justify-end items-start">
+                                <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'} className={`text-lg px-4 py-1 rounded-full ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                    {invoice.status.toUpperCase()}
+                                </Badge>
+                            </div>
                         </div>
-                    </div>
 
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-2/5">Item Description</TableHead>
-                                <TableHead className="text-center">Net Wt.</TableHead>
-                                <TableHead className="text-right">Rate</TableHead>
-                                <TableHead className="text-right">Making</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {items && items.map(item => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="font-medium">{item.description}</TableCell>
-                                    <TableCell className="text-center">{item.netWeight}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(item.rate)}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(item.netWeight * item.making)}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency((item.netWeight * item.rate) + (item.netWeight * item.making))}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-2/5 min-w-[200px]">Item Description</TableHead>
+                                        <TableHead className="text-center min-w-[80px]">Net Wt.</TableHead>
+                                        <TableHead className="text-right min-w-[100px]">Rate</TableHead>
+                                        <TableHead className="text-right min-w-[100px]">Making</TableHead>
+                                        <TableHead className="text-right min-w-[120px]">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {items && items.map(item => (
+                                        <TableRow key={item.id}>
+                                            <TableCell className="font-medium">{item.description}</TableCell>
+                                            <TableCell className="text-center">{item.netWeight}</TableCell>
+                                            <TableCell className="text-right">{formatCurrency(item.rate)}</TableCell>
+                                            <TableCell className="text-right">{formatCurrency(item.netWeight * item.making)}</TableCell>
+                                            <TableCell className="text-right">{formatCurrency((item.netWeight * item.rate) + (item.netWeight * item.making))}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
 
-                    <div className="mt-6 flex justify-end">
-                        <div className="w-full max-w-sm space-y-3">
-                            <div className="flex justify-between">
-                                <span className="font-semibold text-muted-foreground">Subtotal:</span>
-                                <span>{formatCurrency(subtotal)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="font-semibold text-muted-foreground">Discount:</span>
-                                <span>- {formatCurrency(invoice.discount)}</span>
-                            </div>
-                            <Separator />
-                            <div className="flex justify-between">
-                                <span className="font-semibold text-muted-foreground">Total before Tax:</span>
-                                <span>{formatCurrency(subtotal - invoice.discount)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="font-semibold text-muted-foreground">SGST ({invoice.sgst ?? ((invoice.tax || 0) / 2)}%):</span>
-                                <span>+ {formatCurrency(sgstAmount)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="font-semibold text-muted-foreground">CGST ({invoice.cgst ?? ((invoice.tax || 0) / 2)}%):</span>
-                                <span>+ {formatCurrency(cgstAmount)}</span>
-                            </div>
-                            <Separator />
-                            <div className="flex justify-between text-xl font-bold text-primary">
-                                <span>Grand Total:</span>
-                                <span>{formatCurrency(grandTotal)}</span>
+                        <div className="mt-6 flex justify-end">
+                            <div className="w-full max-w-sm space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-muted-foreground">Subtotal:</span>
+                                    <span>{formatCurrency(subtotal)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-muted-foreground">Discount:</span>
+                                    <span>- {formatCurrency(invoice.discount)}</span>
+                                </div>
+                                <Separator />
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-muted-foreground">Total before Tax:</span>
+                                    <span>{formatCurrency(subtotal - invoice.discount)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-muted-foreground">SGST ({invoice.sgst ?? ((invoice.tax || 0) / 2)}%):</span>
+                                    <span>+ {formatCurrency(sgstAmount)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-muted-foreground">CGST ({invoice.cgst ?? ((invoice.tax || 0) / 2)}%):</span>
+                                    <span>+ {formatCurrency(cgstAmount)}</span>
+                                </div>
+                                <Separator />
+                                <div className="flex justify-between text-xl font-bold text-primary">
+                                    <span>Grand Total:</span>
+                                    <span>{formatCurrency(grandTotal)}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </CardContent>
-                 <CardFooter>
-                     <div className="w-full text-sm text-muted-foreground">
-                        <p className="font-semibold">Amount in words:</p>
-                        <p>{toWords(Math.round(grandTotal))} Rupees Only</p>
-                    </div>
-                </CardFooter>
-            </Card>
+                    </CardContent>
+                    <CardFooter>
+                        <div className="w-full text-sm text-muted-foreground">
+                            <p className="font-semibold">Amount in words:</p>
+                            <p>{toWords(Math.round(grandTotal))} Rupees Only</p>
+                        </div>
+                    </CardFooter>
+                </Card>
             </div>
-                {/* Print styles to optimize the view for PDF/print without navigating */}
-                <style jsx global>{`
+            {/* Print styles to optimize the view for PDF/print without navigating */}
+            <style jsx global>{`
                     @media print {
                       html, body {
                         background: #fff !important;
@@ -412,9 +414,12 @@ export default function ViewInvoicePage() {
                       a[href]::after { content: none !important; }
 
                       /* Page size and margins */
-                      @page { size: A4; margin: 12mm; }
+                      @page { size: A4; margin: 10mm; }
+                      html, body { height: auto !important; min-height: auto !important; overflow: visible !important; }
+                      /* Prevent blank pages by avoiding page breaks inside elements if possible */
+                      tr, td, div { page-break-inside: avoid; }
                     }
                 `}</style>
-                </div>
-        );
+        </div>
+    );
 }

@@ -46,9 +46,9 @@ export async function generateInvoicePdfTailwind({ invoice, items, settings }: G
       await (document as any).fonts.ready;
       try {
         await (document as any).fonts.load('700 16px Roboto');
-      } catch {}
+      } catch { }
     }
-  } catch {}
+  } catch { }
 
   // Create an offscreen container with fixed width ~ A4 @ 96dpi for consistency
   const container = document.createElement('div');
@@ -59,11 +59,13 @@ export async function generateInvoicePdfTailwind({ invoice, items, settings }: G
   container.style.minWidth = '794px'; // Ensure minimum width
   container.style.maxWidth = '794px'; // Prevent expansion
   container.style.background = '#ffffff';
+  container.style.color = '#000000'; // Enforce black text
   container.style.padding = '0';
   container.style.margin = '0';
   container.style.overflow = 'hidden'; // Prevent overflow issues
   container.style.boxSizing = 'border-box';
   container.setAttribute('data-invoice-pdf-root', '1');
+  container.className = 'light'; // Force light mode if Tailwind uses .dark class on body
 
   document.body.appendChild(container);
 
@@ -102,14 +104,14 @@ export async function generateInvoicePdfTailwind({ invoice, items, settings }: G
 
     const imgPxWidth = canvas.width;
     const imgPxHeight = canvas.height;
-    
+
     // Calculate aspect ratio
     const aspectRatio = imgPxHeight / imgPxWidth;
-    
+
     // Fit to page width with margins
     const renderWidth = printableWidth;
     const renderHeight = renderWidth * aspectRatio;
-    
+
     // If height exceeds page, scale down proportionally
     let finalWidth = renderWidth;
     let finalHeight = renderHeight;
@@ -117,7 +119,7 @@ export async function generateInvoicePdfTailwind({ invoice, items, settings }: G
       finalHeight = printableHeight;
       finalWidth = finalHeight / aspectRatio;
     }
-    
+
     const x = margin;
     const y = margin;
 
@@ -126,7 +128,7 @@ export async function generateInvoicePdfTailwind({ invoice, items, settings }: G
   } finally {
     try {
       root.unmount();
-    } catch {}
+    } catch { }
     container.remove();
   }
 }
