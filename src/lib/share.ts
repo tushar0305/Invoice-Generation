@@ -1,7 +1,7 @@
 import type { Invoice, InvoiceItem, UserSettings } from './definitions';
 import { format } from 'date-fns';
 import { formatCurrency } from './utils';
-import { generateInvoicePdfTailwind } from './pdf';
+import { generateInvoicePdf } from './pdf';
 import { supabase } from '@/supabase/client';
 
 export function composeWhatsAppInvoiceMessage(
@@ -59,8 +59,8 @@ export async function shareInvoicePdf(
   const message = composeWhatsAppInvoiceMessage(invoice, settings || undefined);
 
   try {
-    const pdfBlob = await generateInvoicePdfTailwind({ invoice, items, settings: settings || undefined });
-    
+    const pdfBlob = await generateInvoicePdf({ invoice, items, settings: settings || undefined });
+
     const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
     const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
@@ -176,7 +176,7 @@ export async function shareInvoicePdfById(
       }
     }
 
-    const pdfBlob = await generateInvoicePdfTailwind({ invoice, items, settings: resolvedSettings || undefined });
+    const pdfBlob = await generateInvoicePdf({ invoice, items, settings: resolvedSettings || undefined });
     const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
     const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
     const navAny = navigator as any;

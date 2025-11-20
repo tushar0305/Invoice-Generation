@@ -420,7 +420,7 @@ export default function StockPage() {
                     </TableHeader>
                     <TableBody>
                       {stockItems.map((item) => (
-                        <TableRow key={item.id} className={!item.isActive ? 'opacity-50 border-b-white/5' : 'hover:bg-white/5 border-b-white/5 transition-colors'}>
+                        <TableRow key={item.id} className={!item.isActive ? 'opacity-50 border-b-white/5' : 'hover:bg-muted/50 border-b-white/5 transition-colors'}>
                           <TableCell className="font-medium pl-6 sm:pl-4">
                             <div className="flex flex-col">
                               <span className="truncate max-w-[120px] sm:max-w-none">{item.name}</span>
@@ -470,42 +470,38 @@ export default function StockPage() {
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden divide-y divide-white/10">
+              <div className="md:hidden space-y-4">
                 {stockItems.map((item) => (
-                  <div key={item.id} className={`p-4 space-y-3 hover:bg-white/5 active:bg-white/10 transition-colors ${!item.isActive ? 'opacity-50' : ''}`}>
-                    <div className="flex justify-between items-start">
+                  <div
+                    key={item.id}
+                    className={`relative overflow-hidden rounded-xl border border-white/10 bg-card/50 p-4 shadow-sm transition-all ${!item.isActive ? 'opacity-50' : ''}`}
+                  >
+                    <div className="absolute right-0 top-0 h-16 w-16 -translate-y-8 translate-x-8 rounded-full bg-[#D4AF37]/10 blur-xl"></div>
+
+                    <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-semibold text-lg">{item.name}</h3>
-                        <div className="text-sm text-muted-foreground">{item.purity} • {item.category || 'No Category'}</div>
+                        <div className="text-xs text-[#D4AF37] font-medium mb-0.5">{item.purity}</div>
+                        <h3 className="font-serif text-lg font-bold text-foreground">{item.name}</h3>
+                        <div className="text-xs text-muted-foreground">{item.category || 'Uncategorized'}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-gold-400">₹{item.basePrice.toFixed(0)}</div>
+                        <div className="text-xs text-muted-foreground mb-0.5">Base Price</div>
+                        <div className="font-serif text-xl font-bold text-[#D4AF37]">₹{item.basePrice.toFixed(0)}</div>
                         <div className="text-xs text-muted-foreground">+ ₹{item.makingChargePerGram.toFixed(0)} making</div>
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                      <div className="text-sm font-medium">
-                        Qty: {item.quantity} <span className="text-muted-foreground text-xs">{item.unit}</span>
+                    <div className="flex justify-between items-end border-t border-white/5 pt-3">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-0.5">Stock</div>
+                        <div className="font-medium">{item.quantity} <span className="text-xs text-muted-foreground">{item.unit}</span></div>
                       </div>
                       <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(item)}
-                          disabled={isPending}
-                          className="h-8 w-8 p-0 hover:text-primary"
-                        >
-                          <Edit2 className="h-4 w-4" />
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 hover:bg-[#D4AF37] hover:text-[#0F172A] hover:border-[#D4AF37]" onClick={() => handleEdit(item)} disabled={isPending}>
+                          <Edit2 className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(item.id)}
-                          disabled={isPending}
-                          className="text-destructive h-8 w-8 p-0 hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 text-destructive hover:bg-destructive hover:text-white hover:border-destructive" onClick={() => handleDelete(item.id)} disabled={isPending}>
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>

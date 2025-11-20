@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Search, MoreHorizontal, FilePlus2, Edit, Printer, Eye, Trash2, Loader2, Calendar as CalendarIcon, Download, Send } from 'lucide-react';
-import type { Invoice } from '@/lib/definitions';
+import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -233,8 +233,96 @@ export default function InvoicesPage() {
     }
   };
 
-  const handlePrintNavigate = (invoiceId: string) => {
-    router.push(`/dashboard/invoices/${invoiceId}/print`);
+  const handleDownloadPdf = async (invoiceId: string) => {
+    try {
+      // Fetch invoice, items, and settings
+      const { data: inv, error: invErr } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', invoiceId)
+        .single();
+      if (invErr || !inv) throw new Error('Invoice not found');
+
+      const { data: its, error: itErr } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoiceId)
+        .order('id');
+      if (itErr) throw itErr;
+
+      const invoice: Invoice = {
+        id: inv.id,
+        userId: inv.user_id,
+        invoiceNumber: inv.invoice_number,
+        customerName: inv.customer_name,
+        customerAddress: inv.customer_address || '',
+        customerState: inv.customer_state || '',
+        customerPincode: inv.customer_pincode || '',
+        customerPhone: inv.customer_phone || '',
+        invoiceDate: inv.invoice_date,
+        discount: Number(inv.discount) || 0,
+        sgst: Number(inv.sgst) || 0,
+        cgst: Number(inv.cgst) || 0,
+        status: inv.status,
+        grandTotal: Number(inv.grand_total) || 0,
+        createdAt: inv.created_at,
+        updatedAt: inv.updated_at,
+      };
+
+      const items: InvoiceItem[] = (its ?? []).map((r: any) => ({
+        id: r.id,
+        description: r.description,
+        purity: r.purity,
+        grossWeight: Number(r.gross_weight) || 0,
+        netWeight: Number(r.net_weight) || 0,
+        rate: Number(r.rate) || 0,
+        making: Number(r.making) || 0,
+      }));
+
+      const { data: userSettings } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', inv.user_id)
+        .single();
+
+      const settings = userSettings ? {
+        id: userSettings.user_id,
+        userId: userSettings.user_id,
+        cgstRate: Number(userSettings.cgst_rate) || 0,
+        sgstRate: Number(userSettings.sgst_rate) || 0,
+        shopName: userSettings.shop_name || 'Jewellers Store',
+        gstNumber: userSettings.gst_number || '',
+        panNumber: userSettings.pan_number || '',
+        address: userSettings.address || '',
+        state: userSettings.state || '',
+        pincode: userSettings.pincode || '',
+        phoneNumber: userSettings.phone_number || '',
+        email: userSettings.email || '',
+      } : undefined;
+
+      // Generate PDF
+      const { generateInvoicePdf } = await import('@/lib/pdf');
+      const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
+
+      // Download the PDF
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice-${invoice.invoiceNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Success', description: 'Invoice PDF downloaded successfully' });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to generate PDF. Please try again.',
+      });
+    }
   };
 
   return (
@@ -361,8 +449,8 @@ export default function InvoicesPage() {
                         <TableCell className="text-right font-bold text-gold-400">₹{invoice.grandTotal.toFixed(2)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" onClick={() => handlePrintNavigate(invoice.id)}>
-                              <Printer className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(invoice.id)}>
+                              <Download className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
                               <Trash2 className="h-4 w-4" />
@@ -377,40 +465,44 @@ export default function InvoicesPage() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden divide-y divide-white/10">
+            <div className="md:hidden space-y-4">
               {isLoading ? (
-                <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
+                <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-[#D4AF37]" /></div>
               ) : filteredInvoices.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">No invoices found.</div>
               ) : (
                 filteredInvoices.map((invoice) => (
-                  <div key={invoice.id} className="p-4 space-y-3 hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer" onClick={() => router.push(`/dashboard/invoices/${invoice.id}/view`)}>
-                    <div className="flex justify-between items-start">
+                  <div
+                    key={invoice.id}
+                    className="relative overflow-hidden rounded-xl border border-white/10 bg-card/50 p-4 shadow-sm transition-all active:scale-[0.98]"
+                    onClick={() => router.push(`/dashboard/invoices/${invoice.id}/view`)}
+                  >
+                    <div className="absolute right-0 top-0 h-16 w-16 -translate-y-8 translate-x-8 rounded-full bg-[#D4AF37]/10 blur-xl"></div>
+
+                    <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-semibold text-lg">{invoice.invoiceNumber}</h3>
-                        <div className="text-sm text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</div>
+                        <div className="text-xs text-[#D4AF37] font-medium mb-0.5">#{invoice.invoiceNumber}</div>
+                        <h3 className="font-serif text-lg font-bold text-foreground">{invoice.customerName}</h3>
+                        <div className="text-xs text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</div>
                       </div>
-                      <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'}>
+                      <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'} className="shadow-none">
                         {invoice.status}
                       </Badge>
                     </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                      <div>
-                        <div className="text-sm text-muted-foreground">Customer</div>
-                        <div className="font-medium">{invoice.customerName}</div>
+
+                    <div className="flex justify-between items-end border-t border-white/5 pt-3">
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 hover:bg-[#D4AF37] hover:text-[#0F172A] hover:border-[#D4AF37]" onClick={(e) => { e.stopPropagation(); handleDownloadPdf(invoice.id); }}>
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 text-destructive hover:bg-destructive hover:text-white hover:border-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteConfirmation(invoice.id); }}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-muted-foreground">Amount</div>
-                        <div className="font-bold text-gold-400">₹{invoice.grandTotal.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground mb-0.5">Total Amount</div>
+                        <div className="font-serif text-xl font-bold text-[#D4AF37]">₹{invoice.grandTotal.toFixed(2)}</div>
                       </div>
-                    </div>
-                    <div className="flex justify-end gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" onClick={() => handlePrintNavigate(invoice.id)}>
-                        <Printer className="h-4 w-4 mr-2" /> Print
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </Button>
                     </div>
                   </div>
                 ))

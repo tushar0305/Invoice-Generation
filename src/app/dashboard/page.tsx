@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard, MessageCircle } from 'lucide-react';
-import type { Invoice } from '@/lib/definitions';
+import { useToast } from '@/hooks/use-toast';
+import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,7 @@ type CustomerStats = {
 
 export default function DashboardPage() {
   const { user } = useUser();
+  const { toast } = useToast(); // Add toast hook
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -112,7 +114,7 @@ export default function DashboardPage() {
           .from('user_settings')
           .upsert({ user_id: user.uid, shop_name: pending }, { onConflict: 'user_id' });
         localStorage.removeItem('pendingShopName');
-      } catch {}
+      } catch { }
     };
     applyPendingShopName();
     return () => { active = false; };
@@ -221,10 +223,110 @@ export default function DashboardPage() {
     }));
   }, [invoices, isLoading]);
 
+  const handlePrintPdf = async (invoiceId: string) => {
+    try {
+      // Fetch invoice, items, and settings
+      const { data: inv, error: invErr } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', invoiceId)
+        .single();
+      if (invErr || !inv) throw new Error('Invoice not found');
+
+      const { data: its, error: itErr } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoiceId)
+        .order('id');
+      if (itErr) throw itErr;
+
+      const invoice: Invoice = {
+        id: inv.id,
+        userId: inv.user_id,
+        invoiceNumber: inv.invoice_number,
+        customerName: inv.customer_name,
+        customerAddress: inv.customer_address || '',
+        customerState: inv.customer_state || '',
+        customerPincode: inv.customer_pincode || '',
+        customerPhone: inv.customer_phone || '',
+        invoiceDate: inv.invoice_date,
+        discount: Number(inv.discount) || 0,
+        sgst: Number(inv.sgst) || 0,
+        cgst: Number(inv.cgst) || 0,
+        status: inv.status,
+        grandTotal: Number(inv.grand_total) || 0,
+        createdAt: inv.created_at,
+        updatedAt: inv.updated_at,
+      };
+
+      const items: InvoiceItem[] = (its ?? []).map((r: any) => ({
+        id: r.id,
+        description: r.description,
+        purity: r.purity,
+        grossWeight: Number(r.gross_weight) || 0,
+        netWeight: Number(r.net_weight) || 0,
+        rate: Number(r.rate) || 0,
+        making: Number(r.making) || 0,
+      }));
+
+      const { data: userSettings } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', inv.user_id)
+        .single();
+
+      const settings = userSettings ? {
+        id: userSettings.user_id,
+        userId: userSettings.user_id,
+        cgstRate: Number(userSettings.cgst_rate) || 0,
+        sgstRate: Number(userSettings.sgst_rate) || 0,
+        shopName: userSettings.shop_name || 'Jewellers Store',
+        gstNumber: userSettings.gst_number || '',
+        panNumber: userSettings.pan_number || '',
+        address: userSettings.address || '',
+        state: userSettings.state || '',
+        pincode: userSettings.pincode || '',
+        phoneNumber: userSettings.phone_number || '',
+        email: userSettings.email || '',
+      } : undefined;
+
+      // Generate PDF
+      const { generateInvoicePdf } = await import('@/lib/pdf');
+      const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
+
+      // Create a Blob URL
+      const url = URL.createObjectURL(pdfBlob);
+
+      // Create an invisible iframe to print
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = url;
+      document.body.appendChild(iframe);
+
+      // Wait for the iframe to load, then print
+      iframe.onload = () => {
+        iframe.contentWindow?.print();
+        // Cleanup after a delay
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(url);
+        }, 1000);
+      };
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to generate PDF. Please try again.',
+      });
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* First-time User Welcome */}
-      <FirstTimeWelcome settings={settings} isLoading={isLoading} hasInvoices={invoices && invoices.length > 0} />
+      <FirstTimeWelcome settings={settings} isLoading={isLoading} hasInvoices={!!(invoices && invoices.length > 0)} />
 
       {/* Shop Setup Banner */}
       <ShopSetupBanner settings={settings} isLoading={isLoading} />
@@ -267,62 +369,58 @@ export default function DashboardPage() {
         />
       </MotionWrapper>
 
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-        {/* Sales Chart */}
-        <Card className="xl:col-span-3 glass-card">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+        <Card className="col-span-4 glass-card">
           <CardHeader>
-            <CardTitle className="font-heading text-xl">Sales Trend (Last 30 Days)</CardTitle>
+            <CardTitle className="font-heading text-xl">Sales Trend</CardTitle>
+            <CardDescription>Daily revenue over the last 30 days.</CardDescription>
           </CardHeader>
-                    <CardContent className="p-2 sm:p-6 divide-y divide-border rounded-lg overflow-hidden border border-primary/10">
+          <CardContent className="pl-2">
             <div className="h-[300px] w-full">
-              {isLoading ? <Skeleton className="w-full h-full" /> : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={false}
-                      interval="preserveStartEnd"
-                      minTickGap={20}
-                    />
-                    <YAxis
-                      tickFormatter={(value) => formatCurrency(value as number, true)}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={60}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        borderColor: 'hsl(var(--border))',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        padding: '8px 12px'
-                      }}
-                      labelStyle={{ color: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 }}
-                      itemStyle={{ fontSize: 12 }}
-                      formatter={(value, name) => [formatCurrency(value as number), name === 'sales' ? 'Sales' : '7d Avg']}
-                    />
-                    <Area type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
-                    <Line type="monotone" dataKey="ma7" stroke="hsl(var(--gold-500))" strokeWidth={2} dot={false} name="7d Avg" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="date"
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={30}
+                  />
+                  <YAxis
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `₹${value}`}
+                  />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: 'none', borderRadius: '8px', color: '#fff' }}
+                    itemStyle={{ color: '#D4AF37' }}
+                    formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Sales']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="sales"
+                    stroke="#D4AF37"
+                    fillOpacity={1}
+                    fill="url(#colorSales)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
         {/* Side Panels */}
-        <div className="space-y-8 xl:col-span-2">
+        <div className="space-y-8 col-span-1 lg:col-span-3">
           {/* Top Customers */}
           <Card className="glass-card">
             <CardHeader>
@@ -340,19 +438,26 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : topCustomers.length > 0 ? (
-                <ul className="space-y-4">
+                <div className="space-y-4">
                   {topCustomers.map(([name, stats], i) => (
-                      <li key={name} className="flex justify-between items-center gap-4 p-2 bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                    <div key={name} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-[#D4AF37] text-[#0F172A]' :
+                          i === 1 ? 'bg-gray-300 text-gray-800' :
+                            i === 2 ? 'bg-orange-300 text-orange-900' :
+                              'bg-primary/10 text-primary'
+                          }`}>
                           {i + 1}
                         </div>
-                        <span className="font-medium truncate">{name}</span>
+                        <div>
+                          <div className="font-medium truncate text-sm">{name}</div>
+                          <div className="text-xs text-muted-foreground">{stats.invoiceCount} orders</div>
+                        </div>
                       </div>
-                      <span className="text-sm font-semibold text-gold-600 dark:text-gold-400 whitespace-nowrap">{formatCurrency(stats.totalPurchase)}</span>
-                    </li>
+                      <div className="font-bold text-foreground text-sm">{formatCurrency(stats.totalPurchase)}</div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center h-24 flex items-center justify-center">No customer data available.</p>
               )}
@@ -502,11 +607,9 @@ export default function DashboardPage() {
                                 Edit
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/invoices/${invoice.id}/print`} target="_blank" className="cursor-pointer flex items-center">
-                                <Printer className="mr-2 h-4 w-4" />
-                                Print
-                              </Link>
+                            <DropdownMenuItem onClick={() => handlePrintPdf(invoice.id)} className="cursor-pointer flex items-center">
+                              <Printer className="mr-2 h-4 w-4" />
+                              Print
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -525,6 +628,6 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
 import { useUser } from '@/supabase/provider';
 import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdfById } from '@/lib/share';
+import { generateInvoicePdf } from '@/lib/pdf';
 import type { UserSettings } from '@/lib/definitions';
 
 
@@ -173,39 +174,51 @@ export default function ViewInvoicePage() {
         });
     };
 
-    const isLoading = loading;
+    const handlePrintPdf = async () => {
+        if (!invoice || !items) return;
+        try {
+            const pdfBlob = await generateInvoicePdf({
+                invoice,
+                items,
+                settings: settings || undefined,
+            });
+            const url = URL.createObjectURL(pdfBlob);
 
-    // Auto-trigger print when arriving with ?print=1 once data is ready.
-    // Keep hook unconditionally positioned before any early return to preserve hook order.
-    useEffect(() => {
-        if (!isLoading && invoice && items && searchParams?.get('print') === '1') {
-            setTimeout(() => {
-                window.print();
-                // Clean URL so back/refresh doesn't re-print
-                router.replace(`/dashboard/invoices/${id}/view`);
-            }, 300);
+            // Try iframe print first (better UX on desktop)
+            try {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
+                iframe.onload = () => {
+                    try {
+                        iframe.contentWindow?.print();
+                    } catch (e) {
+                        // Fallback if iframe print is blocked (common on mobile)
+                        console.warn('Iframe print failed, falling back to new tab', e);
+                        window.open(url, '_blank');
+                    }
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                        URL.revokeObjectURL(url);
+                    }, 60000);
+                };
+            } catch (e) {
+                // Fallback for immediate iframe creation errors
+                console.warn('Iframe creation failed, falling back to new tab', e);
+                window.open(url, '_blank');
+            }
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to generate PDF.',
+            });
         }
-    }, [isLoading, invoice, items, searchParams, router, id]);
+    };
 
-    // Tweak document title during print to minimize header content if headers/footers are enabled.
-    // Keep this hook above any early returns to preserve hook order.
-    useEffect(() => {
-        if (!invoice) return;
-        const originalTitle = document.title;
-        const before = () => {
-            document.title = `Invoice ${invoice.invoiceNumber}`;
-        };
-        const after = () => {
-            document.title = originalTitle;
-        };
-        window.addEventListener('beforeprint', before);
-        window.addEventListener('afterprint', after);
-        return () => {
-            window.removeEventListener('beforeprint', before);
-            window.removeEventListener('afterprint', after);
-            document.title = originalTitle;
-        };
-    }, [invoice]);
+    const isLoading = loading;
 
     if (isLoading) {
         return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -231,7 +244,7 @@ export default function ViewInvoicePage() {
 
     return (
         <div className="space-y-6">
-            <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/invoices')}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Invoices
@@ -270,10 +283,8 @@ export default function ViewInvoicePage() {
                             <Edit className="mr-2 h-4 w-4" /> Edit
                         </Link>
                     </Button>
-                    <Button asChild variant="outline">
-                        <Link href={`/dashboard/invoices/${invoice.id}/print`}>
-                            <Printer className="mr-2 h-4 w-4" /> Print
-                        </Link>
+                    <Button variant="outline" onClick={handlePrintPdf}>
+                        <Printer className="mr-2 h-4 w-4" /> Print
                     </Button>
                 </div>
             </div>
@@ -389,37 +400,6 @@ export default function ViewInvoicePage() {
                     </CardFooter>
                 </Card>
             </div>
-            {/* Print styles to optimize the view for PDF/print without navigating */}
-            <style jsx global>{`
-                    @media print {
-                      html, body {
-                        background: #fff !important;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                      }
-                      /* Hide everything except the print area */
-                      body * { visibility: hidden !important; }
-                      #print-area, #print-area * { visibility: visible !important; }
-                      #print-area { position: absolute; left: 0; top: 0; width: 100%; }
-
-                      /* Hide app chrome and overlays */
-                      .no-print { display: none !important; }
-                      [data-radix-portal], .radix-portal { display: none !important; }
-                      header, nav, footer { display: none !important; }
-
-                      /* Tidy visuals for print */
-                      .shadow, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl { box-shadow: none !important; }
-                      .ring-1, .ring, .border { border-color: #ddd !important; }
-                      table, tr, td, th { page-break-inside: avoid; }
-                      a[href]::after { content: none !important; }
-
-                      /* Page size and margins */
-                      @page { size: A4; margin: 10mm; }
-                      html, body { height: auto !important; min-height: auto !important; overflow: visible !important; }
-                      /* Prevent blank pages by avoiding page breaks inside elements if possible */
-                      tr, td, div { page-break-inside: avoid; }
-                    }
-                `}</style>
         </div>
     );
 }

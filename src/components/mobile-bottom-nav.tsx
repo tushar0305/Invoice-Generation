@@ -34,19 +34,19 @@ export function MobileBottomNav() {
               <li
                 key={item.href}
                 className={cn(
-                  'relative border-t-2 border-transparent',
-                  item.active && 'border-primary'
+                  'relative border-t-2 border-transparent transition-all duration-300',
+                  item.active && 'border-[#D4AF37]'
                 )}
               >
                 <Link
                   href={item.href}
                   aria-current={item.active ? 'page' : undefined}
                   className={cn(
-                    'flex h-14 flex-col items-center justify-center gap-1 text-[11px]',
-                    item.active ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
+                    'flex h-14 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
+                    item.active ? 'text-[#D4AF37]' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
-                  <item.icon className="h-5 w-5" />
+                  <item.icon className={cn("h-5 w-5 mb-0.5", item.active && "fill-[#D4AF37]/20")} />
                   <span className="leading-none">{item.label}</span>
                 </Link>
               </li>

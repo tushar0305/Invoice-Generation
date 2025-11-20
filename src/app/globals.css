@@ -4,101 +4,95 @@
 
 @layer base {
   :root {
-    /* Midnight Gold - Light Mode (Elegant Cream & Navy) */
-    --background: 40 20% 97%;
+    /* Modern Heritage - Light Mode (Cream & Royal Blue) */
+    --background: 40 20% 98%;
     /* Creamy White */
-    --foreground: 224 71% 4%;
-    /* Midnight Blue */
+    --foreground: 222 47% 11%;
+    /* Deep Royal Blue */
 
     --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+    --card-foreground: 222 47% 11%;
 
-  /* Modern table styling */
-  .table-modern tbody tr {
-    border-bottom: 1px solid hsl(var(--border));
-    transition: background-color .15s ease;
-  }
-  .table-modern tbody tr:last-child { border-bottom: none; }
-  .table-modern tbody tr:hover { background: hsl(var(--muted) / 0.5); }
-  .dark .table-modern tbody tr:hover { background: hsl(var(--muted) / 0.3); }
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 224 64% 12%;
-    /* Deep Navy */
+    --primary: 222 47% 11%;
+    /* Deep Royal Blue */
     --primary-foreground: 45 93% 47%;
     /* Gold Text */
 
     --secondary: 45 30% 90%;
     /* Soft Gold/Beige */
-    --secondary-foreground: 224 71% 4%;
+    --secondary-foreground: 222 47% 11%;
 
     --muted: 220 14% 90%;
     --muted-foreground: 220 8% 46%;
 
     --accent: 45 93% 47%;
     /* Gold */
-    --accent-foreground: 224 71% 4%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 220 13% 85%;
     --input: 220 13% 85%;
-    --ring: 224 64% 12%;
+    --ring: 222 47% 11%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 40 20% 97%;
-    --sidebar-foreground: 224 71% 4%;
-    --sidebar-primary: 224 64% 12%;
+    --sidebar-background: 40 20% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 222 47% 11%;
     --sidebar-primary-foreground: 45 93% 47%;
     --sidebar-accent: 45 30% 90%;
-    --sidebar-accent-foreground: 224 71% 4%;
+    --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 220 13% 85%;
-    --sidebar-ring: 224 64% 12%;
+    --sidebar-ring: 222 47% 11%;
   }
 
   .dark {
-    /* Midnight Gold - Dark Mode (The Main Attraction) */
-    --background: 224 71% 4%;
-    /* Deepest Midnight */
-    --foreground: 210 40% 98%;
+    /* Modern Heritage - Dark Mode (Royal Blue & Gold) */
+    --background: 222 47% 11%;
+    /* Deep Royal Blue #0F172A */
+    --foreground: 40 20% 97%;
+    /* Creamy White */
 
-    --card: 224 71% 6%;
-    /* Slightly lighter midnight */
-    --card-foreground: 210 40% 98%;
+    --card: 222 47% 13%;
+    /* Slightly lighter Royal Blue */
+    --card-foreground: 40 20% 97%;
 
-    --popover: 224 71% 4%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 40 20% 97%;
 
     --primary: 45 93% 47%;
-    /* Vibrant Gold */
-    --primary-foreground: 224 71% 4%;
-    /* Midnight Text */
+    /* Gold #D4AF37 */
+    --primary-foreground: 222 47% 11%;
+    /* Royal Blue Text */
 
     --secondary: 217 19% 27%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary-foreground: 40 20% 97%;
 
     --muted: 217 19% 27%;
     --muted-foreground: 215 20% 65%;
 
     --accent: 45 93% 47%;
-    --accent-foreground: 224 71% 4%;
+    /* Gold */
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 40 20% 97%;
 
     --border: 217 19% 27%;
     --input: 217 19% 27%;
     --ring: 45 93% 47%;
 
-    --sidebar-background: 224 71% 4%;
-    --sidebar-foreground: 210 40% 98%;
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 40 20% 97%;
     --sidebar-primary: 45 93% 47%;
-    --sidebar-primary-foreground: 224 71% 4%;
+    --sidebar-primary-foreground: 222 47% 11%;
     --sidebar-accent: 217 19% 27%;
-    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-accent-foreground: 40 20% 97%;
     --sidebar-border: 217 19% 27%;
     --sidebar-ring: 45 93% 47%;
   }
@@ -141,12 +135,15 @@
     border-bottom: 1px solid hsl(var(--border));
     transition: background-color 0.15s ease;
   }
+
   .table-modern tbody tr:last-child {
     border-bottom: none;
   }
+
   .table-modern tbody tr:hover {
     background: hsl(var(--muted)) !important;
   }
+
   .dark .table-modern tbody tr:hover {
     background: hsl(var(--primary) / 0.15) !important;
   }
