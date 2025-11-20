@@ -90,81 +90,81 @@ function UserNav() {
 }
 
 function NavMenu() {
-    const pathname = usePathname();
-    const router = useRouter();
-    const { setOpenMobile } = useSidebar();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { setOpenMobile } = useSidebar();
 
-    const handleNav = (href: string) => {
-        router.push(href);
-        setOpenMobile(false);
-    }
-    
-    return (
-        <>
-            <SidebarMenu className="flex flex-col gap-2">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNav('/dashboard')}
-                  isActive={pathname === '/dashboard'}
-                  tooltip="Dashboard"
-                >
-                  <LayoutDashboard />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                   onClick={() => handleNav('/dashboard/invoices')}
-                  isActive={pathname.startsWith('/dashboard/invoices')}
-                  tooltip="Invoices"
-                >
-                  <FileText />
-                  <span>Invoices</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNav('/dashboard/customers')}
-                  isActive={pathname === '/dashboard/customers'}
-                  tooltip="Customers"
-                >
-                  <Users />
-                  <span>Customers</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNav('/dashboard/stock')}
-                  isActive={pathname === '/dashboard/stock'}
-                  tooltip="Stock"
-                >
-                  <Package />
-                  <span>Stock</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNav('/dashboard/settings')}
-                  isActive={pathname === '/dashboard/settings'}
-                  tooltip="Settings"
-                >
-                  <Settings />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <div className="px-2 pt-4">
-                <Button
-                  variant="outline"
-                  className="h-auto w-full justify-start gap-2 p-2 text-left"
-                  onClick={() => handleNav('/dashboard/invoices/new')}
-                >
-                  <PlusCircle />
-                  <span>New Invoice</span>
-                </Button>
-              </div>
-            </SidebarMenu>
-        </>
-    )
+  const handleNav = (href: string) => {
+    router.push(href);
+    setOpenMobile(false);
+  }
+
+  return (
+    <>
+      <SidebarMenu className="flex flex-col gap-2">
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => handleNav('/dashboard')}
+            isActive={pathname === '/dashboard'}
+            tooltip="Dashboard"
+          >
+            <LayoutDashboard />
+            <span>Dashboard</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => handleNav('/dashboard/invoices')}
+            isActive={pathname.startsWith('/dashboard/invoices')}
+            tooltip="Invoices"
+          >
+            <FileText />
+            <span>Invoices</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => handleNav('/dashboard/customers')}
+            isActive={pathname === '/dashboard/customers'}
+            tooltip="Customers"
+          >
+            <Users />
+            <span>Customers</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => handleNav('/dashboard/stock')}
+            isActive={pathname === '/dashboard/stock'}
+            tooltip="Stock"
+          >
+            <Package />
+            <span>Stock</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => handleNav('/dashboard/settings')}
+            isActive={pathname === '/dashboard/settings'}
+            tooltip="Settings"
+          >
+            <Settings />
+            <span>Settings</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <div className="px-2 pt-4">
+          <Button
+            variant="outline"
+            className="h-auto w-full justify-start gap-2 p-2 text-left"
+            onClick={() => handleNav('/dashboard/invoices/new')}
+          >
+            <PlusCircle />
+            <span>New Invoice</span>
+          </Button>
+        </div>
+      </SidebarMenu>
+    </>
+  )
 }
 
 function DashboardLayoutInternal({
@@ -207,30 +207,129 @@ function DashboardLayoutInternal({
     return 'Dashboard';
   };
 
+  const handleNav = (href: string) => {
+    router.push(href);
+    setOpenMobile(false);
+  };
+
   return (
     <AuthWrapper>
       <Sidebar>
-        <SidebarHeader>
-          <div 
+        <SidebarHeader className="border-b border-sidebar-border/50">
+          <div
             onClick={() => isMobile && setOpenMobile(false)}
-            className="cursor-pointer"
+            className="cursor-pointer px-2 py-4"
             role="button"
             aria-label="Close sidebar"
           >
-            <Logo />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+                <span className="text-xl font-bold text-primary-foreground">J</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-base font-heading font-bold text-foreground">
+                  {settings?.shopName || 'JewelOS'}
+                </span>
+                <span className="text-xs text-muted-foreground">Modern Heritage</span>
+              </div>
+            </div>
           </div>
         </SidebarHeader>
-        <SidebarContent>
-          <NavMenu />
+        <SidebarContent className="px-2">
+          {/* Main Navigation */}
+          <div className="py-2">
+            <div className="mb-2 px-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Menu</span>
+            </div>
+            <SidebarMenu className="flex flex-col gap-1">
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard')}
+                  isActive={pathname === '/dashboard'}
+                  tooltip="Dashboard"
+                  className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/10 data-[active=true]:to-primary/5 data-[active=true]:border-l-2 data-[active=true]:border-[#D4AF37] data-[active=true]:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
+                >
+                  <LayoutDashboard className="data-[active=true]:text-[#D4AF37]" />
+                  <span>Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard/invoices')}
+                  isActive={pathname.startsWith('/dashboard/invoices')}
+                  tooltip="Invoices"
+                  className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/10 data-[active=true]:to-primary/5 data-[active=true]:border-l-2 data-[active=true]:border-[#D4AF37] data-[active=true]:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
+                >
+                  <FileText className="data-[active=true]:text-[#D4AF37]" />
+                  <span>Invoices</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard/customers')}
+                  isActive={pathname === '/dashboard/customers'}
+                  tooltip="Customers"
+                  className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/10 data-[active=true]:to-primary/5 data-[active=true]:border-l-2 data-[active=true]:border-[#D4AF37] data-[active=true]:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
+                >
+                  <Users className="data-[active=true]:text-[#D4AF37]" />
+                  <span>Customers</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard/stock')}
+                  isActive={pathname === '/dashboard/stock'}
+                  tooltip="Stock"
+                  className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/10 data-[active=true]:to-primary/5 data-[active=true]:border-l-2 data-[active=true]:border-[#D4AF37] data-[active=true]:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
+                >
+                  <Package className="data-[active=true]:text-[#D4AF37]" />
+                  <span>Stock</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
+
+          {/* Quick Action */}
+          <div className="px-2 py-4">
+            <Button
+              variant="premium"
+              className="w-full justify-start gap-2 shadow-lg hover:shadow-xl transition-shadow duration-200"
+              onClick={() => handleNav('/dashboard/invoices/new')}
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>New Invoice</span>
+            </Button>
+          </div>
+
+          {/* Settings Section */}
+          <div className="border-t border-sidebar-border/50 py-2">
+            <div className="mb-2 px-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">System</span>
+            </div>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard/settings')}
+                  isActive={pathname === '/dashboard/settings'}
+                  tooltip="Settings"
+                  className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/10 data-[active=true]:to-primary/5 data-[active=true]:border-l-2 data-[active=true]:border-[#D4AF37] data-[active=true]:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
+                >
+                  <Settings className="data-[active=true]:text-[#D4AF37]" />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
         </SidebarContent>
-        <SidebarFooter>
-          <div className="flex flex-col gap-2">
+        <SidebarFooter className="border-t border-sidebar-border/50 bg-sidebar/50 backdrop-blur-sm">
+          <div className="flex flex-col gap-2 p-2">
             <UserNav />
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleSignOut}
                   tooltip="Sign Out"
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
                 >
                   <LogOut />
                   <span>Sign Out</span>

@@ -166,8 +166,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       customerPincode: '',
       customerPhone: '',
       invoiceDate: new Date(),
-      items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 }],
-      discount: 0,
+      items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: '' as any, netWeight: '' as any, rate: '' as any, making: '' as any }],
+      discount: '' as any,
       sgst: 1.5,
       cgst: 1.5,
       status: 'due',
@@ -459,7 +459,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                     <Button type="button" variant="outline" size="sm" onClick={() => setShowStockDialog(true)} className="bg-white/5 border-white/10 hover:bg-white/10 flex-1 sm:flex-none">
                       <Search className="h-4 w-4 mr-2" /> Add from Stock
                     </Button>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => append({ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 })} className="flex-1 sm:flex-none">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => append({ id: uuidv4(), description: '', purity: '22', grossWeight: '' as any, netWeight: '' as any, rate: '' as any, making: '' as any })} className="flex-1 sm:flex-none">
                       <PlusCircle className="h-4 w-4 mr-2" /> Add Manual
                     </Button>
                   </div>

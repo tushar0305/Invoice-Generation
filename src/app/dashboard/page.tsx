@@ -19,7 +19,7 @@ import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Line } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { format, subDays, startOfDay, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
@@ -198,8 +198,8 @@ export default function DashboardPage() {
 
   const chartData = useMemo(() => {
     if (isLoading || !invoices) return [];
-    const last30Days = Array.from({ length: 30 }, (_, i) => format(subDays(new Date(), i), 'yyyy-MM-dd')).reverse();
 
+    // Calculate sales by day
     const salesByDay = invoices
       .filter(inv => inv.status === 'paid')
       .reduce((acc, inv) => {
@@ -208,18 +208,12 @@ export default function DashboardPage() {
         return acc;
       }, {} as Record<string, number>);
 
-    const values = last30Days.map(d => salesByDay[d] || 0);
-    const ma7 = values.map((_, idx) => {
-      const start = Math.max(0, idx - 6);
-      const slice = values.slice(start, idx + 1);
-      const sum = slice.reduce((s, v) => s + v, 0);
-      return sum / slice.length;
-    });
-
-    return last30Days.map((date, i) => ({
-      date: format(new Date(date), 'MMM dd'),
-      sales: values[i] || 0,
-      ma7: ma7[i] || 0,
+    // Last 7 days for cleaner bar chart
+    const last7DaysDates = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), i), 'yyyy-MM-dd')).reverse();
+    return last7DaysDates.map((date) => ({
+      date: format(new Date(date), 'EEE'),
+      fullDate: format(new Date(date), 'MMM dd'),
+      sales: salesByDay[date] || 0,
     }));
   }, [invoices, isLoading]);
 
@@ -370,52 +364,62 @@ export default function DashboardPage() {
       </MotionWrapper>
 
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-        <Card className="col-span-4 glass-card">
+        <Card className="col-span-1 lg:col-span-4 glass-card">
           <CardHeader>
             <CardTitle className="font-heading text-xl">Sales Trend</CardTitle>
-            <CardDescription>Daily revenue over the last 30 days.</CardDescription>
+            <CardDescription>Daily revenue over the last 7 days</CardDescription>
           </CardHeader>
-          <CardContent className="pl-2">
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="date"
-                    stroke="#888888"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    minTickGap={30}
-                  />
-                  <YAxis
-                    stroke="#888888"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `₹${value}`}
-                  />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: 'none', borderRadius: '8px', color: '#fff' }}
-                    itemStyle={{ color: '#D4AF37' }}
-                    formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Sales']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sales"
-                    stroke="#D4AF37"
-                    fillOpacity={1}
-                    fill="url(#colorSales)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="pt-2">
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#D4AF37" stopOpacity={0.8} />
+                    <stop offset="100%" stopColor="#D4AF37" stopOpacity={0.3} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+                  width={45}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    border: '1px solid rgba(212, 175, 55, 0.2)',
+                    borderRadius: '12px',
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                  }}
+                  itemStyle={{ color: '#D4AF37' }}
+                  cursor={{ fill: 'rgba(212, 175, 55, 0.1)' }}
+                  formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Sales']}
+                  labelFormatter={(label, payload) => {
+                    if (payload && payload.length > 0) {
+                      return payload[0].payload.fullDate;
+                    }
+                    return label;
+                  }}
+                />
+                <Bar
+                  dataKey="sales"
+                  fill="url(#barGradient)"
+                  radius={[8, 8, 0, 0]}
+                  maxBarSize={80}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
@@ -628,6 +632,6 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
-    </div >
+    </div>
   );
 }

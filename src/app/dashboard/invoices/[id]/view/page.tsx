@@ -160,6 +160,10 @@ export default function ViewInvoicePage() {
                     .eq('id', invoice.id)
                     .eq('user_id', invoice.userId);
                 if (error) throw error;
+
+                // Update local state to reflect the change immediately
+                setInvoice({ ...invoice, status });
+
                 toast({
                     title: 'Status Updated',
                     description: `Invoice marked as ${status}.`,

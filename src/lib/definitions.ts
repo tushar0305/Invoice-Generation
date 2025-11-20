@@ -41,6 +41,7 @@ export type UserSettings = {
   pincode?: string; // Postal code / PIN
   phoneNumber?: string; // Contact phone number
   email?: string; // Contact email (defaults to auth email, not editable in UI)
+  logoUrl?: string; // Shop logo URL from Supabase storage
 };
 
 export type StockItem = {
