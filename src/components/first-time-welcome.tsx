@@ -13,45 +13,49 @@ interface FirstTimeWelcomeProps {
 }
 
 export function FirstTimeWelcome({ settings, isLoading, hasInvoices }: FirstTimeWelcomeProps) {
-  // Show welcome only if there are no settings and no invoices (brand new user)
-  if (isLoading || settings || hasInvoices) {
-    return null;
-  }
+  if (isLoading || hasInvoices) return null;
+  const hasShopName = !!(settings?.shopName && settings.shopName !== 'Jewellers Store');
+  const incompleteDetails = hasShopName && (
+    !settings?.gstNumber || !settings?.panNumber || !settings?.address || !settings?.state || !settings?.pincode
+  );
+  const isBrandNew = !settings && !hasShopName;
+  if (!isBrandNew && !incompleteDetails) return null;
 
   return (
     <div className="space-y-6">
-      {/* Welcome Hero Card */}
-      <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-secondary/5 to-transparent">
         <CardHeader>
-          <CardTitle className="text-2xl">Welcome to Invoice Generator! 🎉</CardTitle>
-          <CardDescription className="text-base mt-2">
-            Let's set up your shop and get you creating invoices in minutes.
-          </CardDescription>
+          {isBrandNew ? (
+            <>
+              <CardTitle className="text-2xl">Welcome! 🎉</CardTitle>
+              <CardDescription className="text-base mt-2">Let's finish a few details and get you creating invoices.</CardDescription>
+            </>
+          ) : (
+            <>
+              <CardTitle className="text-2xl">Great start! 🛠️</CardTitle>
+              <CardDescription className="text-base mt-2">Shop name saved. Complete the remaining details for professional invoices.</CardDescription>
+            </>
+          )}
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Setup Steps */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Getting Started (3 simple steps):</h3>
-            
+            <h3 className="font-semibold text-lg">{isBrandNew ? 'Getting Started (3 simple steps):' : 'Next Steps:'}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Step 1 */}
-              <div className="p-4 bg-white rounded-lg border border-blue-100">
+              <div className="p-4 bg-white rounded-lg border border-primary/20">
                 <div className="flex items-start gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white font-semibold flex-shrink-0">1</div>
                   <div>
-                    <h4 className="font-semibold mb-2">Add Shop Details</h4>
-                    <p className="text-sm text-muted-foreground mb-3">Tell us about your shop - this will appear on every invoice.</p>
+                    <h4 className="font-semibold mb-2">{hasShopName ? 'Shop Name Added' : 'Add Shop Name'}</h4>
+                    <p className="text-sm text-muted-foreground mb-3">{hasShopName ? 'Great! Your shop name is saved.' : 'Provide a custom shop name shown on invoices.'}</p>
                     <Link href="/dashboard/settings">
-                      <Button size="sm" variant="outline" className="w-full">
-                        Set Up Shop <ArrowRight className="w-4 h-4 ml-2" />
+                      <Button size="sm" variant={hasShopName ? 'secondary' : 'outline'} className="w-full">
+                        {hasShopName ? 'Edit Details' : 'Set Name'} <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </Link>
                   </div>
                 </div>
               </div>
-
-              {/* Step 2 */}
-              <div className="p-4 bg-white rounded-lg border border-indigo-100">
+              <div className="p-4 bg-white rounded-lg border border-secondary/20">
                 <div className="flex items-start gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white font-semibold flex-shrink-0">2</div>
                   <div>
@@ -65,9 +69,7 @@ export function FirstTimeWelcome({ settings, isLoading, hasInvoices }: FirstTime
                   </div>
                 </div>
               </div>
-
-              {/* Step 3 */}
-              <div className="p-4 bg-white rounded-lg border border-purple-100">
+              <div className="p-4 bg-white rounded-lg border border-primary/30">
                 <div className="flex items-start gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-white font-semibold flex-shrink-0">3</div>
                   <div>
@@ -83,8 +85,6 @@ export function FirstTimeWelcome({ settings, isLoading, hasInvoices }: FirstTime
               </div>
             </div>
           </div>
-
-          {/* Features */}
           <div className="pt-6 border-t">
             <h3 className="font-semibold mb-3">Key Features:</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -115,11 +115,10 @@ export function FirstTimeWelcome({ settings, isLoading, hasInvoices }: FirstTime
             </div>
           </div>
 
-          {/* CTA */}
           <div className="pt-4 flex gap-3">
             <Link href="/dashboard/settings" className="flex-1">
               <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700">
-                Get Started <ArrowRight className="w-4 h-4 ml-2" />
+                {hasShopName ? 'Complete Setup' : 'Get Started'} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
           </div>

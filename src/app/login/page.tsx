@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, Building2, Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
 const authSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  // shopName is optional here; we enforce it only when signing up
+  shopName: z.string().optional(),
 });
 
 type AuthFormValues = z.infer<typeof authSchema>;
@@ -25,6 +27,7 @@ type AuthFormValues = z.infer<typeof authSchema>;
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -33,6 +36,7 @@ export default function LoginPage() {
     defaultValues: {
       email: '',
       password: '',
+      shopName: '',
     },
   });
 
@@ -40,11 +44,44 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       if (isSignUp) {
+        // Enforce shop name when signing up
+        if (!data.shopName || data.shopName.trim().length < 2) {
+          toast({
+            variant: 'destructive',
+            title: 'Shop name required',
+            description: 'Please enter your Shop Name to continue.',
+          });
+          setIsLoading(false);
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email: data.email,
           password: data.password,
         });
         if (error) throw error;
+
+        // Try to save initial shop name in user_settings. This may fail if email confirmation is required.
+        try {
+          const currentUser = (await supabase.auth.getUser()).data.user;
+          if (currentUser?.id) {
+            await supabase
+              .from('user_settings')
+              .upsert({
+                user_id: currentUser.id,
+                shop_name: data.shopName.trim(),
+              }, { onConflict: 'user_id' });
+          } else {
+            // Fallback: store to localStorage to be picked up on first login
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('pendingShopName', data.shopName.trim());
+            }
+          }
+        } catch (_) {
+          // Swallow; not critical at signup time
+          if (typeof window !== 'undefined') {
+            try { localStorage.setItem('pendingShopName', data.shopName.trim()); } catch {}
+          }
+        }
         toast({
           title: 'Account created!',
           description: 'Please check your email to verify your account.',
@@ -125,13 +162,32 @@ export default function LoginPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
+                name="shopName"
+                render={({ field }) => (
+                  isSignUp ? (
+                    <FormItem>
+                      <FormLabel>Shop Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Building2 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                          <Input placeholder="e.g. Shree Jewellers" className="pl-10 h-11" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ) : null
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                         <Input placeholder="name@example.com" className="pl-10 h-11" {...field} />
                       </div>
                     </FormControl>
@@ -147,8 +203,16 @@ export default function LoginPage() {
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input type="password" placeholder="••••••••" className="pl-10 h-11" {...field} />
+                        <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                        <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="pl-10 pr-10 h-11" {...field} />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(p => !p)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                     </FormControl>
                     <FormMessage />

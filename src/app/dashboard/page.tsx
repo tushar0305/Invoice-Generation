@@ -102,6 +102,19 @@ export default function DashboardPage() {
       setIsLoading(false);
     };
     load();
+    // After settings load, if a pending shop name exists from signup, persist it once
+    const applyPendingShopName = async () => {
+      try {
+        if (typeof window === 'undefined') return;
+        const pending = localStorage.getItem('pendingShopName');
+        if (!pending || !user?.uid) return;
+        await supabase
+          .from('user_settings')
+          .upsert({ user_id: user.uid, shop_name: pending }, { onConflict: 'user_id' });
+        localStorage.removeItem('pendingShopName');
+      } catch {}
+    };
+    applyPendingShopName();
     return () => { active = false; };
   }, [user?.uid]);
 
@@ -260,7 +273,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="font-heading text-xl">Sales Trend (Last 30 Days)</CardTitle>
           </CardHeader>
-          <CardContent className="p-2 sm:p-6">
+                    <CardContent className="p-2 sm:p-6 divide-y divide-border rounded-lg overflow-hidden border border-primary/10">
             <div className="h-[300px] w-full">
               {isLoading ? <Skeleton className="w-full h-full" /> : (
                 <ResponsiveContainer width="100%" height="100%">
@@ -329,7 +342,7 @@ export default function DashboardPage() {
               ) : topCustomers.length > 0 ? (
                 <ul className="space-y-4">
                   {topCustomers.map(([name, stats], i) => (
-                    <li key={name} className="flex justify-between items-center gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <li key={name} className="flex justify-between items-center gap-4 p-2 bg-muted/30 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
                           {i + 1}

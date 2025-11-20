@@ -326,7 +326,7 @@ export default function ViewInvoicePage() {
                         </div>
 
                         <div className="overflow-x-auto">
-                            <Table>
+                            <Table className="table-modern">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-2/5 min-w-[200px]">Item Description</TableHead>

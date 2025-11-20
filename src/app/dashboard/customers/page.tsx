@@ -130,7 +130,7 @@ export default function CustomersPage() {
                         </div>
                     </div>
                     <div className="hidden md:block rounded-md border border-white/10 overflow-hidden">
-                        <Table>
+                        <Table className="table-modern">
                             <TableHeader className="bg-muted/50">
                                 <TableRow className="hover:bg-transparent border-b-white/10">
                                     <TableHead className="font-semibold min-w-[120px] pl-4 text-primary">Customer</TableHead>

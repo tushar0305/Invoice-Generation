@@ -319,7 +319,7 @@ export default function InvoicesPage() {
 
             {/* Desktop Table View */}
             <div className="rounded-md border border-white/10 overflow-hidden hidden md:block">
-              <Table>
+              <Table className="table-modern">
                 <TableHeader className="bg-muted/50">
                   <TableRow className="hover:bg-transparent border-b-white/10">
                     <TableHead className="text-primary">Invoice #</TableHead>

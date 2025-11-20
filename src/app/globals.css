@@ -13,6 +13,14 @@
     --card: 0 0% 100%;
     --card-foreground: 224 71% 4%;
 
+  /* Modern table styling */
+  .table-modern tbody tr {
+    border-bottom: 1px solid hsl(var(--border));
+    transition: background-color .15s ease;
+  }
+  .table-modern tbody tr:last-child { border-bottom: none; }
+  .table-modern tbody tr:hover { background: hsl(var(--muted) / 0.5); }
+  .dark .table-modern tbody tr:hover { background: hsl(var(--muted) / 0.3); }
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
 
@@ -126,6 +134,21 @@
       radial-gradient(at 100% 0%, hsla(224, 64%, 12%, 0.15) 0px, transparent 50%),
       radial-gradient(at 100% 100%, hsla(45, 93%, 47%, 0.15) 0px, transparent 50%),
       radial-gradient(at 0% 100%, hsla(224, 64%, 12%, 0.15) 0px, transparent 50%);
+  }
+
+  /* Modern table styling with visible hover */
+  .table-modern tbody tr {
+    border-bottom: 1px solid hsl(var(--border));
+    transition: background-color 0.15s ease;
+  }
+  .table-modern tbody tr:last-child {
+    border-bottom: none;
+  }
+  .table-modern tbody tr:hover {
+    background: hsl(var(--muted)) !important;
+  }
+  .dark .table-modern tbody tr:hover {
+    background: hsl(var(--primary) / 0.15) !important;
   }
 }
 

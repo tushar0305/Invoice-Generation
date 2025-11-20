@@ -368,12 +368,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
               {/* Shop Setup Warning */}
               {!isShopSetupValid && !settingsLoading && (
                 <FadeIn>
-                  <Alert variant="destructive" className="border-red-500/50 bg-red-500/10 text-red-200">
-                    <AlertCircle className="h-4 w-4 text-red-400" />
-                    <AlertTitle className="text-red-400">Shop Setup Required</AlertTitle>
-                    <AlertDescription className="text-red-200/80">
-                      Please complete your shop setup before creating invoices.
-                      <Button type="button" variant="link" className="ml-2 p-0 text-red-400 hover:text-red-300" onClick={() => router.push('/dashboard/settings')}>
+                  <Alert className="border-amber-500/60 bg-amber-50 text-amber-800">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-700 font-semibold">Finish Shop Setup</AlertTitle>
+                    <AlertDescription className="text-amber-700/80 text-sm">
+                      Complete your shop address & tax details to enable invoice creation.
+                      <Button type="button" variant="link" className="ml-2 p-0 text-amber-700 hover:text-amber-600 font-medium" onClick={() => router.push('/dashboard/settings')}>
                         Go to Settings →
                       </Button>
                     </AlertDescription>
