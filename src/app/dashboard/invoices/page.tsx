@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Table,
   TableHeader,
@@ -14,12 +14,13 @@ import {
 import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
 import { motion } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
-import { ImpactStyle } from '@capacitor/haptics';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, FilePlus2, Trash2, Loader2, Calendar as CalendarIcon, Download } from 'lucide-react';
+import { Search, FilePlus2, Trash2, Loader2, Calendar as CalendarIcon, Download, RefreshCw, Share2 } from 'lucide-react';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -41,10 +42,19 @@ import { supabase } from '@/supabase/client';
 import { format, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { InvoiceMobileCard } from '@/components/dashboard/invoice-mobile-card';
 
 export default function InvoicesPage() {
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam && ['paid', 'due', 'all'].includes(statusParam)) {
+      setStatusFilter(statusParam);
+    }
+  }, [searchParams]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isExporting, setIsExporting] = useState(false);
   const router = useRouter();
@@ -52,6 +62,8 @@ export default function InvoicesPage() {
   const [isDeleting, startDeleteTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [invoiceToChangeStatus, setInvoiceToChangeStatus] = useState<{ id: string; currentStatus: string } | null>(null);
 
   const { user } = useUser();
   const queryClient = useQueryClient();
@@ -122,6 +134,67 @@ export default function InvoicesPage() {
         setInvoiceToDelete(null);
       }
     });
+  };
+
+  const handleMarkPaid = async (id: string) => {
+    // Find the invoice to determine current status
+    const invoice = invoices?.find(inv => inv.id === id);
+    if (!invoice) return;
+
+    // Open confirmation dialog
+    setInvoiceToChangeStatus({ id, currentStatus: invoice.status });
+    setStatusDialogOpen(true);
+  };
+
+  const confirmStatusChange = async () => {
+    if (!invoiceToChangeStatus) return;
+
+    try {
+      const currentStatus = invoiceToChangeStatus.currentStatus;
+      const newStatus = currentStatus === 'paid' ? 'due' : 'paid';
+
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: newStatus })
+        .eq('id', invoiceToChangeStatus.id)
+        .eq('user_id', user?.uid || '');
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      haptics.notification(NotificationType.Success);
+      toast({
+        title: 'Success',
+        description: `Invoice marked as ${newStatus}`
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update status'
+      });
+    } finally {
+      setStatusDialogOpen(false);
+      setInvoiceToChangeStatus(null);
+    }
+  };
+
+  const handleShare = async (id: string) => {
+    try {
+      const { shareInvoicePdfById } = await import('@/lib/share');
+      // Fetch invoice to get details for message if needed, but ID is enough for PDF generation
+      // For better UX, we could fetch invoice here, but let's keep it simple and fast
+      await shareInvoicePdfById(id);
+    } catch (error) {
+      console.error('Share failed', error);
+      toast({ variant: 'destructive', title: 'Share Failed', description: 'Could not share invoice.' });
+    }
+  };
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    haptics.impact(ImpactStyle.Light);
+    toast({ description: 'Refreshing list...' });
   };
 
   const filteredInvoices = useMemo(() => {
@@ -309,6 +382,7 @@ export default function InvoicesPage() {
       const { Capacitor } = await import('@capacitor/core');
       if (Capacitor.isNativePlatform()) {
         const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const { Share } = await import('@capacitor/share');
 
         // Convert Blob to Base64
         const base64Data = await new Promise<string>((resolve, reject) => {
@@ -322,32 +396,42 @@ export default function InvoicesPage() {
         });
 
         try {
-          // Save to Documents
-          const result = await Filesystem.writeFile({
+          // Try writing to Documents first
+          await Filesystem.writeFile({
             path: filename,
             data: base64Data,
             directory: Directory.Documents,
           });
 
           toast({
-            title: 'Saved Successfully',
-            description: `Invoice saved to Documents folder as ${filename}`,
-            duration: 5000,
+            title: 'Invoice Saved',
+            description: 'Invoice saved to Documents folder.',
+            duration: 3000,
           });
-
-          // Optional: Try to open it to confirm
-          // const { FileOpener } = await import('@capacitor-community/file-opener');
-          // if (FileOpener) FileOpener.open({ filePath: result.uri, contentType: 'application/pdf' });
-
         } catch (e) {
-          console.error('File write failed', e);
-          // Fallback to Share if write fails (e.g. permission)
-          const { Share } = await import('@capacitor/share');
-          await Share.share({
-            title: filename,
-            url: `data:application/pdf;base64,${base64Data}`,
-            dialogTitle: 'Save Invoice'
-          });
+          console.error('Documents write failed, trying cache...', e);
+
+          try {
+            // Fallback: Write to Cache and Share
+            const result = await Filesystem.writeFile({
+              path: filename,
+              data: base64Data,
+              directory: Directory.Cache,
+            });
+
+            await Share.share({
+              title: filename,
+              files: [result.uri],
+              dialogTitle: 'Save Invoice'
+            });
+          } catch (shareError) {
+            console.error('Share failed', shareError);
+            toast({
+              variant: 'destructive',
+              title: 'Download Failed',
+              description: 'Could not save or share the invoice.',
+            });
+          }
         }
         return;
       }
@@ -377,9 +461,14 @@ export default function InvoicesPage() {
     <>
       <div className="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle>All Invoices</CardTitle>
-            <CardDescription>A list of all your invoices.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>All Invoices</CardTitle>
+              <CardDescription>A list of all your invoices.</CardDescription>
+            </div>
+            <Button variant="ghost" size="icon" onClick={handleRefresh} className="md:hidden">
+              <RefreshCw className={cn("h-5 w-5", isLoading && "animate-spin")} />
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -520,57 +609,15 @@ export default function InvoicesPage() {
                 <div className="p-8 text-center text-muted-foreground">No invoices found.</div>
               ) : (
                 filteredInvoices.map((invoice) => (
-                  <div key={invoice.id} className="relative">
-                    {/* Background Actions (Delete) */}
-                    <div className="absolute inset-0 flex items-center justify-end px-4 bg-destructive/20 rounded-xl">
-                      <Trash2 className="text-destructive h-6 w-6" />
-                    </div>
-
-                    {/* Foreground Card */}
-                    <motion.div
-                      drag="x"
-                      dragConstraints={{ left: -100, right: 0 }}
-                      dragElastic={0.1}
-                      onDragEnd={(_, info: any) => {
-                        if (info.offset.x < -80) {
-                          haptics.impact(ImpactStyle.Heavy);
-                          handleDeleteConfirmation(invoice.id);
-                        }
-                      }}
-                      className="relative overflow-hidden rounded-xl border border-white/10 bg-card shadow-sm transition-all active:scale-[0.98]"
-                      style={{ x: 0, background: 'hsl(var(--card))' }}
-                    >
-                      <div className="p-4" onClick={() => router.push(`/dashboard/invoices/view?id=${invoice.id}`)}>
-                        <div className="absolute right-0 top-0 h-16 w-16 -translate-y-8 translate-x-8 rounded-full bg-[#D4AF37]/10 blur-xl"></div>
-
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="text-xs text-[#D4AF37] font-medium mb-0.5">#{invoice.invoiceNumber}</div>
-                            <h3 className="font-serif text-lg font-bold text-foreground">{invoice.customerName}</h3>
-                            <div className="text-xs text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</div>
-                          </div>
-                          <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'} className="shadow-none">
-                            {invoice.status}
-                          </Badge>
-                        </div>
-
-                        <div className="flex justify-between items-end border-t border-white/5 pt-3">
-                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 hover:bg-[#D4AF37] hover:text-[#0F172A] hover:border-[#D4AF37]" onClick={() => handleDownloadPdf(invoice.id)}>
-                              <Download className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 text-destructive hover:bg-destructive hover:text-white hover:border-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-xs text-muted-foreground mb-0.5">Total Amount</div>
-                            <div className="font-serif text-xl font-bold text-[#D4AF37]">₹{invoice.grandTotal.toFixed(2)}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </div>
+                  <InvoiceMobileCard
+                    key={invoice.id}
+                    invoice={invoice}
+                    onView={(id) => router.push(`/dashboard/invoices/view?id=${id}`)}
+                    onDelete={handleDeleteConfirmation}
+                    onDownload={handleDownloadPdf}
+                    onShare={handleShare}
+                    onMarkPaid={handleMarkPaid}
+                  />
                 ))
               )}
             </div>
@@ -595,6 +642,27 @@ export default function InvoicesPage() {
             >
               {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Status Change Confirmation Dialog */}
+      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Invoice Status?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to mark this invoice as {invoiceToChangeStatus?.currentStatus === 'paid' ? 'due' : 'paid'}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmStatusChange}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

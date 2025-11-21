@@ -34,9 +34,7 @@ export const haptics = {
     selection: async () => {
         if (isNative) {
             try {
-                await Haptics.selectionStart();
                 await Haptics.selectionChanged();
-                await Haptics.selectionEnd();
             } catch (e) {
                 // Ignore errors
             }

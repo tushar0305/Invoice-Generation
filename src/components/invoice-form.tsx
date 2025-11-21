@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { Invoice, InvoiceItem, StockItem, UserSettings } from '@/lib/definitions';
 import { cn, formatCurrency } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
@@ -606,13 +606,13 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           </div>
         </div>
 
-        {/* Stock Search Dialog */}
-        <Dialog open={showStockDialog} onOpenChange={setShowStockDialog}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="font-heading text-primary">Select Stock Item</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
+        {/* Stock Search Sheet */}
+        <Sheet open={showStockDialog} onOpenChange={setShowStockDialog}>
+          <SheetContent side="bottom" className="h-[80vh] max-h-[calc(100vh-var(--safe-area-inset-top)-4rem)] rounded-t-xl px-0">
+            <SheetHeader>
+              <SheetTitle className="font-heading text-primary">Select Stock Item</SheetTitle>
+            </SheetHeader>
+            <div className="space-y-4 mt-4 h-full overflow-y-auto pb-10">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -622,7 +622,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   onChange={(e) => setStockSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {filteredStockItems.map(item => (
                   <div key={item.id} className="p-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 cursor-pointer transition-colors flex justify-between items-center group" onClick={() => handleAddStockItem(item)}>
                     <div>
@@ -639,8 +639,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                 )}
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
       </form>
     </Form>
   );

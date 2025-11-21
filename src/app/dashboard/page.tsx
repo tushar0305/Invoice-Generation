@@ -13,8 +13,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard, MessageCircle } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Printer, DollarSign, Users, CreditCard, MessageCircle, FileText, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { GoldSilverTicker } from '@/components/dashboard/gold-silver-ticker';
 import { useToast } from '@/hooks/use-toast';
+import { haptics } from '@/lib/haptics';
+import { ImpactStyle } from '@capacitor/haptics';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,7 +31,7 @@ import { shareInvoicePdfById } from '@/lib/share';
 import type { UserSettings } from '@/lib/definitions';
 import { ShopSetupBanner } from '@/components/shop-setup-banner';
 import { FirstTimeWelcome } from '@/components/first-time-welcome';
-import { DashboardHero } from '@/components/dashboard/hero';
+import { SmartHero } from '@/components/dashboard/smart-hero';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
 
@@ -38,7 +42,8 @@ type CustomerStats = {
 
 export default function DashboardPage() {
   const { user } = useUser();
-  const { toast } = useToast(); // Add toast hook
+  const { toast } = useToast();
+  const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -144,7 +149,8 @@ export default function DashboardPage() {
         outstandingDueAmount: 0,
         outstandingDueCount: 0,
         sales7dChangePct: null as number | null,
-        paid7dChangePct: null as number | null,
+        revenueMoM: null as number | null,
+        invoicesMoM: null as number | null,
       };
     }
     const paid = invoices.filter((inv) => inv.status === 'paid');
@@ -313,6 +319,7 @@ export default function DashboardPage() {
         pincode: userSettings.pincode || '',
         phoneNumber: userSettings.phone_number || '',
         email: userSettings.email || '',
+        templateId: userSettings.template_id || 'classic',
       } : undefined;
 
       // Generate PDF
@@ -356,8 +363,15 @@ export default function DashboardPage() {
       {/* Shop Setup Banner */}
       <ShopSetupBanner settings={settings} isLoading={isLoading} />
 
-      {/* Hero Section */}
-      <DashboardHero />
+      {/* Gold & Silver Ticker */}
+      <GoldSilverTicker />
+
+      {/* Smart Hero Section */}
+      <SmartHero
+        invoices={invoices}
+        revenueMoM={revenueMoM}
+        totalRevenue={totalPaidThisMonth}
+      />
 
       {/* Stats Grid */}
       <MotionWrapper className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -365,9 +379,10 @@ export default function DashboardPage() {
           title="Total Revenue"
           value={formatCurrency(totalPaidThisMonth)}
           icon={DollarSign}
-          description="Paid sales, this month"
           trend={revenueMoM !== null && revenueMoM !== undefined ? { value: Number(revenueMoM.toFixed(0)), label: 'vs last month' } : undefined}
+          context={revenueMoM !== null && revenueMoM !== undefined ? (revenueMoM > 0 ? "Revenue is up! 🔥" : "Revenue is down") : undefined}
           loading={isLoading}
+          action={{ label: "View Details", onClick: () => { haptics.impact(ImpactStyle.Light); router.push("/dashboard/invoices"); } }}
         />
         <StatsCard
           title="Customers"
@@ -380,7 +395,6 @@ export default function DashboardPage() {
           title="Paid Invoices"
           value={paidInvoicesAllTime}
           icon={CreditCard}
-          description="All-time count"
           trend={invoicesMoM !== null && invoicesMoM !== undefined ? { value: Number(invoicesMoM.toFixed(0)), label: 'vs last month' } : undefined}
           loading={isLoading}
         />
@@ -391,6 +405,7 @@ export default function DashboardPage() {
           description={`${outstandingDueCount} invoice(s) due`}
           loading={isLoading}
           className="border-l-4 border-l-red-500"
+          action={outstandingDueCount > 0 ? { label: "Chase Payments", onClick: () => { haptics.impact(ImpactStyle.Light); router.push("/dashboard/invoices?status=due"); } } : undefined}
         />
       </MotionWrapper>
 
@@ -401,7 +416,7 @@ export default function DashboardPage() {
             <CardDescription>Daily revenue over the last 7 days</CardDescription>
           </CardHeader>
           <CardContent className="pt-2">
-            <ResponsiveContainer width="100%" height={350}>
+            <ResponsiveContainer width="100%" height={400}>
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
@@ -422,7 +437,11 @@ export default function DashboardPage() {
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+                  tickFormatter={(value) => {
+                    if (value === 0) return '₹0';
+                    if (value >= 1000) return `₹${(value / 1000).toFixed(1)}k`;
+                    return `₹${value}`;
+                  }}
                   width={45}
                 />
                 <Tooltip
@@ -456,45 +475,96 @@ export default function DashboardPage() {
 
         {/* Side Panels */}
         <div className="space-y-8 col-span-1 lg:col-span-3">
+
+
           {/* Top Customers */}
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="font-heading text-xl">Top Customers</CardTitle>
-              <CardDescription>Most valuable customers by total purchase.</CardDescription>
+              <CardDescription>By total revenue</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="space-y-4">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={`skel-cust-${i}`} className="flex justify-between items-center">
-                      <Skeleton className="h-5 w-32" />
-                      <Skeleton className="h-5 w-24" />
-                    </div>
-                  ))}
-                </div>
-              ) : topCustomers.length > 0 ? (
-                <div className="space-y-4">
-                  {topCustomers.map(([name, stats], i) => (
-                    <div key={name} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-[#D4AF37] text-[#0F172A]' :
-                          i === 1 ? 'bg-gray-300 text-gray-800' :
-                            i === 2 ? 'bg-orange-300 text-orange-900' :
-                              'bg-primary/10 text-primary'
-                          }`}>
-                          {i + 1}
-                        </div>
-                        <div>
-                          <div className="font-medium truncate text-sm">{name}</div>
-                          <div className="text-xs text-muted-foreground">{stats.invoiceCount} orders</div>
-                        </div>
+                    <div key={`skel-cust-${i}`} className="flex items-center justify-between">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
                       </div>
-                      <div className="font-bold text-foreground text-sm">{formatCurrency(stats.totalPurchase)}</div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center h-24 flex items-center justify-center">No customer data available.</p>
+                (() => {
+                  const customerStats = (invoices || []).reduce((acc, inv) => {
+                    if (!acc[inv.customerName]) {
+                      acc[inv.customerName] = {
+                        total: 0,
+                        count: 0,
+                        lastOrder: new Date(inv.invoiceDate),
+                        phone: inv.customerPhone
+                      };
+                    }
+                    acc[inv.customerName].total += inv.grandTotal;
+                    acc[inv.customerName].count += 1;
+                    const invDate = new Date(inv.invoiceDate);
+                    if (invDate > acc[inv.customerName].lastOrder) {
+                      acc[inv.customerName].lastOrder = invDate;
+                    }
+                    return acc;
+                  }, {} as Record<string, { total: number; count: number; lastOrder: Date; phone: string }>);
+
+                  const topCustomers = Object.entries(customerStats)
+                    .sort(([, a], [, b]) => b.total - a.total)
+                    .slice(0, 5);
+
+                  if (topCustomers.length === 0) {
+                    return <p className="text-sm text-muted-foreground text-center py-8">No customer data yet.</p>;
+                  }
+
+                  const today = new Date();
+
+                  return (
+                    <div className="space-y-4">
+                      {topCustomers.map(([name, stats], index) => {
+                        const daysSinceLastOrder = Math.floor((today.getTime() - stats.lastOrder.getTime()) / (1000 * 60 * 60 * 24));
+                        const isActive = daysSinceLastOrder <= 7;
+
+                        return (
+                          <div key={name} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg transition-colors group">
+                            <div className="flex items-center gap-3">
+                              <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">
+                                {index + 1}
+                                {isActive && (
+                                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" title="Active in last 7 days" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-medium flex items-center gap-2">
+                                  {name}
+                                  {index === 0 && <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 rounded-full">Top</span>}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {stats.count} orders • Last: {daysSinceLastOrder}d ago
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold">{formatCurrency(stats.total)}</div>
+                              <Link href={`/dashboard/invoices/new?customer=${encodeURIComponent(name)}&phone=${encodeURIComponent(stats.phone || '')}`}>
+                                <Button size="sm" variant="ghost" className="h-6 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                                  Create Invoice
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
               )}
             </CardContent>
           </Card>
@@ -592,7 +662,7 @@ export default function DashboardPage() {
                             <span>{formatCurrency(critical.reduce((s, i) => s + i.grandTotal, 0))}</span>
                           </div>
                           <ul className="space-y-1">
-                            {critical.map(inv => renderInvoiceRow(inv, "text-red-600 font-bold"))}
+                            {critical.map(inv => renderInvoiceRow(inv, "text-red-600 font-bold bg-red-500/10 px-2 py-0.5 rounded"))}
                           </ul>
                         </div>
                       )}
@@ -627,92 +697,59 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </div >
 
-      {/* Recent Invoices Table */}
-      <Card className="glass-card">
-        <CardHeader>
+      {/* Recent Invoices List */}
+      < Card className="glass-card" >
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-heading text-xl">Recent Invoices</CardTitle>
+          <Button variant="ghost" size="sm" className="text-xs" onClick={() => router.push('/dashboard/invoices')}>
+            View All <ArrowRight className="ml-1 h-3 w-3" />
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-b-primary/10">
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="w-[50px] text-right"> </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={`skeleton-recent-${i}`}>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                      <TableCell className="text-right"><Skeleton className="h-5 w-28 ml-auto" /></TableCell>
-                      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : recentInvoices.length > 0 ? (
-                  recentInvoices.map(invoice => (
-                    <TableRow key={invoice.id} className="hover:bg-muted/50 border-b-primary/5">
-                      <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                      <TableCell>{invoice.customerName}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={invoice.status === 'paid' ? 'default' : 'secondary'}
-                          className={cn(
-                            "capitalize shadow-sm",
-                            invoice.status === 'paid' ? 'bg-green-600/90 hover:bg-green-600' : 'bg-yellow-500/90 hover:bg-yellow-500 text-white'
-                          )}
-                        >
-                          {invoice.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(invoice.grandTotal)}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/invoices/view?id=${invoice.id}`} className="cursor-pointer flex items-center">
-                                <Eye className="mr-2 h-4 w-4" />
-                                View
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/invoices/edit?id=${invoice.id}`} className="cursor-pointer flex items-center">
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePrintPdf(invoice.id)} className="cursor-pointer flex items-center">
-                              <Printer className="mr-2 h-4 w-4" />
-                              Print
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                      No invoices found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 border rounded-xl">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-5 w-20" />
+                </div>
+              ))}
+            </div>
+          ) : recentInvoices.length > 0 ? (
+            <div className="space-y-3">
+              {recentInvoices.map(invoice => (
+                <div key={invoice.id} className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50 hover:bg-accent/50 transition-all group cursor-pointer" onClick={() => router.push(`/dashboard/invoices/view?id=${invoice.id}`)}>
+                  <div className="flex items-center gap-4">
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${invoice.status === 'paid' ? 'bg-green-500/10 text-green-600' : 'bg-yellow-500/10 text-yellow-600'}`}>
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-sm">{invoice.customerName}</div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-2">
+                        <span className="font-mono">{invoice.invoiceNumber}</span>
+                        <span>•</span>
+                        <span>{new Date(invoice.invoiceDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-sm">{formatCurrency(invoice.grandTotal)}</div>
+                    <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'} className={cn("mt-1 text-[10px] h-5 px-1.5", invoice.status === 'paid' ? 'bg-green-500/20 text-green-700 hover:bg-green-500/30' : 'bg-yellow-500/20 text-yellow-700 hover:bg-yellow-500/30')}>
+                      {invoice.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">No recent invoices found.</div>
+          )}
         </CardContent>
       </Card >
     </div >

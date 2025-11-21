@@ -4,7 +4,6 @@ import { Toaster } from '@/components/ui/toaster';
 import { SupabaseProvider } from '@/supabase/provider';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { QueryProvider } from '@/components/query-provider';
-import { SplashScreen } from '@/components/splash-screen';
 
 export const metadata: Metadata = {
   title: 'Saambh Jewellers',
@@ -46,7 +45,6 @@ export default function RootLayout({
             <AuthWrapper>
               {children}
             </AuthWrapper>
-            <SplashScreen />
             <Toaster />
           </QueryProvider>
         </SupabaseProvider>

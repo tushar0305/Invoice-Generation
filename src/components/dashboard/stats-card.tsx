@@ -10,12 +10,18 @@ interface StatsCardProps {
     trend?: {
         value: number;
         label: string;
+        positiveIsGood?: boolean; // Default true
+    };
+    context?: string; // e.g. "₹5,000 ahead of last month"
+    action?: {
+        label: string;
+        onClick: () => void;
     };
     loading?: boolean;
     className?: string;
 }
 
-export function StatsCard({ title, value, description, icon: Icon, trend, loading, className }: StatsCardProps) {
+export function StatsCard({ title, value, description, icon: Icon, trend, context, action, loading, className }: StatsCardProps) {
     return (
         <Card className={cn("glass-card overflow-hidden relative group hover:-translate-y-1 transition-transform duration-300", className)}>
             <div className="absolute inset-0 bg-gradient-to-br from-gold-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -32,18 +38,43 @@ export function StatsCard({ title, value, description, icon: Icon, trend, loadin
                     <div className="h-8 w-24 bg-muted animate-pulse rounded" />
                 ) : (
                     <>
-                        <div className="text-2xl font-bold font-heading tracking-tight">{value}</div>
-                        {(description || trend) && (
-                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                                {trend && (
-                                    <span className={cn(
-                                        "font-medium",
-                                        trend.value > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                                    )}>
-                                        {trend.value > 0 ? "+" : ""}{trend.value}%
-                                    </span>
+                        <div className="flex items-end gap-2">
+                            <div className="text-2xl font-bold font-heading tracking-tight">{value}</div>
+                            {trend && (
+                                <div className={cn(
+                                    "text-xs font-medium mb-1.5 px-1.5 py-0.5 rounded-full bg-opacity-10",
+                                    (trend.positiveIsGood !== false ? trend.value >= 0 : trend.value < 0)
+                                        ? "text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30"
+                                        : "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30"
+                                )}>
+                                    {trend.value > 0 ? "↑" : "↓"} {Math.abs(trend.value)}%
+                                </div>
+                            )}
+                        </div>
+
+                        {(context || description) && (
+                            <div className="mt-2 space-y-1">
+                                {context && (
+                                    <div className="text-xs font-medium text-foreground/80">
+                                        {context}
+                                    </div>
                                 )}
-                                <span>{description}</span>
+                                {description && (
+                                    <div className="text-xs text-muted-foreground">
+                                        {description}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {action && (
+                            <div className="mt-3 pt-3 border-t border-border/50">
+                                <button
+                                    onClick={action.onClick}
+                                    className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                                >
+                                    {action.label} →
+                                </button>
                             </div>
                         )}
                     </>

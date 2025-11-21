@@ -19,7 +19,7 @@ export function MobileBottomNav() {
     { href: '/dashboard/invoices', label: 'Invoices', icon: FileText, active: isActive('/dashboard/invoices', true) },
     { href: '/dashboard/customers', label: 'Customers', icon: Users, active: isActive('/dashboard/customers') },
     { href: '/dashboard/stock', label: 'Stock', icon: Package, active: isActive('/dashboard/stock') },
-    { href: '/dashboard/settings', label: 'Settings', icon: Settings, active: isActive('/dashboard/settings') },
+    { href: '/dashboard/settings', label: 'Profile', icon: Settings, active: isActive('/dashboard/settings') },
   ];
 
   return (
