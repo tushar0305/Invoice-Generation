@@ -40,7 +40,7 @@ export function DashboardHero() {
                     <FadeIn>
                         <div className="flex items-center gap-2 text-[#D4AF37]/80 text-sm font-medium uppercase tracking-wider">
                             <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
-                            Morning Briefing
+                            {hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening'} Briefing
                         </div>
                         <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-white">
                             {shopName ? shopName : `${greeting}, ${user?.email?.split('@')[0] || 'Jeweller'}`}

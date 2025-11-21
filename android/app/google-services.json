@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "975357539113",
+    "project_id": "invoice-generation-8914a",
+    "storage_bucket": "invoice-generation-8914a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975357539113:android:8f9283b29f76e08f2abd38",
+        "android_client_info": {
+          "package_name": "com.invoice.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAa1WmmNZ7lGgtxQ1nR7iA_UVBCC9qFfIk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

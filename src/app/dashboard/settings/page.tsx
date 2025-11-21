@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 as LoaderIcon } from 'lucide-react';
 import { getSetupProgress } from '@/lib/shop-setup';
 import { CelebrationModal } from '@/components/celebration-modal';
+import { TemplateSelector } from '@/components/template-selector';
 
 const settingsFormSchema = z.object({
   cgstRate: z.coerce.number().min(0, 'CGST rate must be positive'),
@@ -30,6 +31,7 @@ const settingsFormSchema = z.object({
   state: z.string().trim().optional(),
   pincode: z.string().trim().optional(),
   phoneNumber: z.string().trim().optional(),
+  templateId: z.string().optional(),
   // email is not part of the form schema anymore
 });
 
@@ -61,6 +63,7 @@ export default function SettingsPage() {
       state: '',
       pincode: '',
       phoneNumber: '',
+      templateId: 'classic',
     },
   });
 
@@ -90,6 +93,7 @@ export default function SettingsPage() {
           pincode: data.pincode || '',
           phoneNumber: data.phone_number || '',
           email: data.email || user.email || '',
+          templateId: data.template_id || 'classic',
         };
         setSettings(mapped);
         setLogoUrl(data.logo_url || null);
@@ -103,6 +107,7 @@ export default function SettingsPage() {
           state: mapped.state || '',
           pincode: mapped.pincode || '',
           phoneNumber: mapped.phoneNumber || '',
+          templateId: mapped.templateId || 'classic',
         });
       } else {
         setSettings(null);
@@ -251,6 +256,7 @@ export default function SettingsPage() {
           phone_number: data.phoneNumber || '',
           email: user.email || '',
           logo_url: logoUrl || null,
+          template_id: data.templateId || 'classic',
           updated_at: new Date().toISOString(),
         } as any;
         if (!settings) {
@@ -273,6 +279,7 @@ export default function SettingsPage() {
           pincode: updatedData.pincode,
           phoneNumber: updatedData.phone_number,
           email: updatedData.email,
+          templateId: updatedData.template_id,
         };
         setSettings(updatedSettings);
 
@@ -284,12 +291,12 @@ export default function SettingsPage() {
         setPreviousProgress(newProgress.completionPercentage);
 
         toast({ title: 'Settings saved successfully!' });
-      } catch (error) {
-        console.error("Failed to save settings:", error);
+      } catch (error: any) {
+        console.error("Failed to save settings:", JSON.stringify(error, null, 2));
         toast({
           variant: 'destructive',
           title: 'An error occurred',
-          description: 'Failed to save settings. Please try again.',
+          description: error?.message || 'Failed to save settings. Please try again.',
         });
       }
     });
@@ -488,6 +495,18 @@ export default function SettingsPage() {
                       <FormItem>
                         <FormLabel>Default SGST Rate (%)</FormLabel>
                         <FormControl><Input type="number" step="0.01" placeholder="e.g., 1.5" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <FormLabel>Invoice Template</FormLabel>
+                    <FormField control={form.control} name="templateId" render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <TemplateSelector value={field.value || 'classic'} onChange={field.onChange} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />

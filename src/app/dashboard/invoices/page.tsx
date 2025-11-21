@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition, useEffect } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -11,14 +11,16 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
+import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
+import { motion } from 'framer-motion';
+import { haptics } from '@/lib/haptics';
+import { ImpactStyle } from '@capacitor/haptics';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Search, MoreHorizontal, FilePlus2, Edit, Printer, Eye, Trash2, Loader2, Calendar as CalendarIcon, Download, Send } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, FilePlus2, Trash2, Loader2, Calendar as CalendarIcon, Download } from 'lucide-react';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
-import { formatCurrency } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -38,9 +40,7 @@ import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
 import { format, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import type { UserSettings } from '@/lib/definitions';
-import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdfById } from '@/lib/share';
-
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function InvoicesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,57 +54,41 @@ export default function InvoicesPage() {
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
 
   const { user } = useUser();
-  const [invoices, setInvoices] = useState<Invoice[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [page, setPage] = useState(0);
-  const pageSize = 10;
-  const hasMore = (invoices?.length ?? 0) >= (page + 1) * pageSize;
-  const settings = undefined as any;
+  const queryClient = useQueryClient();
 
-  async function loadInvoices(nextPage: number, append = false) {
-    if (!user) { setInvoices([]); setIsLoading(false); return; }
-    setIsLoading(true);
-    const from = nextPage * pageSize;
-    const to = from + pageSize - 1;
-    let q = supabase.from('invoices').select('*').eq('user_id', user.uid).order('created_at', { ascending: false }).range(from, to);
-    if (statusFilter !== 'all') {
-      q = supabase.from('invoices').select('*').eq('user_id', user.uid).eq('status', statusFilter).order('created_at', { ascending: false }).range(from, to);
-    }
-    const { data, error } = await q;
-    if (error) {
-      console.error(error);
-      setInvoices([]);
-      setIsLoading(false);
-      return;
-    }
-    const mapped = (data ?? []).map((r: any) => ({
-      id: r.id,
-      userId: r.user_id,
-      invoiceNumber: r.invoice_number,
-      customerName: r.customer_name,
-      customerAddress: r.customer_address || '',
-      customerState: r.customer_state || '',
-      customerPincode: r.customer_pincode || '',
-      customerPhone: r.customer_phone || '',
-      invoiceDate: r.invoice_date,
-      discount: Number(r.discount) || 0,
-      sgst: Number(r.sgst) || 0,
-      cgst: Number(r.cgst) || 0,
-      status: r.status,
-      grandTotal: Number(r.grand_total) || 0,
-    } as Invoice));
-    setInvoices(prev => append && prev ? [...prev, ...mapped] : mapped);
-    setIsLoading(false);
-  }
+  // --- React Query for Invoices ---
+  const { data: invoices, isLoading } = useQuery({
+    queryKey: ['invoices', user?.uid],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('user_id', user.uid)
+        .order('created_at', { ascending: false });
 
-  function loadMore() {
-    const next = page + 1;
-    setPage(next);
-    loadInvoices(next, true);
-  }
+      if (error) throw error;
 
-  // reload on status filter change or user change
-  useEffect(() => { setPage(0); loadInvoices(0, false); }, [user?.uid, statusFilter]);
+      return (data || []).map((r: any) => ({
+        id: r.id,
+        userId: r.user_id,
+        invoiceNumber: r.invoice_number,
+        customerName: r.customer_name,
+        customerAddress: r.customer_address || '',
+        customerState: r.customer_state || '',
+        customerPincode: r.customer_pincode || '',
+        customerPhone: r.customer_phone || '',
+        invoiceDate: r.invoice_date,
+        discount: Number(r.discount) || 0,
+        sgst: Number(r.sgst) || 0,
+        cgst: Number(r.cgst) || 0,
+        status: r.status,
+        grandTotal: Number(r.grand_total) || 0,
+      } as Invoice));
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   const handleDeleteConfirmation = (invoiceId: string) => {
     setInvoiceToDelete(invoiceId);
@@ -118,7 +102,9 @@ export default function InvoicesPage() {
       try {
         const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete).eq('user_id', user?.uid || '');
         if (error) throw error;
-        await loadInvoices(page, false);
+
+        // Invalidate query to refetch
+        queryClient.invalidateQueries({ queryKey: ['invoices'] });
 
         toast({
           title: 'Invoice Deleted',
@@ -140,21 +126,34 @@ export default function InvoicesPage() {
 
   const filteredInvoices = useMemo(() => {
     if (!invoices) return [];
-    const lower = searchTerm.toLowerCase();
-    const bySearch = !lower
-      ? invoices
-      : invoices.filter(inv => inv.customerName.toLowerCase().includes(lower) || inv.invoiceNumber.toLowerCase().includes(lower));
 
-    if (!dateRange?.from && !dateRange?.to) return bySearch;
-    const startStr = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined;
-    const endStr = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : startStr;
-    return bySearch.filter(inv => {
-      const d = inv.invoiceDate; // already 'yyyy-MM-dd'
-      if (startStr && d < startStr) return false;
-      if (endStr && d > endStr) return false;
-      return true;
-    });
-  }, [invoices, searchTerm, dateRange]);
+    // 1. Status Filter
+    let result = statusFilter === 'all'
+      ? invoices
+      : invoices.filter(inv => inv.status === statusFilter);
+
+    // 2. Search Filter
+    const lower = searchTerm.toLowerCase();
+    if (lower) {
+      result = result.filter(inv =>
+        inv.customerName.toLowerCase().includes(lower) ||
+        inv.invoiceNumber.toLowerCase().includes(lower)
+      );
+    }
+
+    // 3. Date Range Filter
+    if (dateRange?.from) {
+      const startStr = format(dateRange.from, 'yyyy-MM-dd');
+      const endStr = dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : startStr;
+
+      result = result.filter(inv => {
+        const d = inv.invoiceDate; // 'yyyy-MM-dd'
+        return d >= startStr && d <= endStr;
+      });
+    }
+
+    return result;
+  }, [invoices, searchTerm, statusFilter, dateRange]);
 
   const applyPreset = (preset: 'today' | 'week' | 'month' | 'year' | 'all') => {
     switch (preset) {
@@ -188,34 +187,34 @@ export default function InvoicesPage() {
     if (!user) return;
     setIsExporting(true);
     try {
-      let qb = supabase.from('invoices').select('*').eq('user_id', user.uid);
-      if (scope === 'filtered') {
-        if (statusFilter !== 'all') qb = qb.eq('status', statusFilter);
-        if (dateRange?.from) qb = qb.gte('invoice_date', format(dateRange.from, 'yyyy-MM-dd'));
-        if (dateRange?.to ?? dateRange?.from) qb = qb.lte('invoice_date', format(dateRange?.to ?? dateRange.from!, 'yyyy-MM-dd'));
+      // If 'filtered', use the client-side filtered list to avoid re-querying complex logic
+      // If 'all', use the full cached list or fetch all
+      let dataToExport = scope === 'filtered' ? filteredInvoices : (invoices || []);
+
+      if (scope === 'all' && (!invoices || invoices.length === 0)) {
+        // Fallback fetch if for some reason we don't have data
+        const { data } = await supabase.from('invoices').select('*').eq('user_id', user.uid);
+        dataToExport = (data || []).map((r: any) => ({
+          id: r.id,
+          invoiceNumber: r.invoice_number,
+          invoiceDate: r.invoice_date,
+          customerName: r.customer_name,
+          status: r.status,
+          discount: Number(r.discount) || 0,
+          sgst: Number(r.sgst) || 0,
+          cgst: Number(r.cgst) || 0,
+          grandTotal: Number(r.grand_total) || 0,
+        } as Invoice));
       }
-      const { data: respData, error: respErr } = await qb;
-      if (respErr) throw respErr;
-      const rows = (respData ?? []).map((r: any) => ({
-        id: r.id,
-        invoiceNumber: r.invoice_number,
-        invoiceDate: r.invoice_date,
-        customerName: r.customer_name,
-        status: r.status,
-        discount: Number(r.discount) || 0,
-        sgst: Number(r.sgst) || 0,
-        cgst: Number(r.cgst) || 0,
-        grandTotal: Number(r.grand_total) || 0,
-      }));
-      // Shape data for export
-      const dataRows = rows.map(r => ({
+
+      const dataRows = dataToExport.map(r => ({
         Invoice: r.invoiceNumber,
         Date: r.invoiceDate,
         Customer: r.customerName,
         Status: r.status,
         Discount: r.discount || 0,
-        SGST: r.sgst,
-        CGST: r.cgst,
+        SGST: r.sgst || 0,
+        CGST: r.cgst || 0,
         GrandTotal: r.grandTotal,
       }));
 
@@ -298,17 +297,66 @@ export default function InvoicesPage() {
         pincode: userSettings.pincode || '',
         phoneNumber: userSettings.phone_number || '',
         email: userSettings.email || '',
+        templateId: userSettings.template_id || 'classic',
       } : undefined;
 
       // Generate PDF
       const { generateInvoicePdf } = await import('@/lib/pdf');
       const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
+      const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
 
-      // Download the PDF
+      // Native Download Logic
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform()) {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+
+        // Convert Blob to Base64
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = reject;
+          reader.onload = () => {
+            if (typeof reader.result === 'string') resolve(reader.result.split(',')[1]);
+            else reject(new Error('Failed to convert blob'));
+          };
+          reader.readAsDataURL(pdfBlob);
+        });
+
+        try {
+          // Save to Documents
+          const result = await Filesystem.writeFile({
+            path: filename,
+            data: base64Data,
+            directory: Directory.Documents,
+          });
+
+          toast({
+            title: 'Saved Successfully',
+            description: `Invoice saved to Documents folder as ${filename}`,
+            duration: 5000,
+          });
+
+          // Optional: Try to open it to confirm
+          // const { FileOpener } = await import('@capacitor-community/file-opener');
+          // if (FileOpener) FileOpener.open({ filePath: result.uri, contentType: 'application/pdf' });
+
+        } catch (e) {
+          console.error('File write failed', e);
+          // Fallback to Share if write fails (e.g. permission)
+          const { Share } = await import('@capacitor/share');
+          await Share.share({
+            title: filename,
+            url: `data:application/pdf;base64,${base64Data}`,
+            dialogTitle: 'Save Invoice'
+          });
+        }
+        return;
+      }
+
+      // Web Download Logic
       const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Invoice-${invoice.invoiceNumber}.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -436,7 +484,7 @@ export default function InvoicesPage() {
                       <TableRow
                         key={invoice.id}
                         className="hover:bg-white/5 border-b-white/5 transition-colors cursor-pointer"
-                        onClick={() => router.push(`/dashboard/invoices/${invoice.id}/view`)}
+                        onClick={() => router.push(`/dashboard/invoices/view?id=${invoice.id}`)}
                       >
                         <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                         <TableCell>{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
@@ -472,38 +520,56 @@ export default function InvoicesPage() {
                 <div className="p-8 text-center text-muted-foreground">No invoices found.</div>
               ) : (
                 filteredInvoices.map((invoice) => (
-                  <div
-                    key={invoice.id}
-                    className="relative overflow-hidden rounded-xl border border-white/10 bg-card/50 p-4 shadow-sm transition-all active:scale-[0.98]"
-                    onClick={() => router.push(`/dashboard/invoices/${invoice.id}/view`)}
-                  >
-                    <div className="absolute right-0 top-0 h-16 w-16 -translate-y-8 translate-x-8 rounded-full bg-[#D4AF37]/10 blur-xl"></div>
-
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="text-xs text-[#D4AF37] font-medium mb-0.5">#{invoice.invoiceNumber}</div>
-                        <h3 className="font-serif text-lg font-bold text-foreground">{invoice.customerName}</h3>
-                        <div className="text-xs text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</div>
-                      </div>
-                      <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'} className="shadow-none">
-                        {invoice.status}
-                      </Badge>
+                  <div key={invoice.id} className="relative">
+                    {/* Background Actions (Delete) */}
+                    <div className="absolute inset-0 flex items-center justify-end px-4 bg-destructive/20 rounded-xl">
+                      <Trash2 className="text-destructive h-6 w-6" />
                     </div>
 
-                    <div className="flex justify-between items-end border-t border-white/5 pt-3">
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 hover:bg-[#D4AF37] hover:text-[#0F172A] hover:border-[#D4AF37]" onClick={(e) => { e.stopPropagation(); handleDownloadPdf(invoice.id); }}>
-                          <Download className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 text-destructive hover:bg-destructive hover:text-white hover:border-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteConfirmation(invoice.id); }}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                    {/* Foreground Card */}
+                    <motion.div
+                      drag="x"
+                      dragConstraints={{ left: -100, right: 0 }}
+                      dragElastic={0.1}
+                      onDragEnd={(_, info: any) => {
+                        if (info.offset.x < -80) {
+                          haptics.impact(ImpactStyle.Heavy);
+                          handleDeleteConfirmation(invoice.id);
+                        }
+                      }}
+                      className="relative overflow-hidden rounded-xl border border-white/10 bg-card shadow-sm transition-all active:scale-[0.98]"
+                      style={{ x: 0, background: 'hsl(var(--card))' }}
+                    >
+                      <div className="p-4" onClick={() => router.push(`/dashboard/invoices/view?id=${invoice.id}`)}>
+                        <div className="absolute right-0 top-0 h-16 w-16 -translate-y-8 translate-x-8 rounded-full bg-[#D4AF37]/10 blur-xl"></div>
+
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <div className="text-xs text-[#D4AF37] font-medium mb-0.5">#{invoice.invoiceNumber}</div>
+                            <h3 className="font-serif text-lg font-bold text-foreground">{invoice.customerName}</h3>
+                            <div className="text-xs text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</div>
+                          </div>
+                          <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'} className="shadow-none">
+                            {invoice.status}
+                          </Badge>
+                        </div>
+
+                        <div className="flex justify-between items-end border-t border-white/5 pt-3">
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 hover:bg-[#D4AF37] hover:text-[#0F172A] hover:border-[#D4AF37]" onClick={() => handleDownloadPdf(invoice.id)}>
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 text-destructive hover:bg-destructive hover:text-white hover:border-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground mb-0.5">Total Amount</div>
+                            <div className="font-serif text-xl font-bold text-[#D4AF37]">₹{invoice.grandTotal.toFixed(2)}</div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs text-muted-foreground mb-0.5">Total Amount</div>
-                        <div className="font-serif text-xl font-bold text-[#D4AF37]">₹{invoice.grandTotal.toFixed(2)}</div>
-                      </div>
-                    </div>
+                    </motion.div>
                   </div>
                 ))
               )}

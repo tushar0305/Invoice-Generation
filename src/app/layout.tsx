@@ -3,6 +3,8 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { SupabaseProvider } from '@/supabase/provider';
 import { AuthWrapper } from '@/components/auth-wrapper';
+import { QueryProvider } from '@/components/query-provider';
+import { SplashScreen } from '@/components/splash-screen';
 
 export const metadata: Metadata = {
   title: 'Saambh Jewellers',
@@ -40,10 +42,13 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-mesh min-h-screen" suppressHydrationWarning>
         <SupabaseProvider>
-          <AuthWrapper>
-            {children}
-          </AuthWrapper>
-          <Toaster />
+          <QueryProvider>
+            <AuthWrapper>
+              {children}
+            </AuthWrapper>
+            <SplashScreen />
+            <Toaster />
+          </QueryProvider>
         </SupabaseProvider>
       </body>
     </html>

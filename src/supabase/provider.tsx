@@ -47,7 +47,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     init();
 
     const { data: sub } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
-      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
       } else if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {

@@ -26,6 +26,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@/components/logo';
 import { AuthWrapper } from '@/components/auth-wrapper';
+import { AppListeners } from '@/components/app-listeners';
+import { Capacitor } from '@capacitor/core';
 import { useAuth, useUser } from '@/supabase/provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -42,6 +44,7 @@ import { FloatingNewInvoiceButton } from '@/components/floating-new-invoice';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/supabase/client';
 import type { UserSettings } from '@/lib/definitions';
+import { registerPushNotifications, addPushListeners } from '@/lib/notifications';
 
 function UserNav() {
   const { user } = useUser();
@@ -178,6 +181,8 @@ function DashboardLayoutInternal({
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const { setOpenMobile, isMobile } = useSidebar();
 
+  // ...
+
   useEffect(() => {
     async function fetchSettings() {
       const { data, error } = await supabase.from('user_settings').select('*').single();
@@ -186,6 +191,27 @@ function DashboardLayoutInternal({
       }
     }
     fetchSettings();
+  }, []);
+
+  // Initialize Push Notifications with error handling
+  const initNotifications = async () => {
+    try {
+      addPushListeners();
+      // Use timeout to avoid blocking the UI
+      setTimeout(() => {
+        registerPushNotifications().catch(err => {
+          console.error('Push notification registration failed:', err);
+        });
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to initialize push notifications:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      initNotifications();
+    }
   }, []);
 
   const handleSignOut = async () => {

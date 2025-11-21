@@ -46,6 +46,18 @@ export function openWhatsAppWithText(message: string) {
  * - Mobile browsers that support Web Share Level 2 (files)
  * Fallback: opens WhatsApp with a prefilled text message.
  */
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
+
+/**
+ * Attempt to share a generated PDF via the native share sheet (e.g., WhatsApp) without uploading.
+ * Requirements:
+ * - Runs in a user gesture (click/tap)
+ * - Over HTTPS (or localhost)
+ * - Mobile browsers that support Web Share Level 2 (files)
+ * Fallback: opens WhatsApp with a prefilled text message.
+ */
 export async function shareInvoicePdf(
   invoice: Invoice,
   items: InvoiceItem[],
@@ -60,22 +72,39 @@ export async function shareInvoicePdf(
 
   try {
     const pdfBlob = await generateInvoicePdf({ invoice, items, settings: settings || undefined });
-
     const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
-    const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-    // Check support for file sharing
-    const navAny = navigator as any;
-    const canShareFiles = !!(navAny?.canShare ? navAny.canShare({ files: [pdfFile] }) : navAny?.share);
+    if (Capacitor.isNativePlatform()) {
+      // Native (iOS/Android) implementation
+      const base64Data = await blobToBase64(pdfBlob);
+      const savedFile = await Filesystem.writeFile({
+        path: filename,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
 
-    if (canShareFiles && navAny?.share) {
-      const shareData: any = {
+      await Share.share({
         title: `Invoice ${invoice.invoiceNumber}`,
         text: message,
-        files: [pdfFile],
-      };
-      await navAny.share(shareData);
+        url: savedFile.uri,
+        dialogTitle: 'Share Invoice PDF',
+      });
       return true;
+    } else {
+      // Web implementation
+      const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+      const navAny = navigator as any;
+      const canShareFiles = !!(navAny?.canShare ? navAny.canShare({ files: [pdfFile] }) : navAny?.share);
+
+      if (canShareFiles && navAny?.share) {
+        const shareData: any = {
+          title: `Invoice ${invoice.invoiceNumber}`,
+          text: message,
+          files: [pdfFile],
+        };
+        await navAny.share(shareData);
+        return true;
+      }
     }
 
     // Fallback 1: try opening WhatsApp with text
@@ -178,13 +207,34 @@ export async function shareInvoicePdfById(
 
     const pdfBlob = await generateInvoicePdf({ invoice, items, settings: resolvedSettings || undefined });
     const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
-    const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
-    const navAny = navigator as any;
-    const canShareFiles = !!(navAny?.canShare ? navAny.canShare({ files: [pdfFile] }) : navAny?.share);
-    if (canShareFiles && navAny?.share) {
-      await navAny.share({ title: filename, text: message, files: [pdfFile] });
+
+    if (Capacitor.isNativePlatform()) {
+      // Native (iOS/Android) implementation
+      const base64Data = await blobToBase64(pdfBlob);
+      const savedFile = await Filesystem.writeFile({
+        path: filename,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
+
+      await Share.share({
+        title: `Invoice ${invoice.invoiceNumber}`,
+        text: message,
+        url: savedFile.uri,
+        dialogTitle: 'Share Invoice PDF',
+      });
       return true;
+    } else {
+      // Web implementation
+      const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+      const navAny = navigator as any;
+      const canShareFiles = !!(navAny?.canShare ? navAny.canShare({ files: [pdfFile] }) : navAny?.share);
+      if (canShareFiles && navAny?.share) {
+        await navAny.share({ title: filename, text: message, files: [pdfFile] });
+        return true;
+      }
     }
+
     openWhatsAppWithText(message);
     return false;
   } catch (err) {
@@ -194,5 +244,22 @@ export async function shareInvoicePdfById(
   } finally {
     isSharing = false; // Reset the flag after the operation completes
   }
+}
+
+// Helper to convert Blob to Base64
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
+        resolve(reader.result.split(',')[1]);
+      } else {
+        reject(new Error('Failed to convert blob to base64'));
+      }
+    };
+    reader.readAsDataURL(blob);
+  });
 }
 

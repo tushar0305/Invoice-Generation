@@ -1,15 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Mail, Lock, ArrowRight, Building2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, Building2, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Capacitor } from '@capacitor/core';
+import { NativeBiometric } from '@capgo/capacitor-native-biometric';
+import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
+import { Preferences } from '@capacitor/preferences';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
@@ -18,8 +23,8 @@ import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
 const authSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  // shopName is optional here; we enforce it only when signing up
   shopName: z.string().optional(),
+  enableBiometrics: z.boolean().optional(),
 });
 
 type AuthFormValues = z.infer<typeof authSchema>;
@@ -28,6 +33,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const [hasStoredCredentials, setHasStoredCredentials] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -37,8 +44,64 @@ export default function LoginPage() {
       email: '',
       password: '',
       shopName: '',
+      enableBiometrics: false,
     },
   });
+
+  useEffect(() => {
+    checkBiometricAvailability();
+  }, []);
+
+  async function checkBiometricAvailability() {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      const result = await NativeBiometric.isAvailable();
+      if (result.isAvailable) {
+        setIsBiometricAvailable(true);
+        // Check if we have stored credentials
+        const { value: storedEmail } = await SecureStoragePlugin.get({ key: 'user_email' }).catch(() => ({ value: null }));
+        const { value: storedPassword } = await SecureStoragePlugin.get({ key: 'user_password' }).catch(() => ({ value: null }));
+        if (storedEmail && storedPassword) {
+          setHasStoredCredentials(true);
+        }
+      }
+    } catch (e) {
+      console.error('Biometric check failed', e);
+    }
+  }
+
+  async function handleBiometricLogin() {
+    try {
+      setIsLoading(true);
+      await NativeBiometric.verifyIdentity({
+        reason: "Log in to your account",
+        title: "Biometric Login",
+        subtitle: "Log in",
+        description: "Use your face or fingerprint to log in"
+      });
+
+      // If verified (no error thrown)
+      const { value: email } = await SecureStoragePlugin.get({ key: 'user_email' });
+      const { value: password } = await SecureStoragePlugin.get({ key: 'user_password' });
+
+      if (email && password) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        toast({ title: 'Welcome back!', description: 'Logged in with biometrics.' });
+        router.push('/dashboard');
+      } else {
+        toast({ variant: 'destructive', title: 'Error', description: 'No credentials found. Please log in with password first.' });
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Biometric Login Failed', description: 'Please use your password.' });
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   async function onSubmit(data: AuthFormValues) {
     setIsLoading(true);
@@ -79,7 +142,7 @@ export default function LoginPage() {
         } catch (_) {
           // Swallow; not critical at signup time
           if (typeof window !== 'undefined') {
-            try { localStorage.setItem('pendingShopName', data.shopName.trim()); } catch {}
+            try { localStorage.setItem('pendingShopName', data.shopName.trim()); } catch { }
           }
         }
         toast({
@@ -92,6 +155,18 @@ export default function LoginPage() {
           password: data.password,
         });
         if (error) throw error;
+
+        // Save credentials if biometric enabled
+        if (isBiometricAvailable && data.enableBiometrics) {
+          try {
+            await SecureStoragePlugin.set({ key: 'user_email', value: data.email });
+            await SecureStoragePlugin.set({ key: 'user_password', value: data.password });
+            toast({ title: 'Biometrics Enabled', description: 'You can now log in with biometrics.' });
+          } catch (e) {
+            console.error('Failed to save credentials', e);
+          }
+        }
+
         toast({
           title: 'Welcome back!',
           description: 'Successfully logged in.',
@@ -158,6 +233,18 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {hasStoredCredentials && !isSignUp && (
+            <Button
+              variant="outline"
+              className="w-full h-12 mb-4 border-gold-500/50 text-gold-600 hover:bg-gold-500/10"
+              onClick={handleBiometricLogin}
+              disabled={isLoading}
+            >
+              <Fingerprint className="mr-2 h-5 w-5" />
+              Login with Biometrics
+            </Button>
+          )}
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -175,7 +262,7 @@ export default function LoginPage() {
                       </FormControl>
                       <FormMessage />
                     </FormItem>
-                  ) : null
+                  ) : <></>
                 )}
               />
 
@@ -219,6 +306,31 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
+
+              {isBiometricAvailable && !isSignUp && (
+                <FormField
+                  control={form.control}
+                  name="enableBiometrics"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Enable Biometric Login
+                        </FormLabel>
+                        <CardDescription>
+                          Save credentials securely for next time.
+                        </CardDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <Button type="submit" className="w-full h-11 text-base shadow-lg" disabled={isLoading} variant="premium">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

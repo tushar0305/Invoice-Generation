@@ -20,7 +20,7 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { format, subDays, startOfDay, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subDays, startOfDay, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
 import { shareInvoicePdfById } from '@/lib/share';
@@ -133,7 +133,8 @@ export default function DashboardPage() {
     outstandingDueAmount,
     outstandingDueCount,
     sales7dChangePct,
-    paid7dChangePct,
+    revenueMoM,
+    invoicesMoM
   } = useMemo(() => {
     if (isLoading || !invoices) {
       return {
@@ -148,32 +149,62 @@ export default function DashboardPage() {
     }
     const paid = invoices.filter((inv) => inv.status === 'paid');
     const due = invoices.filter((inv) => inv.status === 'due');
-    // Restrict revenue to current month only
+
+    // Date ranges
     const now = new Date();
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
-    const inMonth = (d: Date) => isWithinInterval(d, { start: monthStart, end: monthEnd });
-    const paidThisMonth = paid.filter((inv) => inMonth(new Date(inv.invoiceDate)));
+    const currentMonthStart = startOfMonth(now);
+    const currentMonthEnd = endOfMonth(now);
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
+
+    // Helper to check interval
+    const inRange = (d: Date, start: Date, end: Date) => isWithinInterval(d, { start, end });
+
+    // Current Month Stats
+    const paidThisMonth = paid.filter((inv) => inRange(new Date(inv.invoiceDate), currentMonthStart, currentMonthEnd));
     const totalPaidThisMonth = paidThisMonth.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const countPaidThisMonth = paidThisMonth.length;
+
+    // Last Month Stats
+    const paidLastMonth = paid.filter((inv) => inRange(new Date(inv.invoiceDate), lastMonthStart, lastMonthEnd));
+    const totalPaidLastMonth = paidLastMonth.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const countPaidLastMonth = paidLastMonth.length;
+
+    // MoM Calculations
+    const revenueMoM = totalPaidLastMonth === 0
+      ? (totalPaidThisMonth > 0 ? 100 : 0)
+      : ((totalPaidThisMonth - totalPaidLastMonth) / totalPaidLastMonth) * 100;
+
+    const invoicesMoM = countPaidLastMonth === 0
+      ? (countPaidThisMonth > 0 ? 100 : 0)
+      : ((countPaidThisMonth - countPaidLastMonth) / countPaidLastMonth) * 100;
+
     const paidInvoicesAllTime = paid.length;
     const totalCustomers = new Set(invoices.map((inv) => inv.customerName)).size;
     const outstandingDueAmount = due.reduce((sum, inv) => sum + inv.grandTotal, 0);
     const outstandingDueCount = due.length;
-    // 7-day trend calculations
+
+    // 7-day trend (keeping existing logic for chart or other uses if needed, but focusing on MoM for cards)
     const today = startOfDay(new Date());
     const start7 = subDays(today, 6);
     const prevStart7 = subDays(start7, 7);
     const prevEnd7 = subDays(start7, 1);
-    const inWindow = (d: Date, start: Date, end: Date) => isWithinInterval(d, { start, end });
-    const paid7 = paid.filter((inv) => inWindow(new Date(inv.invoiceDate), start7, today));
-    const paidPrev7 = paid.filter((inv) => inWindow(new Date(inv.invoiceDate), prevStart7, prevEnd7));
+    const paid7 = paid.filter((inv) => inRange(new Date(inv.invoiceDate), start7, today));
+    const paidPrev7 = paid.filter((inv) => inRange(new Date(inv.invoiceDate), prevStart7, prevEnd7));
     const sales7 = paid7.reduce((s, inv) => s + inv.grandTotal, 0);
     const salesPrev7 = paidPrev7.reduce((s, inv) => s + inv.grandTotal, 0);
     const sales7dChangePct = salesPrev7 === 0 ? (sales7 > 0 ? 100 : null) : ((sales7 - salesPrev7) / salesPrev7) * 100;
-    const paid7Count = paid7.length;
-    const paidPrev7Count = paidPrev7.length;
-    const paid7dChangePct = paidPrev7Count === 0 ? (paid7Count > 0 ? 100 : null) : ((paid7Count - paidPrev7Count) / paidPrev7Count) * 100;
-    return { totalPaidThisMonth, totalCustomers, paidInvoicesAllTime, outstandingDueAmount, outstandingDueCount, sales7dChangePct, paid7dChangePct };
+
+    return {
+      totalPaidThisMonth,
+      totalCustomers,
+      paidInvoicesAllTime,
+      outstandingDueAmount,
+      outstandingDueCount,
+      sales7dChangePct,
+      revenueMoM,
+      invoicesMoM
+    };
   }, [invoices, isLoading]);
 
   const customerData = useMemo(() => {
@@ -335,7 +366,7 @@ export default function DashboardPage() {
           value={formatCurrency(totalPaidThisMonth)}
           icon={DollarSign}
           description="Paid sales, this month"
-          trend={sales7dChangePct !== null ? { value: Number(sales7dChangePct.toFixed(0)), label: '7d' } : undefined}
+          trend={revenueMoM !== null && revenueMoM !== undefined ? { value: Number(revenueMoM.toFixed(0)), label: 'vs last month' } : undefined}
           loading={isLoading}
         />
         <StatsCard
@@ -350,7 +381,7 @@ export default function DashboardPage() {
           value={paidInvoicesAllTime}
           icon={CreditCard}
           description="All-time count"
-          trend={paid7dChangePct !== null ? { value: Number(paid7dChangePct.toFixed(0)), label: '7d' } : undefined}
+          trend={invoicesMoM !== null && invoicesMoM !== undefined ? { value: Number(invoicesMoM.toFixed(0)), label: 'vs last month' } : undefined}
           loading={isLoading}
         />
         <StatsCard
@@ -472,7 +503,7 @@ export default function DashboardPage() {
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="font-heading text-xl">Due Invoices</CardTitle>
-              <CardDescription>Oldest unpaid invoices first.</CardDescription>
+              <CardDescription>Grouped by urgency</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -488,56 +519,108 @@ export default function DashboardPage() {
                 (() => {
                   const dueInvoices = (invoices || [])
                     .filter((inv) => inv.status === 'due')
-                    .sort((a, b) => new Date(a.invoiceDate).getTime() - new Date(b.invoiceDate).getTime())
-                    .slice(0, 5);
+                    .sort((a, b) => new Date(a.invoiceDate).getTime() - new Date(b.invoiceDate).getTime());
+
                   if (dueInvoices.length === 0) {
                     return (
                       <p className="text-sm text-muted-foreground text-center h-24 flex items-center justify-center">No due invoices. 🎉</p>
                     );
                   }
+
                   const today = startOfDay(new Date());
+
+                  const critical = dueInvoices.filter(inv => {
+                    const age = Math.floor((today.getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 60 * 60 * 24));
+                    return age > 7;
+                  });
+
+                  const warning = dueInvoices.filter(inv => {
+                    const age = Math.floor((today.getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 60 * 60 * 24));
+                    return age >= 3 && age <= 7;
+                  });
+
+                  const recent = dueInvoices.filter(inv => {
+                    const age = Math.floor((today.getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 60 * 60 * 24));
+                    return age < 3;
+                  });
+
+                  const renderInvoiceRow = (inv: Invoice, colorClass: string) => {
+                    const ageDays = Math.max(0, Math.floor((today.getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 60 * 60 * 24)));
+                    return (
+                      <li key={inv.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium truncate">{inv.customerName}</span>
+                            <Badge variant="outline" className="text-[10px] h-5">{inv.invoiceNumber}</Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                            <span>{formatCurrency(inv.grandTotal)}</span>
+                            <span>•</span>
+                            <span className={colorClass}>
+                              {ageDays}d overdue
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Link href={`/dashboard/invoices/view?id=${inv.id}`}>
+                            <Button size="icon" variant="ghost" className="h-8 w-8">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                            onClick={async () => {
+                              await shareInvoicePdfById(inv.id, inv, settings || undefined);
+                            }}
+                            title="Send WhatsApp reminder"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  };
+
                   return (
-                    <ul className="space-y-3">
-                      {dueInvoices.map((inv) => {
-                        const ageDays = Math.max(0, Math.floor((today.getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 60 * 60 * 24)));
-                        const severity = ageDays > 7 ? 'over' : ageDays >= 3 ? 'warn' : 'ok';
-                        return (
-                          <li key={inv.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium truncate">{inv.customerName}</span>
-                                <Badge variant="outline" className="text-[10px] h-5">{inv.invoiceNumber}</Badge>
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                                <span>{formatCurrency(inv.grandTotal)}</span>
-                                <span>•</span>
-                                <span className={severity === 'over' ? 'text-red-600 font-medium' : severity === 'warn' ? 'text-yellow-600' : ''}>
-                                  {ageDays}d overdue
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Link href={`/dashboard/invoices/${inv.id}/view`}>
-                                <Button size="icon" variant="ghost" className="h-8 w-8">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </Link>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
-                                onClick={async () => {
-                                  await shareInvoicePdfById(inv.id, inv, settings || undefined);
-                                }}
-                                title="Send WhatsApp reminder"
-                              >
-                                <MessageCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    <div className="space-y-4">
+                      {critical.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs font-semibold text-red-500 uppercase tracking-wider">
+                            <span>Critical ({critical.length})</span>
+                            <span>{formatCurrency(critical.reduce((s, i) => s + i.grandTotal, 0))}</span>
+                          </div>
+                          <ul className="space-y-1">
+                            {critical.map(inv => renderInvoiceRow(inv, "text-red-600 font-bold"))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {warning.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs font-semibold text-yellow-500 uppercase tracking-wider">
+                            <span>Warning ({warning.length})</span>
+                            <span>{formatCurrency(warning.reduce((s, i) => s + i.grandTotal, 0))}</span>
+                          </div>
+                          <ul className="space-y-1">
+                            {warning.map(inv => renderInvoiceRow(inv, "text-yellow-600 font-medium"))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {recent.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            <span>Recent ({recent.length})</span>
+                            <span>{formatCurrency(recent.reduce((s, i) => s + i.grandTotal, 0))}</span>
+                          </div>
+                          <ul className="space-y-1">
+                            {recent.map(inv => renderInvoiceRow(inv, "text-muted-foreground"))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   );
                 })()
               )}
@@ -600,13 +683,13 @@ export default function DashboardPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/invoices/${invoice.id}/view`} className="cursor-pointer flex items-center">
+                              <Link href={`/dashboard/invoices/view?id=${invoice.id}`} className="cursor-pointer flex items-center">
                                 <Eye className="mr-2 h-4 w-4" />
                                 View
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/invoices/${invoice.id}/edit`} className="cursor-pointer flex items-center">
+                              <Link href={`/dashboard/invoices/edit?id=${invoice.id}`} className="cursor-pointer flex items-center">
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit
                               </Link>
@@ -631,7 +714,7 @@ export default function DashboardPage() {
             </Table>
           </div>
         </CardContent>
-      </Card>
-    </div>
+      </Card >
+    </div >
   );
 }

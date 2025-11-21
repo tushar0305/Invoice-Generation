@@ -156,7 +156,7 @@ export default function CustomersPage() {
                                             <TableRow
                                                 key={name}
                                                 className="hover:bg-white/5 border-b-white/5 transition-colors cursor-pointer"
-                                                onClick={() => router.push(`/dashboard/customers/${encodeURIComponent(name)}`)}
+                                                onClick={() => router.push(`/dashboard/customers/view?name=${encodeURIComponent(name)}`)}
                                             >
                                                 <TableCell className="font-medium pl-4">
                                                     <div className="flex flex-col">
@@ -201,7 +201,7 @@ export default function CustomersPage() {
                                 .map(([name, stats]) => (
                                     <div
                                         key={name}
-                                        onClick={() => router.push(`/dashboard/customers/${encodeURIComponent(name)}`)}
+                                        onClick={() => router.push(`/dashboard/customers/view?name=${encodeURIComponent(name)}`)}
                                         className="p-4 hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer"
                                     >
                                         <div className="flex justify-between items-start mb-3">

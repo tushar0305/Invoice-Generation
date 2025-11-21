@@ -42,6 +42,7 @@ export type UserSettings = {
   phoneNumber?: string; // Contact phone number
   email?: string; // Contact email (defaults to auth email, not editable in UI)
   logoUrl?: string; // Shop logo URL from Supabase storage
+  templateId?: string; // Invoice template ID (classic, modern, minimal)
 };
 
 export type StockItem = {

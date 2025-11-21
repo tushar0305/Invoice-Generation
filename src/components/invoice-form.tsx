@@ -31,6 +31,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { LiveInvoicePreview } from '@/components/invoice-preview';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { haptics } from '@/lib/haptics';
+import { NotificationType } from '@capacitor/haptics';
 
 
 const formSchema = z.object({
@@ -166,8 +168,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       customerPincode: '',
       customerPhone: '',
       invoiceDate: new Date(),
-      items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: '' as any, netWeight: '' as any, rate: '' as any, making: '' as any }],
-      discount: '' as any,
+      items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 }],
+      discount: 0,
       sgst: 1.5,
       cgst: 1.5,
       status: 'due',
@@ -326,15 +328,17 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           var invoiceIdToNavigate = newInvoiceId;
         }
 
+        haptics.notification(NotificationType.Success);
         toast({
           title: `Invoice ${invoice ? 'updated' : 'created'} successfully!`,
           description: `Redirecting to view invoice...`,
         });
 
-        router.push(`/dashboard/invoices/${invoiceIdToNavigate}/view`);
+        router.push(`/dashboard/invoices/view?id=${invoiceIdToNavigate}`);
 
       } catch (error) {
         console.error("Failed to save invoice:", error);
+        haptics.notification(NotificationType.Error);
         toast({
           variant: 'destructive',
           title: 'An error occurred',
