@@ -324,7 +324,7 @@ export default function SettingsPage() {
   return (
     <MotionWrapper className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-3xl font-heading font-bold tracking-tight text-primary">Settings</h1>
           <p className="text-muted-foreground">Manage your shop profile and preferences</p>
         </div>

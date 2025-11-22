@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, FileText, Users, Package, Settings } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, Package, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function MobileBottomNav() {
@@ -19,7 +19,7 @@ export function MobileBottomNav() {
     { href: '/dashboard/invoices', label: 'Invoices', icon: FileText, active: isActive('/dashboard/invoices', true) },
     { href: '/dashboard/customers', label: 'Customers', icon: Users, active: isActive('/dashboard/customers') },
     { href: '/dashboard/stock', label: 'Stock', icon: Package, active: isActive('/dashboard/stock') },
-    { href: '/dashboard/settings', label: 'Profile', icon: Settings, active: isActive('/dashboard/settings') },
+    { href: '/dashboard/calculator', label: 'Calculator', icon: Calculator, active: isActive('/dashboard/calculator') },
   ];
 
   return (

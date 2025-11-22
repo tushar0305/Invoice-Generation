@@ -143,7 +143,7 @@ export default function CustomersPage() {
             <Card className="glass-card border-t-4 border-t-primary">
                 <CardHeader className="pb-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
+                        <div className="hidden md:block">
                             <CardTitle className="text-xl sm:text-2xl font-heading text-primary">All Customers</CardTitle>
                             <CardDescription className="text-xs sm:text-sm mt-1">
                                 Manage and view your customer base

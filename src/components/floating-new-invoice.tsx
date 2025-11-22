@@ -24,6 +24,11 @@ export function FloatingNewInvoiceButton() {
 
   const className = "fixed right-5 bottom-[var(--fab-bottom)] md:bottom-6 z-50 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-95 h-14 w-14 md:h-12 md:w-12";
 
+  // Hide FAB on calculator screen completely
+  if (pathname === '/dashboard/calculator') {
+    return null;
+  }
+
   if (pathname === '/dashboard/stock') {
     return (
       <Button

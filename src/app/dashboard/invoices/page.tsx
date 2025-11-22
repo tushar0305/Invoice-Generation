@@ -51,8 +51,12 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     const statusParam = searchParams.get('status');
-    if (statusParam && ['paid', 'due', 'all'].includes(statusParam)) {
+    if (statusParam && ['paid', 'due', 'all', 'overdue'].includes(statusParam)) {
       setStatusFilter(statusParam);
+    }
+    const q = searchParams.get('q');
+    if (q) {
+      setSearchTerm(q);
     }
   }, [searchParams]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -200,10 +204,17 @@ export default function InvoicesPage() {
   const filteredInvoices = useMemo(() => {
     if (!invoices) return [];
 
+    let result = invoices;
+
     // 1. Status Filter
-    let result = statusFilter === 'all'
-      ? invoices
-      : invoices.filter(inv => inv.status === statusFilter);
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'overdue') {
+        const today = new Date().toISOString().split('T')[0];
+        result = result.filter(inv => inv.status === 'due' && inv.invoiceDate < today);
+      } else {
+        result = result.filter(inv => inv.status === statusFilter);
+      }
+    }
 
     // 2. Search Filter
     const lower = searchTerm.toLowerCase();
@@ -458,172 +469,187 @@ export default function InvoicesPage() {
   };
 
   return (
-    <>
-      <div className="space-y-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>All Invoices</CardTitle>
-              <CardDescription>A list of all your invoices.</CardDescription>
-            </div>
-            <Button variant="ghost" size="icon" onClick={handleRefresh} className="md:hidden">
-              <RefreshCw className={cn("h-5 w-5", isLoading && "animate-spin")} />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-              <div className="relative w-full sm:flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by customer or invoice number..."
-                  className="pl-10 w-full sm:max-w-sm"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+    <MotionWrapper className="space-y-4 pb-24">
+      {/* Header */}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
+        <p className="text-muted-foreground text-sm">Manage and track your invoices.</p>
+      </div>
+
+      {/* Quick Filters */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+        {['all', 'paid', 'due', 'overdue'].map((status) => (
+          <Button
+            key={status}
+            variant={statusFilter === status ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter(status)}
+            className={cn(
+              "capitalize rounded-full h-8 px-4 text-xs",
+              statusFilter === status ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+            )}
+          >
+            {status}
+          </Button>
+        ))}
+      </div>
+
+      {/* Search and Actions */}
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search invoices..."
+              className="pl-9 bg-background h-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" size="icon" onClick={handleRefresh} className="shrink-0">
+            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+          </Button>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0">
+                <CalendarIcon className="h-3.5 w-3.5" />
+                <span className="text-xs">{formatRangeLabel()}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-3" align="start">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div>
+                  <div className="mb-2 text-xs font-medium text-muted-foreground">Quick ranges</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => applyPreset('today')}>Today</Button>
+                    <Button size="sm" variant="secondary" onClick={() => applyPreset('week')}>This Week</Button>
+                    <Button size="sm" variant="secondary" onClick={() => applyPreset('month')}>This Month</Button>
+                    <Button size="sm" variant="secondary" onClick={() => applyPreset('year')}>This Year</Button>
+                    <Button size="sm" variant="ghost" onClick={() => applyPreset('all')}>All Time</Button>
+                  </div>
+                </div>
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={1}
+                  defaultMonth={dateRange?.from}
                 />
               </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="justify-start gap-2 w-full sm:w-auto">
-                      <CalendarIcon className="h-4 w-4" />
-                      <span>{formatRangeLabel()}</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-3" align="end">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div>
-                        <div className="mb-2 text-xs font-medium text-muted-foreground">Quick ranges</div>
-                        <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
-                          <Button size="sm" variant="secondary" onClick={() => applyPreset('today')}>Today</Button>
-                          <Button size="sm" variant="secondary" onClick={() => applyPreset('week')}>This Week</Button>
-                          <Button size="sm" variant="secondary" onClick={() => applyPreset('month')}>This Month</Button>
-                          <Button size="sm" variant="secondary" onClick={() => applyPreset('year')}>This Year</Button>
-                          <Button size="sm" variant="ghost" onClick={() => applyPreset('all')}>All Time</Button>
-                        </div>
-                      </div>
-                      <Calendar
-                        mode="range"
-                        selected={dateRange}
-                        onSelect={setDateRange}
-                        numberOfMonths={2}
-                        defaultMonth={dateRange?.from}
-                      />
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="due">Due</SelectItem>
-                  </SelectContent>
-                </Select>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2 w-full sm:w-auto" disabled={isExporting}>
-                      {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                      Export
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => exportInvoices('filtered')}>Export filtered</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => exportInvoices('all')}>Export all</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button asChild className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
-                  <Link href="/dashboard/invoices/new">
-                    <FilePlus2 className="mr-2 h-4 w-4" />
-                    New Invoice
-                  </Link>
-                </Button>
-              </div>
-            </div>
+            </PopoverContent>
+          </Popover>
 
-            {/* Desktop Table View */}
-            <div className="rounded-md border border-white/10 overflow-hidden hidden md:block">
-              <Table className="table-modern">
-                <TableHeader className="bg-muted/50">
-                  <TableRow className="hover:bg-transparent border-b-white/10">
-                    <TableHead className="text-primary">Invoice #</TableHead>
-                    <TableHead className="text-primary">Date</TableHead>
-                    <TableHead className="text-primary">Customer</TableHead>
-                    <TableHead className="text-primary">Status</TableHead>
-                    <TableHead className="text-right text-primary">Amount</TableHead>
-                    <TableHead className="text-right text-primary">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredInvoices.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                        No invoices found.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredInvoices.map((invoice) => (
-                      <TableRow
-                        key={invoice.id}
-                        className="hover:bg-white/5 border-b-white/5 transition-colors cursor-pointer"
-                        onClick={() => router.push(`/dashboard/invoices/view?id=${invoice.id}`)}
-                      >
-                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                        <TableCell>{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
-                        <TableCell>{invoice.customerName}</TableCell>
-                        <TableCell>
-                          <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'}>
-                            {invoice.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-gold-400">₹{invoice.grandTotal.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(invoice.id)}>
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0" disabled={isExporting}>
+                {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                <span className="text-xs">Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportInvoices('filtered')}>Export filtered</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportInvoices('all')}>Export all</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
+          <Button asChild size="sm" className="h-9 gap-2 ml-auto shrink-0 bg-primary hover:bg-primary/90">
+            <Link href="/dashboard/invoices/new">
+              <FilePlus2 className="h-3.5 w-3.5" />
+              <span className="text-xs">New</span>
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="space-y-4">
+        {/* Desktop Table View */}
+        <div className="rounded-md border border-border/50 overflow-hidden hidden md:block bg-card">
+          <Table className="table-modern">
+            <TableHeader className="bg-muted/50">
+              <TableRow className="hover:bg-transparent border-b-border/50">
+                <TableHead className="text-primary">Invoice #</TableHead>
+                <TableHead className="text-primary">Date</TableHead>
+                <TableHead className="text-primary">Customer</TableHead>
+                <TableHead className="text-primary">Status</TableHead>
+                <TableHead className="text-right text-primary">Amount</TableHead>
+                <TableHead className="text-right text-primary">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading ? (
-                <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-[#D4AF37]" /></div>
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  </TableCell>
+                </TableRow>
               ) : filteredInvoices.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">No invoices found.</div>
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    No invoices found.
+                  </TableCell>
+                </TableRow>
               ) : (
                 filteredInvoices.map((invoice) => (
-                  <InvoiceMobileCard
+                  <TableRow
                     key={invoice.id}
-                    invoice={invoice}
-                    onView={(id) => router.push(`/dashboard/invoices/view?id=${id}`)}
-                    onDelete={handleDeleteConfirmation}
-                    onDownload={handleDownloadPdf}
-                    onShare={handleShare}
-                    onMarkPaid={handleMarkPaid}
-                  />
+                    className="hover:bg-muted/50 border-b-border/50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/dashboard/invoices/view?id=${invoice.id}`)}
+                  >
+                    <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                    <TableCell>{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
+                    <TableCell>{invoice.customerName}</TableCell>
+                    <TableCell>
+                      <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'}>
+                        {invoice.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-primary">₹{invoice.grandTotal.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(invoice.id)}>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {isLoading ? (
+            <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>
+          ) : filteredInvoices.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+              <p>No invoices found.</p>
+              {statusFilter !== 'all' && <Button variant="link" onClick={() => setStatusFilter('all')}>Clear filters</Button>}
             </div>
-          </CardContent>
-        </Card>
+          ) : (
+            filteredInvoices.map((invoice) => (
+              <InvoiceMobileCard
+                key={invoice.id}
+                invoice={invoice}
+                onView={(id) => router.push(`/dashboard/invoices/view?id=${id}`)}
+                onDelete={handleDeleteConfirmation}
+                onDownload={handleDownloadPdf}
+                onShare={handleShare}
+                onMarkPaid={handleMarkPaid}
+              />
+            ))
+          )}
+        </div>
       </div>
+
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -667,6 +693,6 @@ export default function InvoicesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </MotionWrapper>
   );
 }

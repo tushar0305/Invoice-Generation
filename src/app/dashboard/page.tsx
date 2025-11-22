@@ -363,15 +363,15 @@ export default function DashboardPage() {
       {/* Shop Setup Banner */}
       <ShopSetupBanner settings={settings} isLoading={isLoading} />
 
-      {/* Gold & Silver Ticker */}
-      <GoldSilverTicker />
-
       {/* Smart Hero Section */}
       <SmartHero
         invoices={invoices}
         revenueMoM={revenueMoM}
         totalRevenue={totalPaidThisMonth}
       />
+
+      {/* Gold & Silver Ticker (moved below hero for phone UX) */}
+      <GoldSilverTicker />
 
       {/* Stats Grid */}
       <MotionWrapper className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

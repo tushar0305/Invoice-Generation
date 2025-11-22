@@ -2,13 +2,15 @@
 
 import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Settings, AlertTriangle, TrendingDown, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { PlusCircle, Settings, AlertTriangle, TrendingDown, CheckCircle2, ArrowRight, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useUser } from '@/supabase/provider';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/supabase/client';
 import { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 interface SmartHeroProps {
     invoices: Invoice[] | null;
@@ -18,7 +20,9 @@ interface SmartHeroProps {
 
 export function SmartHero({ invoices, revenueMoM, totalRevenue }: SmartHeroProps) {
     const { user } = useUser();
+    const router = useRouter();
     const [shopName, setShopName] = useState<string | null>(null);
+    const [query, setQuery] = useState('');
 
     useEffect(() => {
         let active = true;
@@ -67,7 +71,7 @@ export function SmartHero({ invoices, revenueMoM, totalRevenue }: SmartHeroProps
     }
 
     return (
-        <MotionWrapper className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} p-6 md:p-8 text-white shadow-2xl border border-white/10`}>
+        <MotionWrapper className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} px-4 pb-6 pt-6 md:p-8 text-white shadow-2xl border border-white/10 mt-1 md:mt-0`}>
             <div className="absolute inset-0 bg-[url('/patterns/grid.svg')] opacity-10"></div>
             <div className={`absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl`}></div>
 
@@ -83,12 +87,12 @@ export function SmartHero({ invoices, revenueMoM, totalRevenue }: SmartHeroProps
                         </h1>
 
                         {/* Smart Insight Card */}
-                        <div className="mt-6 inline-flex items-center gap-4 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 max-w-md">
+                        <div className="mt-4 inline-flex items-center gap-4 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 max-w-md">
                             <div className={`p-2 rounded-full bg-white/10 ${accentColor}`}>
                                 <Icon className="h-6 w-6" />
                             </div>
                             <div>
-                                <p className="font-medium text-lg leading-tight">{message}</p>
+                                <p className="font-medium text-lg leading-tight text-white">{message}</p>
                                 {state === 'good' && (
                                     <p className="text-sm text-white/70 mt-1">Great job keeping up!</p>
                                 )}
@@ -101,22 +105,47 @@ export function SmartHero({ invoices, revenueMoM, totalRevenue }: SmartHeroProps
                                 </Button>
                             )}
                         </div>
+
+                        {/* Mobile Search for Invoices */}
+                        <div className="mt-4 md:hidden">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white z-10" />
+                                <Input
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            const q = query.trim();
+                                            if (q) router.push(`/dashboard/invoices?q=${encodeURIComponent(q)}`);
+                                            else router.push('/dashboard/invoices');
+                                        }
+                                    }}
+                                    placeholder="Search invoices (name or number)"
+                                    className="pl-10 h-11 bg-white/15 placeholder:text-white/80 text-white border-white/20 focus:bg-white/20"
+                                />
+                            </div>
+                        </div>
                     </FadeIn>
                 </div>
-
-                <div className="flex flex-col gap-3 w-full sm:flex-row sm:w-auto flex-shrink-0">
-                    <Link href="/dashboard/invoices/new" className="w-full sm:w-auto">
-                        <Button className="bg-white text-black hover:bg-white/90 font-semibold shadow-lg w-full h-11">
-                            <PlusCircle className="mr-2 h-5 w-5" />
-                            New Invoice
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/settings" className="w-full sm:w-auto">
-                        <Button variant="outline" className="bg-transparent border-white/20 text-white hover:bg-white/10 hover:text-white backdrop-blur-sm w-full h-11">
-                            <Settings className="mr-2 h-5 w-5" />
-                            Settings
-                        </Button>
-                    </Link>
+                <div className="hidden md:flex items-center gap-3">
+                    <Button
+                        asChild
+                        variant="secondary"
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 text-white shadow-sm backdrop-blur-sm"
+                    >
+                        <Link href="/dashboard/invoices/new">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Create Invoice
+                        </Link>
+                    </Button>
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white hover:border-white/50"
+                    >
+                        <Link href="/dashboard/settings">
+                            <Settings className="mr-2 h-4 w-4" /> Settings
+                        </Link>
+                    </Button>
                 </div>
             </div>
         </MotionWrapper>

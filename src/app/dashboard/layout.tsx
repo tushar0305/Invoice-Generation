@@ -21,6 +21,8 @@ import {
   LogOut,
   PlusCircle,
   Package,
+  Menu,
+  Palette,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -45,8 +47,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/supabase/client';
 import type { UserSettings } from '@/lib/definitions';
 import { registerPushNotifications, addPushListeners } from '@/lib/notifications';
+import { cn } from '@/lib/utils';
 
-function UserNav() {
+function UserNav({ minimal = false }: { minimal?: boolean }) {
   const { user } = useUser();
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
@@ -60,22 +63,24 @@ function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex w-full items-center gap-3 rounded-md p-2 text-left text-sm hover:bg-sidebar-accent">
-          <Avatar className="h-9 w-9">
-            <AvatarFallback>{fallback}</AvatarFallback>
+        <button className={cn("flex items-center gap-3 rounded-md p-2 text-left text-sm hover:bg-sidebar-accent transition-colors", minimal ? "w-auto justify-center rounded-full" : "w-full")}>
+          <Avatar className={cn("border border-border", minimal ? "h-8 w-8" : "h-9 w-9")}>
+            <AvatarFallback className="bg-primary/10 text-primary font-medium">{fallback}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col truncate">
-            <span className="font-medium text-sidebar-foreground">
-              {user.email}
-            </span>
-            <span className="text-xs text-muted-foreground">Jeweller</span>
-          </div>
+          {!minimal && (
+            <div className="flex flex-col truncate">
+              <span className="font-medium text-sidebar-foreground">
+                {user.email}
+              </span>
+              <span className="text-xs text-muted-foreground">Jeweller</span>
+            </div>
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         className="w-56"
         align="end"
-        side="top"
+        side="bottom"
         forceMount
       >
         <DropdownMenuLabel className="font-normal">
@@ -86,6 +91,11 @@ function UserNav() {
             </p>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => { router.push('/dashboard/settings'); setOpenMobile(false); }}>
+          <Settings className="mr-2 h-4 w-4" />
+          <span>Settings</span>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
       </DropdownMenuContent>
     </DropdownMenu>
@@ -177,6 +187,7 @@ function DashboardLayoutInternal({
 }) {
   const pathname = usePathname();
   const auth = useAuth();
+  const { user } = useUser();
   const router = useRouter();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const { setOpenMobile, isMobile } = useSidebar();
@@ -228,8 +239,10 @@ function DashboardLayoutInternal({
       return 'Invoices';
     }
     if (pathname === '/dashboard/customers') return 'Customers';
-    if (pathname === '/dashboard/stock') return 'Stock';
+    if (pathname === '/dashboard/stock') return 'Stock Management';
+    if (pathname === '/dashboard/templates') return 'Templates';
     if (pathname === '/dashboard/settings') return 'Settings';
+    if (pathname === '/dashboard/calculator') return 'Calculator';
     return 'Dashboard';
   };
 
@@ -312,19 +325,18 @@ function DashboardLayoutInternal({
                   <span>Stock</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard/templates')}
+                  isActive={pathname === '/dashboard/templates'}
+                  tooltip="Templates"
+                  className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/10 data-[active=true]:to-primary/5 data-[active=true]:border-l-2 data-[active=true]:border-[#D4AF37] data-[active=true]:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
+                >
+                  <Palette className="data-[active=true]:text-[#D4AF37]" />
+                  <span>Templates</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
-          </div>
-
-          {/* Quick Action */}
-          <div className="px-2 py-4">
-            <Button
-              variant="premium"
-              className="w-full justify-start gap-2 shadow-lg hover:shadow-xl transition-shadow duration-200"
-              onClick={() => handleNav('/dashboard/invoices/new')}
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>New Invoice</span>
-            </Button>
           </div>
 
           {/* Settings Section */}
@@ -366,7 +378,27 @@ function DashboardLayoutInternal({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <main className="flex-1 p-4 sm:p-6 pb-20 md:pb-6">{children}</main>
+        {/* Mobile Header */}
+        <header className="md:hidden fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] bg-background/80 backdrop-blur-xl border-b border-border/40 shadow-sm transition-all duration-300 h-[calc(env(safe-area-inset-top)+3.5rem)]">
+          <Button variant="ghost" size="icon" onClick={() => setOpenMobile(true)} className="-ml-2 hover:bg-accent text-foreground">
+            <Menu className="h-6 w-6" />
+          </Button>
+          <span className="font-heading font-bold text-lg tracking-tight text-foreground">{getTitle()}</span>
+          <div className="-mr-2">
+            <button
+              onClick={() => router.push('/dashboard/settings')}
+              className="rounded-full hover:opacity-80 transition-opacity"
+            >
+              <Avatar className="h-9 w-9 border border-white/20">
+                <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                  {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 p-4 sm:p-6 pb-20 md:pb-6 pt-[calc(env(safe-area-inset-top)+1.5rem)]">{children}</main>
         <FloatingNewInvoiceButton />
         <MobileBottomNav />
       </SidebarInset>
@@ -380,7 +412,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider style={{ "--header-top": "calc(env(safe-area-inset-top) + 3.5rem)" } as React.CSSProperties}>
       <DashboardLayoutInternal>{children}</DashboardLayoutInternal>
     </SidebarProvider>
   );

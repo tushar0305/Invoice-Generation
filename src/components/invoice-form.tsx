@@ -408,7 +408,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   <FormField control={form.control} name="customerPhone" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
-                      <FormControl><Input placeholder="+91 98765 43210" {...field} className="bg-background/50" /></FormControl>
+                      <FormControl><Input placeholder="+91 98765 43210" inputMode="tel" {...field} className="bg-background/50" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -429,7 +429,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   <FormField control={form.control} name="customerPincode" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Pincode (Optional)</FormLabel>
-                      <FormControl><Input placeholder="Pincode" {...field} className="bg-background/50" /></FormControl>
+                      <FormControl><Input placeholder="Pincode" inputMode="numeric" pattern="[0-9]*" {...field} className="bg-background/50" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -516,7 +516,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                             <FormField control={form.control} name={`items.${index}.grossWeight`} render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-xs">Gross Wt (g)</FormLabel>
-                                <FormControl><Input type="number" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
+                                <FormControl><Input type="number" inputMode="decimal" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
                                 <FormMessage />
                               </FormItem>
                             )} />
@@ -525,7 +525,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                             <FormField control={form.control} name={`items.${index}.netWeight`} render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-xs">Net Wt (g)</FormLabel>
-                                <FormControl><Input type="number" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
+                                <FormControl><Input type="number" inputMode="decimal" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
                                 <FormMessage />
                               </FormItem>
                             )} />
@@ -534,7 +534,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                             <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-xs">Rate (₹)</FormLabel>
-                                <FormControl><Input type="number" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
+                                <FormControl><Input type="number" inputMode="decimal" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
                                 <FormMessage />
                               </FormItem>
                             )} />
@@ -543,7 +543,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                             <FormField control={form.control} name={`items.${index}.making`} render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-xs">Making (₹)</FormLabel>
-                                <FormControl><Input type="number" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
+                                <FormControl><Input type="number" inputMode="decimal" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
                                 <FormMessage />
                               </FormItem>
                             )} />
@@ -568,20 +568,20 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   <FormField control={form.control} name="discount" render={({ field }) => (
                     <FormItem className="flex items-center justify-between space-y-0 gap-4">
                       <FormLabel className="whitespace-nowrap">Discount</FormLabel>
-                      <FormControl><Input type="number" className="w-24 text-right h-8 bg-background/50" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
+                      <FormControl><Input type="number" inputMode="decimal" className="w-24 text-right h-8 bg-background/50" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
                     </FormItem>
                   )} />
                   <div className="flex gap-4">
                     <FormField control={form.control} name="sgst" render={({ field }) => (
                       <FormItem className="flex-1 flex items-center justify-between space-y-0 gap-2">
                         <FormLabel className="whitespace-nowrap text-xs">SGST %</FormLabel>
-                        <FormControl><Input type="number" className="w-16 text-right h-8 bg-background/50" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
+                        <FormControl><Input type="number" inputMode="decimal" className="w-16 text-right h-8 bg-background/50" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="cgst" render={({ field }) => (
                       <FormItem className="flex-1 flex items-center justify-between space-y-0 gap-2">
                         <FormLabel className="whitespace-nowrap text-xs">CGST %</FormLabel>
-                        <FormControl><Input type="number" className="w-16 text-right h-8 bg-background/50" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
+                        <FormControl><Input type="number" inputMode="decimal" className="w-16 text-right h-8 bg-background/50" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
                       </FormItem>
                     )} />
                   </div>
