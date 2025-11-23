@@ -479,10 +479,10 @@ export default function InvoicesPage() {
   return (
     <MotionWrapper className="space-y-4 pb-24">
       {/* Header */}
-      <div className="flex flex-col gap-1">
+      {/* <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
         <p className="text-muted-foreground text-sm">Manage and track your invoices.</p>
-      </div>
+      </div> */}
 
       {/* Quick Filters */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">

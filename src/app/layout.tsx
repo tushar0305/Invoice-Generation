@@ -5,6 +5,7 @@ import { SupabaseProvider } from '@/supabase/provider';
 import { ActiveShopProvider } from '@/hooks/use-active-shop';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { QueryProvider } from '@/components/query-provider';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
   title: 'Saambh Jewellers',
@@ -45,7 +46,9 @@ export default function RootLayout({
           <QueryProvider>
             <ActiveShopProvider>
               <AuthWrapper>
-                {children}
+                <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+                  {children}
+                </ThemeProvider>
               </AuthWrapper>
               <Toaster />
             </ActiveShopProvider>

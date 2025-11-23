@@ -34,7 +34,7 @@ import { Badge } from '@/components/ui/badge';
 import { LiveInvoicePreview } from '@/components/invoice-preview';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { haptics } from '@/lib/haptics';
-import { NotificationType } from '@capacitor/haptics';
+import { NotificationType, ImpactStyle } from '@capacitor/haptics';
 
 
 const formSchema = z.object({
@@ -465,7 +465,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
               {/* Mobile Preview (if toggled) */}
               {showPreview && (
-                <div className="lg:hidden mb-6">
+                <div className="lg:hidden mb-6 h-[500px] rounded-lg overflow-hidden border border-white/10 shadow-xl">
                   <LiveInvoicePreview data={watchedValues} settings={settings} />
                 </div>
               )}
@@ -689,23 +689,36 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   </div>
 
                   <FormField control={form.control} name="status" render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-white/10 p-4 bg-white/5">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value === 'paid'}
-                          onCheckedChange={(checked) => {
-                            field.onChange(checked ? 'paid' : 'due');
-                          }}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="cursor-pointer">
-                          Mark as Paid
+                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-white/10 p-4 bg-white/5 transition-all hover:bg-white/10">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base font-semibold text-primary">
+                          Payment Status
                         </FormLabel>
                         <p className="text-xs text-muted-foreground">
-                          Check this if the payment is already received.
+                          {field.value === 'paid' ? 'Payment Received' : 'Payment Pending'}
                         </p>
                       </div>
+                      <FormControl>
+                        <div
+                          className={cn(
+                            "w-14 h-8 rounded-full relative cursor-pointer transition-colors duration-300 ease-in-out",
+                            field.value === 'paid' ? "bg-emerald-500" : "bg-slate-600"
+                          )}
+                          onClick={() => {
+                            field.onChange(field.value === 'paid' ? 'due' : 'paid');
+                            haptics.impact(ImpactStyle.Medium);
+                          }}
+                        >
+                          <div
+                            className={cn(
+                              "absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-300 ease-in-out flex items-center justify-center",
+                              field.value === 'paid' ? "translate-x-6" : "translate-x-0"
+                            )}
+                          >
+                            {field.value === 'paid' && <div className="w-2 h-2 bg-emerald-500 rounded-full" />}
+                          </div>
+                        </div>
+                      </FormControl>
                     </FormItem>
                   )} />
 

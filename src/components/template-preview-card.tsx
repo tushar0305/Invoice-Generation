@@ -1,0 +1,84 @@
+"use client";
+
+import React from 'react';
+import InvoicePdfTemplate from '@/components/invoice-pdf-template';
+import { Invoice, InvoiceItem } from '@/lib/definitions';
+
+const dummyInvoice: Invoice = {
+    id: 'preview',
+    invoiceNumber: 'INV-001',
+    customerName: 'John Doe',
+    customerPhone: '9876543210',
+    // totalAmount removed as it's not in Invoice type
+    grandTotal: 55000,
+    createdBy: 'preview',
+    status: 'paid',
+    // items removed
+    createdAt: new Date().toISOString(),
+    userId: 'preview',
+    invoiceDate: new Date().toISOString(),
+    discount: 0,
+    tax: 3,
+    cgst: 1.5,
+    sgst: 1.5,
+    // paymentMode removed
+    shopId: 'preview',
+    customerAddress: '123 Main St, City',
+    customerState: 'State',
+    customerPincode: '123456',
+};
+
+const dummyItems: InvoiceItem[] = [
+    {
+        id: '1',
+        // invoiceId removed
+        description: 'Gold Ring',
+        purity: '22K',
+        grossWeight: 5.5,
+        netWeight: 5.0,
+        rate: 5000,
+        making: 500,
+        // amount removed
+    },
+    {
+        id: '2',
+        // invoiceId removed
+        description: 'Silver Chain',
+        purity: '92.5',
+        grossWeight: 10.5,
+        netWeight: 10.0,
+        rate: 70,
+        making: 20,
+        // amount removed
+    }
+];
+
+const dummySettings = {
+    shopName: 'Saambh Jewellers',
+    address: 'Jewellery Market, City',
+    phoneNumber: '9876543210',
+    email: 'info@saambh.com',
+    gstNumber: '22AAAAA0000A1Z5',
+    templateId: 'classic',
+};
+
+interface TemplatePreviewCardProps {
+    templateId: string;
+}
+
+export function TemplatePreviewCard({ templateId }: TemplatePreviewCardProps) {
+    // Adjust settings to use the requested template
+    const settings = { ...dummySettings, templateId };
+
+    return (
+        <div className="w-full h-full overflow-hidden bg-white relative">
+            <div className="origin-top-left transform scale-[0.25] w-[210mm] h-[297mm] pointer-events-none select-none">
+                <InvoicePdfTemplate
+                    invoice={dummyInvoice}
+                    items={dummyItems}
+                    settings={settings}
+                />
+            </div>
+        </div>
+    );
+}

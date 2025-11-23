@@ -3,9 +3,10 @@ import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { UserSettings } from "@/lib/definitions";
+import { cn } from "@/lib/utils";
 
 interface LiveInvoicePreviewProps {
-    data: any; // Using any for form values flexibility, strictly typed in parent
+    data: any;
     settings: UserSettings | null;
     invoiceNumber?: string;
 }
@@ -29,112 +30,145 @@ export function LiveInvoicePreview({ data, settings, invoiceNumber = "INV-PREVIE
     const grandTotal = taxableAmount + sgstAmount + cgstAmount;
 
     return (
-        <Card className="h-full overflow-hidden bg-white text-slate-900 shadow-2xl print:shadow-none">
-            <CardContent className="p-8 h-full flex flex-col text-[10px] sm:text-xs font-serif leading-relaxed overflow-y-auto">
-                {/* Header */}
-                <div className="flex justify-between items-start border-b border-slate-200 pb-6 mb-6">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight uppercase">{settings?.shopName || "Jewellery Store"}</h1>
-                        <p className="text-slate-500 max-w-[200px]">{settings?.address}</p>
-                        <p className="text-slate-500">{settings?.state} {settings?.pincode}</p>
-                        <p className="text-slate-500">Phone: {settings?.phoneNumber}</p>
-                        {settings?.email && <p className="text-slate-500">Email: {settings?.email}</p>}
-                    </div>
-                    <div className="text-right space-y-1">
-                        <h2 className="text-xl font-light text-slate-400">INVOICE</h2>
-                        <p className="font-mono font-bold text-slate-700">{invoiceNumber}</p>
-                        <p className="text-slate-500">Date: {data.invoiceDate ? format(data.invoiceDate, "dd MMM yyyy") : format(new Date(), "dd MMM yyyy")}</p>
-                        <div className="mt-2 text-[10px] text-slate-400">
-                            {settings?.gstNumber && <p>GSTIN: {settings.gstNumber}</p>}
-                            {settings?.panNumber && <p>PAN: {settings.panNumber}</p>}
-                        </div>
-                    </div>
-                </div>
+        <Card className="h-full overflow-hidden bg-white text-slate-900 shadow-2xl print:shadow-none border-0 relative">
+            {/* Decorative Background Pattern */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #000 1px, transparent 0)', backgroundSize: '20px 20px' }}>
+            </div>
 
-                {/* Customer Info */}
-                <div className="mb-8 bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Bill To</h3>
-                    <div className="text-sm font-medium text-slate-900">{data.customerName || "Customer Name"}</div>
-                    <div className="text-slate-600 mt-1 whitespace-pre-wrap">{data.customerAddress || "Address"}</div>
-                    <div className="text-slate-600 mt-1">
-                        {data.customerState} {data.customerPincode}
-                    </div>
-                    <div className="text-slate-600 mt-1">{data.customerPhone}</div>
-                </div>
+            <CardContent className="p-0 h-full flex flex-col text-xs font-serif leading-relaxed overflow-y-auto relative z-10">
+                {/* Top Gold Bar */}
+                <div className="h-2 w-full bg-gradient-to-r from-[#D4AF37] via-[#F2D06B] to-[#D4AF37]"></div>
 
-                {/* Items Table */}
-                <div className="flex-grow">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b-2 border-slate-900 text-[10px] uppercase tracking-wider text-slate-500">
-                                <th className="pb-2 font-medium">Description</th>
-                                <th className="pb-2 font-medium text-center">Purity</th>
-                                <th className="pb-2 font-medium text-right">Net Wt</th>
-                                <th className="pb-2 font-medium text-right">Rate</th>
-                                <th className="pb-2 font-medium text-right">Making</th>
-                                <th className="pb-2 font-medium text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-slate-700">
-                            {items.map((item: any, i: number) => {
-                                const netWeight = Number(item.netWeight) || 0;
-                                const rate = Number(item.rate) || 0;
-                                const making = Number(item.making) || 0;
-                                const total = (netWeight * rate) + (netWeight * making);
-                                return (
-                                    <tr key={item.id || i} className="border-b border-slate-100 last:border-0">
-                                        <td className="py-3 pr-2 font-medium">{item.description || "Item"}</td>
-                                        <td className="py-3 px-2 text-center">{item.purity}K</td>
-                                        <td className="py-3 px-2 text-right">{netWeight.toFixed(3)} g</td>
-                                        <td className="py-3 px-2 text-right">{formatCurrency(rate)}</td>
-                                        <td className="py-3 px-2 text-right">{formatCurrency(making * netWeight)}</td>
-                                        <td className="py-3 pl-2 text-right font-bold text-slate-900">{formatCurrency(total)}</td>
-                                    </tr>
-                                );
-                            })}
-                            {items.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} className="py-8 text-center text-slate-300 italic">No items added</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Totals */}
-                <div className="mt-8 flex justify-end">
-                    <div className="w-full sm:w-1/2 space-y-2">
-                        <div className="flex justify-between text-slate-500">
-                            <span>Subtotal</span>
-                            <span>{formatCurrency(subtotal)}</span>
-                        </div>
-                        {discount > 0 && (
-                            <div className="flex justify-between text-green-600">
-                                <span>Discount</span>
-                                <span>-{formatCurrency(discount)}</span>
+                <div className="p-8 flex-grow flex flex-col">
+                    {/* Header */}
+                    <div className="flex justify-between items-start mb-8">
+                        <div className="space-y-2">
+                            <h1 className="text-3xl font-bold text-slate-900 tracking-tight uppercase font-heading">{settings?.shopName || "Jewellery Store"}</h1>
+                            <div className="text-slate-500 text-[11px] uppercase tracking-widest font-medium">Premium Jewellery Collection</div>
+                            <div className="pt-2 space-y-0.5 text-slate-600">
+                                <p className="max-w-[250px]">{settings?.address}</p>
+                                <p>{settings?.state} {settings?.pincode}</p>
+                                <p>Phone: {settings?.phoneNumber}</p>
+                                {settings?.email && <p>Email: {settings?.email}</p>}
                             </div>
-                        )}
-                        <div className="flex justify-between text-slate-500">
-                            <span>SGST ({sgstRate}%)</span>
-                            <span>{formatCurrency(sgstAmount)}</span>
                         </div>
-                        <div className="flex justify-between text-slate-500">
-                            <span>CGST ({cgstRate}%)</span>
-                            <span>{formatCurrency(cgstAmount)}</span>
+                        <div className="text-right space-y-1">
+                            <div className="inline-block px-4 py-1 bg-slate-900 text-[#D4AF37] text-xs font-bold tracking-widest uppercase mb-2">Tax Invoice</div>
+                            <p className="font-mono font-bold text-lg text-slate-800">{invoiceNumber}</p>
+                            <p className="text-slate-500">Date: {data.invoiceDate ? format(data.invoiceDate, "dd MMM yyyy") : format(new Date(), "dd MMM yyyy")}</p>
+                            <div className="mt-3 text-[10px] text-slate-400 space-y-0.5">
+                                {settings?.gstNumber && <p>GSTIN: <span className="font-mono text-slate-600">{settings.gstNumber}</span></p>}
+                                {settings?.panNumber && <p>PAN: <span className="font-mono text-slate-600">{settings.panNumber}</span></p>}
+                            </div>
                         </div>
-                        <Separator className="my-2" />
-                        <div className="flex justify-between text-base font-bold text-slate-900">
-                            <span>Grand Total</span>
-                            <span>{formatCurrency(grandTotal)}</span>
+                    </div>
+
+                    <Separator className="mb-8 bg-slate-100" />
+
+                    {/* Customer Info */}
+                    <div className="mb-8 flex gap-8">
+                        <div className="flex-1 bg-slate-50/50 p-5 rounded-xl border border-slate-100">
+                            <h3 className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest mb-3">Billed To</h3>
+                            <div className="text-base font-bold text-slate-900 mb-1">{data.customerName || "Customer Name"}</div>
+                            <div className="text-slate-600 whitespace-pre-wrap leading-relaxed">{data.customerAddress || "Address"}</div>
+                            <div className="text-slate-600 mt-1">
+                                {data.customerState} {data.customerPincode}
+                            </div>
+                            <div className="text-slate-600 mt-2 font-mono text-[11px]">{data.customerPhone}</div>
                         </div>
+                        <div className="w-1/3 hidden sm:block bg-slate-50/50 p-5 rounded-xl border border-slate-100">
+                            <h3 className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest mb-3">Payment Status</h3>
+                            <div className={cn(
+                                "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
+                                data.status === 'paid' ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
+                            )}>
+                                {data.status === 'paid' ? 'Paid' : 'Due'}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Items Table */}
+                    <div className="flex-grow mb-8">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b-2 border-slate-900 text-[10px] uppercase tracking-wider text-slate-500">
+                                    <th className="py-3 font-bold pl-2">Description</th>
+                                    <th className="py-3 font-bold text-center">Purity</th>
+                                    <th className="py-3 font-bold text-right">Net Wt</th>
+                                    <th className="py-3 font-bold text-right">Rate</th>
+                                    <th className="py-3 font-bold text-right">Making</th>
+                                    <th className="py-3 font-bold text-right pr-2">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-slate-700">
+                                {items.map((item: any, i: number) => {
+                                    const netWeight = Number(item.netWeight) || 0;
+                                    const rate = Number(item.rate) || 0;
+                                    const making = Number(item.making) || 0;
+                                    const total = (netWeight * rate) + (netWeight * making);
+                                    return (
+                                        <tr key={item.id || i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                            <td className="py-4 pl-2 font-medium">
+                                                <div className="text-slate-900">{item.description || "Item"}</div>
+                                            </td>
+                                            <td className="py-4 px-2 text-center">
+                                                <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-medium">{item.purity}K</span>
+                                            </td>
+                                            <td className="py-4 px-2 text-right font-mono text-slate-600">{netWeight.toFixed(3)} g</td>
+                                            <td className="py-4 px-2 text-right font-mono text-slate-600">{formatCurrency(rate)}</td>
+                                            <td className="py-4 px-2 text-right font-mono text-slate-600">{formatCurrency(making * netWeight)}</td>
+                                            <td className="py-4 pr-2 text-right font-bold text-slate-900 font-mono">{formatCurrency(total)}</td>
+                                        </tr>
+                                    );
+                                })}
+                                {items.length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="py-12 text-center text-slate-300 italic">No items added yet</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Totals */}
+                    <div className="flex justify-end mb-12">
+                        <div className="w-full sm:w-1/2 bg-slate-50 p-6 rounded-xl space-y-3">
+                            <div className="flex justify-between text-slate-500">
+                                <span>Subtotal</span>
+                                <span className="font-mono">{formatCurrency(subtotal)}</span>
+                            </div>
+                            {discount > 0 && (
+                                <div className="flex justify-between text-emerald-600">
+                                    <span>Discount</span>
+                                    <span className="font-mono">-{formatCurrency(discount)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-slate-500 text-[11px]">
+                                <span>SGST ({sgstRate}%)</span>
+                                <span className="font-mono">{formatCurrency(sgstAmount)}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-500 text-[11px]">
+                                <span>CGST ({cgstRate}%)</span>
+                                <span className="font-mono">{formatCurrency(cgstAmount)}</span>
+                            </div>
+                            <Separator className="my-2 bg-slate-200" />
+                            <div className="flex justify-between items-end">
+                                <span className="text-sm font-bold text-slate-900 uppercase tracking-wider">Grand Total</span>
+                                <span className="text-xl font-bold text-slate-900 font-mono">{formatCurrency(grandTotal)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mt-auto pt-8 border-t border-slate-100 text-center">
+                        <p className="text-slate-900 font-medium mb-2">Thank you for your business!</p>
+                        <p className="text-slate-400 text-[10px] uppercase tracking-widest">Terms & Conditions Apply</p>
                     </div>
                 </div>
 
-                {/* Footer */}
-                <div className="mt-12 pt-6 border-t border-slate-100 text-center text-slate-400 text-[10px]">
-                    <p>Thank you for your business!</p>
-                    <p className="mt-1">Terms & Conditions Apply</p>
-                </div>
+                {/* Bottom Gold Bar */}
+                <div className="h-1 w-full bg-gradient-to-r from-[#D4AF37] via-[#F2D06B] to-[#D4AF37]"></div>
             </CardContent>
         </Card>
     );

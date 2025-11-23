@@ -116,7 +116,7 @@ export default function LoginPage() {
     <div className="min-h-screen w-full flex bg-background">
       {/* Left Side - Branding (Desktop) */}
       <div className="hidden lg:flex w-1/2 bg-primary relative overflow-hidden items-center justify-center text-primary-foreground">
-        <div className="absolute inset-0 bg-[url('/patterns/grid.svg')] opacity-10"></div>
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-gold-500/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gold-500/10 rounded-full blur-3xl"></div>
 

@@ -17,12 +17,14 @@ export function AppListeners() {
         const configStatusBar = async () => {
             try {
                 await StatusBar.setStyle({ style: Style.Light });
-                await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
-                await StatusBar.setOverlaysWebView({ overlay: false });
-            } catch (e) {
-                console.error('Status Bar config failed', e);
+                // Make status bar transparent and overlay on content
+                await StatusBar.setBackgroundColor({ color: '#00000000' }); // Fully transparent
+                await StatusBar.setOverlaysWebView({ overlay: true }); // Overlay on content
+            } catch (error) {
+                console.error('Error configuring status bar:', error);
             }
         };
+
         configStatusBar();
 
         // Handle Back Button

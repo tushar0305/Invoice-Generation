@@ -72,7 +72,7 @@ export function SmartHero({ invoices, revenueMoM, totalRevenue }: SmartHeroProps
 
     return (
         <MotionWrapper className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} px-4 pb-6 pt-4 md:p-8 text-white shadow-2xl border border-white/10 mt-0 md:mt-0`}>
-            <div className="absolute inset-0 bg-[url('/patterns/grid.svg')] opacity-10"></div>
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
             <div className={`absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl`}></div>
 
             <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
