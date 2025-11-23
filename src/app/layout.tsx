@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { SupabaseProvider } from '@/supabase/provider';
+import { ActiveShopProvider } from '@/hooks/use-active-shop';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { QueryProvider } from '@/components/query-provider';
 
@@ -42,10 +43,12 @@ export default function RootLayout({
       <body className="font-body antialiased bg-mesh min-h-screen" suppressHydrationWarning>
         <SupabaseProvider>
           <QueryProvider>
-            <AuthWrapper>
-              {children}
-            </AuthWrapper>
-            <Toaster />
+            <ActiveShopProvider>
+              <AuthWrapper>
+                {children}
+              </AuthWrapper>
+              <Toaster />
+            </ActiveShopProvider>
           </QueryProvider>
         </SupabaseProvider>
       </body>

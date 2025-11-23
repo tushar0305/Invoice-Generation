@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { PlusCircle, Settings, AlertTriangle, TrendingDown, CheckCircle2, ArrowRight, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useUser } from '@/supabase/provider';
+import { useActiveShop } from '@/hooks/use-active-shop';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/supabase/client';
 import { Invoice } from '@/lib/definitions';
@@ -20,25 +21,11 @@ interface SmartHeroProps {
 
 export function SmartHero({ invoices, revenueMoM, totalRevenue }: SmartHeroProps) {
     const { user } = useUser();
+    const { activeShop } = useActiveShop();
     const router = useRouter();
-    const [shopName, setShopName] = useState<string | null>(null);
     const [query, setQuery] = useState('');
 
-    useEffect(() => {
-        let active = true;
-        const load = async () => {
-            if (!user?.uid) { setShopName(null); return; }
-            const { data } = await supabase
-                .from('user_settings')
-                .select('shop_name')
-                .eq('user_id', user.uid)
-                .maybeSingle();
-            if (!active) return;
-            setShopName(data?.shop_name || null);
-        };
-        load();
-        return () => { active = false; };
-    }, [user?.uid]);
+    const shopName = activeShop?.shopName;
 
     // Determine Business State
     const dueInvoices = invoices?.filter(inv => inv.status === 'due') || [];
@@ -71,7 +58,7 @@ export function SmartHero({ invoices, revenueMoM, totalRevenue }: SmartHeroProps
     }
 
     return (
-        <MotionWrapper className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} px-4 pb-6 pt-6 md:p-8 text-white shadow-2xl border border-white/10 mt-1 md:mt-0`}>
+        <MotionWrapper className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} px-4 pb-6 pt-[calc(0.5rem+env(safe-area-inset-top))] md:p-8 text-white shadow-2xl border border-white/10 mt-1 md:mt-0`}>
             <div className="absolute inset-0 bg-[url('/patterns/grid.svg')] opacity-10"></div>
             <div className={`absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl`}></div>
 

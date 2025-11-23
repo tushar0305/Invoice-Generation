@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
+import { useActiveShop } from '@/hooks/use-active-shop';
 import type { StockItem } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +64,7 @@ type StockItemFormValues = z.infer<typeof stockItemSchema>;
 export default function StockPage() {
   const { toast } = useToast();
   const { user, isUserLoading: userLoading } = useUser();
+  const { activeShop, permissions, isLoading: shopLoading } = useActiveShop();
   const [isPending, startTransition] = useTransition();
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -105,10 +107,12 @@ export default function StockPage() {
 
   async function loadItems() {
     if (!user) { setStockItems([]); return; }
+    if (!activeShop?.id) { setStockItems([]); return; }
+
     const { data, error } = await supabase
       .from('stock_items')
       .select('*')
-      .eq('user_id', user.uid)
+      .eq('shop_id', activeShop.id)
       .order('created_at', { ascending: false });
     if (error) {
       console.error('Load stock_items error', error);
@@ -118,6 +122,9 @@ export default function StockPage() {
     const mapped: StockItem[] = (data || []).map((r: any) => ({
       id: r.id,
       userId: r.user_id,
+      shopId: r.shop_id,
+      createdBy: r.created_by,
+      updatedBy: r.updated_by,
       name: r.name,
       description: r.description || undefined,
       purity: r.purity,
@@ -139,10 +146,12 @@ export default function StockPage() {
   useEffect(() => {
     if (searchParams.get('action') === 'add') {
       setIsOpen(true);
+      // Remove the URL parameter to prevent auto-opening on refresh
+      window.history.replaceState({}, '', '/dashboard/stock');
     }
   }, [searchParams]);
 
-  useEffect(() => { loadItems(); }, [user?.uid]);
+  useEffect(() => { loadItems(); }, [user?.uid, activeShop?.id]);
 
   const form = useForm<StockItemFormValues>({
     resolver: zodResolver(stockItemSchema),
@@ -168,7 +177,12 @@ export default function StockPage() {
 
     startTransition(async () => {
       try {
-        const itemDb = {
+        if (!activeShop?.id) {
+          toast({ variant: 'destructive', title: 'Error', description: 'No active shop selected' });
+          return;
+        }
+
+        const itemDb: any = {
           user_id: user.uid,
           name: data.name,
           description: data.description || null,
@@ -182,6 +196,13 @@ export default function StockPage() {
           is_active: data.isActive,
           updated_at: new Date().toISOString(),
         };
+
+        // Include RBAC fields if shop exists
+        if (activeShop?.id) {
+          itemDb.shop_id = activeShop.id;
+          itemDb.created_by = user.uid;
+          itemDb.updated_by = user.uid;
+        }
 
         if (editingItem?.id) {
           const { error } = await supabase
@@ -204,8 +225,12 @@ export default function StockPage() {
         setEditingItem(null);
         setIsOpen(false);
         await loadItems();
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error saving stock item:', err);
+        console.error('Error details:', JSON.stringify(err, null, 2));
+        if (err?.message) {
+          console.error('Error message:', err.message);
+        }
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -259,17 +284,17 @@ export default function StockPage() {
     <MotionWrapper className="space-y-4 sm:space-y-6 pb-24">
       <Sheet open={isOpen} onOpenChange={handleOpenChange}>
         <SheetContent
-          side="bottom"
-          className="h-[80vh] max-h-[calc(100vh-var(--safe-area-inset-top)-4rem)] rounded-t-xl px-0"
+          side="right"
+          className="w-full sm:max-w-lg overflow-y-auto"
         >
-          <SheetHeader className="pb-4 border-b border-border/50 px-6">
+          <SheetHeader className="pb-4 border-b border-border/50">
             <SheetTitle className="text-xl font-heading text-primary">{editingItem ? 'Edit Stock Item' : 'Add New Stock Item'}</SheetTitle>
             <SheetDescription>
               {editingItem ? 'Update the stock item details below.' : 'Enter the details for the new stock item.'}
             </SheetDescription>
           </SheetHeader>
 
-          <div className="overflow-y-auto px-6">
+          <div className="overflow-y-auto p-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-6">
                 <div className="space-y-4">
@@ -404,6 +429,12 @@ export default function StockPage() {
         </SheetContent>
       </Sheet>
 
+      {/* Desktop Page Title */}
+      <div className="hidden md:block">
+        <h1 className="text-3xl font-heading font-bold text-primary">Stock Management</h1>
+        <p className="text-muted-foreground mt-1">Manage your inventory and stock items</p>
+      </div>
+
       <div className="space-y-4">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -468,7 +499,9 @@ export default function StockPage() {
                           <TableHead className="font-semibold text-right min-w-[90px] text-primary">Price</TableHead>
                           <TableHead className="font-semibold text-right hidden md:table-cell min-w-[90px] text-primary">Making</TableHead>
                           <TableHead className="font-semibold hidden lg:table-cell min-w-[100px] text-primary">Category</TableHead>
-                          <TableHead className="text-right font-semibold min-w-[90px] pr-6 sm:pr-4 text-primary">Actions</TableHead>
+                          {permissions.canManageStock && (
+                            <TableHead className="text-right font-semibold min-w-[90px] pr-6 sm:pr-4 text-primary">Actions</TableHead>
+                          )}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -495,28 +528,30 @@ export default function StockPage() {
                             <TableCell className="hidden lg:table-cell">
                               <span className="text-xs bg-muted px-2 py-1 rounded">{item.category || '-'}</span>
                             </TableCell>
-                            <TableCell className="text-right pr-6 sm:pr-4">
-                              <div className="flex justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEdit(item)}
-                                  disabled={isPending}
-                                  className="h-8 w-8 p-0 hover:text-primary"
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(item.id)}
-                                  disabled={isPending}
-                                  className="text-destructive h-8 w-8 p-0 hover:bg-destructive/10"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </TableCell>
+                            {permissions.canManageStock && (
+                              <TableCell className="text-right pr-6 sm:pr-4">
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEdit(item)}
+                                    disabled={isPending}
+                                    className="h-8 w-8 p-0 hover:text-primary"
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDelete(item.id)}
+                                    disabled={isPending}
+                                    className="text-destructive h-8 w-8 p-0 hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -533,6 +568,7 @@ export default function StockPage() {
                         item={item}
                         onEdit={() => handleEdit(item)}
                         onDelete={() => handleDelete(item.id)}
+                        canManage={permissions.canManageStock}
                       />
                     ))}
                   </AnimatePresence>
@@ -542,23 +578,26 @@ export default function StockPage() {
           </>
         )}
       </div>
+
     </MotionWrapper>
   );
 }
 
-function StockCard({ item, onEdit, onDelete }: { item: StockItem; onEdit: () => void; onDelete: () => void }) {
+function StockCard({ item, onEdit, onDelete, canManage }: { item: StockItem; onEdit: () => void; onDelete: () => void; canManage: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="relative">
       {/* Background Actions (Delete) */}
-      <div className="absolute inset-0 flex items-center justify-end px-4 bg-destructive/20 rounded-xl">
-        <Trash2 className="text-destructive h-6 w-6" />
-      </div>
+      {canManage && (
+        <div className="absolute inset-0 flex items-center justify-end px-4 bg-destructive/20 rounded-xl">
+          <Trash2 className="text-destructive h-6 w-6" />
+        </div>
+      )}
 
       {/* Foreground Card */}
       <motion.div
-        drag="x"
+        drag={canManage ? "x" : false}
         dragConstraints={{ left: -100, right: 0 }}
         dragElastic={0.1}
         onDragEnd={(_, info: any) => {
@@ -625,12 +664,16 @@ function StockCard({ item, onEdit, onDelete }: { item: StockItem; onEdit: () => 
                     <span className="font-medium">{new Date(item.createdAt).toLocaleDateString()}</span>
                   </div>
                   <div className="col-span-2 flex justify-end gap-2 mt-2">
-                    <Button variant="outline" size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                      <Edit2 className="mr-2 h-3.5 w-3.5" /> Edit
-                    </Button>
-                    <Button variant="destructive" size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
-                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                    </Button>
+                    {canManage && (
+                      <>
+                        <Button variant="outline" size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                          <Edit2 className="mr-2 h-3.5 w-3.5" /> Edit
+                        </Button>
+                        <Button variant="destructive" size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </motion.div>

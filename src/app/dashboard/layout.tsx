@@ -29,6 +29,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@/components/logo';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { AppListeners } from '@/components/app-listeners';
+import { ShopSwitcher } from '@/components/shop-switcher';
+import { useActiveShop } from '@/hooks/use-active-shop';
 import { Capacitor } from '@capacitor/core';
 import { useAuth, useUser } from '@/supabase/provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -49,10 +51,14 @@ import type { UserSettings } from '@/lib/definitions';
 import { registerPushNotifications, addPushListeners } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 
+import { Badge } from '@/components/ui/badge';
+import { getRoleBadgeColor } from '@/lib/permissions';
+
 function UserNav({ minimal = false }: { minimal?: boolean }) {
   const { user } = useUser();
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
+  const { activeShop, userRole } = useActiveShop();
 
   if (!user) {
     return null;
@@ -68,11 +74,13 @@ function UserNav({ minimal = false }: { minimal?: boolean }) {
             <AvatarFallback className="bg-primary/10 text-primary font-medium">{fallback}</AvatarFallback>
           </Avatar>
           {!minimal && (
-            <div className="flex flex-col truncate">
-              <span className="font-medium text-sidebar-foreground">
-                {user.email}
-              </span>
-              <span className="text-xs text-muted-foreground">Jeweller</span>
+            <div className="flex flex-col min-w-0 items-start">
+              <span className="text-sm font-medium truncate w-full">{user?.email}</span>
+              {activeShop && (
+                <Badge variant="secondary" className={`mt-1 text-[10px] px-1.5 py-0 h-5 ${getRoleBadgeColor(userRole?.role || 'staff')}`}>
+                  {(userRole?.role || 'staff').toUpperCase()}
+                </Badge>
+              )}
             </div>
           )}
         </button>
@@ -188,6 +196,7 @@ function DashboardLayoutInternal({
   const pathname = usePathname();
   const auth = useAuth();
   const { user } = useUser();
+  const { permissions } = useActiveShop();
   const router = useRouter();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const { setOpenMobile, isMobile } = useSidebar();
@@ -255,20 +264,10 @@ function DashboardLayoutInternal({
     <AuthWrapper>
       <Sidebar>
         <SidebarHeader className="border-b border-sidebar-border/50">
-          <div
-            onClick={() => isMobile && setOpenMobile(false)}
-            className="cursor-pointer px-2 py-4"
-            role="button"
-            aria-label="Close sidebar"
-          >
+          <div className="px-2 py-4 md:py-4 pt-[calc(env(safe-area-inset-top)+1rem)] md:pt-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-                <span className="text-xl font-bold text-primary-foreground">J</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base font-heading font-bold text-foreground">
-                  {settings?.shopName || 'JewelOS'}
-                </span>
+              <div className="flex flex-col flex-1 min-w-0">
+                <ShopSwitcher className="w-full" />
                 <span className="text-xs text-muted-foreground">Modern Heritage</span>
               </div>
             </div>
@@ -354,6 +353,17 @@ function DashboardLayoutInternal({
                 >
                   <Settings className="data-[active=true]:text-[#D4AF37]" />
                   <span>Settings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNav('/dashboard/staff')}
+                  isActive={pathname === '/dashboard/staff'}
+                  tooltip="Staff"
+                  className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/10 data-[active=true]:to-primary/5 data-[active=true]:border-l-2 data-[active=true]:border-[#D4AF37] data-[active=true]:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
+                >
+                  <Users className="data-[active=true]:text-[#D4AF37]" />
+                  <span>Staff</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

@@ -10,6 +10,7 @@ import { useState, useTransition, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -24,6 +25,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
+import { useActiveShop } from '@/hooks/use-active-shop';
 import { useStockItems } from '@/hooks/use-stock-items';
 import { isShopSetupComplete } from '@/lib/shop-setup';
 import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
@@ -63,12 +65,12 @@ interface InvoiceFormProps {
   invoice?: Invoice & { items: InvoiceItem[] };
 }
 
-async function getNextInvoiceNumberSupabase(userId: string): Promise<string> {
+async function getNextInvoiceNumberSupabase(shopId: string): Promise<string> {
   const currentYear = new Date().getFullYear();
   const { data, error } = await supabase
     .from('invoices')
     .select('invoice_number, created_at')
-    .eq('user_id', userId)
+    .eq('shop_id', shopId)
     .order('created_at', { ascending: false })
     .limit(1000);
   if (error) throw new Error(error.message);
@@ -101,7 +103,7 @@ const calculateTotals = (items: InvoiceFormValues['items'], discount: number, sg
   const sgstAmount = totalBeforeTax * ((sgst || 0) / 100);
   const cgstAmount = totalBeforeTax * ((cgst || 0) / 100);
   const grandTotal = totalBeforeTax + sgstAmount + cgstAmount;
-  return { subtotal, grandTotal };
+  return { subtotal, grandTotal, sgstAmount, cgstAmount };
 };
 
 export function InvoiceForm({ invoice }: InvoiceFormProps) {
@@ -109,6 +111,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const { user } = useUser();
+  const { activeShop, isLoading: shopLoading, permissions } = useActiveShop();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [showPreview, setShowPreview] = useState(false); // Mobile toggle
@@ -116,6 +119,28 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
   useEffect(() => {
     const loadSettings = async () => {
+      // If we have an active shop, use its details for settings
+      if (activeShop) {
+        setSettings({
+          id: activeShop.id,
+          userId: user?.uid || '',
+          cgstRate: activeShop.cgstRate || 1.5,
+          sgstRate: activeShop.sgstRate || 1.5,
+          shopName: activeShop.shopName,
+          gstNumber: activeShop.gstNumber || '',
+          panNumber: activeShop.panNumber || '',
+          address: activeShop.address || '',
+          state: activeShop.state || '',
+          pincode: activeShop.pincode || '',
+          phoneNumber: activeShop.phoneNumber || '',
+          email: activeShop.email || '',
+          templateId: activeShop.templateId || 'classic',
+        });
+        setSettingsLoading(false);
+        return;
+      }
+
+      // Fallback to user_settings (legacy/owner only)
       if (!user?.uid) {
         setSettingsLoading(false);
         return;
@@ -149,7 +174,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       }
     };
     loadSettings();
-  }, [user?.uid]);
+  }, [user?.uid, activeShop]);
 
   const defaultValues: Partial<InvoiceFormValues> = invoice
     ? {
@@ -168,7 +193,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       customerPincode: '',
       customerPhone: '',
       invoiceDate: new Date(),
-      items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: 0, netWeight: 0, rate: 0, making: 0 }],
+      items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: '' as any, netWeight: '' as any, rate: '' as any, making: '' as any }],
       discount: 0,
       sgst: 1.5,
       cgst: 1.5,
@@ -181,7 +206,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     mode: 'onChange',
   });
 
-  const { items: stockItems, isLoading: stockLoading } = useStockItems(user?.uid);
+  const { items: stockItems } = useStockItems(activeShop?.id);
   const [showStockDialog, setShowStockDialog] = useState(false);
 
   useEffect(() => {
@@ -227,29 +252,43 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       return;
     }
 
+    if (!activeShop) {
+      toast({ variant: 'destructive', title: 'Shop Required', description: 'No active shop selected. Please refresh the page.' });
+      return;
+    }
+
+    console.log('Submitting invoice with shop:', activeShop.id, 'isTemp:', activeShop.id.startsWith('temp-'));
+
     startTransition(async () => {
       try {
         const { items, ...invoiceMainData } = data;
-        const { grandTotal: finalGrandTotal } = calculateTotals(items, data.discount, data.sgst, data.cgst);
+        // Calculate totals
+        const { grandTotal: finalGrandTotal, subtotal, sgstAmount, cgstAmount } = calculateTotals(items, data.discount, data.sgst, data.cgst);
 
         if (invoice) {
           const invoiceId = invoice.id;
+          const updateData: any = {
+            customer_name: invoiceMainData.customerName,
+            customer_address: invoiceMainData.customerAddress,
+            customer_state: invoiceMainData.customerState,
+            customer_pincode: invoiceMainData.customerPincode,
+            customer_phone: invoiceMainData.customerPhone,
+            invoice_date: format(invoiceMainData.invoiceDate, 'yyyy-MM-dd'),
+            discount: invoiceMainData.discount,
+            sgst: invoiceMainData.sgst,
+            cgst: invoiceMainData.cgst,
+            status: invoiceMainData.status,
+            grand_total: finalGrandTotal,
+            subtotal: subtotal,
+            sgst_amount: sgstAmount,
+            cgst_amount: cgstAmount,
+            updated_at: new Date().toISOString(),
+            updated_by: user.uid,
+          };
+
           const { error: invErr } = await supabase
             .from('invoices')
-            .update({
-              customer_name: invoiceMainData.customerName,
-              customer_address: invoiceMainData.customerAddress,
-              customer_state: invoiceMainData.customerState,
-              customer_pincode: invoiceMainData.customerPincode,
-              customer_phone: invoiceMainData.customerPhone,
-              invoice_date: format(invoiceMainData.invoiceDate, 'yyyy-MM-dd'),
-              discount: invoiceMainData.discount,
-              sgst: invoiceMainData.sgst,
-              cgst: invoiceMainData.cgst,
-              status: invoiceMainData.status,
-              grand_total: finalGrandTotal,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('id', invoiceId)
             .eq('user_id', user.uid);
           if (invErr) throw invErr;
@@ -287,24 +326,53 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           }
           var invoiceIdToNavigate = invoiceId;
         } else {
-          const invoiceNumber = await getNextInvoiceNumberSupabase(user.uid);
+          const invoiceNumber = await getNextInvoiceNumberSupabase(activeShop.id);
+
+          console.log('=== INVOICE SAVE DEBUG ===');
+          console.log('activeShop:', activeShop);
+          console.log('activeShop?.id:', activeShop?.id);
+          console.log('user.uid:', user.uid);
+
+          // Only include shop_id if not temporary (migration complete)
+          const invoiceData: any = {
+            user_id: user.uid,
+            created_by: user.uid,
+            invoice_number: invoiceNumber,
+            customer_name: invoiceMainData.customerName,
+            customer_address: invoiceMainData.customerAddress,
+            customer_state: invoiceMainData.customerState,
+            customer_pincode: invoiceMainData.customerPincode,
+            customer_phone: invoiceMainData.customerPhone,
+            invoice_date: format(invoiceMainData.invoiceDate, 'yyyy-MM-dd'),
+            discount: invoiceMainData.discount,
+            sgst: invoiceMainData.sgst,
+            cgst: invoiceMainData.cgst,
+            status: invoiceMainData.status,
+            grand_total: finalGrandTotal,
+            subtotal: subtotal,
+            sgst_amount: sgstAmount,
+            cgst_amount: cgstAmount,
+          };
+
+          // Always include shop_id if we have an active shop
+          // The database requires it (NOT NULL constraint), so we must send it.
+          // If it's a temp ID and migration hasn't run, the DB won't enforce FK constraint yet (or will fail with FK error, not NULL error)
+          if (activeShop?.id) {
+            invoiceData.shop_id = activeShop.id;
+            invoiceData.created_by = user.uid;
+            invoiceData.created_by_name = user.user_metadata?.full_name || user.email || 'Unknown';
+            console.log('✅ Adding shop_id to invoiceData:', activeShop.id);
+          } else {
+            console.error('❌ activeShop or activeShop.id is missing!');
+            console.error('activeShop:', activeShop);
+          }
+
+          console.log('Final invoiceData:', invoiceData);
+          console.log('=== END DEBUG ===');
+
           const { data: insertInv, error: insErr } = await supabase
             .from('invoices')
-            .insert([{
-              user_id: user.uid,
-              invoice_number: invoiceNumber,
-              customer_name: invoiceMainData.customerName,
-              customer_address: invoiceMainData.customerAddress,
-              customer_state: invoiceMainData.customerState,
-              customer_pincode: invoiceMainData.customerPincode,
-              customer_phone: invoiceMainData.customerPhone,
-              invoice_date: format(invoiceMainData.invoiceDate, 'yyyy-MM-dd'),
-              discount: invoiceMainData.discount,
-              sgst: invoiceMainData.sgst,
-              cgst: invoiceMainData.cgst,
-              status: invoiceMainData.status,
-              grand_total: finalGrandTotal,
-            }])
+            .insert([invoiceData])
             .select('id')
             .single();
           if (insErr) throw insErr;
@@ -336,8 +404,18 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
         router.push(`/dashboard/invoices/view?id=${invoiceIdToNavigate}`);
 
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to save invoice:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        if (error?.message) {
+          console.error("Error message:", error.message);
+        }
+        if (error?.details) {
+          console.error("Error details:", error.details);
+        }
+        if (error?.hint) {
+          console.error("Error hint:", error.hint);
+        }
         haptics.notification(NotificationType.Error);
         toast({
           variant: 'destructive',
@@ -369,8 +447,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                 </div>
               </div>
 
-              {/* Shop Setup Warning */}
-              {!isShopSetupValid && !settingsLoading && (
+              {/* Shop Setup Warning - Only for owners */}
+              {permissions.canEditSettings && !isShopSetupValid && !settingsLoading && (
                 <FadeIn>
                   <Alert className="border-amber-500/60 bg-amber-50 text-amber-800">
                     <AlertCircle className="h-4 w-4 text-amber-600" />
@@ -422,7 +500,26 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   <FormField control={form.control} name="customerState" render={({ field }) => (
                     <FormItem>
                       <FormLabel>State (Optional)</FormLabel>
-                      <FormControl><Input placeholder="State" {...field} className="bg-background/50" /></FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-background/50">
+                            <SelectValue placeholder="Select State" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {[
+                            "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
+                            "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+                            "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
+                            "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh",
+                            "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+                          ].map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -591,9 +688,30 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                     <span>{formatCurrency(grandTotal)}</span>
                   </div>
 
-                  <Button type="submit" variant="premium" className="w-full h-12 text-lg shadow-lg mt-4" disabled={isPending || settingsLoading || !isShopSetupValid}>
-                    {(isPending || settingsLoading) && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                    {!isShopSetupValid ? 'Setup Required' : (invoice ? 'Update Invoice' : 'Create Invoice')}
+                  <FormField control={form.control} name="status" render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-white/10 p-4 bg-white/5">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value === 'paid'}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked ? 'paid' : 'due');
+                          }}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="cursor-pointer">
+                          Mark as Paid
+                        </FormLabel>
+                        <p className="text-xs text-muted-foreground">
+                          Check this if the payment is already received.
+                        </p>
+                      </div>
+                    </FormItem>
+                  )} />
+
+                  <Button type="submit" variant="premium" className="w-full h-12 text-lg shadow-lg mt-4" disabled={isPending || settingsLoading || shopLoading || !isShopSetupValid || !activeShop}>
+                    {(isPending || settingsLoading || shopLoading) && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                    {!activeShop ? 'Loading shop...' : !isShopSetupValid ? 'Setup Required' : (invoice ? 'Update Invoice' : 'Create Invoice')}
                   </Button>
                 </CardContent>
               </Card>
@@ -601,8 +719,10 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           </div>
 
           {/* Right Column: Live Preview (Desktop) */}
-          <div className="hidden lg:block lg:col-span-5 h-full sticky top-6">
-            <LiveInvoicePreview data={watchedValues} settings={settings} />
+          <div className="hidden lg:block lg:col-span-5">
+            <div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto no-scrollbar">
+              <LiveInvoicePreview data={watchedValues} settings={settings} />
+            </div>
           </div>
         </div>
 

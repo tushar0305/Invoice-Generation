@@ -37,6 +37,7 @@
   "exclude": [
     "node_modules",
     "src/firebase/**",
-    "src/components/FirebaseErrorListener.tsx"
+    "src/components/FirebaseErrorListener.tsx",
+    "supabase/functions/**"
   ]
 }

@@ -10,7 +10,11 @@ export type InvoiceItem = {
 
 export type Invoice = {
   id: string; // db id
-  userId: string; // a reference to the user who owns this invoice
+  userId: string; // DEPRECATED: kept for backward compatibility, use createdBy
+  shopId: string; // Shop this invoice belongs to
+  createdBy: string; // User who created this invoice
+  createdByName?: string; // Name of the user who created this invoice
+  updatedBy?: string; // User who last updated this invoice
   invoiceNumber: string; // user-facing id
   customerName: string;
   customerAddress: string;
@@ -43,11 +47,15 @@ export type UserSettings = {
   email?: string; // Contact email (defaults to auth email, not editable in UI)
   logoUrl?: string; // Shop logo URL from Supabase storage
   templateId?: string; // Invoice template ID (classic, modern, minimal)
+  migratedToShopId?: string; // DEPRECATED: Reference to migrated shop ID
 };
 
 export type StockItem = {
   id: string; // Document ID
-  userId: string; // Reference to user who owns this item
+  userId: string; // DEPRECATED: kept for backward compatibility
+  shopId: string; // Shop this stock belongs to
+  createdBy: string; // User who created this stock item
+  updatedBy?: string; // User who last updated this stock item
   name: string; // Item name (e.g., "Gold Ring", "Silver Bracelet")
   description?: string; // Additional description
   purity: string; // Purity (e.g., "22K", "92.5", "999")
@@ -61,3 +69,67 @@ export type StockItem = {
   createdAt?: any;
   updatedAt?: any;
 };
+
+// ============================================
+// RBAC and Multi-Shop Types
+// ============================================
+
+export type UserRole = 'owner' | 'manager' | 'staff';
+
+export type Shop = {
+  id: string;
+  shopName: string;
+  gstNumber?: string;
+  panNumber?: string;
+  address?: string;
+  state?: string;
+  pincode?: string;
+  phoneNumber?: string;
+  email?: string;
+  logoUrl?: string;
+  templateId?: string;
+  cgstRate: number;
+  sgstRate: number;
+  isActive: boolean;
+  createdBy: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type UserShopRole = {
+  id: string;
+  userId: string;
+  shopId: string;
+  role: UserRole;
+  inviteCode?: string; // 6-digit code for invitation
+  invitedBy?: string;
+  invitedAt?: string;
+  acceptedAt?: string; // NULL if invitation pending
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type UserPreferences = {
+  userId: string;
+  lastActiveShopId?: string;
+  theme: 'light' | 'dark';
+  language: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+// Permission helper type
+export type Permission = {
+  canCreateInvoices: boolean;
+  canEditAllInvoices: boolean; // false for staff (only own)
+  canDeleteInvoices: boolean;
+  canExportInvoices: boolean;
+  canManageStock: boolean; // false for staff
+  canViewStock: boolean;
+  canEditSettings: boolean; // owner only
+  canInviteStaff: boolean; // owner only
+  canViewAnalytics: boolean;
+  canCreateShop: boolean; // owner only
+};
+

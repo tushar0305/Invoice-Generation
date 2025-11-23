@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/supabase/provider';
+import { useActiveShop } from '@/hooks/use-active-shop';
 import { supabase } from '@/supabase/client';
 import { format, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
@@ -69,18 +70,19 @@ export default function InvoicesPage() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [invoiceToChangeStatus, setInvoiceToChangeStatus] = useState<{ id: string; currentStatus: string } | null>(null);
 
+  const { activeShop } = useActiveShop();
   const { user } = useUser();
   const queryClient = useQueryClient();
 
   // --- React Query for Invoices ---
   const { data: invoices, isLoading } = useQuery({
-    queryKey: ['invoices', user?.uid],
+    queryKey: ['invoices', activeShop?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!activeShop?.id) return [];
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
-        .eq('user_id', user.uid)
+        .eq('shop_id', activeShop.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -88,6 +90,8 @@ export default function InvoicesPage() {
       return (data || []).map((r: any) => ({
         id: r.id,
         userId: r.user_id,
+        shopId: r.shop_id,
+        createdBy: r.created_by,
         invoiceNumber: r.invoice_number,
         customerName: r.customer_name,
         customerAddress: r.customer_address || '',
@@ -100,9 +104,11 @@ export default function InvoicesPage() {
         cgst: Number(r.cgst) || 0,
         status: r.status,
         grandTotal: Number(r.grand_total) || 0,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
       } as Invoice));
     },
-    enabled: !!user,
+    enabled: !!activeShop?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -336,6 +342,8 @@ export default function InvoicesPage() {
       const invoice: Invoice = {
         id: inv.id,
         userId: inv.user_id,
+        shopId: inv.shop_id,
+        createdBy: inv.created_by,
         invoiceNumber: inv.invoice_number,
         customerName: inv.customer_name,
         customerAddress: inv.customer_address || '',

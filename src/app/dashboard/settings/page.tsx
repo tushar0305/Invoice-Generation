@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, ArrowLeft, Upload, X, Image as ImageIcon, Package, DollarSign, FileText, AlertTriangle } from 'lucide-react';
+import { Loader2, ArrowLeft, Upload, X, Image as ImageIcon, Package, DollarSign, FileText, AlertTriangle, Settings, Shield } from 'lucide-react';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, useEffect, useRef } from 'react';
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
+import { useActiveShop } from '@/hooks/use-active-shop';
 import type { UserSettings } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 as LoaderIcon } from 'lucide-react';
@@ -28,6 +29,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const settingsFormSchema = z.object({
   cgstRate: z.coerce.number().min(0, 'CGST rate must be positive'),
@@ -50,6 +58,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const { user, isUserLoading } = useUser();
+  const { activeShop, permissions } = useActiveShop();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState<boolean>(true);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -78,6 +87,11 @@ export default function SettingsPage() {
   useEffect(() => {
     const load = async () => {
       if (!user) { setSettings(null); setSettingsLoading(false); return; }
+
+      // Only allow owners to access settings
+      // Redirect logic removed in favor of UI component
+      // if (permissions && !permissions.canEditSettings) { ... }
+
       setSettingsLoading(true);
       const { data, error } = await supabase
         .from('user_settings')
@@ -128,11 +142,16 @@ export default function SettingsPage() {
       setSettingsLoading(false);
     };
     load();
-  }, [user?.uid, form]);
+  }, [user?.uid, permissions, router, toast, form]);
 
   const handleLogoUpload = async (file: File) => {
     if (!user) {
       toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in.' });
+      return null;
+    }
+
+    if (!permissions.canEditSettings) {
+      toast({ variant: 'destructive', title: 'Access Denied', description: 'Only shop owners can change the logo.' });
       return null;
     }
 
@@ -254,6 +273,11 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!permissions.canEditSettings) {
+      toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to update settings.' });
+      return;
+    }
+
     startTransition(async () => {
       try {
         const payload = {
@@ -275,7 +299,12 @@ export default function SettingsPage() {
         if (!settings) {
           payload.created_at = new Date().toISOString();
         }
-        const { error, data: updatedData } = await supabase.from('user_settings').upsert(payload, { onConflict: 'user_id' }).select().single();
+
+        // Use update instead of upsert for views (triggers handle the upsert logic)
+        const { error, data: updatedData } = settings
+          ? await supabase.from('user_settings').update(payload).eq('user_id', user.uid).select().single()
+          : await supabase.from('user_settings').insert(payload).select().single();
+
         if (error) throw error;
 
         // Update local settings state
@@ -317,12 +346,31 @@ export default function SettingsPage() {
 
   const isLoading = isUserLoading || settingsLoading;
   const progress = getSetupProgress(settings);
-
-
   const [activeSection, setActiveSection] = useState("shop-details");
+
+  const INDIAN_STATES = [
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
+    "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+    "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
+    "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh",
+    "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+  ];
+
+  if (!permissions.canEditSettings && !isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center p-4">
+        <Shield className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
+        <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+        <p className="text-muted-foreground max-w-md">
+          You do not have permission to manage settings. Only shop owners can access this page.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <MotionWrapper className="max-w-3xl mx-auto space-y-6">
+      {/* ... (Header) ... */}
       <div className="flex items-center justify-between">
         <div className="hidden md:block">
           <h1 className="text-3xl font-heading font-bold tracking-tight text-primary">Settings</h1>
@@ -345,269 +393,290 @@ export default function SettingsPage() {
           <Skeleton className="h-12 w-full rounded-lg" />
         </div>
       ) : (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="relative">
+          {/* Blur Overlay Removed since we have dedicated Access Denied page */}
 
-            {/* Hero Logo Section */}
-            <Card className="overflow-hidden border-none shadow-lg bg-gradient-to-br from-primary/5 to-primary/10">
-              <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-                <div className="relative group">
-                  <div className={`w-32 h-32 rounded-full border-4 border-background shadow-xl overflow-hidden flex items-center justify-center bg-white ${!logoUrl ? 'border-dashed border-muted-foreground/30' : ''}`}>
-                    {logoUrl ? (
-                      <img src={logoUrl} alt="Shop Logo" className="w-full h-full object-contain p-2" />
-                    ) : (
-                      <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingLogo}
-                    className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 shadow-lg hover:scale-110 transition-transform"
-                  >
-                    {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </div>
-                <div className="text-center sm:text-left space-y-2 flex-1">
-                  <h2 className="text-xl font-bold font-heading">{form.watch('shopName') || 'Your Shop'}</h2>
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    Upload your shop logo to make your invoices look professional. Recommended size: 500x500px.
-                  </p>
-                  {logoUrl && (
-                    <Button type="button" variant="ghost" size="sm" onClick={handleRemoveLogo} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8">
-                      <X className="mr-2 h-3.5 w-3.5" /> Remove Logo
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <fieldset disabled={!permissions.canEditSettings} className="space-y-6">
+
+                {/* ... (Logo Section) ... */}
+                <Card className="overflow-hidden border-none shadow-lg bg-gradient-to-br from-primary/5 to-primary/10">
+                  <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+                    <div className="relative group">
+                      <div className={`w-32 h-32 rounded-full border-4 border-background shadow-xl overflow-hidden flex items-center justify-center bg-white ${!logoUrl ? 'border-dashed border-muted-foreground/30' : ''}`}>
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="Shop Logo" className="w-full h-full object-contain p-2" />
+                        ) : (
+                          <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingLogo || !permissions.canEditSettings}
+                        className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 shadow-lg hover:scale-110 transition-transform disabled:opacity-50"
+                      >
+                        {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </div>
+                    <div className="text-center sm:text-left space-y-2 flex-1">
+                      <h2 className="text-xl font-bold font-heading">{form.watch('shopName') || 'Your Shop'}</h2>
+                      <p className="text-sm text-muted-foreground max-w-md">
+                        Upload your shop logo to make your invoices look professional. Recommended size: 500x500px.
+                      </p>
+                      {logoUrl && permissions.canEditSettings && (
+                        <Button type="button" variant="ghost" size="sm" onClick={handleRemoveLogo} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8">
+                          <X className="mr-2 h-3.5 w-3.5" /> Remove Logo
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Accordion type="single" collapsible defaultValue="shop-details" className="w-full space-y-4">
+
+                  {/* Shop Details Section */}
+                  <AccordionItem value="shop-details" className="border rounded-xl px-4 bg-card">
+                    <AccordionTrigger className="hover:no-underline py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
+                          <Package className="h-4 w-4" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold">Shop Details</div>
+                          <div className="text-xs text-muted-foreground">Name, Address, Contact</div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-2 pb-6 space-y-4">
+                      <FormField control={form.control} name="shopName" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Shop Name</FormLabel>
+                          <FormControl><Input placeholder="e.g., Jewellers Store" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="address" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address</FormLabel>
+                          <FormControl><Input placeholder="Full address" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="state" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select State" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {INDIAN_STATES.map((state) => (
+                                  <SelectItem key={state} value={state}>
+                                    {state}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="pincode" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Pincode</FormLabel>
+                            <FormControl><Input placeholder="e.g., 302001" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone</FormLabel>
+                            <FormControl><Input placeholder="e.g., 9876543210" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <div>
+                          <FormLabel>Email</FormLabel>
+                          <Input value={user?.email || ''} disabled readOnly className="bg-muted" />
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Tax & Finance Section */}
+                  <AccordionItem value="tax-finance" className="border rounded-xl px-4 bg-card">
+                    <AccordionTrigger className="hover:no-underline py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                          <DollarSign className="h-4 w-4" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold">Tax & Finance</div>
+                          <div className="text-xs text-muted-foreground">GST, PAN, Tax Rates</div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-2 pb-6 space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="gstNumber" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>GST Number</FormLabel>
+                            <FormControl><Input placeholder="e.g., 08AAAAA0000A1Z5" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="panNumber" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>PAN Number</FormLabel>
+                            <FormControl><Input placeholder="e.g., AAAAA0000A" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="cgstRate" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Default CGST Rate (%)</FormLabel>
+                            <FormControl><Input type="number" step="0.01" placeholder="1.5" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="sgstRate" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Default SGST Rate (%)</FormLabel>
+                            <FormControl><Input type="number" step="0.01" placeholder="1.5" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Invoice Settings */}
+                  <AccordionItem value="invoice-settings" className="border rounded-xl px-4 bg-card">
+                    <AccordionTrigger className="hover:no-underline py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold">Invoice Settings</div>
+                          <div className="text-xs text-muted-foreground">Templates, Defaults</div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-2 pb-6 space-y-4">
+                      <FormField control={form.control} name="templateId" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invoice Template</FormLabel>
+                          <FormControl>
+                            <TemplateSelector value={field.value || 'classic'} onChange={field.onChange} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Danger Zone - Only for Owners */}
+                  {permissions.canEditSettings && (
+                    <AccordionItem value="danger-zone" className="border rounded-xl px-4 bg-destructive/5 border-destructive/20">
+                      <AccordionTrigger className="hover:no-underline py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-destructive/10 text-destructive">
+                            <AlertTriangle className="h-4 w-4" />
+                          </div>
+                          <div className="text-left">
+                            <div className="font-semibold text-destructive">Danger Zone</div>
+                            <div className="text-xs text-destructive/70">Delete Account</div>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-2 pb-6">
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Once you delete your account, there is no going back. All your data including invoices, customers, and stock items will be permanently deleted.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          onClick={async () => {
+                            const confirmDelete = confirm('Are you absolutely sure? This cannot be undone.');
+                            if (!confirmDelete) return;
+
+                            const doubleConfirm = confirm('FINAL WARNING: Type your email to confirm deletion.');
+                            if (!doubleConfirm) return;
+
+                            try {
+                              if (!user) throw new Error('No user found');
+                              await supabase.from('invoices').delete().eq('user_id', user.uid);
+                              await supabase.from('customers').delete().eq('user_id', user.uid);
+                              await supabase.from('stock_items').delete().eq('user_id', user.uid);
+                              await supabase.from('user_settings').delete().eq('user_id', user.uid);
+                              const { error } = await supabase.auth.admin.deleteUser(user.uid);
+                              if (error) throw error;
+                              toast({ title: 'Account Deleted' });
+                              await supabase.auth.signOut();
+                              router.push('/');
+                            } catch (e: any) {
+                              console.error('Delete error:', e);
+                              toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
+                            }
+                          }}
+                        >
+                          Delete Account Permanently
+                        </Button>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+
+                </Accordion>
+
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  {permissions.canEditSettings && (
+                    <Button type="submit" disabled={isPending} size="lg" className="flex-1 font-semibold shadow-lg hover:shadow-xl transition-all">
+                      {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Save Changes
                     </Button>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Accordion type="single" collapsible defaultValue="shop-details" className="w-full space-y-4">
-
-              {/* Shop Details Section */}
-              <AccordionItem value="shop-details" className="border rounded-xl px-4 bg-card">
-                <AccordionTrigger className="hover:no-underline py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
-                      <Package className="h-4 w-4" />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-semibold">Shop Details</div>
-                      <div className="text-xs text-muted-foreground">Name, Address, Contact</div>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-6 space-y-4">
-                  <FormField control={form.control} name="shopName" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Shop Name</FormLabel>
-                      <FormControl><Input placeholder="e.g., Jewellers Store" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="address" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl><Input placeholder="Full address" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="state" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <FormControl><Input placeholder="e.g., Rajasthan" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="pincode" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Pincode</FormLabel>
-                        <FormControl><Input placeholder="e.g., 302001" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="phoneNumber" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl><Input placeholder="e.g., 9876543210" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <div>
-                      <FormLabel>Email</FormLabel>
-                      <Input value={user?.email || ''} disabled readOnly className="bg-muted" />
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* Tax & Finance Section */}
-              <AccordionItem value="tax-finance" className="border rounded-xl px-4 bg-card">
-                <AccordionTrigger className="hover:no-underline py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">
-                      <DollarSign className="h-4 w-4" />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-semibold">Tax & Finance</div>
-                      <div className="text-xs text-muted-foreground">GST, PAN, Tax Rates</div>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-6 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="gstNumber" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>GST Number</FormLabel>
-                        <FormControl><Input placeholder="e.g., 08AAAAA0000A1Z5" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="panNumber" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>PAN Number</FormLabel>
-                        <FormControl><Input placeholder="e.g., AAAAA0000A" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="cgstRate" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Default CGST Rate (%)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="1.5" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="sgstRate" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Default SGST Rate (%)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="1.5" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* Invoice Settings */}
-              <AccordionItem value="invoice-settings" className="border rounded-xl px-4 bg-card">
-                <AccordionTrigger className="hover:no-underline py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400">
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-semibold">Invoice Settings</div>
-                      <div className="text-xs text-muted-foreground">Templates, Defaults</div>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-6 space-y-4">
-                  <FormField control={form.control} name="templateId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Invoice Template</FormLabel>
-                      <FormControl>
-                        <TemplateSelector value={field.value || 'classic'} onChange={field.onChange} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* Danger Zone */}
-              <AccordionItem value="danger-zone" className="border rounded-xl px-4 bg-destructive/5 border-destructive/20">
-                <AccordionTrigger className="hover:no-underline py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-destructive/10 text-destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-semibold text-destructive">Danger Zone</div>
-                      <div className="text-xs text-destructive/70">Delete Account</div>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-6">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Once you delete your account, there is no going back. All your data including invoices, customers, and stock items will be permanently deleted.
-                  </p>
                   <Button
                     type="button"
-                    variant="destructive"
+                    variant="outline"
+                    size="lg"
                     onClick={async () => {
-                      const confirmDelete = confirm('Are you absolutely sure? This cannot be undone.');
-                      if (!confirmDelete) return;
-                      // ... existing delete logic ...
-                      // For brevity, I'll just call the existing logic if I could, but I need to inline it or move it to a function.
-                      // I'll inline a simplified version or assume the previous handler is available if I didn't delete it.
-                      // Since I'm replacing the whole return, I need to re-implement the handler or call a function.
-                      // I'll re-implement the handler logic here.
-
-                      const doubleConfirm = confirm('FINAL WARNING: Type your email to confirm deletion.');
-                      if (!doubleConfirm) return;
-
-                      try {
-                        if (!user) throw new Error('No user found');
-                        await supabase.from('invoices').delete().eq('user_id', user.uid);
-                        await supabase.from('customers').delete().eq('user_id', user.uid);
-                        await supabase.from('stock_items').delete().eq('user_id', user.uid);
-                        await supabase.from('user_settings').delete().eq('user_id', user.uid);
-                        const { error } = await supabase.auth.admin.deleteUser(user.uid);
-                        if (error) throw error;
-                        toast({ title: 'Account Deleted' });
-                        await supabase.auth.signOut();
-                        router.push('/');
-                      } catch (e: any) {
-                        console.error('Delete error:', e);
-                        toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
-                      }
+                      await supabase.auth.signOut();
+                      toast({ title: 'Signed Out' });
                     }}
                   >
-                    Delete Account Permanently
+                    Sign Out
                   </Button>
-                </AccordionContent>
-              </AccordionItem>
+                </div>
 
-            </Accordion>
 
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button type="submit" disabled={isPending} size="lg" className="flex-1 font-semibold shadow-lg hover:shadow-xl transition-all">
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  toast({ title: 'Signed Out' });
-                }}
-              >
-                Sign Out
-              </Button>
-            </div>
 
-          </form>
-        </Form>
-      )}
+              </fieldset>
+            </form>
+          </Form >
+        </div>
+      )
+      }
 
       <CelebrationModal
         isOpen={showCelebration}
         onClose={() => setShowCelebration(false)}
       />
-    </MotionWrapper>
+    </MotionWrapper >
   );
 }

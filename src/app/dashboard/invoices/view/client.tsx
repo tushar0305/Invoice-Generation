@@ -125,6 +125,7 @@ export function ViewInvoiceClient() {
                 cgst: Number(inv.cgst) || 0,
                 status: inv.status,
                 grandTotal: Number(inv.grand_total) || 0,
+                createdByName: inv.created_by_name,
             } as Invoice;
             const { data: its, error: itErr } = await supabase
                 .from('invoice_items')
@@ -474,6 +475,9 @@ export function ViewInvoiceClient() {
                         <div className="w-full text-sm text-muted-foreground">
                             <p className="font-semibold">Amount in words:</p>
                             <p>{toWords(Math.round(grandTotal))} Rupees Only</p>
+                            {invoice.createdByName && (
+                                <p className="mt-2 text-xs text-muted-foreground">Created by: {invoice.createdByName}</p>
+                            )}
                         </div>
                     </CardFooter>
                 </Card>

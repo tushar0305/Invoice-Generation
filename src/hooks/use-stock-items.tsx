@@ -7,7 +7,7 @@ import { supabase } from '@/supabase/client';
 /**
  * Hook to fetch stock items for the current user (Supabase)
  */
-export function useStockItems(userId: string | null | undefined) {
+export function useStockItems(shopId: string | null | undefined) {
   const [items, setItems] = useState<StockItem[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
@@ -15,7 +15,7 @@ export function useStockItems(userId: string | null | undefined) {
   useEffect(() => {
     let aborted = false;
     async function run() {
-      if (!userId) {
+      if (!shopId) {
         setItems([]);
         setIsLoading(false);
         setError(null);
@@ -26,7 +26,7 @@ export function useStockItems(userId: string | null | undefined) {
       const { data, error } = await supabase
         .from('stock_items')
         .select('*')
-        .eq('user_id', userId)
+        .eq('shop_id', shopId)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       if (aborted) return;
@@ -40,7 +40,7 @@ export function useStockItems(userId: string | null | undefined) {
     }
     run();
     return () => { aborted = true; };
-  }, [userId]);
+  }, [shopId]);
 
   return { items: items ?? [], allItems: items ?? [], isLoading, error };
 }

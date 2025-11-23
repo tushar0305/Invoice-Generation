@@ -58,25 +58,31 @@ export default function LoginPage() {
         });
         if (error) throw error;
 
-        // Try to save initial shop name in user_settings.
+        // Create the shop immediately using the RPC
         try {
-          const currentUser = (await supabase.auth.getUser()).data.user;
-          if (currentUser?.id) {
-            await supabase
-              .from('user_settings')
-              .upsert({
-                user_id: currentUser.id,
-                shop_name: data.shopName.trim(),
-              }, { onConflict: 'user_id' });
+          const { data: sessionData } = await supabase.auth.getSession();
+
+          if (sessionData.session) {
+            const { error: createShopError } = await supabase.rpc('create_new_shop', {
+              p_shop_name: data.shopName.trim()
+            });
+
+            if (createShopError) {
+              console.error('Failed to create shop:', createShopError);
+              // Don't block signup success, but log it. 
+              // The user can create a shop later from dashboard.
+            } else {
+              console.log('✅ Shop created successfully during signup');
+            }
           } else {
+            // If no session (e.g. email verification required), we can't call RPC yet.
+            // Store in localStorage for potential post-verification handling (optional)
             if (typeof window !== 'undefined') {
               localStorage.setItem('pendingShopName', data.shopName.trim());
             }
           }
-        } catch (_) {
-          if (typeof window !== 'undefined') {
-            try { localStorage.setItem('pendingShopName', data.shopName.trim()); } catch { }
-          }
+        } catch (err) {
+          console.error('Error creating shop:', err);
         }
         toast({
           title: 'Account created!',

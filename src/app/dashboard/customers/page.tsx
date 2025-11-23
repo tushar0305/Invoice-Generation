@@ -29,22 +29,25 @@ type CustomerStats = {
     lastPurchase: string;
 };
 
+import { useActiveShop } from '@/hooks/use-active-shop';
+
 export default function CustomersPage() {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
     const { user } = useUser();
+    const { activeShop } = useActiveShop();
     const [invoices, setInvoices] = useState<Invoice[] | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     useEffect(() => {
         let active = true;
         const load = async () => {
-            if (!user) { setInvoices([]); setIsLoading(false); return; }
+            if (!activeShop?.id) { setInvoices([]); setIsLoading(false); return; }
             setIsLoading(true);
             const { data, error } = await supabase
                 .from('invoices')
                 .select('id, user_id, invoice_number, invoice_date, customer_name, grand_total, status')
-                .eq('user_id', user.uid);
+                .eq('shop_id', activeShop.id);
             if (!active) return;
             if (error) {
                 console.error(error);
@@ -72,7 +75,7 @@ export default function CustomersPage() {
         };
         load();
         return () => { active = false; };
-    }, [user?.uid]);
+    }, [activeShop?.id]);
 
     const customerData = useMemo(() => {
         if (!invoices) return {};

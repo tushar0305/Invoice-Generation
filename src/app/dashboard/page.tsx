@@ -1,5 +1,7 @@
 'use client';
 
+import { useActiveShop } from '@/hooks/use-active-shop';
+
 import { useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -42,6 +44,7 @@ type CustomerStats = {
 
 export default function DashboardPage() {
   const { user } = useUser();
+  const { activeShop, userRole, isLoading: shopLoading } = useActiveShop();
   const { toast } = useToast();
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
@@ -51,13 +54,18 @@ export default function DashboardPage() {
   useEffect(() => {
     let active = true;
     const load = async () => {
-      if (!user) { setInvoices([]); setSettings(null); setIsLoading(false); return; }
+      if (!user || !activeShop?.id) {
+        setInvoices([]);
+        setSettings(null);
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
       const [{ data: inv, error: invErr }, { data: setData, error: setErr }] = await Promise.all([
         supabase
           .from('invoices')
           .select('*')
-          .eq('user_id', user.uid),
+          .eq('shop_id', activeShop.id), // Changed from user_id to shop_id
         supabase
           .from('user_settings')
           .select('*')
@@ -72,6 +80,8 @@ export default function DashboardPage() {
         const mapped = (inv ?? []).map((r: any) => ({
           id: r.id,
           userId: r.user_id,
+          shopId: r.shop_id,
+          createdBy: r.created_by,
           invoiceNumber: r.invoice_number,
           customerName: r.customer_name,
           customerAddress: r.customer_address || '',
@@ -84,11 +94,14 @@ export default function DashboardPage() {
           cgst: Number(r.cgst) || 0,
           status: r.status,
           grandTotal: Number(r.grand_total) || 0,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
         } as Invoice));
         setInvoices(mapped);
       }
       if (setErr) {
-        console.error('Error fetching user settings:', setErr.message || setErr);
+        // user_settings table no longer exists - it's been replaced by shops table
+        // console.error('Error fetching user settings:', setErr.message || setErr);
         setSettings(null);
       } else if (setData) {
         setSettings({
@@ -123,7 +136,7 @@ export default function DashboardPage() {
     };
     applyPendingShopName();
     return () => { active = false; };
-  }, [user?.uid]);
+  }, [user?.uid, activeShop?.id]);
 
 
   const recentInvoices = useMemo(() => {
@@ -274,6 +287,8 @@ export default function DashboardPage() {
       const invoice: Invoice = {
         id: inv.id,
         userId: inv.user_id,
+        shopId: inv.shop_id,
+        createdBy: inv.created_by,
         invoiceNumber: inv.invoice_number,
         customerName: inv.customer_name,
         customerAddress: inv.customer_address || '',
@@ -358,10 +373,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* First-time User Welcome */}
-      <FirstTimeWelcome settings={settings} isLoading={isLoading} hasInvoices={!!(invoices && invoices.length > 0)} />
+      {/* Only show welcome banner to owners */}
+      {userRole?.role === 'owner' && (
+        <FirstTimeWelcome settings={settings} isLoading={isLoading} hasInvoices={!!(invoices && invoices.length > 0)} />
+      )}
 
-      {/* Shop Setup Banner */}
-      <ShopSetupBanner settings={settings} isLoading={isLoading} />
+      {/* Shop Setup Banner - Only show to owners */}
+      {userRole?.role === 'owner' && (
+        <ShopSetupBanner settings={settings} isLoading={isLoading} />
+      )}
 
       {/* Smart Hero Section */}
       <SmartHero

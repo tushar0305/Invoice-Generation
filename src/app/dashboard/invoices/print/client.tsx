@@ -108,6 +108,8 @@ export function PrintInvoiceClient() {
                 const mappedInv: Invoice = {
                     id: inv.id,
                     userId: inv.user_id,
+                    shopId: inv.shop_id,
+                    createdBy: inv.created_by,
                     invoiceNumber: inv.invoice_number,
                     customerName: inv.customer_name,
                     customerAddress: inv.customer_address || '',
