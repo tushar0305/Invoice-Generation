@@ -389,7 +389,7 @@ function DashboardLayoutInternal({
       </Sidebar>
       <SidebarInset>
         {/* Mobile Header */}
-        <header className="md:hidden fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] bg-background/80 backdrop-blur-xl border-b border-border/40 shadow-sm transition-all duration-300 h-[calc(env(safe-area-inset-top)+3.5rem)]">
+        <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] bg-background/80 backdrop-blur-xl border-b border-border/40 shadow-sm transition-all duration-300 h-[calc(env(safe-area-inset-top)+3.5rem)]">
           <Button variant="ghost" size="icon" onClick={() => setOpenMobile(true)} className="-ml-2 hover:bg-accent text-foreground">
             <Menu className="h-6 w-6" />
           </Button>
@@ -408,7 +408,7 @@ function DashboardLayoutInternal({
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 pb-20 md:pb-6 pt-[calc(env(safe-area-inset-top)+1.5rem)]">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 pb-20 md:pb-6 pt-[calc(env(safe-area-inset-top)+2.3rem)]">{children}</main>
         <FloatingNewInvoiceButton />
         <MobileBottomNav />
       </SidebarInset>
@@ -422,7 +422,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider style={{ "--header-top": "calc(env(safe-area-inset-top) + 3.5rem)" } as React.CSSProperties}>
+    <SidebarProvider style={{ "--header-top": "calc(env(safe-area-inset-top) + 2rem)" } as React.CSSProperties}>
       <DashboardLayoutInternal>{children}</DashboardLayoutInternal>
     </SidebarProvider>
   );
