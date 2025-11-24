@@ -86,28 +86,54 @@ export function ViewInvoiceClient() {
                 .single();
             if (invErr) { setInvoice(null); setItems(null); setLoading(false); return; }
 
-            // Fetch user settings using the user_id from the invoice
-            const { data: userSettings, error: settingsErr } = await supabase
-                .from('user_settings')
+            // Fetch shop details using the shop_id from the invoice
+            const { data: shopDetails, error: shopErr } = await supabase
+                .from('shops')
                 .select('*')
-                .eq('user_id', inv.user_id)
+                .eq('id', inv.shop_id)
                 .single();
 
-            if (!settingsErr && userSettings) {
+            if (!shopErr && shopDetails) {
                 setSettings({
-                    id: userSettings.user_id,
-                    userId: userSettings.user_id,
-                    cgstRate: Number(userSettings.cgst_rate) || 0,
-                    sgstRate: Number(userSettings.sgst_rate) || 0,
-                    shopName: userSettings.shop_name || 'Jewellers Store',
-                    gstNumber: userSettings.gst_number || '',
-                    panNumber: userSettings.pan_number || '',
-                    address: userSettings.address || '',
-                    state: userSettings.state || '',
-                    pincode: userSettings.pincode || '',
-                    phoneNumber: userSettings.phone_number || '',
-                    email: userSettings.email || '',
-                });
+                    id: shopDetails.id, // Use shop ID
+                    userId: inv.user_id,
+                    cgstRate: Number(shopDetails.cgst_rate) || 0,
+                    sgstRate: Number(shopDetails.sgst_rate) || 0,
+                    shopName: shopDetails.shop_name || 'Jewellers Store',
+                    gstNumber: shopDetails.gst_number || '',
+                    panNumber: shopDetails.pan_number || '',
+                    address: shopDetails.address || '',
+                    state: shopDetails.state || '',
+                    pincode: shopDetails.pincode || '',
+                    phoneNumber: shopDetails.phone_number || '',
+                    email: shopDetails.email || '',
+                    templateId: shopDetails.template_id || 'classic', // Add templateId
+                } as any);
+            } else {
+                // Fallback to user_settings if shop fetch fails or for legacy support
+                const { data: userSettings, error: settingsErr } = await supabase
+                    .from('user_settings')
+                    .select('*')
+                    .eq('user_id', inv.user_id)
+                    .single();
+
+                if (!settingsErr && userSettings) {
+                    setSettings({
+                        id: userSettings.user_id,
+                        userId: userSettings.user_id,
+                        cgstRate: Number(userSettings.cgst_rate) || 0,
+                        sgstRate: Number(userSettings.sgst_rate) || 0,
+                        shopName: userSettings.shop_name || 'Jewellers Store',
+                        gstNumber: userSettings.gst_number || '',
+                        panNumber: userSettings.pan_number || '',
+                        address: userSettings.address || '',
+                        state: userSettings.state || '',
+                        pincode: userSettings.pincode || '',
+                        phoneNumber: userSettings.phone_number || '',
+                        email: userSettings.email || '',
+                        templateId: userSettings.template_id || 'classic',
+                    } as any);
+                }
             }
 
             const mappedInv: Invoice = {

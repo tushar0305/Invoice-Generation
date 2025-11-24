@@ -188,6 +188,142 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
       headStyles: { fontStyle: 'bold' },
       margin: { left: 15, right: 15 },
     });
+  } else if (templateId === 'elegant') {
+    // === ELEGANT TEMPLATE ===
+    const GOLD_ACCENT = '#C5A059';
+    const DARK_TEXT = '#1A1A1A';
+
+    // Border Frame
+    doc.setDrawColor(GOLD_ACCENT);
+    doc.setLineWidth(0.5);
+    doc.rect(10, 10, 190, 277);
+    doc.setLineWidth(0.2);
+    doc.rect(12, 12, 186, 273);
+
+    // Header Center
+    doc.setFont('times', 'bold');
+    doc.setFontSize(26);
+    doc.setTextColor(DARK_TEXT);
+    doc.text(shopName, 105, 30, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor('#555555');
+    let yPos = 38;
+    doc.text(addressLines, 105, yPos, { align: 'center' });
+    yPos += (addressLines.length * 4);
+    if (settings?.phoneNumber) doc.text(settings.phoneNumber, 105, yPos, { align: 'center' });
+
+    // Decorative Line
+    yPos += 8;
+    doc.setDrawColor(GOLD_ACCENT);
+    doc.setLineWidth(0.5);
+    doc.line(70, yPos, 140, yPos);
+
+    // Invoice Title
+    yPos += 10;
+    doc.setFont('times', 'italic');
+    doc.setFontSize(14);
+    doc.setTextColor(GOLD_ACCENT);
+    doc.text('Tax Invoice', 105, yPos, { align: 'center' });
+
+    // Details Grid
+    yPos += 15;
+    doc.setFont('times', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(DARK_TEXT);
+
+    // Left Side
+    doc.text(`Billed To:`, 20, yPos);
+    doc.setFont('times', 'bold');
+    doc.text(invoice.customerName, 20, yPos + 5);
+    doc.setFont('times', 'normal');
+    if (invoice.customerAddress) doc.text(invoice.customerAddress, 20, yPos + 10);
+    if (invoice.customerPhone) doc.text(`Ph: ${invoice.customerPhone}`, 20, yPos + 15);
+
+    // Right Side
+    doc.text(`Invoice No: ${invoice.invoiceNumber}`, 140, yPos);
+    doc.text(`Date: ${invoiceDate}`, 140, yPos + 5);
+    if (settings?.gstNumber) doc.text(`GSTIN: ${settings.gstNumber}`, 140, yPos + 10);
+
+    // Table
+    autoTable(doc, {
+      startY: yPos + 25,
+      head: [['Item', 'Purity', 'Net Wt', 'Rate', 'Making', 'Total']],
+      body: items.map(item => [
+        item.description,
+        item.purity,
+        item.netWeight.toFixed(3),
+        formatCurrency(item.rate),
+        formatCurrency(item.netWeight * item.making),
+        formatCurrency((item.netWeight * item.rate) + (item.netWeight * item.making))
+      ]),
+      theme: 'plain',
+      styles: { font: 'times', fontSize: 10, textColor: DARK_TEXT },
+      headStyles: { fillColor: '#FAFAFA', textColor: GOLD_ACCENT, fontStyle: 'bold', halign: 'center' },
+      columnStyles: { 0: { halign: 'left' }, 5: { halign: 'right' } },
+      margin: { left: 20, right: 20 },
+    });
+
+  } else if (templateId === 'bold') {
+    // === BOLD TEMPLATE ===
+    const ACCENT_BLACK = '#000000';
+    const ACCENT_YELLOW = '#FFD700';
+
+    // Header Block
+    doc.setFillColor(ACCENT_BLACK);
+    doc.rect(0, 0, 210, 40, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(24);
+    doc.setTextColor('#FFFFFF');
+    doc.text(shopName, 15, 25);
+
+    doc.setFontSize(10);
+    doc.setTextColor('#CCCCCC');
+    doc.text('INVOICE', 195, 25, { align: 'right' });
+
+    // Shop Info
+    doc.setTextColor(ACCENT_BLACK);
+    doc.setFontSize(9);
+    let yPos = 50;
+    doc.text(addressLines, 15, yPos);
+    yPos += (addressLines.length * 4);
+    if (settings?.phoneNumber) doc.text(settings.phoneNumber, 15, yPos);
+
+    // Customer Block
+    doc.setFillColor(ACCENT_YELLOW);
+    doc.rect(15, yPos + 10, 180, 25, 'F');
+
+    doc.setFontSize(10);
+    doc.text('BILL TO:', 20, yPos + 18);
+    doc.setFontSize(12);
+    doc.text(invoice.customerName, 20, yPos + 26);
+
+    doc.setFontSize(10);
+    doc.text('DETAILS:', 120, yPos + 18);
+    doc.setFontSize(9);
+    doc.text(`No: ${invoice.invoiceNumber}`, 120, yPos + 24);
+    doc.text(`Date: ${invoiceDate}`, 120, yPos + 29);
+
+    // Table
+    autoTable(doc, {
+      startY: yPos + 45,
+      head: [['DESCRIPTION', 'PURITY', 'NET WT', 'RATE', 'MAKING', 'AMOUNT']],
+      body: items.map(item => [
+        item.description.toUpperCase(),
+        item.purity,
+        item.netWeight.toFixed(3),
+        formatCurrency(item.rate),
+        formatCurrency(item.netWeight * item.making),
+        formatCurrency((item.netWeight * item.rate) + (item.netWeight * item.making))
+      ]),
+      theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 9, textColor: ACCENT_BLACK },
+      headStyles: { fillColor: ACCENT_BLACK, textColor: '#FFFFFF', fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: '#F0F0F0' },
+      margin: { left: 15, right: 15 },
+    });
 
   } else {
     // === CLASSIC TEMPLATE (Default) ===
@@ -272,8 +408,11 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
   const lineHeight = 6;
 
   doc.setFont(templateId === 'minimal' ? 'courier' : 'helvetica', 'normal');
+  if (templateId === 'elegant') doc.setFont('times', 'normal');
+
   doc.setTextColor(templateId === 'modern' ? '#475569' : '#4B5563');
-  if (templateId === 'minimal') doc.setTextColor('#000000');
+  if (templateId === 'minimal' || templateId === 'bold') doc.setTextColor('#000000');
+  if (templateId === 'elegant') doc.setTextColor('#1A1A1A');
 
   doc.text('Subtotal:', rightColX, finalY);
   doc.text(formatCurrency(subtotal), valueX, finalY, { align: 'right' });
@@ -305,6 +444,14 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
     doc.setDrawColor('#1e293b');
     doc.setLineWidth(0.5);
     doc.line(rightColX - 5, finalY, 195, finalY);
+  } else if (templateId === 'elegant') {
+    doc.setDrawColor('#C5A059');
+    doc.setLineWidth(0.5);
+    doc.line(rightColX - 5, finalY, 195, finalY);
+  } else if (templateId === 'bold') {
+    doc.setDrawColor('#000000');
+    doc.setLineWidth(1);
+    doc.line(rightColX - 5, finalY, 195, finalY);
   } else {
     // Minimal
     doc.setDrawColor('#000000');
@@ -314,11 +461,12 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
   finalY += 6;
 
   doc.setFont(templateId === 'minimal' ? 'courier' : 'times', 'bold');
-  if (templateId === 'modern') doc.setFont('helvetica', 'bold');
+  if (templateId === 'modern' || templateId === 'bold') doc.setFont('helvetica', 'bold');
 
   doc.setFontSize(12);
   doc.setTextColor(templateId === 'modern' ? '#1e293b' : '#0F172A');
-  if (templateId === 'minimal') doc.setTextColor('#000000');
+  if (templateId === 'minimal' || templateId === 'bold') doc.setTextColor('#000000');
+  if (templateId === 'elegant') doc.setTextColor('#C5A059');
 
   doc.text('Grand Total:', rightColX, finalY);
   doc.text(formatCurrency(invoice.grandTotal), valueX, finalY, { align: 'right' });

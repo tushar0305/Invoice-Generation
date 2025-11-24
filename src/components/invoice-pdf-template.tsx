@@ -391,6 +391,191 @@ const MinimalTemplate = ({ invoice, items, settings, calculations, shopDetails }
   );
 };
 
+// --- Elegant Template ---
+const ElegantTemplate = ({ invoice, items, settings, calculations, shopDetails }: TemplateProps) => {
+  return (
+    <div className="mx-auto w-full max-w-[210mm] bg-[#FAFAFA] text-[#1A1A1A] text-[10px] leading-[1.5] p-8 font-serif border border-gray-200 relative">
+      {/* Border Frame */}
+      <div className="absolute inset-4 border border-[#C5A059] pointer-events-none"></div>
+      <div className="absolute inset-[18px] border-[0.5px] border-[#C5A059] pointer-events-none"></div>
+
+      {/* Header */}
+      <div className="text-center mt-6 mb-8">
+        <h1 className="text-3xl font-bold text-[#1A1A1A] mb-2">{shopDetails.name}</h1>
+        <div className="text-[#555] space-y-1 text-[9px]">
+          <p>{shopDetails.address}</p>
+          {shopDetails.state && <p>{shopDetails.state} {shopDetails.pincode}</p>}
+          <p>{shopDetails.phone} | {shopDetails.email}</p>
+        </div>
+
+        <div className="flex justify-center my-4">
+          <div className="h-[1px] w-24 bg-[#C5A059]"></div>
+        </div>
+
+        <h2 className="text-xl italic text-[#C5A059] font-medium">Tax Invoice</h2>
+      </div>
+
+      {/* Details */}
+      <div className="flex justify-between px-8 mb-8">
+        <div>
+          <h3 className="font-bold text-[#1A1A1A] mb-1">Billed To:</h3>
+          <p className="font-bold text-lg">{invoice.customerName}</p>
+          <p className="text-[#555]">{invoice.customerAddress}</p>
+          <p className="text-[#555]">{invoice.customerPhone}</p>
+        </div>
+        <div className="text-right">
+          <p><span className="font-bold">Invoice No:</span> {invoice.invoiceNumber}</p>
+          <p><span className="font-bold">Date:</span> {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</p>
+          {shopDetails.gst && <p><span className="font-bold">GSTIN:</span> {shopDetails.gst}</p>}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="px-6 mb-8">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-[#FAFAFA] border-b border-[#C5A059]">
+              <th className="py-2 text-left text-[#C5A059] font-bold">Item</th>
+              <th className="py-2 text-center text-[#C5A059] font-bold">Purity</th>
+              <th className="py-2 text-right text-[#C5A059] font-bold">Net Wt</th>
+              <th className="py-2 text-right text-[#C5A059] font-bold">Rate</th>
+              <th className="py-2 text-right text-[#C5A059] font-bold">Making</th>
+              <th className="py-2 text-right text-[#C5A059] font-bold">Total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {calculations.safeItems.map((item) => {
+              const makingTotal = item.netWeight * item.making;
+              const lineTotal = item.netWeight * item.rate + makingTotal;
+              return (
+                <tr key={item.id}>
+                  <td className="py-3">{item.description}</td>
+                  <td className="py-3 text-center">{item.purity}</td>
+                  <td className="py-3 text-right">{f2(item.netWeight)}</td>
+                  <td className="py-3 text-right">{f2(item.rate)}</td>
+                  <td className="py-3 text-right">{f2(makingTotal)}</td>
+                  <td className="py-3 text-right font-medium">{f2(lineTotal)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Totals */}
+      <div className="flex justify-end px-8 mb-12">
+        <div className="w-64 space-y-2">
+          <div className="flex justify-between text-[#555]">
+            <span>Subtotal</span>
+            <span>{f2(calculations.subtotal)}</span>
+          </div>
+          <div className="flex justify-between text-[#555] border-b border-gray-200 pb-2">
+            <span>Tax</span>
+            <span>{f2(calculations.cgst + calculations.sgst)}</span>
+          </div>
+          <div className="flex justify-between text-[#C5A059] font-bold text-lg pt-1">
+            <span>Grand Total</span>
+            <span>{f2(calculations.finalAmount)}</span>
+          </div>
+          <p className="text-[9px] text-right italic text-[#555] mt-2">
+            {toWords(calculations.finalAmount)} Rupees Only
+          </p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center text-[9px] text-[#888] absolute bottom-8 left-0 right-0">
+        <p>Thank you for your patronage.</p>
+      </div>
+    </div>
+  );
+};
+
+// --- Bold Template ---
+const BoldTemplate = ({ invoice, items, settings, calculations, shopDetails }: TemplateProps) => {
+  return (
+    <div className="mx-auto w-full max-w-[210mm] bg-white text-black text-[10px] leading-[1.5] font-sans">
+      {/* Header Block */}
+      <div className="bg-black text-white p-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tighter">{shopDetails.name}</h1>
+        </div>
+        <div className="text-right">
+          <h2 className="text-xl font-bold text-[#888]">INVOICE</h2>
+        </div>
+      </div>
+
+      <div className="p-8">
+        {/* Info */}
+        <div className="mb-8 text-[#333]">
+          <p>{shopDetails.address}</p>
+          <p>{shopDetails.phone}</p>
+        </div>
+
+        {/* Customer Block */}
+        <div className="bg-[#FFD700] p-6 rounded-none mb-8 flex justify-between items-start">
+          <div>
+            <p className="text-xs font-bold mb-2">BILL TO:</p>
+            <p className="text-xl font-bold">{invoice.customerName}</p>
+            <p className="text-sm">{invoice.customerAddress}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-bold mb-1">DETAILS:</p>
+            <p className="font-mono">NO: {invoice.invoiceNumber}</p>
+            <p className="font-mono">DATE: {format(new Date(invoice.invoiceDate), 'dd-MM-yyyy')}</p>
+          </div>
+        </div>
+
+        {/* Table */}
+        <table className="w-full mb-8">
+          <thead>
+            <tr className="bg-black text-white">
+              <th className="py-3 px-4 text-left font-bold">DESCRIPTION</th>
+              <th className="py-3 px-4 text-center font-bold">PURITY</th>
+              <th className="py-3 px-4 text-right font-bold">NET WT</th>
+              <th className="py-3 px-4 text-right font-bold">RATE</th>
+              <th className="py-3 px-4 text-right font-bold">AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {calculations.safeItems.map((item, i) => {
+              const makingTotal = item.netWeight * item.making;
+              const lineTotal = item.netWeight * item.rate + makingTotal;
+              return (
+                <tr key={item.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="py-3 px-4 font-medium">{item.description.toUpperCase()}</td>
+                  <td className="py-3 px-4 text-center">{item.purity}</td>
+                  <td className="py-3 px-4 text-right">{f2(item.netWeight)}</td>
+                  <td className="py-3 px-4 text-right">{f2(item.rate)}</td>
+                  <td className="py-3 px-4 text-right font-bold">{f2(lineTotal)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* Totals */}
+        <div className="flex justify-end">
+          <div className="w-1/2 border-t-4 border-black pt-4">
+            <div className="flex justify-between mb-2 font-medium">
+              <span>SUBTOTAL</span>
+              <span>{f2(calculations.subtotal)}</span>
+            </div>
+            <div className="flex justify-between mb-4 font-medium">
+              <span>TAXES</span>
+              <span>{f2(calculations.cgst + calculations.sgst)}</span>
+            </div>
+            <div className="flex justify-between text-2xl font-black bg-black text-white p-4">
+              <span>TOTAL</span>
+              <span>{f2(calculations.finalAmount)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function InvoicePdfTemplate({ invoice, items, settings }: Props) {
   const safeItems = items ?? [];
 
@@ -438,6 +623,10 @@ export default function InvoicePdfTemplate({ invoice, items, settings }: Props) 
       return <ModernTemplate invoice={invoice} items={items} settings={settings} calculations={calculations} shopDetails={shopDetails} />;
     case 'minimal':
       return <MinimalTemplate invoice={invoice} items={items} settings={settings} calculations={calculations} shopDetails={shopDetails} />;
+    case 'elegant':
+      return <ElegantTemplate invoice={invoice} items={items} settings={settings} calculations={calculations} shopDetails={shopDetails} />;
+    case 'bold':
+      return <BoldTemplate invoice={invoice} items={items} settings={settings} calculations={calculations} shopDetails={shopDetails} />;
     default:
       return <ClassicTemplate invoice={invoice} items={items} settings={settings} calculations={calculations} shopDetails={shopDetails} />;
   }

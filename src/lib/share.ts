@@ -184,26 +184,57 @@ export async function shareInvoicePdfById(
 
     let resolvedSettings: Partial<UserSettings> | null = settings || null;
     if (!resolvedSettings) {
-      const { data: userSettings } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', inv.user_id)
-        .single();
-      if (userSettings) {
-        resolvedSettings = {
-          id: userSettings.user_id,
-          userId: userSettings.user_id,
-          cgstRate: Number(userSettings.cgst_rate) || 0,
-          sgstRate: Number(userSettings.sgst_rate) || 0,
-          shopName: userSettings.shop_name || 'Jewellers Store',
-          gstNumber: userSettings.gst_number || '',
-          panNumber: userSettings.pan_number || '',
-          address: userSettings.address || '',
-          state: userSettings.state || '',
-          pincode: userSettings.pincode || '',
-          phoneNumber: userSettings.phone_number || '',
-          email: userSettings.email || '',
-        } as Partial<UserSettings>;
+      // Try fetching from shops table first using invoice.shopId
+      if (invoice.shopId) {
+        const { data: shopDetails } = await supabase
+          .from('shops')
+          .select('*')
+          .eq('id', invoice.shopId)
+          .single();
+
+        if (shopDetails) {
+          resolvedSettings = {
+            id: shopDetails.id,
+            userId: invoice.userId,
+            cgstRate: Number(shopDetails.cgst_rate) || 0,
+            sgstRate: Number(shopDetails.sgst_rate) || 0,
+            shopName: shopDetails.shop_name || 'Jewellers Store',
+            gstNumber: shopDetails.gst_number || '',
+            panNumber: shopDetails.pan_number || '',
+            address: shopDetails.address || '',
+            state: shopDetails.state || '',
+            pincode: shopDetails.pincode || '',
+            phoneNumber: shopDetails.phone_number || '',
+            email: shopDetails.email || '',
+            templateId: shopDetails.template_id || 'classic',
+          } as any;
+        }
+      }
+
+      // Fallback to user_settings if shop fetch failed or no shopId
+      if (!resolvedSettings) {
+        const { data: userSettings } = await supabase
+          .from('user_settings')
+          .select('*')
+          .eq('user_id', inv.user_id)
+          .single();
+        if (userSettings) {
+          resolvedSettings = {
+            id: userSettings.user_id,
+            userId: userSettings.user_id,
+            cgstRate: Number(userSettings.cgst_rate) || 0,
+            sgstRate: Number(userSettings.sgst_rate) || 0,
+            shopName: userSettings.shop_name || 'Jewellers Store',
+            gstNumber: userSettings.gst_number || '',
+            panNumber: userSettings.pan_number || '',
+            address: userSettings.address || '',
+            state: userSettings.state || '',
+            pincode: userSettings.pincode || '',
+            phoneNumber: userSettings.phone_number || '',
+            email: userSettings.email || '',
+            templateId: userSettings.template_id || 'classic',
+          } as any;
+        }
       }
     }
 

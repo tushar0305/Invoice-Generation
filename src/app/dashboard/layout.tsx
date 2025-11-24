@@ -39,6 +39,7 @@ import {
   HelpCircle,
   CalendarDays,
   Command,
+  TrendingUp,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -271,6 +272,7 @@ function DashboardLayoutInternal({
     if (pathname === '/dashboard/templates') return 'Templates';
     if (pathname === '/dashboard/settings') return 'Settings';
     if (pathname === '/dashboard/calculator') return 'Calculator';
+    if (pathname === '/dashboard/insights') return 'Sales Insights';
     return 'Dashboard';
   };
 
@@ -308,6 +310,18 @@ function DashboardLayoutInternal({
                   >
                     <LayoutDashboard className="h-[18px] w-[18px] transition-transform duration-200 group-hover/item:scale-105 opacity-70 data-[active=true]:opacity-100 data-[active=true]:text-primary" data-active={pathname === '/dashboard'} />
                     <span className="text-sm font-normal opacity-70 data-[active=true]:opacity-100 data-[active=true]:font-medium transition-all duration-200" data-active={pathname === '/dashboard'}>Dashboard</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => handleNav('/dashboard/insights')}
+                    isActive={pathname === '/dashboard/insights'}
+                    tooltip="Sales Insights"
+                    className="group/item h-9 px-3 rounded-lg data-[active=true]:bg-primary/10 hover:bg-white/[0.03] transition-all duration-200"
+                  >
+                    <TrendingUp className="h-[18px] w-[18px] transition-transform duration-200 group-hover/item:scale-105 opacity-70 data-[active=true]:opacity-100 data-[active=true]:text-primary" data-active={pathname === '/dashboard/insights'} />
+                    <span className="text-sm font-normal opacity-70 data-[active=true]:opacity-100 data-[active=true]:font-medium transition-all duration-200" data-active={pathname === '/dashboard/insights'}>Sales Insights</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -444,7 +458,7 @@ function DashboardLayoutInternal({
                 <ThemeToggle />
               </div>
             </SidebarMenuItem>
-            
+
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={handleSignOut}
@@ -502,47 +516,32 @@ function DashboardLayoutInternal({
                   className="h-9 w-full rounded-lg bg-white/5 border border-white/10 pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all"
                   readOnly
                 />
-              </div>
-
-              {/* Notifications + Theme Toggle */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative h-9 w-9 rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <Bell className="h-[18px] w-[18px]" />
-                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
-                </Button>
-
-                <ThemeToggle />
-
-                <UserNav />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <span className="text-[10px] font-medium text-muted-foreground/40 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">⌘K</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Right: Shop Info & User */}
-          <div className="flex items-center gap-4">
-            {/* Notifications */}
-            <div className="flex items-center gap-1 pr-2 border-r border-white/5">
-              <button className="p-2 rounded-full hover:bg-white/5 text-muted-foreground/60 hover:text-foreground transition-colors relative group">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 border-2 border-background"></span>
-                <span className="absolute top-full mt-2 right-0 bg-popover text-popover-foreground text-xs px-2 py-1 rounded border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Notifications</span>
-              </button>
-            </div>
+          {/* Right: Actions & User */}
+          <div className="flex items-center gap-3">
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
-            {/* Active Shop Badge */}
-            {activeShop && (
-              <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-default">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-400/80 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></div>
-                <span className="text-sm font-medium text-muted-foreground/80">{activeShop.shopName}</span>
-              </div>
-            )}
+            {/* Notifications */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative h-9 w-9 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <Bell className="h-[18px] w-[18px]" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+            </Button>
+
+            <div className="h-4 w-px bg-white/10 mx-1"></div>
 
             {/* User Navigation */}
-            <UserNav minimal />
+            <UserNav />
           </div>
         </header>
 

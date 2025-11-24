@@ -71,14 +71,12 @@ export function TemplatePreviewCard({ templateId }: TemplatePreviewCardProps) {
     const settings = { ...dummySettings, templateId };
 
     return (
-        <div className="w-full h-full overflow-hidden bg-white relative">
-            <div className="origin-top-left transform scale-[0.25] w-[210mm] h-[297mm] pointer-events-none select-none">
-                <InvoicePdfTemplate
-                    invoice={dummyInvoice}
-                    items={dummyItems}
-                    settings={settings}
-                />
-            </div>
+        <div className="w-[210mm] h-[297mm] bg-white shadow-sm">
+            <InvoicePdfTemplate
+                invoice={dummyInvoice}
+                items={dummyItems}
+                settings={settings}
+            />
         </div>
     );
 }
