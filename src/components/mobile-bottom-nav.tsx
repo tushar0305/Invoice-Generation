@@ -25,7 +25,7 @@ export function MobileBottomNav() {
   return (
     <div className="print:hidden fixed inset-x-0 bottom-0 z-40 md:hidden pointer-events-none">
       {/* Floating container with padding from edges */}
-      <div className="relative w-full px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+      <div className="relative w-full px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         <nav
           className="pointer-events-auto relative overflow-hidden rounded-3xl bg-background/40 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/40 border border-border/10 shadow-2xl shadow-black/10"
           style={{

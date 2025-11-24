@@ -114,18 +114,7 @@ export default function StockPage() {
   useEffect(() => { loadItems(); }, [user?.uid, activeShop?.id]);
 
   const handleEdit = (item: StockItem) => {
-    // For now, we can reuse the new page for editing by passing ID, but let's keep it simple first
-    // Or we can implement edit page later. For now, maybe just show a toast or redirect to edit page (if we create one)
-    // Since the user asked for "create stock item page", I'll focus on creation.
-    // But to avoid breaking edit, I should probably keep the sheet for edit OR create an edit page.
-    // Given the instructions, I'll redirect to a hypothetical edit page or just show "Edit feature coming soon" if I strictly follow "create page".
-    // Actually, a better UX is to use the same form page for editing.
-    // Let's just implement delete for now and maybe leave edit as a TODO or implement it if easy.
-    // Wait, I removed the sheet form logic. So I MUST implement edit page or lose functionality.
-    // I'll just redirect to /dashboard/stock/edit/[id] (which I haven't created yet) or just disable edit for a moment.
-    // To be safe and deliver value, I will create the edit page logic in the same 'new' page or a separate one.
-    // For this step, I'll just focus on the list view and delete.
-    toast({ description: "Edit functionality will be moved to a separate page soon." });
+    router.push(`/dashboard/stock/new?edit=${item.id}`);
   };
 
   const handleDelete = (itemId: string) => {

@@ -186,7 +186,7 @@ export default function DashboardPage() {
   }, [invoices]);
 
   return (
-    <div className="space-y-8 pb-24 md:pb-8">
+    <div className="space-y-6 md:space-y-8 pb-24 md:pb-8 w-full">
       {/* First-time User Welcome */}
       {userRole?.role === 'owner' && (
         <FirstTimeWelcome settings={settings} isLoading={isLoading} hasInvoices={!!(invoices && invoices.length > 0)} />
@@ -201,27 +201,27 @@ export default function DashboardPage() {
       <SmartHero
         invoices={invoices}
         revenueMoM={revenueMoM}
-        totalRevenue={totalPaidThisMonth}
+        totalRevenue={totalPaidThisMonth ?? 0}
       />
 
       {/* Gold & Silver Ticker */}
       <GoldSilverTicker />
 
       {/* Quick Actions Grid */}
-      <MotionWrapper className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <MotionWrapper className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[
-          { label: 'New Invoice', icon: Plus, href: '/dashboard/invoices/new', color: 'text-primary' },
-          { label: 'View Customers', icon: Users, href: '/dashboard/customers', color: 'text-blue-400' },
-          { label: 'Add Stock', icon: PackagePlus, href: '/dashboard/stock', color: 'text-emerald-400' },
-          { label: 'Sales Insights', icon: TrendingUp, href: '/dashboard/insights', color: 'text-purple-400' },
+          { label: 'New Invoice', icon: Plus, href: '/dashboard/invoices/new', color: 'text-gold-600 dark:text-gold-400' },
+          { label: 'View Customers', icon: Users, href: '/dashboard/customers', color: 'text-blue-500 dark:text-blue-400' },
+          { label: 'Add Stock', icon: PackagePlus, href: '/dashboard/stock', color: 'text-emerald-500 dark:text-emerald-400' },
+          { label: 'Sales Insights', icon: TrendingUp, href: '/dashboard/insights', color: 'text-purple-500 dark:text-purple-400' },
         ].map((action, i) => (
-          <Link key={i} href={action.href}>
-            <Card className="glass-card hover:bg-white/5 transition-all cursor-pointer h-full border-white/5 hover:border-primary/20 group">
-              <CardContent className="p-4 flex flex-col items-center justify-center gap-3 text-center h-full">
-                <div className={cn("p-3 rounded-full bg-white/5 group-hover:scale-110 transition-transform duration-300", action.color)}>
-                  <action.icon className="h-6 w-6" />
+          <Link key={i} href={action.href} className="focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 rounded-xl stagger-item">
+            <Card className="glass-card card-lift hover:bg-gold-500/5 cursor-pointer h-full border-white/10 hover:border-gold-500/30 group min-h-[120px]">
+              <CardContent className="p-3 md:p-4 flex flex-col items-center justify-center gap-2 md:gap-3 text-center h-full min-h-[110px]">
+                <div className={cn("p-3 rounded-full bg-white/5 group-hover:scale-110 transition-all duration-300 border border-white/5 group-hover:border-gold-500/20 group-hover:shadow-md min-w-[44px] min-h-[44px] flex items-center justify-center", action.color)}>
+                  <action.icon className="h-5 w-5 md:h-6 md:w-6" />
                 </div>
-                <span className="font-medium text-sm">{action.label}</span>
+                <span className="font-bold text-xs md:text-sm font-heading tracking-wide">{action.label}</span>
               </CardContent>
             </Card>
           </Link>
@@ -230,14 +230,14 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Recent Invoices */}
-        <Card className="glass-card border-white/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-medium">Recent Activity</CardTitle>
-            <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => router.push('/dashboard/invoices')}>
+        <Card className="glass-panel card-lift border-gold-500/10">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-gold-500/5">
+            <CardTitle className="text-lg font-heading font-bold text-foreground">Recent Activity</CardTitle>
+            <Button variant="ghost" size="sm" className="text-xs h-8 text-muted-foreground hover:text-gold-500 transition-colors" onClick={() => router.push('/dashboard/invoices')}>
               View All <ArrowRight className="ml-1 h-3 w-3" />
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             {isLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map(i => (
@@ -251,26 +251,33 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : recentInvoices.length > 0 ? (
-              <div className="space-y-4">
-                {recentInvoices.map(invoice => (
-                  <div key={invoice.id} className="flex items-center justify-between group cursor-pointer" onClick={() => router.push(`/dashboard/invoices/view?id=${invoice.id}`)}>
+              <div className="space-y-2">
+                {recentInvoices.map((invoice, index) => (
+                  <div
+                    key={invoice.id}
+                    className="flex items-center justify-between group cursor-pointer p-3 rounded-lg hover:bg-gold-500/5 transition-all duration-200 border border-transparent hover:border-gold-500/10 stagger-item"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                    onClick={() => router.push(`/dashboard/invoices/view?id=${invoice.id}`)}
+                  >
                     <div className="flex items-center gap-4">
                       <div className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center transition-colors",
-                        invoice.status === 'paid' ? "bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20" : "bg-amber-500/10 text-amber-500 group-hover:bg-amber-500/20"
+                        "h-10 w-10 rounded-full flex items-center justify-center transition-all duration-200 border",
+                        invoice.status === 'paid'
+                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 group-hover:border-emerald-500/30 group-hover:shadow-sm"
+                          : "bg-amber-500/10 text-amber-500 border-amber-500/20 group-hover:border-amber-500/30 group-hover:shadow-sm"
                       )}>
                         <FileText className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{invoice.customerName}</p>
+                        <p className="font-semibold text-sm text-foreground group-hover:text-gold-600 transition-colors">{invoice.customerName}</p>
                         <p className="text-xs text-muted-foreground">{invoice.invoiceNumber} • {new Date(invoice.invoiceDate).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-sm">{formatCurrency(invoice.grandTotal)}</p>
+                      <p className="font-bold text-sm text-foreground">{formatCurrency(invoice.grandTotal)}</p>
                       <span className={cn(
-                        "text-[10px] capitalize",
-                        invoice.status === 'paid' ? "text-emerald-500" : "text-amber-500"
+                        "text-[10px] capitalize font-medium px-2 py-0.5 rounded-full",
+                        invoice.status === 'paid' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
                       )}>
                         {invoice.status}
                       </span>
@@ -279,56 +286,63 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground text-sm">No recent activity</div>
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No recent invoices</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Due Invoices / Alerts */}
-        <Card className="glass-card border-white/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-medium">Pending Actions</CardTitle>
-            {dueInvoices.length > 0 && (
-              <Badge variant="destructive" className="text-[10px] h-5 px-1.5">
-                {dueInvoices.length} Due
-              </Badge>
-            )}
+        {/* Pending Actions */}
+        <Card className="glass-panel card-lift border-gold-500/10">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-gold-500/5">
+            <CardTitle className="text-lg font-heading font-bold text-foreground">Pending Actions</CardTitle>
+            <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+              {dueInvoices.length}
+            </Badge>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             {isLoading ? (
               <div className="space-y-4">
-                {[1, 2].map(i => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
+                {[1, 2].map(i => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-3 w-1/4" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : dueInvoices.length > 0 ? (
-              <div className="space-y-3">
-                {dueInvoices.map(inv => (
-                  <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+              <div className="space-y-2">
+                {dueInvoices.map((invoice, index) => (
+                  <div
+                    key={invoice.id}
+                    className="flex items-center justify-between group cursor-pointer p-3 rounded-lg hover:bg-amber-500/5 transition-all duration-200 border border-transparent hover:border-amber-500/10 stagger-item"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                    onClick={() => router.push(`/dashboard/invoices/view?id=${invoice.id}`)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center bg-amber-500/10 text-amber-500 border border-amber-500/20 group-hover:border-amber-500/30 group-hover:shadow-sm transition-all duration-200">
+                        <Eye className="h-5 w-5" />
+                      </div>
                       <div>
-                        <p className="font-medium text-sm">{inv.customerName}</p>
-                        <p className="text-xs text-red-400">Due: {formatCurrency(inv.grandTotal)}</p>
+                        <p className="font-semibold text-sm text-foreground group-hover:text-amber-600 transition-colors">{invoice.customerName}</p>
+                        <p className="text-xs text-muted-foreground">{invoice.invoiceNumber}</p>
                       </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-red-500/20 hover:text-red-400" onClick={() => shareInvoicePdfById(inv.id, inv, settings || undefined)}>
-                        <MessageCircle className="h-4 w-4" />
-                      </Button>
-                      <Link href={`/dashboard/invoices/view?id=${inv.id}`}>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/10">
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                    <div className="text-right">
+                      <p className="font-bold text-sm text-foreground">{formatCurrency(invoice.grandTotal)}</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2">
-                <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                  <TrendingUp className="h-6 w-6" />
-                </div>
-                <p className="text-sm">All caught up! No pending actions.</p>
+              <div className="text-center py-8 text-muted-foreground">
+                <Eye className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No pending invoices</p>
               </div>
             )}
           </CardContent>

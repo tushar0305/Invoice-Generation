@@ -1,153 +1,96 @@
 'use client';
 
-import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { PlusCircle, Settings, AlertTriangle, TrendingDown, CheckCircle2, ArrowRight, Search } from 'lucide-react';
-import Link from 'next/link';
-import { useUser } from '@/supabase/provider';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/supabase/client';
-import { Invoice } from '@/lib/definitions';
-import { formatCurrency } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { TrendingUp, TrendingDown, DollarSign, Calendar } from 'lucide-react';
+import type { Invoice } from '@/lib/definitions';
 
 interface SmartHeroProps {
     invoices: Invoice[] | null;
-    revenueMoM: number | null;
     totalRevenue: number;
+    revenueMoM: number | null;
 }
 
-export function SmartHero({ invoices, revenueMoM, totalRevenue }: SmartHeroProps) {
-    const { user } = useUser();
-    const router = useRouter();
-    const [shopName, setShopName] = useState<string | null>(null);
-    const [query, setQuery] = useState('');
-
-    useEffect(() => {
-        let active = true;
-        const load = async () => {
-            if (!user?.uid) { setShopName(null); return; }
-            const { data } = await supabase
-                .from('user_settings')
-                .select('shop_name')
-                .eq('user_id', user.uid)
-                .maybeSingle();
-            if (!active) return;
-            setShopName(data?.shop_name || null);
-        };
-        load();
-        return () => { active = false; };
-    }, [user?.uid]);
-
-    // Determine Business State
-    const dueInvoices = invoices?.filter(inv => inv.status === 'due') || [];
-    const overdueCount = dueInvoices.length;
-
-    let state: 'critical' | 'warning' | 'good' = 'good';
-    let message = "All invoices up-to-date. Create a new one?";
-    let actionLabel = "New Invoice";
-    let actionLink = "/dashboard/invoices/new";
-    let Icon = CheckCircle2;
-    let gradient = "from-emerald-600 to-emerald-900";
-    let accentColor = "text-emerald-400";
-
-    if (overdueCount >= 5) {
-        state = 'critical';
-        message = `${overdueCount} invoices overdue - Send reminders`;
-        actionLabel = "View Overdue";
-        actionLink = "/dashboard?section=due"; // We can implement scrolling to due section later
-        Icon = AlertTriangle;
-        gradient = "from-red-600 to-red-900";
-        accentColor = "text-red-400";
-    } else if (revenueMoM !== null && revenueMoM < 0) {
-        state = 'warning';
-        message = `Revenue ${Math.abs(revenueMoM).toFixed(0)}% below last month`;
-        actionLabel = "Analyze Sales";
-        actionLink = "/dashboard/invoices";
-        Icon = TrendingDown;
-        gradient = "from-amber-600 to-amber-900";
-        accentColor = "text-amber-400";
-    }
+export function SmartHero({ invoices, totalRevenue, revenueMoM }: SmartHeroProps) {
+    const isPositiveTrend = (revenueMoM ?? 0) >= 0;
 
     return (
-        <MotionWrapper className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} px-4 pb-6 pt-4 md:p-8 text-white shadow-2xl border border-white/10 mt-0 md:mt-0`}>
-            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
-            <div className={`absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl`}></div>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-background to-primary/5 border border-border shadow-gold-lg p-6 md:p-8"
+        >
+            {/* Decorative Background Elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-0" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/5 rounded-full blur-3xl -z-0" />
 
-            <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-                <div className="space-y-4 flex-1">
-                    <FadeIn>
-                        <div className={`flex items-center gap-2 ${accentColor} text-sm font-medium uppercase tracking-wider`}>
-                            <span className={`h-1.5 w-1.5 rounded-full bg-current animate-pulse`}></span>
-                            {state === 'critical' ? 'Action Required' : state === 'warning' ? 'Insight Alert' : 'Status Update'}
-                        </div>
-                        <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-white">
-                            {shopName ? shopName : `Welcome, ${user?.email?.split('@')[0] || 'Jeweller'}`}
-                        </h1>
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                {/* Revenue Section */}
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                        <DollarSign className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                            This Month's Revenue
+                        </span>
+                    </div>
 
-                        {/* Smart Insight Card */}
-                        <div className="mt-6 inline-flex items-center gap-4 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 max-w-md">
-                            <div className={`p-2 rounded-full bg-white/10 ${accentColor}`}>
-                                <Icon className="h-6 w-6" />
-                            </div>
-                            <div>
-                                <p className="font-medium text-lg leading-tight text-white">{message}</p>
-                                {state === 'good' && (
-                                    <p className="text-sm text-white/70 mt-1">Great job keeping up!</p>
-                                )}
-                            </div>
-                            {state !== 'good' && (
-                                <Button size="sm" variant="secondary" className="ml-auto whitespace-nowrap" asChild>
-                                    <Link href={actionLink}>
-                                        {actionLabel} <ArrowRight className="ml-2 h-4 w-4" />
-                                    </Link>
-                                </Button>
+                    <div className="flex items-baseline gap-3">
+                        <h2 className="text-3xl md:text-4xl font-bold text-foreground font-mono">
+                            ₹{totalRevenue.toLocaleString('en-IN')}
+                        </h2>
+
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className={`flex items-center gap-1 px-3 py-1 rounded-full ${isPositiveTrend
+                                ? 'bg-green-500/10 text-green-600'
+                                : 'bg-red-500/10 text-red-600'
+                                }`}
+                        >
+                            {isPositiveTrend ? (
+                                <TrendingUp className="h-4 w-4" />
+                            ) : (
+                                <TrendingDown className="h-4 w-4" />
                             )}
-                        </div>
+                            <span className="text-sm font-bold">
+                                {Math.abs(revenueMoM ?? 0).toFixed(1)}%
+                            </span>
+                        </motion.div>
+                    </div>
 
-                        {/* Mobile Search for Invoices */}
-                        <div className="mt-4 md:hidden">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white z-10" />
-                                <Input
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            const q = query.trim();
-                                            if (q) router.push(`/dashboard/invoices?q=${encodeURIComponent(q)}`);
-                                            else router.push('/dashboard/invoices');
-                                        }
-                                    }}
-                                    placeholder="Search invoices (name or number)"
-                                    className="pl-10 h-11 bg-white/10 placeholder:text-white/80 text-white border-white/20 focus:bg-white/20"
-                                />
+                    <p className="mt-2 text-sm text-muted-foreground">
+                        {isPositiveTrend ? '🎉 Great growth!' : '📊 Keep pushing!'}
+                        <span className="ml-1">from last month</span>
+                    </p>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="flex gap-6">
+                    <div className="text-center">
+                        <div className="text-2xl md:text-3xl font-bold text-primary font-mono">
+                            {invoices?.length || 0}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">
+                            Invoices
+                        </div>
+                    </div>
+
+                    <div className="w-px bg-border" />
+
+                    <div className="text-center">
+                        <div className="flex items-center gap-1 text-primary">
+                            <Calendar className="h-5 w-5" />
+                            <div className="text-2xl md:text-3xl font-bold font-mono">
+                                {new Date().toLocaleDateString('en-IN', { month: 'short' })}
                             </div>
                         </div>
-                    </FadeIn>
-                </div>
-                <div className="hidden md:flex items-center gap-3">
-                    <Button
-                        asChild
-                        variant="secondary"
-                        className="bg-white/10 hover:bg-white/20 border border-white/20 text-white shadow-sm backdrop-blur-sm"
-                    >
-                        <Link href="/dashboard/invoices/new">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Create Invoice
-                        </Link>
-                    </Button>
-                    <Button
-                        asChild
-                        variant="outline"
-                        className="bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white hover:border-white/50"
-                    >
-                        <Link href="/dashboard/settings">
-                            <Settings className="mr-2 h-4 w-4" /> Settings
-                        </Link>
-                    </Button>
+                        <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">
+                            Current Period
+                        </div>
+                    </div>
                 </div>
             </div>
-        </MotionWrapper>
+        </motion.div>
     );
 }

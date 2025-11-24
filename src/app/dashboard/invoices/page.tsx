@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, FilePlus2, Trash2, Loader2, Calendar as CalendarIcon, Download, RefreshCw, Share2 } from 'lucide-react';
+import { Search, FilePlus2, Trash2, Loader2, Calendar as CalendarIcon, Download, RefreshCw, Share2, Scan } from 'lucide-react';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -563,7 +563,14 @@ export default function InvoicesPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button asChild size="sm" className="h-9 gap-2 ml-auto shrink-0 bg-primary hover:bg-primary/90">
+          <Button asChild size="sm" variant="outline" className="h-9 gap-2 shrink-0 border-primary/20 hover:bg-primary/5">
+            <Link href="/dashboard/invoices/scan">
+              <Scan className="h-3.5 w-3.5" />
+              <span className="text-xs">Scan</span>
+            </Link>
+          </Button>
+
+          <Button asChild size="sm" className="h-9 gap-2 shrink-0 bg-primary hover:bg-primary/90">
             <Link href="/dashboard/invoices/new">
               <FilePlus2 className="h-3.5 w-3.5" />
               <span className="text-xs">New</span>

@@ -13,7 +13,8 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     Package,
-    MoreHorizontal
+    MoreHorizontal,
+    RefreshCw
 } from 'lucide-react';
 import {
     AreaChart,
@@ -120,27 +121,32 @@ export default function InsightsPage() {
         if (isLoading || !invoices.length) return null;
 
         const now = new Date();
-        const currentMonthStart = startOfMonth(now);
-        const currentMonthEnd = endOfMonth(now);
-        const lastMonthStart = startOfMonth(subMonths(now, 1));
-        const lastMonthEnd = endOfMonth(subMonths(now, 1));
+        const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+
+        // Current period
+        const currentPeriodStart = subDays(now, days);
+        const currentPeriodEnd = now;
+
+        // Previous period (same duration)
+        const previousPeriodStart = subDays(currentPeriodStart, days);
+        const previousPeriodEnd = currentPeriodStart;
 
         const paidInvoices = invoices.filter(inv => inv.status === 'paid');
 
         // Helper
         const inRange = (d: Date, start: Date, end: Date) => isWithinInterval(d, { start, end });
 
-        // Current Month
-        const thisMonthPaid = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), currentMonthStart, currentMonthEnd));
-        const revenueThisMonth = thisMonthPaid.reduce((sum, inv) => sum + inv.grandTotal, 0);
-        const salesCountThisMonth = thisMonthPaid.length;
-        const newCustomersThisMonth = new Set(thisMonthPaid.map(inv => inv.customerName)).size;
+        // Current Period
+        const currentPeriodPaid = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), currentPeriodStart, currentPeriodEnd));
+        const revenueCurrent = currentPeriodPaid.reduce((sum, inv) => sum + inv.grandTotal, 0);
+        const salesCountCurrent = currentPeriodPaid.length;
+        const newCustomersCurrent = new Set(currentPeriodPaid.map(inv => inv.customerName)).size;
 
-        // Last Month
-        const lastMonthPaid = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), lastMonthStart, lastMonthEnd));
-        const revenueLastMonth = lastMonthPaid.reduce((sum, inv) => sum + inv.grandTotal, 0);
-        const salesCountLastMonth = lastMonthPaid.length;
-        const newCustomersLastMonth = new Set(lastMonthPaid.map(inv => inv.customerName)).size;
+        // Previous Period
+        const previousPeriodPaid = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), previousPeriodStart, previousPeriodEnd));
+        const revenuePrevious = previousPeriodPaid.reduce((sum, inv) => sum + inv.grandTotal, 0);
+        const salesCountPrevious = previousPeriodPaid.length;
+        const newCustomersPrevious = new Set(previousPeriodPaid.map(inv => inv.customerName)).size;
 
         // Growth Calcs
         const calcGrowth = (current: number, previous: number) => {
@@ -148,18 +154,18 @@ export default function InsightsPage() {
             return ((current - previous) / previous) * 100;
         };
 
-        const revenueGrowth = calcGrowth(revenueThisMonth, revenueLastMonth);
-        const salesGrowth = calcGrowth(salesCountThisMonth, salesCountLastMonth);
-        const customersGrowth = calcGrowth(newCustomersThisMonth, newCustomersLastMonth);
+        const revenueGrowth = calcGrowth(revenueCurrent, revenuePrevious);
+        const salesGrowth = calcGrowth(salesCountCurrent, salesCountPrevious);
+        const customersGrowth = calcGrowth(newCustomersCurrent, newCustomersPrevious);
 
-        const avgOrderValue = salesCountThisMonth > 0 ? revenueThisMonth / salesCountThisMonth : 0;
-        const avgOrderValueLast = salesCountLastMonth > 0 ? revenueLastMonth / salesCountLastMonth : 0;
+        const avgOrderValue = salesCountCurrent > 0 ? revenueCurrent / salesCountCurrent : 0;
+        const avgOrderValueLast = salesCountPrevious > 0 ? revenuePrevious / salesCountPrevious : 0;
         const aovGrowth = calcGrowth(avgOrderValue, avgOrderValueLast);
 
         return [
             {
                 title: 'Total Revenue',
-                value: formatCurrency(revenueThisMonth),
+                value: formatCurrency(revenueCurrent),
                 change: `${revenueGrowth > 0 ? '+' : ''}${revenueGrowth.toFixed(1)}%`,
                 trend: revenueGrowth >= 0 ? 'up' : 'down',
                 icon: DollarSign,
@@ -167,7 +173,7 @@ export default function InsightsPage() {
             },
             {
                 title: 'Total Sales',
-                value: salesCountThisMonth.toString(),
+                value: salesCountCurrent.toString(),
                 change: `${salesGrowth > 0 ? '+' : ''}${salesGrowth.toFixed(1)}%`,
                 trend: salesGrowth >= 0 ? 'up' : 'down',
                 icon: ShoppingBag,
@@ -183,34 +189,46 @@ export default function InsightsPage() {
             },
             {
                 title: 'Active Customers',
-                value: newCustomersThisMonth.toString(),
+                value: newCustomersCurrent.toString(),
                 change: `${customersGrowth > 0 ? '+' : ''}${customersGrowth.toFixed(1)}%`,
                 trend: customersGrowth >= 0 ? 'up' : 'down',
                 icon: Users,
                 color: 'text-pink-400'
             },
         ];
-    }, [invoices, isLoading]);
+    }, [invoices, isLoading, timeRange]);
 
     const chartData = useMemo(() => {
         if (isLoading || !invoices.length) return [];
 
-        // Group by month for the area chart (last 6 months)
-        const data = [];
-        for (let i = 5; i >= 0; i--) {
-            const date = subMonths(new Date(), i);
-            const monthStart = startOfMonth(date);
-            const monthEnd = endOfMonth(date);
-            const monthLabel = format(date, 'MMM');
+        const now = new Date();
+        const paidInvoices = invoices.filter(inv => inv.status === 'paid');
 
-            const monthlyRevenue = invoices
-                .filter(inv => inv.status === 'paid' && isWithinInterval(new Date(inv.invoiceDate), { start: monthStart, end: monthEnd }))
+        // Determine the number of days based on timeRange
+        const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+
+        const data = [];
+        for (let i = days - 1; i >= 0; i--) {
+            const date = subDays(now, i);
+            const dayStart = startOfDay(date);
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // Format label based on range
+            const label = days === 7
+                ? format(date, 'EEE')  // Mon, Tue, etc
+                : days === 30
+                    ? format(date, 'MMM d')  // Nov 1, Nov 2, etc
+                    : format(date, 'MMM d');  // Nov 1, Nov 2, etc
+
+            const dailyRevenue = paidInvoices
+                .filter(inv => isWithinInterval(new Date(inv.invoiceDate), { start: dayStart, end: dayEnd }))
                 .reduce((sum, inv) => sum + inv.grandTotal, 0);
 
-            data.push({ name: monthLabel, value: monthlyRevenue });
+            data.push({ name: label, value: dailyRevenue });
         }
         return data;
-    }, [invoices, isLoading]);
+    }, [invoices, isLoading, timeRange]);
 
     const categoryData = useMemo(() => {
         if (isLoading || !invoiceItems.length) return [];
@@ -313,21 +331,35 @@ export default function InsightsPage() {
                         Overview of your shop's performance and growth.
                     </p>
                 </div>
-                <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10 w-full md:w-fit overflow-x-auto">
-                    {['7d', '30d', '90d'].map((range) => (
-                        <button
-                            key={range}
-                            onClick={() => setTimeRange(range)}
-                            className={cn(
-                                "flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap",
-                                timeRange === range
-                                    ? "bg-primary/20 text-primary shadow-[0_0_10px_rgba(0,240,255,0.2)]"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                            )}
-                        >
-                            {range}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setIsLoading(true);
+                            window.location.reload();
+                        }}
+                        className="border-border hover:bg-white/5 gap-2"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        Refresh
+                    </Button>
+                    <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10 w-full md:w-fit overflow-x-auto">
+                        {['7d', '30d', '90d'].map((range) => (
+                            <button
+                                key={range}
+                                onClick={() => setTimeRange(range)}
+                                className={cn(
+                                    "flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap",
+                                    timeRange === range
+                                        ? "bg-primary/20 text-primary shadow-[0_0_10px_rgba(0,240,255,0.2)]"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                )}
+                            >
+                                {range}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -371,7 +403,7 @@ export default function InsightsPage() {
                         <Card className="glass-card border-white/10 h-full">
                             <CardHeader>
                                 <CardTitle>Revenue Trend</CardTitle>
-                                <CardDescription>Monthly revenue performance (Last 6 Months)</CardDescription>
+                                <CardDescription>Daily revenue performance ({timeRange === '7d' ? 'Last 7 Days' : timeRange === '30d' ? 'Last 30 Days' : 'Last 90 Days'})</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="h-[250px] md:h-[300px] w-full">

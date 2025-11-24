@@ -1,7 +1,7 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'export',
+  // output: 'export', // Disabled to allow API routes (SSR/Edge)
   images: {
     unoptimized: true,
     remotePatterns: [

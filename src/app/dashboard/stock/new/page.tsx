@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useTransition, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
 import { useActiveShop } from '@/hooks/use-active-shop';
@@ -42,10 +42,13 @@ type StockItemFormValues = z.infer<typeof stockItemSchema>;
 
 export default function NewStockItemPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const editId = searchParams.get('edit');
     const { toast } = useToast();
     const { user } = useUser();
     const { activeShop } = useActiveShop();
     const [isPending, startTransition] = useTransition();
+    const [isLoading, setIsLoading] = useState(!!editId);
 
     const form = useForm<StockItemFormValues>({
         resolver: zodResolver(stockItemSchema),
@@ -63,6 +66,47 @@ export default function NewStockItemPage() {
         },
     });
 
+    // Load existing item if editing
+    useEffect(() => {
+        if (!editId || !activeShop?.id) return;
+
+        const loadItem = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('stock_items')
+                    .select('*')
+                    .eq('id', editId)
+                    .eq('shop_id', activeShop.id)
+                    .single();
+
+                if (error) throw error;
+
+                if (data) {
+                    form.reset({
+                        name: data.name,
+                        description: data.description || '',
+                        purity: data.purity,
+                        basePrice: Number(data.base_price) || 0,
+                        baseWeight: Number(data.base_weight) || 0,
+                        makingChargePerGram: Number(data.making_charge_per_gram) || 0,
+                        quantity: Number(data.quantity) || 0,
+                        unit: data.unit,
+                        category: data.category || '',
+                        isActive: data.is_active ?? true,
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading stock item:', err);
+                toast({ variant: 'destructive', title: 'Error', description: 'Failed to load item' });
+                router.push('/dashboard/stock');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadItem();
+    }, [editId, activeShop?.id, form, router, toast]);
+
     const onSubmit = (data: StockItemFormValues) => {
         if (!user) {
             toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in' });
@@ -77,9 +121,6 @@ export default function NewStockItemPage() {
                 }
 
                 const itemDb: any = {
-                    user_id: user.uid,
-                    shop_id: activeShop.id,
-                    created_by: user.uid,
                     updated_by: user.uid,
                     name: data.name,
                     description: data.description || null,
@@ -94,14 +135,34 @@ export default function NewStockItemPage() {
                     updated_at: new Date().toISOString(),
                 };
 
-                const { error } = await supabase
-                    .from('stock_items')
-                    .insert([itemDb]);
+                if (editId) {
+                    // Update existing item
+                    const { error } = await supabase
+                        .from('stock_items')
+                        .update(itemDb)
+                        .eq('id', editId)
+                        .eq('shop_id', activeShop.id);
 
-                if (error) throw error;
+                    if (error) throw error;
 
-                haptics.notification(NotificationType.Success);
-                toast({ title: 'Success', description: 'Stock item added successfully' });
+                    haptics.notification(NotificationType.Success);
+                    toast({ title: 'Success', description: 'Stock item updated successfully' });
+                } else {
+                    // Create new item
+                    itemDb.user_id = user.uid;
+                    itemDb.shop_id = activeShop.id;
+                    itemDb.created_by = user.uid;
+
+                    const { error } = await supabase
+                        .from('stock_items')
+                        .insert([itemDb]);
+
+                    if (error) throw error;
+
+                    haptics.notification(NotificationType.Success);
+                    toast({ title: 'Success', description: 'Stock item added successfully' });
+                }
+
                 router.push('/dashboard/stock');
             } catch (err: any) {
                 console.error('Error saving stock item:', err);
@@ -121,99 +182,50 @@ export default function NewStockItemPage() {
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-heading font-bold text-primary">Add New Stock Item</h1>
-                    <p className="text-muted-foreground text-sm">Enter the details for the new stock item.</p>
+                    <h1 className="text-2xl font-heading font-bold text-primary">
+                        {editId ? 'Edit Stock Item' : 'Add New Stock Item'}
+                    </h1>
+                    <p className="text-muted-foreground text-sm">
+                        {editId ? 'Update the details for this stock item.' : 'Enter the details for the new stock item.'}
+                    </p>
                 </div>
             </div>
 
-            <Card className="glass-card border-t-4 border-t-primary">
-                <CardContent className="p-6">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="name"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Item Name *</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g., Gold Ring" {...field} className="bg-background/50" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+            {isLoading ? (
+                <Card className="glass-card border-t-4 border-t-primary">
+                    <CardContent className="p-6 flex items-center justify-center h-64">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </CardContent>
+                </Card>
+            ) : (
+                <Card className="glass-card border-t-4 border-t-primary">
+                    <CardContent className="p-6">
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                <div className="space-y-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Item Name *</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="e.g., Gold Ring" {...field} className="bg-background/50" />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="purity"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Purity *</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="e.g., 22K" {...field} className="bg-background/50" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="category"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Category</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="e.g., Gold" {...field} className="bg-background/50" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="quantity"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Quantity *</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" inputMode="numeric" placeholder="0" {...field} className="bg-background/50" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="unit"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Unit *</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="gram" {...field} className="bg-background/50" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
-                                    <h4 className="text-sm font-semibold text-muted-foreground mb-2">Pricing Details</h4>
                                     <div className="grid grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
-                                            name="basePrice"
+                                            name="purity"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Base Price (₹)</FormLabel>
+                                                    <FormLabel>Purity *</FormLabel>
                                                     <FormControl>
-                                                        <Input type="number" inputMode="decimal" placeholder="0.00" {...field} className="bg-background" />
+                                                        <Input placeholder="e.g., 22K" {...field} className="bg-background/50" />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -221,43 +233,104 @@ export default function NewStockItemPage() {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="makingChargePerGram"
+                                            name="category"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Making Charge (₹)</FormLabel>
+                                                    <FormLabel>Category</FormLabel>
                                                     <FormControl>
-                                                        <Input type="number" inputMode="decimal" placeholder="0.00" {...field} className="bg-background" />
+                                                        <Input placeholder="e.g., Gold" {...field} className="bg-background/50" />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
                                     </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="quantity"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Quantity *</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" inputMode="numeric" placeholder="0" {...field} className="bg-background/50" />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="unit"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Unit *</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="gram" {...field} className="bg-background/50" />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                    <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-4">
+                                        <h4 className="text-sm font-semibold text-muted-foreground mb-2">Pricing Details</h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <FormField
+                                                control={form.control}
+                                                name="basePrice"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Base Price (₹)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" inputMode="decimal" placeholder="0.00" {...field} className="bg-background" />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="makingChargePerGram"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Making Charge (₹)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" inputMode="decimal" placeholder="0.00" {...field} className="bg-background" />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <FormField
+                                        control={form.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Description</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Optional details..." {...field} className="bg-background/50" />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                 </div>
 
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Description</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Optional details..." {...field} className="bg-background/50" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <Button type="submit" disabled={isPending} variant="premium" className="w-full h-12 text-lg">
-                                {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                                Add Stock Item
-                            </Button>
-                        </form>
-                    </Form>
-                </CardContent>
-            </Card>
+                                <Button type="submit" disabled={isPending} variant="premium" className="w-full h-12 text-lg">
+                                    {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                                    {editId ? 'Update Stock Item' : 'Add Stock Item'}
+                                </Button>
+                            </form>
+                        </Form>
+                    </CardContent>
+                </Card>
+            )}
         </MotionWrapper>
     );
 }
