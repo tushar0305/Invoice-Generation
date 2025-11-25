@@ -6,11 +6,54 @@ import { ActiveShopProvider } from '@/hooks/use-active-shop';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { QueryProvider } from '@/components/query-provider';
 import { ThemeProvider } from '@/components/theme-provider';
+import { InstallPrompt } from '@/components/install-prompt';
 
 export const metadata: Metadata = {
-  title: 'SwarnaVyapar',
+  metadataBase: new URL('https://swarnavyapar.in'),
+  title: {
+    default: 'SwarnaVyapar - Premium Jewellery Management Software',
+    template: '%s | SwarnaVyapar',
+  },
   description:
-    'Invoice generation and management for SwarnaVyapar.',
+    'India\'s most premium jewellery management suite. Create professional invoices, track stock, and manage customers with elegance. Designed for modern jewellers.',
+  keywords: [
+    'jewellery software',
+    'jewellery billing software',
+    'gold invoice generator',
+    'jewellery inventory management',
+    'hallmarking software',
+    'gst billing software for jewellers',
+    'swarnavyapar',
+  ],
+  authors: [{ name: 'SwarnaVyapar Team' }],
+  creator: 'SwarnaVyapar',
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    url: 'https://swarnavyapar.in',
+    title: 'SwarnaVyapar - Premium Jewellery Management Software',
+    description:
+      'Transform your jewellery business with SwarnaVyapar. Elegant invoicing, smart inventory tracking, and seamless customer management.',
+    siteName: 'SwarnaVyapar',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SwarnaVyapar - Premium Jewellery Management Software',
+    description:
+      'Transform your jewellery business with SwarnaVyapar. Elegant invoicing, smart inventory tracking, and seamless customer management.',
+    creator: '@swarnavyapar',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export const viewport: Viewport = {
@@ -20,6 +63,7 @@ export const viewport: Viewport = {
   minimumScale: 1,
   userScalable: true,
   viewportFit: 'cover',
+  themeColor: '#ffffff',
 };
 
 export default function RootLayout({
@@ -48,6 +92,7 @@ export default function RootLayout({
               <AuthWrapper>
                 <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
                   {children}
+                  <InstallPrompt />
                 </ThemeProvider>
               </AuthWrapper>
               <Toaster />

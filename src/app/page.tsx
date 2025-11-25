@@ -11,8 +11,32 @@ import { Testimonials } from '@/components/landing/testimonials';
 import { Footer } from '@/components/landing/footer';
 
 export default function LandingPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'SwarnaVyapar',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    url: 'https://swarnavyapar.in',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'INR',
+    },
+    description: 'Premium jewellery management software for modern jewellers.',
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.8',
+      ratingCount: '500',
+    },
+  };
+
   return (
-    <main className="min-h-screen bg-white text-slate-900 selection:bg-gold-200">
+    <main className="flex min-h-screen flex-col bg-white overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
       <HeroSection />
       <ValueProp />
