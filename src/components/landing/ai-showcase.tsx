@@ -1,30 +1,92 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Bot, Mic, Send, Sparkles, BarChart3, Play } from 'lucide-react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { Bot, Mic, Send, Sparkles, BarChart3, Play, TrendingUp, MessageCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useRef } from 'react';
 
 export function AIShowcase() {
+    const sectionRef = useRef<HTMLElement>(null);
+    const { scrollYProgress } = useScroll({
+        target: sectionRef,
+        offset: ["start end", "end start"]
+    });
+
+    const y = useTransform(scrollYProgress, [0, 1], [100, -100]);
+    const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
+
     return (
-        <section id="ai-features" className="py-24 relative bg-slate-50 overflow-hidden">
-            <div className="container px-4 md:px-6 mx-auto">
-                <div className="text-center max-w-3xl mx-auto mb-20">
+        <section ref={sectionRef} id="ai-features" className="py-32 bg-gradient-to-b from-white via-slate-50 to-white relative overflow-hidden">
+            {/* Enhanced Background Effects */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_var(--tw-gradient-stops))] from-blue-100/40 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,_var(--tw-gradient-stops))] from-purple-100/30 via-transparent to-transparent" />
+
+            {/* Floating Grid Pattern */}
+            <motion.div
+                style={{ y }}
+                className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.02]"
+            />
+
+            {/* Animated Sparkles */}
+            <motion.div
+                animate={{
+                    scale: [1, 1.2, 1],
+                    rotate: [0, 180, 360]
+                }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="absolute top-20 right-20 text-gold-400/20"
+            >
+                <Sparkles className="h-32 w-32" />
+            </motion.div>
+            <motion.div
+                animate={{
+                    scale: [1, 1.1, 1],
+                    rotate: [360, 180, 0]
+                }}
+                transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                className="absolute bottom-20 left-20 text-blue-400/20"
+            >
+                <Zap className="h-24 w-24" />
+            </motion.div>
+
+            <div className="container px-4 md:px-6 relative z-10 mx-auto">
+                <motion.div
+                    style={{ opacity }}
+                    className="text-center max-w-4xl mx-auto mb-20 flex flex-col items-center"
+                >
                     <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 text-blue-700 text-sm font-semibold mb-6 backdrop-blur-sm"
+                    >
+                        <Bot className="h-4 w-4" />
+                        <span>Powered by Advanced AI</span>
+                    </motion.div>
+
+                    <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-medium mb-4"
+                        transition={{ duration: 0.6, delay: 0.1 }}
+                        className="text-4xl md:text-6xl font-bold tracking-tight mb-6 text-slate-900 font-heading text-center"
                     >
-                        <Sparkles className="h-3.5 w-3.5" />
-                        <span>Powered by Advanced AI</span>
-                    </motion.div>
-                    <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-slate-900 font-heading">
-                        Your Personal Business Assistant
-                    </h2>
-                    <p className="text-lg text-slate-600">
-                        Don't just manage your business, talk to it. SwarnaVyapar's AI understands your jewellery business language.
-                    </p>
-                </div>
+                        Your Personal Business{' '}
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 animate-shimmer bg-[length:200%_100%]">
+                            AI Assistant
+                        </span>
+                    </motion.h2>
+                    <motion.p
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                        className="text-lg md:text-xl text-slate-600 leading-relaxed text-center max-w-3xl"
+                    >
+                        Chat with your business in plain language. Get instant insights, create invoices by voice, and make data-driven decisions — all powered by cutting-edge AI.
+                    </motion.p>
+                </motion.div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center max-w-7xl mx-auto">
                     {/* Feature 1: AI Chatbot */}
@@ -80,7 +142,10 @@ export function AIShowcase() {
                                     className="w-full bg-slate-50 border border-slate-200 rounded-full px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                     readOnly
                                 />
-                                <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-blue-600 rounded-full text-white">
+                                <button
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-blue-600 rounded-full text-white"
+                                    aria-label="Send message"
+                                >
                                     <Send className="h-3.5 w-3.5" />
                                 </button>
                             </div>

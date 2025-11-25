@@ -20,10 +20,10 @@ export function Footer() {
                             India's most premium jewellery management suite. Designed for elegance, built for business growth.
                         </p>
                         <div className="flex gap-4 pt-2">
-                            <Link href="#" className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-gold-600 hover:bg-gold-50 transition-all duration-300 hover:scale-110"><Facebook className="h-5 w-5" /></Link>
-                            <Link href="#" className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-gold-600 hover:bg-gold-50 transition-all duration-300 hover:scale-110"><Twitter className="h-5 w-5" /></Link>
-                            <Link href="#" className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-gold-600 hover:bg-gold-50 transition-all duration-300 hover:scale-110"><Instagram className="h-5 w-5" /></Link>
-                            <Link href="#" className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-gold-600 hover:bg-gold-50 transition-all duration-300 hover:scale-110"><Linkedin className="h-5 w-5" /></Link>
+                            <Link href="#" className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-gold-600 hover:bg-gold-50 transition-all duration-300 hover:scale-110" aria-label="Follow us on Facebook"><Facebook className="h-5 w-5" /></Link>
+                            <Link href="#" className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-gold-600 hover:bg-gold-50 transition-all duration-300 hover:scale-110" aria-label="Follow us on Twitter"><Twitter className="h-5 w-5" /></Link>
+                            <Link href="#" className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-gold-600 hover:bg-gold-50 transition-all duration-300 hover:scale-110" aria-label="Follow us on Instagram"><Instagram className="h-5 w-5" /></Link>
+                            <Link href="#" className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-gold-600 hover:bg-gold-50 transition-all duration-300 hover:scale-110" aria-label="Follow us on LinkedIn"><Linkedin className="h-5 w-5" /></Link>
                         </div>
                     </div>
 

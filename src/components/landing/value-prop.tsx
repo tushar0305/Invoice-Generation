@@ -1,11 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Calculator, BarChart3, TrendingUp, ShieldCheck } from 'lucide-react';
+import { Zap, TrendingUp, Wallet, Shield } from 'lucide-react';
 
 const features = [
     {
-        icon: Calculator,
+        icon: Zap,
         title: 'Smart Billing',
         description: 'Generate GST-compliant invoices for gold, silver, and diamonds in seconds.',
     },
@@ -15,12 +15,12 @@ const features = [
         description: 'Auto-sync with market rates. Never sell at a loss with real-time updates.',
     },
     {
-        icon: BarChart3,
-        title: 'AI Analytics',
-        description: 'Predict sales trends and optimize inventory with smart insights.',
+        icon: Wallet,
+        title: 'Loan Tracker',
+        description: 'Manage gold loans and customer credit seamlessly with automated tracking.',
     },
     {
-        icon: ShieldCheck,
+        icon: Shield,
         title: 'Bank-Grade Security',
         description: 'Your data is encrypted and backed up daily on secure cloud servers.',
     },
@@ -29,8 +29,8 @@ const features = [
 export function ValueProp() {
     return (
         <section className="py-24 relative z-10 bg-white">
-            <div className="container px-4 md:px-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="container px-4 md:px-6 mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto justify-items-center">
                     {features.map((feature, index) => (
                         <motion.div
                             key={index}

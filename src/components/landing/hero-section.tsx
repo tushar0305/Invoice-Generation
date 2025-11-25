@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Play, Sparkles, Bot, Mic } from 'lucide-react';
+import { ArrowRight, Play, Sparkles, Bot, Mic, ScanLine, Gift } from 'lucide-react';
 import Link from 'next/link';
 
 export function HeroSection() {
@@ -14,6 +14,7 @@ export function HeroSection() {
 
             {/* Animated Floating Elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {/* AI Assistant */}
                 <motion.div
                     animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
@@ -28,6 +29,7 @@ export function HeroSection() {
                     </div>
                 </motion.div>
 
+                {/* Voice Invoice */}
                 <motion.div
                     animate={{ y: [0, 20, 0], rotate: [0, -5, 0] }}
                     transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
@@ -38,6 +40,36 @@ export function HeroSection() {
                         <div>
                             <p className="text-xs text-muted-foreground">Voice Invoice</p>
                             <p className="text-sm font-bold">"Add 22k Ring..."</p>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Invoice Scanner */}
+                <motion.div
+                    animate={{ y: [0, -15, 0], rotate: [0, 3, 0], x: [0, 10, 0] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                    className="absolute top-[45%] left-8 md:left-16 p-4 bg-white rounded-2xl shadow-xl border border-black/5 hidden lg:block"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600"><ScanLine className="h-6 w-6" /></div>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Smart Scan</p>
+                            <p className="text-sm font-bold">Paper → Digital ✨</p>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Loyalty Program */}
+                <motion.div
+                    animate={{ y: [0, 18, 0], rotate: [0, -4, 0], x: [0, -8, 0] }}
+                    transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+                    className="absolute bottom-[20%] right-8 md:right-16 p-4 bg-white rounded-2xl shadow-xl border border-black/5 hidden lg:block"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-rose-50 rounded-lg text-rose-600"><Gift className="h-6 w-6" /></div>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Loyalty Rewards</p>
+                            <p className="text-sm font-bold">+500 pts earned 🎁</p>
                         </div>
                     </div>
                 </motion.div>

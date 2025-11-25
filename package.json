@@ -94,6 +94,7 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.0.4",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
@@ -104,5 +105,19 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "browserslist": {
+    "production": [
+      "chrome >= 90",
+      "edge >= 90",
+      "firefox >= 88",
+      "safari >= 14",
+      "ios >= 14"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
