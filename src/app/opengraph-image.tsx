@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
+export const dynamic = 'force-static';
 
 export const alt = 'SwarnaVyapar - Premium Jewellery Management';
 export const size = {
