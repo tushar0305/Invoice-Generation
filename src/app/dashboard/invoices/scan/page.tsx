@@ -152,55 +152,15 @@ export default function ScanInvoicePage() {
     const handleProcessInvoice = async () => {
         if (!image) return;
 
-        setIsProcessing(true);
-        try {
-            const response = await fetch('/api/scan-invoice', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ image }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to process invoice');
-            }
-
-            const data = await response.json();
-
-            if (data.error) {
-                throw new Error(data.error);
-            }
-
-            // Check if in demo mode
-            if (data.demo) {
-                toast({
-                    title: "Demo Mode",
-                    description: data.message || "Using sample data for demonstration",
-                    variant: "default"
-                });
-            } else {
-                toast({
-                    title: "Processing Complete",
-                    description: "Invoice data extracted successfully!",
-                });
-            }
-
-            // Store extracted data in localStorage for the invoice form
-            localStorage.setItem('scannedInvoiceData', JSON.stringify(data.extractedData));
-
-            // Navigate to new invoice page
-            router.push('/dashboard/invoices/new?from=scan');
-        } catch (error: any) {
-            console.error('Processing error:', error);
-            toast({
-                title: "Processing Failed",
-                description: error.message || "Could not extract data. Please try again manually.",
-                variant: "destructive"
-            });
-        } finally {
-            setIsProcessing(false);
-        }
+        // API logic removed for mobile build compatibility
+        toast({
+            title: "Coming Soon",
+            description: "AI Invoice Scanning will be available in a future update.",
+            variant: "default"
+        });
+        
+        // Optional: You could still navigate to the new invoice page with the image attached if needed
+        // router.push('/dashboard/invoices/new');
     };
 
     const toggleFlash = async () => {

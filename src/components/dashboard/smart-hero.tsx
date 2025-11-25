@@ -1,18 +1,21 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Eye, EyeOff } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Calendar, Eye, EyeOff, Zap, TrendingDown as TrendIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { Invoice } from '@/lib/definitions';
+import { formatCurrency } from '@/lib/utils';
 
 interface SmartHeroProps {
     invoices: Invoice[] | null;
-    totalRevenue: number;
+    totalRevenue: number;  // This Month
+    totalWeekRevenue: number;  // This Week
+    totalTodayRevenue: number;  // Today (Hero metric)
     revenueMoM: number | null;
 }
 
-export function SmartHero({ invoices, totalRevenue, revenueMoM }: SmartHeroProps) {
-    const [isRevenueVisible, setIsRevenueVisible] = useState(false);
+export function SmartHero({ invoices, totalRevenue, totalWeekRevenue, totalTodayRevenue, revenueMoM }: SmartHeroProps) {
+    const [isRevenueVisible, setIsRevenueVisible] = useState(true);
     const isPositiveTrend = (revenueMoM ?? 0) >= 0;
 
     return (
@@ -26,32 +29,32 @@ export function SmartHero({ invoices, totalRevenue, revenueMoM }: SmartHeroProps
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-0" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/5 rounded-full blur-3xl -z-0" />
 
-            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                {/* Revenue Section */}
-                <div className="flex-1">
+            <div className="relative z-10">
+                {/* Hero Metric - Today's Revenue */}
+                <div className="mb-6">
                     <div className="flex items-center gap-2 mb-2">
-                        <DollarSign className="h-5 w-5 text-primary" />
+                        <Zap className="h-5 w-5 text-gold-500" />
                         <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                            This Month's Revenue
+                            Today's Revenue
                         </span>
                     </div>
 
-                    <div className="flex items-baseline gap-3">
+                    <div className="flex items-baseline gap-3 mb-2">
                         <button
                             onClick={() => setIsRevenueVisible(!isRevenueVisible)}
-                            className="flex items-baseline gap-2 hover:opacity-90 transition-opacity"
+                            className="flex items-baseline gap-2 hover:opacity-90 transition-opacity group"
                             aria-pressed={isRevenueVisible}
                             aria-label={isRevenueVisible ? 'Hide revenue' : 'Show revenue'}
                         >
-                            <motion.h2
+                            <motion.h1
                                 layout
                                 initial={{ opacity: 0, scale: 0.98 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 0.25 }}
-                                className="text-3xl md:text-4xl font-bold text-foreground font-mono"
+                                className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gold-500 via-gold-400 to-amber-500 bg-clip-text text-transparent font-mono"
                             >
-                                {isRevenueVisible ? `₹${totalRevenue.toLocaleString('en-IN')}` : '••••••'}
-                            </motion.h2>
+                                {isRevenueVisible ? formatCurrency(totalTodayRevenue) : '••••••'}
+                            </motion.h1>
 
                             <motion.span
                                 key={isRevenueVisible ? 'visible' : 'hidden'}
@@ -62,62 +65,79 @@ export function SmartHero({ invoices, totalRevenue, revenueMoM }: SmartHeroProps
                                 className="inline-flex"
                             >
                                 {isRevenueVisible ? (
-                                    <Eye className="h-5 w-5 text-primary" />
+                                    <Eye className="h-6 w-6 text-gold-500" />
                                 ) : (
-                                    <EyeOff className="h-5 w-5 text-muted-foreground" />
+                                    <EyeOff className="h-6 w-6 text-muted-foreground" />
                                 )}
                             </motion.span>
                         </button>
+                    </div>
 
+                    <p className="text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })}
+                        </span>
+                    </p>
+                </div>
+
+                {/* Secondary Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* This Week */}
+                    <div className="glass-card p-4 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-2 mb-2">
+                            <TrendingUp className="h-4 w-4 text-primary" />
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                This Week
+                            </span>
+                        </div>
+                        <div className="text-2xl font-bold text-foreground font-mono">
+                            {isRevenueVisible ? formatCurrency(totalWeekRevenue) : '••••••'}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Last 7 days</p>
+                    </div>
+
+                    {/* This Month */}
+                    <div className="glass-card p-4 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-2 mb-2">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                This Month
+                            </span>
+                        </div>
+                        <div className="text-2xl font-bold text-foreground font-mono">
+                            {isRevenueVisible ? formatCurrency(totalRevenue) : '••••••'}
+                        </div>
                         <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.2 }}
-                            className={`flex items-center gap-1 px-3 py-1 rounded-full ${isPositiveTrend
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${isPositiveTrend
                                 ? 'bg-green-500/10 text-green-600'
                                 : 'bg-red-500/10 text-red-600'
                                 }`}
                         >
                             {isPositiveTrend ? (
-                                <TrendingUp className="h-4 w-4" />
+                                <TrendingUp className="h-3 w-3" />
                             ) : (
-                                <TrendingDown className="h-4 w-4" />
+                                <TrendingDown className="h-3 w-3" />
                             )}
-                            <span className="text-sm font-bold">
-                                {Math.abs(revenueMoM ?? 0).toFixed(1)}%
-                            </span>
+                            <span>{Math.abs(revenueMoM ?? 0).toFixed(1)}% vs last month</span>
                         </motion.div>
                     </div>
 
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        {isPositiveTrend ? '🎉 Great growth!' : '📊 Keep pushing!'}
-                        <span className="ml-1">from last month</span>
-                    </p>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="flex gap-6">
-                    <div className="text-center">
-                        <div className="text-2xl md:text-3xl font-bold text-primary font-mono">
+                    {/* Total Invoices */}
+                    <div className="glass-card p-4 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-2 mb-2">
+                            <TrendIcon className="h-4 w-4 text-primary" />
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                Total Invoices
+                            </span>
+                        </div>
+                        <div className="text-2xl font-bold text-primary font-mono">
                             {invoices?.length || 0}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">
-                            Invoices
-                        </div>
-                    </div>
-
-                    <div className="w-px bg-border" />
-
-                    <div className="text-center">
-                        <div className="flex items-center gap-1 text-primary">
-                            <Calendar className="h-5 w-5" />
-                            <div className="text-2xl md:text-3xl font-bold font-mono">
-                                {new Date().toLocaleDateString('en-IN', { month: 'short' })}
-                            </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">
-                            Current Period
-                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">All time</p>
                     </div>
                 </div>
             </div>

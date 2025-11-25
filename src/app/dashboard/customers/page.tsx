@@ -12,7 +12,8 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, Trophy, Calendar } from 'lucide-react';
+import { Search, Trophy, Calendar, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -152,14 +153,37 @@ export default function CustomersPage() {
                                 Manage and view your customer base
                             </CardDescription>
                         </div>
-                        <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search customers..."
-                                className="pl-10 bg-background/50"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                        <div className="flex items-center gap-2">
+                            <div className="relative w-full sm:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search customers..."
+                                    className="pl-10 bg-background/50"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-9 gap-2 shrink-0"
+                                onClick={() => {
+                                    import('@/lib/export-excel').then(({ exportCustomersToExcel }) => {
+                                        const exportData = Object.entries(customerData).map(([name, stats]) => ({
+                                            name,
+                                            phone: '-',
+                                            email: '-',
+                                            invoiceCount: stats.invoiceCount,
+                                            totalSpent: stats.totalPurchase,
+                                            lastPurchase: stats.lastPurchase,
+                                        }));
+                                        exportCustomersToExcel(exportData, 'customers');
+                                    });
+                                }}
+                            >
+                                <Download className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Export</span>
+                            </Button>
                         </div>
                     </div>
                 </CardHeader>

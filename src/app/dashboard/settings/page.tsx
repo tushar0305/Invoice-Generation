@@ -550,30 +550,6 @@ export default function SettingsPage() {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Invoice Settings Card */}
-                <Card className="md:col-span-2 border-white/10 bg-background/40 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 group">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform duration-300">
-                        <Receipt className="h-5 w-5" />
-                      </div>
-                      <CardTitle className="text-lg">Invoice Settings</CardTitle>
-                    </div>
-                    <CardDescription>Customize your invoice template and appearance</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField control={form.control} name="templateId" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Select Template</FormLabel>
-                        <FormControl>
-                          <TemplateSelector value={field.value || 'classic'} onChange={field.onChange} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Mobile Save Button */}

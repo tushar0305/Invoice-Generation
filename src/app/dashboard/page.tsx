@@ -138,11 +138,15 @@ export default function DashboardPage() {
 
   const {
     totalPaidThisMonth,
+    totalPaidThisWeek,
+    totalPaidToday,
     revenueMoM,
   } = useMemo(() => {
     if (isLoading || !invoices) {
       return {
         totalPaidThisMonth: 0,
+        totalPaidThisWeek: 0,
+        totalPaidToday: 0,
         revenueMoM: null as number | null,
       };
     }
@@ -155,12 +159,25 @@ export default function DashboardPage() {
     const lastMonthStart = startOfMonth(subMonths(now, 1));
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
+    // Week and day ranges
+    const todayStart = startOfDay(now);
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - 7);
+
     // Helper to check interval
     const inRange = (d: Date, start: Date, end: Date) => isWithinInterval(d, { start, end });
 
     // Current Month Stats
     const paidThisMonth = paid.filter((inv) => inRange(new Date(inv.invoiceDate), currentMonthStart, currentMonthEnd));
     const totalPaidThisMonth = paidThisMonth.reduce((sum, inv) => sum + inv.grandTotal, 0);
+
+    // Weekly Stats
+    const paidThisWeek = paid.filter((inv) => new Date(inv.invoiceDate) >= weekStart);
+    const totalPaidThisWeek = paidThisWeek.reduce((sum, inv) => sum + inv.grandTotal, 0);
+
+    // Today's Stats
+    const paidToday = paid.filter((inv) => new Date(inv.invoiceDate) >= todayStart);
+    const totalPaidToday = paidToday.reduce((sum, inv) => sum + inv.grandTotal, 0);
 
     // Last Month Stats
     const paidLastMonth = paid.filter((inv) => inRange(new Date(inv.invoiceDate), lastMonthStart, lastMonthEnd));
@@ -173,6 +190,8 @@ export default function DashboardPage() {
 
     return {
       totalPaidThisMonth,
+      totalPaidThisWeek,
+      totalPaidToday,
       revenueMoM,
     };
   }, [invoices, isLoading]);
@@ -202,6 +221,8 @@ export default function DashboardPage() {
         invoices={invoices}
         revenueMoM={revenueMoM}
         totalRevenue={totalPaidThisMonth ?? 0}
+        totalWeekRevenue={totalPaidThisWeek ?? 0}
+        totalTodayRevenue={totalPaidToday ?? 0}
       />
 
       {/* Gold & Silver Ticker */}

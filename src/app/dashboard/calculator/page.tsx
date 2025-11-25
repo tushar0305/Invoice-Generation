@@ -11,8 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatCurrency } from '@/lib/utils';
+import { evaluate } from 'mathjs';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CalculatorPage() {
+  const { toast } = useToast();
   const [display, setDisplay] = useState('0');
   const [equation, setEquation] = useState('');
   const [isNewNumber, setIsNewNumber] = useState(true);
@@ -41,17 +44,21 @@ export default function CalculatorPage() {
   const handleEqual = () => {
     haptics.impact(ImpactStyle.Heavy);
     try {
-      // eslint-disable-next-line no-eval
-      const result = eval(equation + display);
+      // Safe mathematical expression evaluation (no code injection risk)
+      const result = evaluate(equation + display);
       const resultStr = String(result);
       const historyItem = `${equation} ${display} = ${resultStr}`;
 
       setDisplay(resultStr);
       setEquation('');
-      setIsNewNumber(true);
-      setHistory(prev => [historyItem, ...prev].slice(0, 10)); // Keep last 10
-    } catch (e) {
-      setDisplay('Error');
+      setHistory((prev) => [historyItem, ...prev].slice(0, 10));
+    } catch (error) {
+      // Invalid mathematical expression
+      toast({
+        title: "Invalid Expression",
+        description: "Please check your calculation and try again.",
+        variant: "destructive"
+      });
     }
   };
 

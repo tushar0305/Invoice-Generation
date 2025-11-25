@@ -14,6 +14,14 @@ import { ArrowLeft, Calendar, CreditCard, FileText, Phone, MapPin, Mail } from '
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Invoice } from '@/lib/definitions';
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 export function CustomerDetailsClient() {
     const searchParams = useSearchParams();
@@ -30,12 +38,12 @@ export function CustomerDetailsClient() {
 
         const load = async () => {
             setIsLoading(true);
-            // We are querying by customer_name since we don't have a separate customers table yet
+            // Case-insensitive query for customer_name to catch all variations
             const { data, error } = await supabase
                 .from('invoices')
                 .select('*')
                 .eq('user_id', user.uid)
-                .eq('customer_name', customerName)
+                .ilike('customer_name', customerName)  // Case-insensitive match
                 .order('invoice_date', { ascending: false });
 
             if (error) {
@@ -87,6 +95,27 @@ export function CustomerDetailsClient() {
 
     return (
         <MotionWrapper className="space-y-6">
+            {/* Breadcrumb Navigation */}
+            <Breadcrumb>
+                <BreadcrumbList>
+                    <BreadcrumbItem>
+                        <BreadcrumbLink onClick={() => router.push('/dashboard')}>
+                            Dashboard
+                        </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                        <BreadcrumbLink onClick={() => router.push('/dashboard/customers')}>
+                            Customers
+                        </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                        <BreadcrumbPage>{customerName}</BreadcrumbPage>
+                    </BreadcrumbItem>
+                </BreadcrumbList>
+            </Breadcrumb>
+
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeft className="h-5 w-5" />

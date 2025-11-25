@@ -72,22 +72,31 @@ export function GoldSilverTicker() {
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
-            // Call the API to scrape fresh prices from the web
-            const response = await fetch('/api/cron/update-prices');
+            // Call the Supabase Edge Function to fetch fresh prices
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-prices`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
             const result = await response.json();
-            
-            if (!response.ok) {
+
+            if (!response.ok || !result.success) {
                 throw new Error(result.error || 'Failed to fetch prices');
             }
-            
+
             // Re-fetch prices from Supabase to get updated values
             await fetchPrices();
-            
+
             toast({
                 title: "Prices Updated",
-                description: result.source === 'scraped' 
-                    ? "Latest rates fetched from market." 
-                    : "Using estimated market rates.",
+                description: result.source === 'IBJA'
+                    ? "Latest rates fetched from IBJA."
+                    : `Updated from ${result.source}.`,
             });
         } catch (error) {
             console.error('Refresh error:', error);
