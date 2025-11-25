@@ -14,7 +14,9 @@ import {
     ArrowDownRight,
     Package,
     MoreHorizontal,
-    RefreshCw
+    RefreshCw,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import {
     AreaChart,
@@ -60,6 +62,12 @@ export default function InsightsPage() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [visibleMetrics, setVisibleMetrics] = useState<Record<string, boolean>>({
+        'Total Revenue': false,
+        'Total Sales': false,
+        'Avg. Order Value': false,
+        'Active Customers': false,
+    });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -375,21 +383,57 @@ export default function InsightsPage() {
                         <motion.div key={i} variants={item}>
                             <Card className="glass-card border-white/10 hover:border-primary/30 transition-all duration-300 group">
                                 <CardContent className="p-4 md:p-6">
-                                    <div className="flex justify-between items-start">
-                                        <div className={cn("p-2 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors", metric.color)}>
-                                            <metric.icon className="h-5 w-5" />
-                                        </div>
-                                        <div className={cn(
-                                            "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-white/5",
-                                            metric.trend === 'up' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                                        )}>
-                                            {metric.trend === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                                            {metric.change}
-                                        </div>
-                                    </div>
+                                                    <div className="flex justify-between items-start">
+                                                        <div className={cn("p-2 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors", metric.color)}>
+                                                            <metric.icon className="h-5 w-5" />
+                                                        </div>
+                                                        {/* Only show eye toggle for Total Revenue (amount) card */}
+                                                        {(metric.title === 'Total Revenue' || metric.title === 'Avg.\u00A0Order\u00A0Value' || metric.title === 'Avg. Order Value') ? (
+                                                            <button
+                                                                onClick={() => setVisibleMetrics(prev => ({
+                                                                    ...prev,
+                                                                    [metric.title]: !prev[metric.title as keyof typeof prev]
+                                                                }))}
+                                                                className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-white/5 hover:border-white/20 hover:bg-white/5 transition-all"
+                                                                aria-label={visibleMetrics[metric.title as keyof typeof visibleMetrics] ? 'Hide amount' : 'Show amount'}
+                                                            >
+                                                                <motion.span
+                                                                    initial={{ opacity: 0, y: -4 }}
+                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    transition={{ duration: 0.18 }}
+                                                                >
+                                                                    {visibleMetrics[metric.title as keyof typeof visibleMetrics] ? (
+                                                                        <Eye className="h-3 w-3" />
+                                                                    ) : (
+                                                                        <EyeOff className="h-3 w-3" />
+                                                                    )}
+                                                                </motion.span>
+                                                            </button>
+                                                        ) : (
+                                                            <div className="w-6" />
+                                                        )}
+                                                    </div>
                                     <div className="mt-4">
-                                        <h3 className="text-xl md:text-2xl font-bold tracking-tight">{metric.value}</h3>
+                                        <h3 className="text-xl md:text-2xl font-bold tracking-tight">
+                                            {/* If this is the revenue card, respect visibility toggle. Other cards always show value. */}
+                                            {(
+                                                metric.title === 'Total Revenue' ||
+                                                metric.title === 'Avg.\u00A0Order\u00A0Value' ||
+                                                metric.title === 'Avg. Order Value'
+                                            )
+                                                ? (visibleMetrics[metric.title as keyof typeof visibleMetrics] ? metric.value : '••••')
+                                                : metric.value
+                                            }
+                                        </h3>
                                         <p className="text-sm text-muted-foreground mt-1">{metric.title}</p>
+                                    </div>
+                                    <div className={cn(
+                                        "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-white/5 mt-3 w-fit",
+                                        metric.trend === 'up' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                                    )}>
+                                        {metric.trend === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                                        {metric.change}
                                     </div>
                                 </CardContent>
                             </Card>

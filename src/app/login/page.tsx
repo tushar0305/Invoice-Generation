@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -115,26 +116,26 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex bg-background">
       {/* Left Side - Branding (Desktop) */}
-      <div className="hidden lg:flex w-1/2 bg-primary relative overflow-hidden items-center justify-center text-primary-foreground">
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden items-center justify-center text-primary-foreground">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-rose-500 to-amber-400 opacity-95" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/4 via-transparent to-transparent opacity-20 pointer-events-none" />
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-white/6 rounded-full blur-3xl animate-blob" />
+        <div className="absolute -bottom-28 -right-28 w-80 h-80 bg-white/4 rounded-full blur-2xl animate-blob animation-delay-2000" />
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-gold-500/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gold-500/10 rounded-full blur-3xl"></div>
 
-        <div className="relative z-10 p-12 max-w-lg">
-          <FadeIn>
-            <div className="mb-8">
-              <div className="h-16 w-16 bg-gold-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-gold-500/20">
-                <span className="text-3xl font-heading font-bold text-primary">SJ</span>
-              </div>
-              <h1 className="text-5xl font-heading font-bold mb-6 leading-tight">
-                Manage Your Jewellery Business with <span className="text-gold-400">Elegance</span>
-              </h1>
-              <p className="text-lg text-primary-foreground/80 leading-relaxed">
-                Create professional invoices, track stock, and manage customers with a platform designed for modern jewellers.
-              </p>
-            </div>
-          </FadeIn>
-        </div>
+        <motion.div className="relative z-10 p-12 max-w-lg text-white" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
+          <div className="mb-8">
+            {/* logo removed per request */}
+            <h1 className="text-5xl font-heading font-bold mb-6 leading-tight tracking-tight">
+              Manage Your Jewellery Business with <span className="text-white/95">Elegance</span>
+            </h1>
+            <p className="text-lg text-white/80 leading-relaxed max-w-lg">
+              Create professional invoices, track stock, and manage customers with a platform designed for modern jewellers.
+            </p>
+          </div>
+        </motion.div>
       </div>
 
       {/* Right Side - Form */}
@@ -142,15 +143,17 @@ export default function LoginPage() {
         {/* Mobile Background Accents */}
         <div className="lg:hidden absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-primary/10 to-transparent -z-10" />
 
-        <MotionWrapper className="w-full max-w-md space-y-8 bg-card/50 backdrop-blur-sm p-6 rounded-2xl border border-border/50 shadow-xl lg:shadow-none lg:bg-transparent lg:border-none lg:p-0">
+        <MotionWrapper className="w-full max-w-md space-y-8 relative lg:space-y-0 pb-20 sm:pb-12">
+          <div className="absolute inset-0 bg-white/30 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg pointer-events-none z-0" />
+          <div className="relative p-6 lg:p-8 z-10">
 
           {/* Mobile Branding */}
           <div className="lg:hidden text-center mb-6">
-            <div className="h-12 w-12 bg-gold-500 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg shadow-gold-500/20">
-              <span className="text-2xl font-heading font-bold text-primary">SJ</span>
-            </div>
-            <h1 className="text-2xl font-heading font-bold text-primary">Welcome Back</h1>
-            <p className="text-sm text-muted-foreground">Sign in to your account</p>
+            {/* mobile logo removed per request */}
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+              <h1 className="text-2xl font-heading font-bold text-foreground">Welcome Back</h1>
+              <p className="text-sm text-muted-foreground mt-1">Sign in to your account or create a shop in seconds</p>
+            </motion.div>
           </div>
 
           <div className="text-center lg:text-left hidden lg:block">
@@ -163,7 +166,9 @@ export default function LoginPage() {
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <AnimatePresence mode="wait">
+                <motion.div key={isSignUp ? 'signup' : 'signin'} initial={{ opacity: 0, y: 8, scale: 0.99 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.99 }} transition={{ duration: 0.36 }}>
               <FormField
                 control={form.control}
                 name="shopName"
@@ -174,7 +179,7 @@ export default function LoginPage() {
                       <FormControl>
                         <div className="relative">
                           <Building2 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                          <Input placeholder="e.g. Shree Jewellers" className="pl-10 h-11 bg-background/50" {...field} />
+                          <Input placeholder="e.g. Shree Jewellers" className="pl-10 h-12" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -192,7 +197,7 @@ export default function LoginPage() {
                     <FormControl>
                       <div className="relative">
                         <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                        <Input placeholder="name@example.com" className="pl-10 h-11 bg-background/50" {...field} />
+                        <Input placeholder="name@example.com" className="pl-10 h-12" {...field} />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -208,7 +213,7 @@ export default function LoginPage() {
                     <FormControl>
                       <div className="relative">
                         <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                        <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="pl-10 pr-10 h-11 bg-background/50" {...field} />
+                        <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="pl-10 pr-10 h-12" {...field} />
                         <button
                           type="button"
                           onClick={() => setShowPassword(p => !p)}
@@ -224,15 +229,17 @@ export default function LoginPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full h-11 text-base shadow-lg font-semibold" disabled={isLoading} variant="premium">
+                <Button type="submit" className="w-full h-12 text-base shadow-md font-semibold rounded-lg mt-6" disabled={isLoading} variant="premium">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSignUp ? 'Sign Up' : 'Sign In'}
+                {isSignUp ? 'Create account' : 'Sign in'}
                 {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
-              </Button>
+                </Button>
+              </motion.div>
+            </AnimatePresence>
             </form>
           </Form>
 
-          <div className="text-center text-sm pt-2">
+          <div className="text-center text-sm pt-2 mb-6">
             <span className="text-muted-foreground">
               {isSignUp ? 'Already have an account?' : "Don't have an account?"}
             </span>{' '}
@@ -243,6 +250,7 @@ export default function LoginPage() {
             >
               {isSignUp ? 'Sign in' : 'Sign up'}
             </Button>
+          </div>
           </div>
         </MotionWrapper>
       </div>

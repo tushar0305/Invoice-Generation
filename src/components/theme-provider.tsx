@@ -31,11 +31,13 @@ export function ThemeProvider({
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        const savedTheme = localStorage.getItem(storageKey) as Theme;
+        const savedTheme = localStorage.getItem(storageKey) as Theme | null;
         if (savedTheme) {
             setTheme(savedTheme);
-        } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-            setTheme("dark");
+        } else {
+            // First time open: default to light mode per product decision.
+            // We still allow the provider to accept defaultTheme prop to override.
+            setTheme(defaultTheme ?? "light");
         }
         setMounted(true);
     }, [storageKey]);

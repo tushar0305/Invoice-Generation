@@ -8,6 +8,9 @@
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
+    "build:mobile": "MOBILE_EXPORT=true next build",
+    "cap:sync": "npx cap sync android",
+    "cap:run": "npx cap run android",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"

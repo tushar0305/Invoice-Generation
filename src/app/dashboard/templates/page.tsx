@@ -37,12 +37,6 @@ const templates = [
     description: 'Sophisticated design with serif fonts and gold accents.',
     color: 'from-amber-500/20 to-amber-500/5',
   },
-  {
-    id: 'bold',
-    name: 'Bold',
-    description: 'High contrast design with strong typography.',
-    color: 'from-yellow-500/20 to-yellow-500/5',
-  },
 ];
 
 export default function TemplatesPage() {

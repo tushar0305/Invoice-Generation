@@ -1,7 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Calendar, Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react';
 import type { Invoice } from '@/lib/definitions';
 
 interface SmartHeroProps {
@@ -11,6 +12,7 @@ interface SmartHeroProps {
 }
 
 export function SmartHero({ invoices, totalRevenue, revenueMoM }: SmartHeroProps) {
+    const [isRevenueVisible, setIsRevenueVisible] = useState(false);
     const isPositiveTrend = (revenueMoM ?? 0) >= 0;
 
     return (
@@ -35,9 +37,37 @@ export function SmartHero({ invoices, totalRevenue, revenueMoM }: SmartHeroProps
                     </div>
 
                     <div className="flex items-baseline gap-3">
-                        <h2 className="text-3xl md:text-4xl font-bold text-foreground font-mono">
-                            ₹{totalRevenue.toLocaleString('en-IN')}
-                        </h2>
+                        <button
+                            onClick={() => setIsRevenueVisible(!isRevenueVisible)}
+                            className="flex items-baseline gap-2 hover:opacity-90 transition-opacity"
+                            aria-pressed={isRevenueVisible}
+                            aria-label={isRevenueVisible ? 'Hide revenue' : 'Show revenue'}
+                        >
+                            <motion.h2
+                                layout
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.25 }}
+                                className="text-3xl md:text-4xl font-bold text-foreground font-mono"
+                            >
+                                {isRevenueVisible ? `₹${totalRevenue.toLocaleString('en-IN')}` : '••••••'}
+                            </motion.h2>
+
+                            <motion.span
+                                key={isRevenueVisible ? 'visible' : 'hidden'}
+                                initial={{ opacity: 0, rotate: -10, scale: 0.9 }}
+                                animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                                whileTap={{ scale: 0.95, rotate: -6 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                                className="inline-flex"
+                            >
+                                {isRevenueVisible ? (
+                                    <Eye className="h-5 w-5 text-primary" />
+                                ) : (
+                                    <EyeOff className="h-5 w-5 text-muted-foreground" />
+                                )}
+                            </motion.span>
+                        </button>
 
                         <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}

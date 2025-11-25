@@ -1,7 +1,11 @@
 import type { NextConfig } from 'next';
 
+const isMobileExport = process.env.MOBILE_EXPORT === 'true';
+
 const nextConfig: NextConfig = {
-  // output: 'export', // Disabled to allow API routes (SSR/Edge)
+  // Static export only when building for mobile (Capacitor)
+  // API routes won't work in static export, so keep this off for Vercel
+  ...(isMobileExport ? { output: 'export' } : {}),
   images: {
     unoptimized: true,
     remotePatterns: [

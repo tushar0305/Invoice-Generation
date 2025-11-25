@@ -116,7 +116,7 @@ export default function CalculatorPage() {
     <MotionWrapper className="h-full flex flex-col">
       <Tabs defaultValue="calculator" className="flex-1 flex flex-col h-full">
         {/* Custom Glassy Tabs - Minimal spacing */}
-        <div className="px-4 pt-0.5 shrink-0">
+        <div className="px-4 pt-2 pb-3 shrink-0">
           <TabsList className="w-full h-auto p-1 rounded-2xl bg-background/40 backdrop-blur-xl border border-white/10 shadow-lg grid grid-cols-2 gap-2">
             <TabsTrigger
               value="calculator"

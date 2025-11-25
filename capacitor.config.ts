@@ -4,6 +4,7 @@ const config: CapacitorConfig = {
   appId: 'com.invoice.app',
   appName: 'Invoice App',
   webDir: 'out',
+  // No server config - app runs standalone
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,

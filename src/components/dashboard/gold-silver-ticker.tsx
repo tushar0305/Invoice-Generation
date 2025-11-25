@@ -72,23 +72,28 @@ export function GoldSilverTicker() {
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
+            // Call the API to scrape fresh prices from the web
             const response = await fetch('/api/cron/update-prices');
             const result = await response.json();
-
-            if (result.success) {
-                await fetchPrices();
-                toast({
-                    title: "Prices Updated",
-                    description: "Latest market rates fetched successfully.",
-                });
-            } else {
-                throw new Error(result.error || 'Failed to update');
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to fetch prices');
             }
+            
+            // Re-fetch prices from Supabase to get updated values
+            await fetchPrices();
+            
+            toast({
+                title: "Prices Updated",
+                description: result.source === 'scraped' 
+                    ? "Latest rates fetched from market." 
+                    : "Using estimated market rates.",
+            });
         } catch (error) {
             console.error('Refresh error:', error);
             toast({
                 variant: "destructive",
-                title: "Update Failed",
+                title: "Refresh Failed",
                 description: "Could not fetch latest prices. Please try again.",
             });
         } finally {
@@ -139,15 +144,19 @@ export function GoldSilverTicker() {
         };
     }, []);
 
-    const PriceItem = ({ label, price, unit, trend }: { label: string, price: number, unit: string, trend: string }) => {
-        const [showUp, setShowUp] = useState(true);
+    const PriceItem = ({ label, price, unit, trend, offset }: { label: string, price: number, unit: string, trend: string, offset: number }) => {
+        const [showUp, setShowUp] = useState(offset === 0);
 
         useEffect(() => {
+            // Each item has different timing, creating varied animations.
+            // Use a base of ~2.5s so arrows change slowly (2-3s range per request).
+            const baseMs = 2500;
+            const intervalMs = baseMs + (offset * 500); // offsets: ~2500, 3000, 3500ms
             const interval = setInterval(() => {
                 setShowUp(prev => !prev);
-            }, 1000);
+            }, intervalMs);
             return () => clearInterval(interval);
-        }, []);
+        }, [offset]);
 
         return (
             <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-1.5 md:py-2 bg-white/5 rounded-full border border-gold-500/10 backdrop-blur-sm shadow-sm hover:bg-gold-500/5 transition-colors flex-shrink-0">
@@ -159,7 +168,7 @@ export function GoldSilverTicker() {
                             initial={{ y: showUp ? 5 : -5, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: showUp ? -5 : 5, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }}
                         >
                             {showUp ? (
                                 <TrendingUp className="h-3 w-3 text-green-500" />
@@ -217,9 +226,9 @@ export function GoldSilverTicker() {
                 <div className="flex items-center gap-2 md:gap-3 overflow-x-auto scrollbar-hide md:overflow-visible md:ml-auto">
                     {prices.gold24k.value > 0 ? (
                         <>
-                            <PriceItem label="Gold 24K" price={prices.gold24k.value} unit="10g" trend={prices.gold24k.trend} />
-                            <PriceItem label="Gold 22K" price={prices.gold22k.value} unit="10g" trend={prices.gold22k.trend} />
-                            <PriceItem label="Silver" price={prices.silver.value} unit="1kg" trend={prices.silver.trend} />
+                            <PriceItem label="Gold 24K" price={prices.gold24k.value} unit="10g" trend={prices.gold24k.trend} offset={0} />
+                            <PriceItem label="Gold 22K" price={prices.gold22k.value} unit="10g" trend={prices.gold22k.trend} offset={1} />
+                            <PriceItem label="Silver" price={prices.silver.value} unit="1kg" trend={prices.silver.trend} offset={2} />
                         </>
                     ) : (
                         <div className="text-xs text-muted-foreground animate-pulse">Fetching rates...</div>

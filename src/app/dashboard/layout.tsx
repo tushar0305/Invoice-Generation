@@ -780,7 +780,7 @@ function DashboardLayoutInternal({
         </header>
 
         {/* Mobile Header */}
-        <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] glass-panel border-b border-gold-500/10 shadow-sm transition-all duration-300 h-[calc(env(safe-area-inset-top)+3.5rem)]">
+        <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pb-3 pt-[calc(max(env(safe-area-inset-top),25px)+0.75rem)] glass-panel border-b border-gold-500/10 shadow-sm transition-all duration-300 h-[calc(max(env(safe-area-inset-top),25px)+3.5rem)]">
           <Button variant="ghost" size="icon" onClick={() => setOpenMobile(true)} className="-ml-2 hover:bg-gold-500/10 text-foreground">
             <Menu className="h-6 w-6" />
           </Button>
@@ -800,7 +800,9 @@ function DashboardLayoutInternal({
         </header>
 
         <main className={cn(
-          "flex-1 px-3 sm:px-4 md:px-6 pb-20 md:pb-6 pt-[calc(env(safe-area-inset-top)+3rem)] md:pt-20 transition-all duration-300 max-w-[100vw] overflow-x-hidden"
+          "flex-1 px-3 sm:px-4 md:px-6 pb-20 md:pb-6 md:pt-20 transition-all duration-300 max-w-[100vw] overflow-x-hidden",
+          // For mobile (md:hidden), use safe-area-inset + header height
+          "pt-[calc(max(env(safe-area-inset-top),25px)+3.5rem)]"
         )}>{children}</main>
         <FloatingNewInvoiceButton />
         <MobileBottomNav />
