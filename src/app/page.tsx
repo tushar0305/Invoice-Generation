@@ -9,6 +9,7 @@ import { WhyUs } from '@/components/landing/why-us';
 import { Pricing } from '@/components/landing/pricing';
 import { Testimonials } from '@/components/landing/testimonials';
 import { Footer } from '@/components/landing/footer';
+import { PlatformRedirect } from '@/components/platform-redirect';
 
 export default function LandingPage() {
   const jsonLd = {
@@ -33,6 +34,7 @@ export default function LandingPage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-white overflow-x-hidden">
+      <PlatformRedirect />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
