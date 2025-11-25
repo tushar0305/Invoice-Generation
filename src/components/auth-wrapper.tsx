@@ -12,7 +12,8 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // If auth state is determined and there's no user, redirect to login.
-    if (!isUserLoading && !user) {
+    // Skip redirect for public paths: login and root (landing page)
+    if (!isUserLoading && !user && pathname !== '/login' && pathname !== '/') {
       router.replace('/login');
     }
     // If the user is logged in and on the login page, redirect to dashboard.
@@ -22,14 +23,15 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
   }, [user, isUserLoading, router, pathname]);
 
   // While loading, show a full-screen loader.
-  if (isUserLoading || (!user && pathname !== '/login')) {
+  // Allow rendering for public paths even without user
+  if (isUserLoading || (!user && pathname !== '/login' && pathname !== '/')) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
-  
+
   // If user is loaded and on the correct page, render children.
   return <>{children}</>;
 }

@@ -1,19 +1,29 @@
-'use client';
+import { Navbar } from '@/components/landing/navbar';
+import { HeroSection } from '@/components/landing/hero-section';
+import { ValueProp } from '@/components/landing/value-prop';
+import { AIShowcase } from '@/components/landing/ai-showcase';
+import { StorySection } from '@/components/landing/story-section';
+import { Features } from '@/components/landing/features';
+import { Showcase } from '@/components/landing/showcase';
+import { WhyUs } from '@/components/landing/why-us';
+import { Pricing } from '@/components/landing/pricing';
+import { Testimonials } from '@/components/landing/testimonials';
+import { Footer } from '@/components/landing/footer';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
-
-export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/dashboard');
-  }, [router]);
-
+export default function LandingPage() {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin" />
-    </div>
+    <main className="min-h-screen bg-white text-slate-900 selection:bg-gold-200">
+      <Navbar />
+      <HeroSection />
+      <ValueProp />
+      <AIShowcase />
+      <StorySection />
+      <Features />
+      <Showcase />
+      <WhyUs />
+      <Pricing />
+      <Testimonials />
+      <Footer />
+    </main>
   );
 }

@@ -8,9 +8,9 @@ import { QueryProvider } from '@/components/query-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'Saambh Jewellers',
+  title: 'SwarnaVyapar',
   description:
-    'Invoice generation and management for Saambh Jewellers.',
+    'Invoice generation and management for SwarnaVyapar.',
 };
 
 export const viewport: Viewport = {
