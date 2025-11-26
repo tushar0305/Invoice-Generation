@@ -17,7 +17,8 @@ export function Showcase() {
                     : 'rgb(248 250 252)' // slate-50
             }}
             transition={{ duration: 0.8, ease: "easeInOut" }}
-            className="py-32 relative overflow-hidden"
+            className="py-16 md:py-32 relative overflow-hidden scroll-mt-20"
+            aria-labelledby="showcase-heading"
         >
             {/* Animated Background Effects */}
             <motion.div

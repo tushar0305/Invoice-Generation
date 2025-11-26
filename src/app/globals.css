@@ -3,6 +3,18 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-size: 16px; /* Ensure base font size is 16px for readability */
+    -webkit-text-size-adjust: 100%; /* Prevent font scaling in landscape */
+  }
+
+  /* Prevent auto-zoom on iOS inputs */
+  @media screen and (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
   :root {
     /* Modern Light Mode - Warm Cream & Refined Gold */
     --background: 45 25% 96%;

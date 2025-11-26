@@ -5,9 +5,31 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { useUser } from '@/supabase/provider';
+import { supabase } from '@/supabase/client';
 
 export function ThemeToggle() {
     const { setTheme, theme } = useTheme();
+    const { user } = useUser();
+
+    const handleThemeChange = async () => {
+        const newTheme = theme === "dark" ? "light" : "dark";
+        setTheme(newTheme);
+
+        if (user) {
+            const { error } = await supabase
+                .from('user_preferences')
+                .upsert({
+                    user_id: user.uid,
+                    theme: newTheme,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id' });
+            
+            if (error) {
+                console.error('Error updating theme preference:', error);
+            }
+        }
+    };
 
     return (
         <motion.div
@@ -17,7 +39,7 @@ export function ThemeToggle() {
         >
             <Button
                 variant="ghost"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                onClick={handleThemeChange}
                 className="w-full h-11 px-4 rounded-xl border border-primary/10 bg-gradient-to-r from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/20 hover:border-primary/20 transition-all duration-300 group relative overflow-hidden shadow-gold-sm hover:shadow-gold-md"
             >
                 {/* Shimmer effect */}

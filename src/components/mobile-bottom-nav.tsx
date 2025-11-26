@@ -71,7 +71,7 @@ export function MobileBottomNav() {
                   {/* Label with fade effect */}
                   <span
                     className={cn(
-                      "relative z-10 text-[10px] font-medium tracking-wide leading-none transition-all duration-300",
+                      "relative z-10 text-[11px] font-medium tracking-wide leading-none transition-all duration-300",
                       item.active
                         ? 'text-primary opacity-100 scale-100'
                         : 'text-muted-foreground/80 opacity-90 group-hover:text-foreground group-hover:opacity-100'

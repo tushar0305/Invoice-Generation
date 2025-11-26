@@ -21,10 +21,10 @@ const buttonVariants = cva(
         premium: "bg-gradient-to-r from-amber-400 to-amber-600 text-white hover:from-amber-500 hover:to-amber-700 shadow-md hover:shadow-amber-500/25 border-0 relative overflow-hidden after:absolute after:inset-0 after:translate-x-[-100%] after:animate-[shimmer_2s_infinite] after:bg-gradient-to-r after:from-transparent after:via-white/25 after:to-transparent",
       },
       size: {
-        default: "h-10 px-4 py-2",
+        default: "h-11 px-4 py-2", // Increased to 44px for touch targets
         sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        lg: "h-12 rounded-md px-8", // Increased to 48px
+        icon: "h-11 w-11", // Increased to 44px for touch targets
       },
     },
     defaultVariants: {

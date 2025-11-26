@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/supabase/client';
 import { useUser } from '@/supabase/provider';
+import { useTheme } from '@/components/theme-provider';
 import type { Shop, UserShopRole, UserRole, Permission } from '@/lib/definitions';
 
 type ActiveShopContextType = {
@@ -19,6 +20,7 @@ const ActiveShopContext = createContext<ActiveShopContextType | undefined>(undef
 
 export function ActiveShopProvider({ children }: { children: ReactNode }) {
     const { user } = useUser();
+    const { setTheme } = useTheme();
     const [activeShop, setActiveShop] = useState<Shop | null>(null);
     const [userShops, setUserShops] = useState<Shop[]>([]);
     const [userRole, setUserRole] = useState<UserShopRole | null>(null);
@@ -106,9 +108,13 @@ export function ActiveShopProvider({ children }: { children: ReactNode }) {
                     // Get user's last active shop from preferences
                     const { data: prefs } = await supabase
                         .from('user_preferences')
-                        .select('last_active_shop_id')
+                        .select('last_active_shop_id, theme')
                         .eq('user_id', user.uid)
                         .maybeSingle();
+
+                    if (prefs?.theme) {
+                        setTheme(prefs.theme as any);
+                    }
 
                     let activeShopId = prefs?.last_active_shop_id;
 
@@ -442,7 +448,7 @@ export function ActiveShopProvider({ children }: { children: ReactNode }) {
 export function useActiveShop() {
     const context = useContext(ActiveShopContext);
     if (context === undefined) {
-        throw new Error('useActiveShop must be used within an ActiveShopProvider');
+        throw new Error('useActiveShop must be used within a ActiveShopProvider');
     }
     return context;
 }

@@ -16,7 +16,7 @@ export function AIShowcase() {
     const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
 
     return (
-        <section ref={sectionRef} id="ai-features" className="py-32 bg-gradient-to-b from-white via-slate-50 to-white relative overflow-hidden">
+        <section ref={sectionRef} id="ai-features" className="py-16 md:py-32 bg-gradient-to-b from-white via-slate-50 to-white relative overflow-hidden scroll-mt-20" aria-labelledby="ai-features-heading">
             {/* Enhanced Background Effects */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_var(--tw-gradient-stops))] from-blue-100/40 via-transparent to-transparent" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,_var(--tw-gradient-stops))] from-purple-100/30 via-transparent to-transparent" />

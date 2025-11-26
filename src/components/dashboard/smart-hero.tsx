@@ -15,7 +15,7 @@ interface SmartHeroProps {
 }
 
 export function SmartHero({ invoices, totalRevenue, totalWeekRevenue, totalTodayRevenue, revenueMoM }: SmartHeroProps) {
-    const [isRevenueVisible, setIsRevenueVisible] = useState(true);
+    const [isRevenueVisible, setIsRevenueVisible] = useState(false);
     const isPositiveTrend = (revenueMoM ?? 0) >= 0;
 
     return (
@@ -26,8 +26,22 @@ export function SmartHero({ invoices, totalRevenue, totalWeekRevenue, totalToday
             className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-background to-primary/5 border border-border shadow-gold-lg p-6 md:p-8"
         >
             {/* Decorative Background Elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-0" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/5 rounded-full blur-3xl -z-0" />
+            <motion.div
+                animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.1, 0.15, 0.1]
+                }}
+                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-gold-200/30 to-transparent rounded-full blur-3xl -z-0"
+            />
+            <motion.div
+                animate={{
+                    scale: [1, 1.1, 1],
+                    opacity: [0.1, 0.2, 0.1]
+                }}
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-br from-blue-200/30 to-transparent rounded-full blur-3xl -z-0"
+            />
 
             <div className="relative z-10">
                 {/* Hero Metric - Today's Revenue */}

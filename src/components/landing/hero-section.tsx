@@ -1,159 +1,194 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Play, Sparkles, Bot, Mic, ScanLine, Gift } from 'lucide-react';
-import Link from 'next/link';
+import { useCallback } from 'react';
+
+const floatingCards = [
+    {
+        icon: Bot,
+        label: 'AI Assistant',
+        text: '"Gold rate is up 2%"',
+        bgColor: 'bg-blue-50',
+        iconColor: 'text-blue-600',
+        position: 'top-1/4 left-4 md:left-10 lg:left-20',
+        animation: { y: [0, -20, 0], rotate: [0, 5, 0] },
+        duration: 6,
+        delay: 0,
+    },
+    {
+        icon: Mic,
+        label: 'Voice Invoice',
+        text: '"Add 22k Ring..."',
+        bgColor: 'bg-purple-50',
+        iconColor: 'text-purple-600',
+        position: 'bottom-1/3 right-4 md:right-10 lg:right-20',
+        animation: { y: [0, 20, 0], rotate: [0, -5, 0] },
+        duration: 7,
+        delay: 1,
+    },
+    {
+        icon: ScanLine,
+        label: 'Smart Scan',
+        text: 'Paper → Digital ✨',
+        bgColor: 'bg-emerald-50',
+        iconColor: 'text-emerald-600',
+        position: 'top-[45%] left-4 md:left-8 lg:left-16',
+        animation: { y: [0, -15, 0], rotate: [0, 3, 0], x: [0, 10, 0] },
+        duration: 8,
+        delay: 2,
+    },
+    {
+        icon: Gift,
+        label: 'Loyalty Rewards',
+        text: '+500 pts earned 🎁',
+        bgColor: 'bg-rose-50',
+        iconColor: 'text-rose-600',
+        position: 'bottom-[20%] right-4 md:right-8 lg:right-16',
+        animation: { y: [0, 18, 0], rotate: [0, -4, 0], x: [0, -8, 0] },
+        duration: 9,
+        delay: 3,
+    },
+];
 
 export function HeroSection() {
+    const shouldReduceMotion = useReducedMotion();
+
+    const handleSmoothScroll = useCallback((e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+        e.preventDefault();
+        const element = document.querySelector(targetId);
+        if (element) {
+            const navHeight = 80;
+            const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+            window.scrollTo({ top: elementPosition - navHeight, behavior: 'smooth' });
+        }
+    }, []);
+
+    const fadeInUp = {
+        initial: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
+        animate: { opacity: 1, y: 0 },
+    };
+
     return (
-        <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-white">
-            {/* Background Elements */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-gold-100/40 via-white to-white" />
-            <div className="absolute top-0 left-0 w-full h-full bg-[url('/grid-pattern.svg')] opacity-[0.03]" />
+        <section 
+            className="relative min-h-screen flex items-center justify-center pt-20 md:pt-24 pb-12 overflow-hidden bg-white"
+            aria-labelledby="hero-heading"
+        >
+            {/* Background Elements - using CSS for better performance */}
+            <div 
+                className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-gold-100/40 via-white to-white" 
+                aria-hidden="true" 
+            />
+            <div 
+                className="absolute top-0 left-0 w-full h-full bg-[url('/grid-pattern.svg')] opacity-[0.03]" 
+                aria-hidden="true"
+            />
 
-            {/* Animated Floating Elements */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {/* AI Assistant */}
-                <motion.div
-                    animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-1/4 left-10 md:left-20 p-4 bg-white rounded-2xl shadow-xl border border-black/5 hidden lg:block"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Bot className="h-6 w-6" /></div>
-                        <div>
-                            <p className="text-xs text-muted-foreground">AI Assistant</p>
-                            <p className="text-sm font-bold">"Gold rate is up 2%"</p>
+            {/* Animated Floating Elements - Hidden on mobile for performance */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none hidden lg:block" aria-hidden="true">
+                {floatingCards.map((card, index) => (
+                    <motion.div
+                        key={index}
+                        animate={shouldReduceMotion ? {} : card.animation}
+                        transition={shouldReduceMotion ? {} : { duration: card.duration, repeat: Infinity, ease: "easeInOut", delay: card.delay }}
+                        className={`absolute ${card.position} p-3 md:p-4 bg-white rounded-2xl shadow-xl border border-slate-200`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 ${card.bgColor} rounded-lg ${card.iconColor}`}>
+                                <card.icon className="h-5 w-5 md:h-6 md:w-6" aria-hidden="true" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500">{card.label}</p>
+                                <p className="text-sm font-bold text-slate-900">{card.text}</p>
+                            </div>
                         </div>
-                    </div>
-                </motion.div>
-
-                {/* Voice Invoice */}
-                <motion.div
-                    animate={{ y: [0, 20, 0], rotate: [0, -5, 0] }}
-                    transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute bottom-1/3 right-10 md:right-20 p-4 bg-white rounded-2xl shadow-xl border border-black/5 hidden lg:block"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-50 rounded-lg text-purple-600"><Mic className="h-6 w-6" /></div>
-                        <div>
-                            <p className="text-xs text-muted-foreground">Voice Invoice</p>
-                            <p className="text-sm font-bold">"Add 22k Ring..."</p>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Invoice Scanner */}
-                <motion.div
-                    animate={{ y: [0, -15, 0], rotate: [0, 3, 0], x: [0, 10, 0] }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                    className="absolute top-[45%] left-8 md:left-16 p-4 bg-white rounded-2xl shadow-xl border border-black/5 hidden lg:block"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600"><ScanLine className="h-6 w-6" /></div>
-                        <div>
-                            <p className="text-xs text-muted-foreground">Smart Scan</p>
-                            <p className="text-sm font-bold">Paper → Digital ✨</p>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Loyalty Program */}
-                <motion.div
-                    animate={{ y: [0, 18, 0], rotate: [0, -4, 0], x: [0, -8, 0] }}
-                    transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-                    className="absolute bottom-[20%] right-8 md:right-16 p-4 bg-white rounded-2xl shadow-xl border border-black/5 hidden lg:block"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-rose-50 rounded-lg text-rose-600"><Gift className="h-6 w-6" /></div>
-                        <div>
-                            <p className="text-xs text-muted-foreground">Loyalty Rewards</p>
-                            <p className="text-sm font-bold">+500 pts earned 🎁</p>
-                        </div>
-                    </div>
-                </motion.div>
+                    </motion.div>
+                ))}
             </div>
 
             <div className="container px-4 md:px-6 relative z-10">
-                <div className="flex flex-col items-center text-center space-y-8 max-w-5xl mx-auto">
+                <div className="flex flex-col items-center text-center space-y-6 md:space-y-8 max-w-5xl mx-auto">
+                    {/* Badge */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        {...fadeInUp}
                         transition={{ duration: 0.6 }}
-                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/5 border border-black/5 text-black/70 text-sm font-medium backdrop-blur-sm"
+                        className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs md:text-sm font-medium"
+                        role="status"
                     >
-                        <Sparkles className="h-3.5 w-3.5 text-gold-600" />
+                        <Sparkles className="h-3 w-3 md:h-3.5 md:w-3.5 text-gold-600" aria-hidden="true" />
                         <span>Now with AI Voice Invoicing & Chatbot</span>
                     </motion.div>
 
+                    {/* Main Heading - Semantic H1 */}
                     <motion.h1
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        id="hero-heading"
+                        {...fadeInUp}
                         transition={{ duration: 0.6, delay: 0.1 }}
-                        className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 font-heading"
+                        className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight text-slate-900 font-heading leading-tight"
                     >
-                        Smart Management for <br />
+                        Smart Management for{' '}
+                        <br className="hidden sm:block" />
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-gold-500 via-gold-400 to-gold-600 animate-shimmer bg-[length:200%_100%]">
                             Modern Jewellers
                         </span>
                     </motion.h1>
 
+                    {/* Description */}
                     <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        {...fadeInUp}
                         transition={{ duration: 0.6, delay: 0.2 }}
-                        className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-light"
+                        className="text-base sm:text-lg md:text-xl lg:text-2xl text-slate-600 max-w-2xl mx-auto leading-relaxed font-light px-2"
                     >
                         Run your entire jewellery shop with AI. Talk to your business, create invoices with voice, and manage inventory effortlessly.
                     </motion.p>
 
+                    {/* CTA Buttons */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        {...fadeInUp}
                         transition={{ duration: 0.6, delay: 0.3 }}
-                        className="flex flex-col sm:flex-row items-center gap-4 pt-4"
+                        className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 pt-4 w-full sm:w-auto px-4 sm:px-0"
                     >
-                        <Link href="/signup">
-                            <div className="relative group">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-gold-400 via-pink-500 to-purple-600 rounded-full blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
-                                <Button size="lg" className="relative h-14 px-8 bg-black text-white hover:bg-black/90 shadow-2xl shadow-black/20 rounded-full text-lg font-semibold transition-all hover:scale-105">
-                                    Get Started Free <ArrowRight className="ml-2 h-5 w-5" />
+                        <a 
+                            href="#pricing" 
+                            onClick={(e) => handleSmoothScroll(e, '#pricing')}
+                            className="w-full sm:w-auto group"
+                        >
+                            <div className="relative">
+                                <div 
+                                    className="absolute -inset-1 bg-gradient-to-r from-gold-400 via-pink-500 to-purple-600 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-500" 
+                                    aria-hidden="true"
+                                />
+                                <Button 
+                                    size="lg" 
+                                    className="relative w-full sm:w-auto min-h-[48px] md:min-h-[56px] px-6 md:px-8 bg-slate-900 text-white hover:bg-slate-800 shadow-2xl shadow-slate-900/20 rounded-full text-base md:text-lg font-semibold transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2"
+                                >
+                                    Get Started Free 
+                                    <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
                                 </Button>
                             </div>
-                        </Link>
-                        <Button size="lg" variant="outline" className="h-14 px-8 rounded-full border-black/10 hover:bg-black/5 text-lg text-black backdrop-blur-sm transition-all hover:scale-105 hover:border-gold-400/50">
-                            <Play className="mr-2 h-4 w-4 fill-current" /> See AI in Action
+                        </a>
+                        <Button 
+                            size="lg" 
+                            variant="outline" 
+                            className="w-full sm:w-auto min-h-[48px] md:min-h-[56px] px-6 md:px-8 rounded-full border-2 border-slate-300 bg-white hover:bg-slate-50 text-base md:text-lg text-slate-900 font-semibold transition-all hover:scale-105 hover:border-gold-400 focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2"
+                            aria-label="Watch demo video showing AI features in action"
+                        >
+                            <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" /> 
+                            See AI in Action
                         </Button>
                     </motion.div>
                 </div>
             </div>
 
-            {/* Decorative Glows with 3D Hover Effect */}
-            <motion.div
-                className="absolute top-1/4 -left-64 w-96 h-96 bg-gold-200/30 rounded-full blur-[128px] -z-10 mix-blend-multiply"
-                animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{
-                    duration: 8,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
+            {/* Decorative Glows - CSS only for performance */}
+            <div 
+                className="absolute top-1/4 -left-32 md:-left-64 w-64 md:w-96 h-64 md:h-96 bg-gold-200/30 rounded-full blur-[80px] md:blur-[128px] -z-10 mix-blend-multiply"
+                aria-hidden="true"
             />
-            <motion.div
-                className="absolute bottom-0 -right-64 w-96 h-96 bg-blue-200/20 rounded-full blur-[128px] -z-10 mix-blend-multiply"
-                animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.2, 0.4, 0.2],
-                }}
-                transition={{
-                    duration: 10,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: 1
-                }}
+            <div 
+                className="absolute bottom-0 -right-32 md:-right-64 w-64 md:w-96 h-64 md:h-96 bg-blue-200/20 rounded-full blur-[80px] md:blur-[128px] -z-10 mix-blend-multiply"
+                aria-hidden="true"
             />
         </section>
     );
