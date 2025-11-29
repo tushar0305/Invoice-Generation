@@ -134,8 +134,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         id: item.id,
         description: item.description,
         purity: item.purity || '',
-        grossWeight: Number(item.gross_weight) || 0,
-        netWeight: Number(item.net_weight) || 0,
+        grossWeight: Number(item.grossWeight ?? item.gross_weight) || 0,
+        netWeight: Number(item.netWeight ?? item.net_weight) || 0,
         rate: Number(item.rate) || 0,
         making: Number(item.making) || 0,
       })) || [{
@@ -245,16 +245,59 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const isShopSetupValid = settings?.gstNumber && settings?.address;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-4rem)]">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-4rem)] relative">
+      {/* Sticky Action Bar (Desktop Only) */}
+      <div className="hidden lg:block fixed top-0 left-0 right-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40 px-8 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button type="button" variant="ghost" onClick={() => router.back()} className="gap-2">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </Button>
+            <div className="h-6 w-px bg-border/40" />
+            <h2 className="text-lg font-semibold">
+              {invoice ? 'Edit Invoice' : 'New Invoice'}
+            </h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="invoice-form"
+              disabled={isPending || !isShopSetupValid}
+              className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white shadow-lg shadow-gold-500/20"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  {invoice ? 'Update' : 'Create'}
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Left Column - Form */}
-      <div className="lg:col-span-7 flex flex-col gap-6 h-full overflow-y-auto pb-20 lg:pb-0 no-scrollbar">
+      <div className="lg:col-span-7 flex flex-col gap-6 h-full overflow-y-auto pb-20 lg:pb-6 lg:pt-20 no-scrollbar">
         <MotionWrapper className="space-y-6">
-          {/* Header Actions */}
-          <div className="flex items-center justify-between">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between lg:hidden">
             <Button type="button" variant="ghost" onClick={() => router.back()} className="gap-2 hover:bg-white/5">
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
-            <div className="flex items-center gap-2 lg:hidden">
+            <div className="flex items-center gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="bg-white/5 border-white/10 hover:bg-white/10">
                 {showPreview ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
                 {showPreview ? 'Hide Preview' : 'Show Preview'}
@@ -286,7 +329,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           )}
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form id="invoice-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Customer Details */}
               <Card className="glass-card border-t-2 border-t-primary/50">
                 <CardHeader>
@@ -346,33 +389,36 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                 editable={!isPending}
               />
 
-              {/* Actions */}
-              <div className="flex justify-end gap-4 pt-4 pb-8">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.back()}
-                  disabled={isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isPending || !isShopSetupValid}
-                  className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white shadow-lg shadow-gold-500/20"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      {invoice ? 'Update Invoice' : 'Create Invoice'}
-                    </>
-                  )}
-                </Button>
+              {/* Mobile Actions - Floating Bottom Bar */}
+              <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border/40 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-50">
+                <div className="flex gap-3 max-w-lg mx-auto">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.back()}
+                    disabled={isPending}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isPending || !isShopSetupValid}
+                    className="flex-1 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white shadow-lg shadow-gold-500/20"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        {invoice ? 'Update' : 'Create'}
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>
@@ -380,8 +426,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       </div>
 
       {/* Right Column - Live Preview (Desktop) */}
-      <div className="hidden lg:col-span-5 lg:block sticky top-6 self-start">
-        <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-slate-900/50 backdrop-blur-xl p-4">
+      <div className="hidden lg:col-span-5 lg:block sticky top-20 self-start h-[calc(100vh-6rem)] pt-4">
+        <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-slate-900/50 backdrop-blur-xl p-4 h-full">
           <LiveInvoicePreview data={watchedValues} settings={settings} />
         </div>
       </div>

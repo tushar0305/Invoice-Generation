@@ -1,6 +1,4 @@
 import type { Invoice, InvoiceItem, UserSettings } from './definitions';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
 // Helper to format currency
@@ -39,6 +37,9 @@ interface GenerateInvoicePdfParams {
 }
 
 export async function generateInvoicePdf({ invoice, items, settings }: GenerateInvoicePdfParams): Promise<Blob> {
+  const jsPDF = (await import('jspdf')).default;
+  const autoTable = (await import('jspdf-autotable')).default;
+
   const templateId = settings?.templateId || 'classic';
 
   const doc = new jsPDF({

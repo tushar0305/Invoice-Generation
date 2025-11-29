@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, FileText, Users, Package, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function MobileBottomNav() {
+export function MobileBottomNav({ shopId }: { shopId: string }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -15,11 +15,11 @@ export function MobileBottomNav() {
   };
 
   const items = [
-    { href: '/dashboard', label: 'Home', icon: LayoutDashboard, active: isActive('/dashboard') && pathname === '/dashboard' },
-    { href: '/dashboard/invoices', label: 'Invoices', icon: FileText, active: isActive('/dashboard/invoices', true) },
-    { href: '/dashboard/customers', label: 'Customers', icon: Users, active: isActive('/dashboard/customers') },
-    { href: '/dashboard/stock', label: 'Stock', icon: Package, active: isActive('/dashboard/stock') },
-    { href: '/dashboard/calculator', label: 'Calculator', icon: Calculator, active: isActive('/dashboard/calculator') },
+    { href: `/shop/${shopId}/dashboard`, label: 'Home', icon: LayoutDashboard, active: isActive(`/shop/${shopId}/dashboard`) && pathname === `/shop/${shopId}/dashboard` },
+    { href: `/shop/${shopId}/invoices`, label: 'Invoices', icon: FileText, active: isActive(`/shop/${shopId}/invoices`, true) },
+    { href: `/shop/${shopId}/customers`, label: 'Customers', icon: Users, active: isActive(`/shop/${shopId}/customers`) },
+    { href: `/shop/${shopId}/stock`, label: 'Stock', icon: Package, active: isActive(`/shop/${shopId}/stock`) },
+    { href: `/shop/${shopId}/calculator`, label: 'Calculator', icon: Calculator, active: isActive(`/shop/${shopId}/calculator`) },
   ];
 
   return (

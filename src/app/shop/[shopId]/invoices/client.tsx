@@ -1,0 +1,613 @@
+/**
+ * Invoices Client Component
+ * Handles all interactive UI for the invoices page
+ */
+
+'use client';
+
+import { useState, useMemo, useTransition } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+    Table,
+    TableHeader,
+    TableRow,
+    TableHead,
+    TableBody,
+    TableCell,
+} from '@/components/ui/table';
+import { MotionWrapper } from '@/components/ui/motion-wrapper';
+import { haptics, ImpactStyle, NotificationType } from '@/lib/haptics';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, FilePlus2, Trash2, Loader2, Calendar as CalendarIcon, Download, RefreshCw, Share2, Scan } from 'lucide-react';
+import type { Invoice, InvoiceItem } from '@/lib/definitions';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/supabase/provider';
+import { supabase } from '@/supabase/client';
+import { format, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
+import { InvoiceMobileCard } from '@/components/dashboard/invoice-mobile-card';
+
+type InvoicesClientProps = {
+    initialInvoices: Invoice[];
+    shopId: string;
+    initialStatus: string;
+    initialSearch: string;
+};
+
+export function InvoicesClient({
+    initialInvoices,
+    shopId,
+    initialStatus,
+    initialSearch
+}: InvoicesClientProps) {
+    const [searchTerm, setSearchTerm] = useState(initialSearch);
+    const [statusFilter, setStatusFilter] = useState(initialStatus);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [isExporting, setIsExporting] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const router = useRouter();
+    const { toast } = useToast();
+    const [isDeleting, startDeleteTransition] = useTransition();
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+    const [invoiceToChangeStatus, setInvoiceToChangeStatus] = useState<{ id: string; currentStatus: string } | null>(null);
+    const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
+    const { user } = useUser();
+
+    const handleDeleteConfirmation = (invoiceId: string) => {
+        setInvoiceToDelete(invoiceId);
+        setDialogOpen(true);
+    };
+
+    const executeDelete = () => {
+        if (!invoiceToDelete) return;
+
+        startDeleteTransition(async () => {
+            try {
+                const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete).eq('user_id', user?.uid || '');
+                if (error) throw error;
+
+                // Update local state
+                setInvoices(prev => prev.filter(inv => inv.id !== invoiceToDelete));
+
+                toast({
+                    title: 'Invoice Deleted',
+                    description: 'The invoice and its items have been successfully deleted.',
+                });
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Error',
+                    description: 'Failed to delete the invoice.',
+                });
+            } finally {
+                setDialogOpen(false);
+                setInvoiceToDelete(null);
+            }
+        });
+    };
+
+    const handleMarkPaid = async (id: string) => {
+        const invoice = invoices?.find(inv => inv.id === id);
+        if (!invoice) return;
+
+        setInvoiceToChangeStatus({ id, currentStatus: invoice.status });
+        setStatusDialogOpen(true);
+    };
+
+    const confirmStatusChange = async () => {
+        if (!invoiceToChangeStatus) return;
+
+        try {
+            const currentStatus = invoiceToChangeStatus.currentStatus;
+            const newStatus = currentStatus === 'paid' ? 'due' : 'paid';
+
+            const { error } = await supabase
+                .from('invoices')
+                .update({ status: newStatus })
+                .eq('id', invoiceToChangeStatus.id)
+                .eq('user_id', user?.uid || '');
+
+            if (error) throw error;
+
+            // Update local state
+            setInvoices(prev => prev.map(inv =>
+                inv.id === invoiceToChangeStatus.id
+                    ? { ...inv, status: newStatus as 'paid' | 'due' }
+                    : inv
+            ));
+
+            haptics.notification(NotificationType.Success);
+            toast({
+                title: 'Success',
+                description: `Invoice marked as ${newStatus}`
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to update status'
+            });
+        } finally {
+            setStatusDialogOpen(false);
+            setInvoiceToChangeStatus(null);
+        }
+    };
+
+    const handleShare = async (id: string) => {
+        try {
+            const inv = invoices.find(i => i.id === id);
+            if (!inv) return;
+            const { shareInvoice } = await import('@/lib/share');
+            await shareInvoice(inv);
+        } catch (error) {
+            console.error('Share failed', error);
+            toast({ variant: 'destructive', title: 'Share Failed', description: 'Could not share invoice.' });
+        }
+    };
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            const { data } = await supabase
+                .from('invoices')
+                .select('*')
+                .eq('shop_id', shopId)
+                .order('created_at', { ascending: false });
+
+            if (data) {
+                const refreshedInvoices: Invoice[] = data.map((r: any) => ({
+                    id: r.id,
+                    userId: r.user_id,
+                    shopId: r.shop_id,
+                    createdBy: r.created_by,
+                    invoiceNumber: r.invoice_number,
+                    customerName: r.customer_name,
+                    customerAddress: r.customer_address || '',
+                    customerState: r.customer_state || '',
+                    customerPincode: r.customer_pincode || '',
+                    customerPhone: r.customer_phone || '',
+                    invoiceDate: r.invoice_date,
+                    discount: Number(r.discount) || 0,
+                    sgst: Number(r.sgst) || 0,
+                    cgst: Number(r.cgst) || 0,
+                    status: r.status,
+                    grandTotal: Number(r.grand_total) || 0,
+                    createdAt: r.created_at,
+                    updatedAt: r.updated_at,
+                }));
+                setInvoices(refreshedInvoices);
+            }
+
+            haptics.impact(ImpactStyle.Light);
+            toast({ description: 'List refreshed!' });
+        } catch (error) {
+            toast({ variant: 'destructive', description: 'Failed to refresh' });
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    // Client-side filtering for search and date range (status filter already server-side)
+    const filteredInvoices = useMemo(() => {
+        let result = invoices;
+
+        // Search filter (client-side for instant feedback)
+        const lower = searchTerm.toLowerCase();
+        if (lower) {
+            result = result.filter(inv =>
+                inv.customerName.toLowerCase().includes(lower) ||
+                inv.invoiceNumber.toLowerCase().includes(lower)
+            );
+        }
+
+        // Date Range Filter
+        if (dateRange?.from) {
+            const startStr = format(dateRange.from, 'yyyy-MM-dd');
+            const endStr = dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : startStr;
+
+            result = result.filter(inv => {
+                const d = inv.invoiceDate;
+                return d >= startStr && d <= endStr;
+            });
+        }
+
+        return result;
+    }, [invoices, searchTerm, dateRange]);
+
+    const applyPreset = (preset: 'today' | 'week' | 'month' | 'year' | 'all') => {
+        switch (preset) {
+            case 'today':
+                setDateRange({ from: startOfToday(), to: endOfToday() });
+                break;
+            case 'week':
+                setDateRange({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) });
+                break;
+            case 'month':
+                setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
+                break;
+            case 'year':
+                setDateRange({ from: startOfYear(new Date()), to: endOfYear(new Date()) });
+                break;
+            case 'all':
+            default:
+                setDateRange(undefined);
+        }
+    };
+
+    const formatRangeLabel = () => {
+        if (!dateRange?.from && !dateRange?.to) return 'All time';
+        if (dateRange.from && dateRange.to) return `${format(dateRange.from, 'dd MMM, yyyy')} – ${format(dateRange.to, 'dd MMM, yyyy')}`;
+        if (dateRange.from) return format(dateRange.from, 'dd MMM, yyyy');
+        if (dateRange.to) return format(dateRange.to, 'dd MMM, yyyy');
+        return 'All time';
+    };
+
+    const exportInvoices = async (scope: 'filtered' | 'all') => {
+        if (!user) return;
+        setIsExporting(true);
+        try {
+            const dataToExport = scope === 'filtered' ? filteredInvoices : invoices;
+
+            const dataRows = dataToExport.map(r => ({
+                Invoice: r.invoiceNumber,
+                Date: r.invoiceDate,
+                Customer: r.customerName,
+                Status: r.status,
+                Discount: r.discount || 0,
+                SGST: r.sgst || 0,
+                CGST: r.cgst || 0,
+                GrandTotal: r.grandTotal,
+            }));
+
+            const XLSX = await import('xlsx');
+            const ws = XLSX.utils.json_to_sheet(dataRows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Invoices');
+            const filename = scope === 'filtered' ? 'invoices_filtered.xlsx' : 'invoices_all.xlsx';
+            XLSX.writeFile(wb, filename);
+        } catch (e) {
+            console.error(e);
+            toast({ variant: 'destructive', title: 'Export failed', description: 'Unable to generate Excel right now.' });
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleDownloadPdf = async (invoiceId: string) => {
+        try {
+            const { data: inv, error: invErr } = await supabase
+                .from('invoices')
+                .select('*')
+                .eq('id', invoiceId)
+                .single();
+            if (invErr || !inv) throw new Error('Invoice not found');
+
+            const { data: its, error: itErr } = await supabase
+                .from('invoice_items')
+                .select('*')
+                .eq('invoice_id', invoiceId)
+                .order('id');
+            if (itErr) throw itErr;
+
+            const invoice: Invoice = {
+                id: inv.id,
+                userId: inv.user_id,
+                shopId: inv.shop_id,
+                createdBy: inv.created_by,
+                invoiceNumber: inv.invoice_number,
+                customerName: inv.customer_name,
+                customerAddress: inv.customer_address || '',
+                customerState: inv.customer_state || '',
+                customerPincode: inv.customer_pincode || '',
+                customerPhone: inv.customer_phone || '',
+                invoiceDate: inv.invoice_date,
+                discount: Number(inv.discount) || 0,
+                sgst: Number(inv.sgst) || 0,
+                cgst: Number(inv.cgst) || 0,
+                status: inv.status,
+                grandTotal: Number(inv.grand_total) || 0,
+                createdAt: inv.created_at,
+                updatedAt: inv.updated_at,
+            };
+
+            const items: InvoiceItem[] = (its ?? []).map((r: any) => ({
+                id: r.id,
+                description: r.description,
+                purity: r.purity,
+                grossWeight: Number(r.gross_weight) || 0,
+                netWeight: Number(r.net_weight) || 0,
+                rate: Number(r.rate) || 0,
+                making: Number(r.making) || 0,
+            }));
+
+            const { data: shopDetails } = await supabase
+                .from('shops')
+                .select('*')
+                .eq('id', inv.shop_id)
+                .single();
+
+            const settings = shopDetails ? {
+                id: shopDetails.id,
+                userId: inv.user_id,
+                cgstRate: Number(shopDetails.cgst_rate) || 0,
+                sgstRate: Number(shopDetails.sgst_rate) || 0,
+                shopName: shopDetails.shop_name || 'Jewellers Store',
+                gstNumber: shopDetails.gst_number || '',
+                panNumber: shopDetails.pan_number || '',
+                address: shopDetails.address || '',
+                state: shopDetails.state || '',
+                pincode: shopDetails.pincode || '',
+                phoneNumber: shopDetails.phone_number || '',
+                email: shopDetails.email || '',
+                templateId: shopDetails.template_id || 'classic',
+            } : undefined;
+
+            const { generateInvoicePdf } = await import('@/lib/pdf');
+            const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
+            const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
+
+            // Web Download Logic
+            const url = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            toast({ title: 'Success', description: 'Invoice PDF downloaded successfully' });
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to generate PDF. Please try again.',
+            });
+        }
+    };
+
+    return (
+        <MotionWrapper className="space-y-4 pb-24">
+            {/* Quick Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                {['all', 'paid', 'due', 'overdue'].map((status) => (
+                    <Button
+                        key={status}
+                        variant={statusFilter === status ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                            haptics.impact(ImpactStyle.Light);
+                            router.push(`/shop/${shopId}/invoices?status=${status}`);
+                        }}
+                        className={cn(
+                            "capitalize rounded-full h-8 px-4 text-xs",
+                            statusFilter === status ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+                        )}
+                    >
+                        {status}
+                    </Button>
+                ))}
+            </div>
+
+            {/* Search and Actions */}
+            <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search invoices..."
+                            className="pl-9 bg-background h-10"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Button variant="outline" size="icon" onClick={handleRefresh} className="shrink-0">
+                        <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                    </Button>
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0">
+                                <CalendarIcon className="h-3.5 w-3.5" />
+                                <span className="text-xs">{formatRangeLabel()}</span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-3" align="start">
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <div>
+                                    <div className="mb-2 text-xs font-medium text-muted-foreground">Quick ranges</div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
+                                        <Button size="sm" variant="secondary" onClick={() => applyPreset('today')}>Today</Button>
+                                        <Button size="sm" variant="secondary" onClick={() => applyPreset('week')}>This Week</Button>
+                                        <Button size="sm" variant="secondary" onClick={() => applyPreset('month')}>This Month</Button>
+                                        <Button size="sm" variant="secondary" onClick={() => applyPreset('year')}>This Year</Button>
+                                        <Button size="sm" variant="ghost" onClick={() => applyPreset('all')}>All Time</Button>
+                                    </div>
+                                </div>
+                                <Calendar
+                                    mode="range"
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={1}
+                                    defaultMonth={dateRange?.from}
+                                />
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0" disabled={isExporting}>
+                                {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                <span className="text-xs">Export</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => exportInvoices('filtered')}>Export filtered</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportInvoices('all')}>Export all</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button asChild size="sm" variant="outline" className="h-9 gap-2 shrink-0 border-primary/20 hover:bg-primary/5">
+                        <Link href={`/shop/${shopId}/invoices/scan`}>
+                            <Scan className="h-3.5 w-3.5" />
+                            <span className="text-xs">Scan</span>
+                        </Link>
+                    </Button>
+
+                    <Button asChild size="sm" className="h-9 gap-2 shrink-0 bg-primary hover:bg-primary/90">
+                        <Link href={`/shop/${shopId}/invoices/new`}>
+                            <FilePlus2 className="h-3.5 w-3.5" />
+                            <span className="text-xs">New</span>
+                        </Link>
+                    </Button>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="space-y-4">
+                {/* Desktop Table View */}
+                <div className="rounded-md border border-border/50 overflow-hidden hidden md:block bg-card">
+                    <Table className="table-modern">
+                        <TableHeader className="bg-muted/50">
+                            <TableRow className="hover:bg-transparent border-b-border/50">
+                                <TableHead className="text-primary">Invoice #</TableHead>
+                                <TableHead className="text-primary">Date</TableHead>
+                                <TableHead className="text-primary">Customer</TableHead>
+                                <TableHead className="text-primary">Status</TableHead>
+                                <TableHead className="text-right text-primary">Amount</TableHead>
+                                <TableHead className="text-right text-primary">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredInvoices.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                        No invoices found.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                filteredInvoices.map((invoice) => (
+                                    <TableRow
+                                        key={invoice.id}
+                                        className="hover:bg-muted/50 border-b-border/50 transition-colors cursor-pointer"
+                                        onClick={() => router.push(`/shop/${shopId}/invoices/view?id=${invoice.id}`)}
+                                    >
+                                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                                        <TableCell>{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
+                                        <TableCell>{invoice.customerName}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'}>
+                                                {invoice.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right font-bold text-primary">₹{invoice.grandTotal.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                                <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(invoice.id)}>
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                    {filteredInvoices.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+                            <p>No invoices found.</p>
+                            {statusFilter !== 'all' && <Button variant="link" onClick={() => setStatusFilter('all')}>Clear filters</Button>}
+                        </div>
+                    ) : (
+                        filteredInvoices.map((invoice) => (
+                            <InvoiceMobileCard
+                                key={invoice.id}
+                                invoice={invoice}
+                                onView={(id) => router.push(`/shop/${shopId}/invoices/view?id=${id}`)}
+                                onDelete={handleDeleteConfirmation}
+                                onDownload={handleDownloadPdf}
+                                onShare={handleShare}
+                                onMarkPaid={handleMarkPaid}
+                            />
+                        ))
+                    )}
+                </div>
+            </div>
+
+            <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the invoice
+                            and all of its associated data.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={executeDelete}
+                            disabled={isDeleting}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Status Change Confirmation Dialog */}
+            <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Change Invoice Status?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to mark this invoice as {invoiceToChangeStatus?.currentStatus === 'paid' ? 'due' : 'paid'}?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmStatusChange}
+                            className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
+                            Confirm
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </MotionWrapper>
+    );
+}

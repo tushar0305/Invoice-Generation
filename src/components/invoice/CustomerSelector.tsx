@@ -72,7 +72,7 @@ export function CustomerSelector({ value, onChange, customers, disabled }: Custo
     return (
         <div className="space-y-4" ref={dropdownRef}>
             <div className="relative">
-                <Label htmlFor="customerName" className="text-sm font-medium mb-1.5 block">Customer Name / Search</Label>
+                <Label htmlFor="customerName" className="text-xs uppercase text-muted-foreground font-semibold tracking-wider mb-1.5 block">Customer Name / Search</Label>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                     <Input
@@ -82,7 +82,7 @@ export function CustomerSelector({ value, onChange, customers, disabled }: Custo
                         onFocus={() => setShowDropdown(true)}
                         placeholder="Search or enter new customer..."
                         disabled={disabled}
-                        className="pl-9"
+                        className="pl-9 h-12 text-base bg-background/50"
                         autoComplete="off"
                     />
                 </div>
@@ -127,50 +127,50 @@ export function CustomerSelector({ value, onChange, customers, disabled }: Custo
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <Label htmlFor="customerPhone">Phone Number</Label>
+                    <Label htmlFor="customerPhone" className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Phone Number</Label>
                     <Input
                         id="customerPhone"
                         value={value.customerPhone}
                         onChange={(e) => onChange({ phone: e.target.value })}
                         placeholder="Enter phone number"
                         disabled={disabled}
-                        className="mt-1"
+                        className="mt-1.5 h-12 text-base bg-background/50"
                     />
                 </div>
                 <div>
-                    <Label htmlFor="customerAddress">Address</Label>
+                    <Label htmlFor="customerAddress" className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Address</Label>
                     <Input
                         id="customerAddress"
                         value={value.customerAddress}
                         onChange={(e) => onChange({ address: e.target.value })}
                         placeholder="Enter address"
                         disabled={disabled}
-                        className="mt-1"
+                        className="mt-1.5 h-12 text-base bg-background/50"
                     />
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <Label htmlFor="customerState">State</Label>
+                    <Label htmlFor="customerState" className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">State</Label>
                     <Input
                         id="customerState"
                         value={value.customerState || ''}
                         onChange={(e) => onChange({ state: e.target.value })}
                         placeholder="State"
                         disabled={disabled}
-                        className="mt-1"
+                        className="mt-1.5 h-12 text-base bg-background/50"
                     />
                 </div>
                 <div>
-                    <Label htmlFor="customerPincode">Pincode</Label>
+                    <Label htmlFor="customerPincode" className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Pincode</Label>
                     <Input
                         id="customerPincode"
                         value={value.customerPincode || ''}
                         onChange={(e) => onChange({ pincode: e.target.value })}
                         placeholder="Pincode"
                         disabled={disabled}
-                        className="mt-1"
+                        className="mt-1.5 h-12 text-base bg-background/50"
                     />
                 </div>
             </div>

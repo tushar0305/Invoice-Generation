@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from 'framer-motion';
  * - Dashboard/Invoices: Speed Dial (Scan vs Manual)
  * - Stock: Add Stock Item
  */
-export function FloatingNewInvoiceButton() {
+export function FloatingNewInvoiceButton({ shopId }: { shopId: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -27,15 +27,15 @@ export function FloatingNewInvoiceButton() {
   const baseClassName = "fixed right-5 bottom-[var(--fab-bottom)] md:bottom-6 z-[100] inline-flex items-center justify-center rounded-full shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-95 h-14 w-14 md:h-12 md:w-12 transition-transform";
 
   // Hide FAB on calculator screen completely
-  if (pathname === '/dashboard/calculator') {
+  if (pathname === `/shop/${shopId}/calculator`) {
     return null;
   }
 
   // Stock Page: Simple Add Button
-  if (pathname === '/dashboard/stock') {
+  if (pathname === `/shop/${shopId}/stock`) {
     return (
       <Button
-        onClick={() => router.push('/dashboard/stock?action=add')}
+        onClick={() => router.push(`/shop/${shopId}/stock?action=add`)}
         aria-label="Add Stock Item"
         style={style}
         className={cn(baseClassName, "bg-[#D4AF37] hover:bg-[#C5A028] text-white")}
@@ -46,7 +46,7 @@ export function FloatingNewInvoiceButton() {
   }
 
   // Hide on specific pages
-  if (pathname.includes('/new') || pathname.includes('/edit') || pathname === '/dashboard/settings' || pathname === '/dashboard/invoices/scan') {
+  if (pathname.includes('/new') || pathname.includes('/edit') || pathname === `/shop/${shopId}/settings` || pathname === `/shop/${shopId}/invoices/scan`) {
     return null;
   }
 
@@ -81,7 +81,7 @@ export function FloatingNewInvoiceButton() {
                 transition={{ delay: 0.1, type: "spring", stiffness: 500, damping: 30 }}
               >
                 <Link
-                  href="/dashboard/invoices/scan"
+                  href={`/shop/${shopId}/invoices/scan`}
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-3 group"
                 >
@@ -102,7 +102,7 @@ export function FloatingNewInvoiceButton() {
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               >
                 <Link
-                  href="/dashboard/invoices/new"
+                  href={`/shop/${shopId}/invoices/new`}
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-3 group"
                 >

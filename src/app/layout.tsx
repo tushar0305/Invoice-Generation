@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { SupabaseProvider } from '@/supabase/provider';
-import { ActiveShopProvider } from '@/hooks/use-active-shop';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { QueryProvider } from '@/components/query-provider';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -91,15 +90,13 @@ export default function RootLayout({
       <body className="font-body antialiased bg-mesh min-h-screen" suppressHydrationWarning>
         <SupabaseProvider>
           <QueryProvider>
-            <ActiveShopProvider>
-              <AuthWrapper>
-                <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-                  {children}
-                  <InstallPrompt />
-                </ThemeProvider>
-              </AuthWrapper>
-              <Toaster />
-            </ActiveShopProvider>
+            <AuthWrapper>
+              <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+                {children}
+                <InstallPrompt />
+              </ThemeProvider>
+            </AuthWrapper>
+            <Toaster />
           </QueryProvider>
         </SupabaseProvider>
       </body>

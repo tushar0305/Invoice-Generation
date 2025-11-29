@@ -124,11 +124,10 @@ export function ShopSwitcher({ className }: { className?: string }) {
                         {userShops.length > 0 && <DropdownMenuSeparator className="bg-white/10" />}
                         <DropdownMenuItem
                             className="flex items-center gap-2 cursor-pointer text-primary focus:text-primary hover:bg-primary/10 rounded-md mx-1 my-0.5"
-                            onClick={() => {
-                                // Use URL param to trigger global dialog
-                                const params = new URLSearchParams(window.location.search);
-                                params.set('action', 'create-shop');
-                                router.push(`?${params.toString()}`);
+                            onClick={async () => {
+                                // Reset onboarding step to 1
+                                await supabase.rpc('update_onboarding_step', { p_step: 1 });
+                                router.push('/onboarding/shop-setup');
                                 setOpenMobile(false);
                             }}
                         >

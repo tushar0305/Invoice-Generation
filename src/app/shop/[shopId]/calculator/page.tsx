@@ -5,7 +5,7 @@ import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { Button } from '@/components/ui/button';
 import { Delete, Divide, Equal, Minus, Plus, X, History, Calculator as CalcIcon, Coins } from 'lucide-react';
 import { haptics } from '@/lib/haptics';
-import { ImpactStyle } from '@capacitor/haptics';
+import { ImpactStyle } from '@/lib/haptics';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';

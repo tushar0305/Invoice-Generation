@@ -1,43 +1,45 @@
-import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
-import { Capacitor } from '@capacitor/core';
+// Web-only haptics implementation (no-op for browsers)
+// Capacitor has been removed - mobile app will be handled separately
 
-const isNative = Capacitor.isNativePlatform();
+export enum ImpactStyle {
+    Heavy = 'HEAVY',
+    Medium = 'MEDIUM',
+    Light = 'LIGHT',
+}
+
+export enum NotificationType {
+    Success = 'SUCCESS',
+    Warning = 'WARNING',
+    Error = 'ERROR',
+}
+
+const isNative = false; // Always false in web-only mode
+
+export const triggerImpact = async (_style: ImpactStyle = ImpactStyle.Medium) => {
+    // No-op for web
+    return;
+};
+
+export const triggerNotification = async (_type: NotificationType = NotificationType.Success) => {
+    // No-op for web
+    return;
+};
+
+export const triggerSelection = async () => {
+    // No-op for web
+    return;
+};
+
+export const triggerVibration = async () => {
+    // No-op for web - browsers can use navigator.vibrate if needed
+    if ('vibrate' in navigator) {
+        navigator.vibrate(10);
+    }
+};
 
 export const haptics = {
-    impact: async (style: ImpactStyle = ImpactStyle.Medium) => {
-        if (isNative) {
-            try {
-                await Haptics.impact({ style });
-            } catch (e) {
-                // Ignore errors
-            }
-        }
-    },
-    notification: async (type: NotificationType = NotificationType.Success) => {
-        if (isNative) {
-            try {
-                await Haptics.notification({ type });
-            } catch (e) {
-                // Ignore errors
-            }
-        }
-    },
-    vibrate: async () => {
-        if (isNative) {
-            try {
-                await Haptics.vibrate();
-            } catch (e) {
-                // Ignore errors
-            }
-        }
-    },
-    selection: async () => {
-        if (isNative) {
-            try {
-                await Haptics.selectionChanged();
-            } catch (e) {
-                // Ignore errors
-            }
-        }
-    }
+    impact: triggerImpact,
+    notification: triggerNotification,
+    selection: triggerSelection,
+    vibration: triggerVibration,
 };

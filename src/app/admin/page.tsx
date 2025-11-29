@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useActiveShop } from '@/hooks/use-active-shop';
 import { useUser } from '@/supabase/provider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,34 +19,75 @@ import { motion } from 'framer-motion';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/supabase/client';
+import type { Shop } from '@/lib/definitions';
 
 export default function AdminDashboardPage() {
     const { user } = useUser();
-    const { userShops, userRole, isLoading: shopLoading } = useActiveShop();
     const router = useRouter();
+    const [userShops, setUserShops] = useState<Shop[]>([]);
     const [stats, setStats] = useState({ revenue: 0, invoices: 0 });
-    const [statsLoading, setStatsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const isLoading = shopLoading || statsLoading;
-
-    // Fetch real stats from database
+    // Fetch user shops and stats
     useEffect(() => {
-        async function fetchStats() {
-            if (!user || userShops.length === 0) {
-                setStatsLoading(false);
+        async function fetchData() {
+            if (!user?.uid) {
+                setIsLoading(false);
                 return;
             }
 
             try {
-                const shopIds = userShops.map(shop => shop.id);
+                // Fetch user's shops
+                const { data: roles, error: rolesError } = await supabase
+                    .from('user_shop_roles')
+                    .select('shop_id, shops(*)')
+                    .eq('user_id', user.uid)
+                    .eq('is_active', true);
+
+                if (rolesError) throw rolesError;
+
+                const shops: Shop[] = (roles || [])
+                    .map((role: any) => {
+                        if (!role.shops) return null;
+                        const shop = role.shops;
+                        return {
+                            id: shop.id,
+                            shopName: shop.shop_name,
+                            gstNumber: shop.gst_number,
+                            panNumber: shop.pan_number,
+                            address: shop.address,
+                            state: shop.state,
+                            pincode: shop.pincode,
+                            phoneNumber: shop.phone_number,
+                            email: shop.email,
+                            logoUrl: shop.logo_url,
+                            templateId: shop.template_id,
+                            cgstRate: Number(shop.cgst_rate) || 1.5,
+                            sgstRate: Number(shop.sgst_rate) || 1.5,
+                            isActive: shop.is_active,
+                            createdBy: shop.created_by,
+                            createdAt: shop.created_at,
+                            updatedAt: shop.updated_at,
+                        };
+                    })
+                    .filter(Boolean) as Shop[];
+
+                setUserShops(shops);
 
                 // Fetch total revenue across all shops
-                const { data: invoices, error } = await supabase
+                const shopIds = shops.map(shop => shop.id);
+
+                if (shopIds.length === 0) {
+                    setStats({ revenue: 0, invoices: 0 });
+                    return;
+                }
+
+                const { data: invoices, error: invoicesError } = await supabase
                     .from('invoices')
                     .select('grand_total')
                     .in('shop_id', shopIds);
 
-                if (error) throw error;
+                if (invoicesError) throw invoicesError;
 
                 const totalRevenue = invoices?.reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0) || 0;
                 const totalInvoices = invoices?.length || 0;
@@ -57,14 +97,14 @@ export default function AdminDashboardPage() {
                     invoices: totalInvoices
                 });
             } catch (error) {
-                console.error('Error fetching stats:', error);
+                console.error('Error fetching data:', error);
             } finally {
-                setStatsLoading(false);
+                setIsLoading(false);
             }
         }
 
-        fetchStats();
-    }, [user, userShops]);
+        fetchData();
+    }, [user?.uid]);
 
     if (isLoading) {
         return (

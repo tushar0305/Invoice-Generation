@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, DollarSign, Calendar, Eye, EyeOff, Zap, Trend
 import { useState } from 'react';
 import type { Invoice } from '@/lib/definitions';
 import { formatCurrency } from '@/lib/utils';
+import { ClientDate } from './client-date';
 
 interface SmartHeroProps {
     invoices: Invoice[] | null;
@@ -23,16 +24,16 @@ export function SmartHero({ invoices, totalRevenue, totalWeekRevenue, totalToday
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-background to-primary/5 border border-border shadow-gold-lg p-6 md:p-8"
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-background to-primary/5 border border-border shadow-gold-lg p-5 md:p-8"
         >
-            {/* Decorative Background Elements */}
+            {/* Decorative Background Elements - Hidden on mobile to reduce noise */}
             <motion.div
                 animate={{
                     scale: [1, 1.2, 1],
                     opacity: [0.1, 0.15, 0.1]
                 }}
                 transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-gold-200/30 to-transparent rounded-full blur-3xl -z-0"
+                className="hidden md:block absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-gold-200/30 to-transparent rounded-full blur-3xl -z-0"
             />
             <motion.div
                 animate={{
@@ -40,15 +41,15 @@ export function SmartHero({ invoices, totalRevenue, totalWeekRevenue, totalToday
                     opacity: [0.1, 0.2, 0.1]
                 }}
                 transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-br from-blue-200/30 to-transparent rounded-full blur-3xl -z-0"
+                className="hidden md:block absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-br from-blue-200/30 to-transparent rounded-full blur-3xl -z-0"
             />
 
             <div className="relative z-10">
                 {/* Hero Metric - Today's Revenue */}
                 <div className="mb-6">
                     <div className="flex items-center gap-2 mb-2">
-                        <Zap className="h-5 w-5 text-gold-500" />
-                        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                        <Zap className="h-4 w-4 md:h-5 md:w-5 text-gold-500" />
+                        <span className="text-xs md:text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                             Today's Revenue
                         </span>
                     </div>
@@ -65,7 +66,7 @@ export function SmartHero({ invoices, totalRevenue, totalWeekRevenue, totalToday
                                 initial={{ opacity: 0, scale: 0.98 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 0.25 }}
-                                className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gold-500 via-gold-400 to-amber-500 bg-clip-text text-transparent font-mono"
+                                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gold-500 via-gold-400 to-amber-500 bg-clip-text text-transparent font-mono"
                             >
                                 {isRevenueVisible ? formatCurrency(totalTodayRevenue) : '••••••'}
                             </motion.h1>
@@ -90,7 +91,7 @@ export function SmartHero({ invoices, totalRevenue, totalWeekRevenue, totalToday
                     <p className="text-sm text-muted-foreground">
                         <span className="inline-flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })}
+                            <ClientDate />
                         </span>
                     </p>
                 </div>

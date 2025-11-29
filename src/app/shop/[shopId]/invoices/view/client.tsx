@@ -6,9 +6,6 @@ import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Loader2, Printer, Edit, ArrowLeft, CheckCircle, Clock, Send } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -18,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
 import { useUser } from '@/supabase/provider';
-import { composeWhatsAppInvoiceMessage, openWhatsAppWithText, shareInvoicePdfById } from '@/lib/share';
+import { shareInvoice } from '@/lib/share';
 import { generateInvoicePdf } from '@/lib/pdf';
 // import type { UserSettings } from '@/lib/definitions';
 
@@ -196,52 +193,15 @@ export function ViewInvoiceClient() {
                 settings: settings || undefined,
             });
 
-            if (Capacitor.isNativePlatform()) {
-                // Mobile: Save to Filesystem
-                const fileName = `Invoice-${invoice.invoiceNumber}.pdf`;
-                const reader = new FileReader();
-                reader.readAsDataURL(pdfBlob);
-                reader.onloadend = async () => {
-                    const base64data = reader.result as string;
-                    try {
-                        const result = await Filesystem.writeFile({
-                            path: fileName,
-                            data: base64data,
-                            directory: Directory.Documents,
-                        });
-
-                        toast({
-                            title: 'Download Successful',
-                            description: `Saved to Documents as ${fileName}`,
-                        });
-
-                        // Try to open the file
-                        try {
-                            // On Android we can try to open it, but Share is often better for "viewing"
-                            // For now, just notifying success is good, or we can share it
-                        } catch (e) {
-                            console.error('Error opening file', e);
-                        }
-                    } catch (e) {
-                        console.error('Error writing file', e);
-                        toast({
-                            variant: 'destructive',
-                            title: 'Download Failed',
-                            description: 'Could not save file to device.',
-                        });
-                    }
-                };
-            } else {
-                // Web: Standard download
-                const url = URL.createObjectURL(pdfBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `Invoice-${invoice.invoiceNumber}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }
+            // Web: Standard download
+            const url = URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Invoice-${invoice.invoiceNumber}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Error generating PDF:', error);
             toast({
@@ -262,14 +222,6 @@ export function ViewInvoiceClient() {
                 settings: settings || undefined,
             });
             const url = URL.createObjectURL(pdfBlob);
-
-            if (Capacitor.isNativePlatform()) {
-                // On mobile, "Print" is best handled by sharing the PDF (which usually has a Print option)
-                // or opening it in a system viewer.
-                // We'll use our robust share helper which handles file saving and sharing.
-                await shareInvoicePdfById(invoice.id, invoice, settings || undefined);
-                return;
-            }
 
             // Try iframe print first (better UX on desktop)
             try {
@@ -337,15 +289,7 @@ export function ViewInvoiceClient() {
                         variant="outline"
                         onClick={async () => {
                             if (!invoice) return;
-                            // Share an exact PDF captured from the print layout via iframe
-                            const ok = await shareInvoicePdfById(invoice.id, invoice, settings || undefined);
-                            if (!ok) {
-                                // Fallback already opened WhatsApp with text; let the user know
-                                toast({
-                                    title: 'Sharing fallback used',
-                                    description: 'Your device/browser does not support sharing files directly. Opened WhatsApp with a text summary instead.',
-                                });
-                            }
+                            await shareInvoice(invoice);
                         }}
                     >
                         <Send className="mr-2 h-4 w-4" /> Share

@@ -8,18 +8,18 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-export function GoldSilverTicker() {
+export function GoldSilverTicker({ initialData }: { initialData?: any }) {
     const [prices, setPrices] = useState({
-        gold24k: { value: 0, trend: 'up' },
-        gold22k: { value: 0, trend: 'up' },
-        silver: { value: 0, trend: 'up' },
+        gold24k: { value: initialData?.gold_24k || 0, trend: 'up' },
+        gold22k: { value: initialData?.gold_22k || 0, trend: 'up' },
+        silver: { value: initialData?.silver || 0, trend: 'up' },
     });
     const [previousPrices, setPreviousPrices] = useState({
-        gold24k: 0,
-        gold22k: 0,
-        silver: 0,
+        gold24k: initialData?.gold_24k || 0,
+        gold22k: initialData?.gold_22k || 0,
+        silver: initialData?.silver || 0,
     });
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(initialData?.updated_at ? new Date(initialData.updated_at) : null);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const calculateTrend = (current: number, previous: number): string => {
@@ -111,7 +111,9 @@ export function GoldSilverTicker() {
     };
 
     useEffect(() => {
-        fetchPrices();
+        if (!initialData) {
+            fetchPrices();
+        }
 
         // Subscribe to real-time updates
         const channel = supabase
@@ -226,7 +228,7 @@ export function GoldSilverTicker() {
                         <RefreshCw className={cn("h-3 w-3 text-muted-foreground", isRefreshing && "animate-spin")} />
                     </Button>
                     {lastUpdated && (
-                        <span className="text-[10px] text-muted-foreground hidden sm:inline-block">
+                        <span className="text-[10px] text-muted-foreground hidden sm:inline-block" suppressHydrationWarning>
                             {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                         </span>
                     )}

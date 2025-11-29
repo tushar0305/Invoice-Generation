@@ -1,18 +1,17 @@
+// Web-only platform redirect
+// Capacitor has been removed - mobile app will be handled separately
+
 'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Capacitor } from '@capacitor/core';
 
 export function PlatformRedirect() {
     const router = useRouter();
 
     useEffect(() => {
-        // Check if running in Capacitor (mobile app)
-        if (Capacitor.isNativePlatform()) {
-            // Redirect to login page for mobile app
-            router.replace('/login');
-        }
+        // No redirect needed - web-only mode
+        // Mobile app is handled separately
     }, [router]);
 
     return null;

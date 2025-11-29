@@ -22,7 +22,7 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { haptics } from '@/lib/haptics';
-import { NotificationType } from '@capacitor/haptics';
+import { NotificationType } from '@/lib/haptics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const stockItemSchema = z.object({
@@ -121,18 +121,15 @@ export default function NewStockItemPage() {
                 }
 
                 const itemDb: any = {
-                    updated_by: user.uid,
                     name: data.name,
                     description: data.description || null,
                     purity: data.purity,
                     base_price: data.basePrice,
-                    base_weight: data.baseWeight ?? null,
                     making_charge_per_gram: data.makingChargePerGram,
                     quantity: data.quantity,
                     unit: data.unit,
                     category: data.category || null,
                     is_active: data.isActive,
-                    updated_at: new Date().toISOString(),
                 };
 
                 if (editId) {
@@ -151,7 +148,6 @@ export default function NewStockItemPage() {
                     // Create new item
                     itemDb.user_id = user.uid;
                     itemDb.shop_id = activeShop.id;
-                    itemDb.created_by = user.uid;
 
                     const { error } = await supabase
                         .from('stock_items')
@@ -165,12 +161,13 @@ export default function NewStockItemPage() {
 
                 router.push('/dashboard/stock');
             } catch (err: any) {
-                console.error('Error saving stock item:', {
+                console.error('Error saving stock item:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+                console.error('Error details:', {
                     message: err?.message,
                     code: err?.code,
                     details: err?.details,
                     hint: err?.hint,
-                    fullError: err
+                    full: JSON.stringify(err)
                 });
                 toast({
                     variant: 'destructive',

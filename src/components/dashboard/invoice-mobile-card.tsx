@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Download, Trash2, Share2, CheckCircle, RefreshCw, Check } from 'lucide-react';
 import { haptics } from '@/lib/haptics';
-import { ImpactStyle, NotificationType } from '@capacitor/haptics';
+import { ImpactStyle, NotificationType } from '@/lib/haptics';
 import { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';

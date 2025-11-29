@@ -1,272 +1,76 @@
-import type { Invoice, InvoiceItem, UserSettings } from './definitions';
-import { format } from 'date-fns';
-import { formatCurrency } from './utils';
-import { generateInvoicePdf } from './pdf';
-import { supabase } from '@/supabase/client';
+// Web-only sharing implementation
+// Capacitor has been removed - mobile app will be handled separately
 
-export function composeWhatsAppInvoiceMessage(
-  invoice: Invoice,
-  settings?: any
-) {
-  const dateStr = format(new Date(invoice.invoiceDate), 'dd MMM, yyyy');
-  const shop = settings?.shopName || 'Jewellers Store';
-  const phone = settings?.phoneNumber;
-  const header = `Invoice ${invoice.invoiceNumber}`;
-  const customer = invoice.customerName ? `for ${invoice.customerName}` : '';
-  const amount = formatCurrency(invoice.grandTotal);
-  const lines = [
-    `${header} ${customer}`.trim(),
-    `Date: ${dateStr}`,
-    `Amount: ${amount}`,
-    `Status: ${invoice.status.toUpperCase()}`,
-    '',
-    `— ${shop}${phone ? ` \u2022 ${phone}` : ''}`,
-  ];
-  return lines.join('\n');
-}
-
-export function openWhatsAppWithText(message: string) {
-  const encoded = encodeURIComponent(message);
-  // Prefer wa.me when available, fall back to whatsapp:// scheme
-  const webUrl = `https://wa.me/?text=${encoded}`;
-  const appUrl = `whatsapp://send?text=${encoded}`;
-  // Try opening the web URL in a new tab; most environments redirect to app if installed
-  const win = window.open(webUrl, '_blank');
-  if (!win) {
-    // As a fallback (e.g., popup blocked), try app scheme
-    window.location.href = appUrl;
-  }
-}
-
-/**
- * Attempt to share a generated PDF via the native share sheet (e.g., WhatsApp) without uploading.
- * Requirements:
- * - Runs in a user gesture (click/tap)
- * - Over HTTPS (or localhost)
- * - Mobile browsers that support Web Share Level 2 (files)
- * Fallback: opens WhatsApp with a prefilled text message.
- */
-import { Share } from '@capacitor/share';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Capacitor } from '@capacitor/core';
-
-/**
- * Attempt to share a generated PDF via the native share sheet (e.g., WhatsApp) without uploading.
- * Requirements:
- * - Runs in a user gesture (click/tap)
- * - Over HTTPS (or localhost)
- * - Mobile browsers that support Web Share Level 2 (files)
- * Fallback: opens WhatsApp with a prefilled text message.
- */
-export async function shareInvoicePdf(
-  invoice: Invoice,
-  items: InvoiceItem[],
-  settings?: any | null
-) {
-  // Guard: only run in the browser
-  if (typeof window === 'undefined') {
-    throw new Error('Sharing is only available in the browser');
-  }
-
-  const message = composeWhatsAppInvoiceMessage(invoice, settings || undefined);
-
-  try {
-    const pdfBlob = await generateInvoicePdf({ invoice, items, settings: settings || undefined });
-    const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
-
-    if (Capacitor.isNativePlatform()) {
-      // Native (iOS/Android) implementation
-      const base64Data = await blobToBase64(pdfBlob);
-      const savedFile = await Filesystem.writeFile({
-        path: filename,
-        data: base64Data,
-        directory: Directory.Cache,
+export const shareInvoice = async (invoice: any) => {
+  // Use Web Share API if available
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: `Invoice #${invoice.invoice_number}`,
+        text: `Invoice for ${invoice.customer_name}`,
+        url: window.location.href,
       });
-
-      await Share.share({
-        title: `Invoice ${invoice.invoiceNumber}`,
-        text: message,
-        url: savedFile.uri,
-        dialogTitle: 'Share Invoice PDF',
-      });
-      return true;
-    } else {
-      // Web implementation
-      const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
-      const navAny = navigator as any;
-      const canShareFiles = !!(navAny?.canShare ? navAny.canShare({ files: [pdfFile] }) : navAny?.share);
-
-      if (canShareFiles && navAny?.share) {
-        const shareData: any = {
-          title: `Invoice ${invoice.invoiceNumber}`,
-          text: message,
-          files: [pdfFile],
-        };
-        await navAny.share(shareData);
-        return true;
-      }
+      return { success: true };
+    } catch (error) {
+      console.error('Share failed:', error);
+      return { success: false, error };
     }
-
-    // Fallback 1: try opening WhatsApp with text
-    openWhatsAppWithText(message);
-    return false;
-  } catch (err) {
-    console.error('Failed to share PDF natively:', err); // Log the error
-    // Fallback 2: on any error, just open WhatsApp with text
-    openWhatsAppWithText(message);
-    return false;
-  }
-}
-
-let isSharing = false; // Add a global or module-level flag
-
-// Share by invoiceId only (loads the print route and captures it). Optionally include invoice/settings for message text.
-export async function shareInvoicePdfById(
-  invoiceId: string,
-  invoiceForMessage?: Invoice,
-  settings?: any | null
-) {
-  if (isSharing) {
-    console.warn('Share operation already in progress');
-    return false; // Prevent concurrent share requests
   }
 
-  isSharing = true; // Set the flag to true when starting a share operation
-
-  const message = invoiceForMessage
-    ? composeWhatsAppInvoiceMessage(invoiceForMessage, settings || undefined)
-    : `Invoice ${invoiceId}`;
+  // Fallback: copy link to clipboard
   try {
-    // Fetch invoice, items and settings; then render Tailwind template PDF
-    const { data: inv, error: invErr } = await supabase
-      .from('invoices')
-      .select('*')
-      .eq('id', invoiceId)
-      .single();
-    if (invErr || !inv) throw new Error('Invoice not found');
+    await navigator.clipboard.writeText(window.location.href);
+    return { success: true, message: 'Link copied to clipboard' };
+  } catch (error) {
+    return { success: false, error: 'Sharing not supported' };
+  }
+};
 
-    const { data: its, error: itErr } = await supabase
-      .from('invoice_items')
-      .select('*')
-      .eq('invoice_id', invoiceId)
-      .order('id');
-    if (itErr) throw itErr;
+// Download blob function remains the same
+export const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
-    const invoice: Invoice = {
-      id: inv.id,
-      userId: inv.user_id,
-      shopId: inv.shop_id,
-      createdBy: inv.created_by,
-      invoiceNumber: inv.invoice_number,
-      customerName: inv.customer_name,
-      customerAddress: inv.customer_address || '',
-      customerState: inv.customer_state || '',
-      customerPincode: inv.customer_pincode || '',
-      customerPhone: inv.customer_phone || '',
-      invoiceDate: inv.invoice_date,
-      discount: Number(inv.discount) || 0,
-      sgst: Number(inv.sgst) || 0,
-      cgst: Number(inv.cgst) || 0,
-      status: inv.status,
-      grandTotal: Number(inv.grand_total) || 0,
-      createdAt: inv.created_at,
-      updatedAt: inv.updated_at,
-    };
-    const items: InvoiceItem[] = (its ?? []).map((r: any) => ({
-      id: r.id,
-      description: r.description,
-      purity: r.purity,
-      grossWeight: Number(r.gross_weight) || 0,
-      netWeight: Number(r.net_weight) || 0,
-      rate: Number(r.rate) || 0,
-      making: Number(r.making) || 0,
-    }));
+export const downloadInvoiceAction = async (pdfBlob: Blob, filename: string) => {
+  downloadBlob(pdfBlob, filename);
+  return { success: true };
+};
 
-    let resolvedSettings: Partial<UserSettings> | null = settings || null;
-    if (!resolvedSettings) {
-      // Try fetching from shops table first using invoice.shopId
-      if (invoice.shopId) {
-        const { data: shopDetails } = await supabase
-          .from('shops')
-          .select('*')
-          .eq('id', invoice.shopId)
-          .single();
+export const shareImageAction = async (canvas: HTMLCanvasElement, filename: string) => {
+  return new Promise<{ success: boolean, error?: string }>((resolve) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        resolve({ success: false, error: 'Failed to create image' });
+        return;
+      }
 
-        if (shopDetails) {
-          resolvedSettings = {
-            id: shopDetails.id,
-            userId: invoice.userId,
-            cgstRate: Number(shopDetails.cgst_rate) || 0,
-            sgstRate: Number(shopDetails.sgst_rate) || 0,
-            shopName: shopDetails.shop_name || 'Jewellers Store',
-            gstNumber: shopDetails.gst_number || '',
-            panNumber: shopDetails.pan_number || '',
-            address: shopDetails.address || '',
-            state: shopDetails.state || '',
-            pincode: shopDetails.pincode || '',
-            phoneNumber: shopDetails.phone_number || '',
-            email: shopDetails.email || '',
-            templateId: shopDetails.template_id || 'classic',
-          } as any;
+      // Use Web Share API if available
+      if (navigator.share && navigator.canShare) {
+        try {
+          const file = new File([blob], filename, { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: filename,
+            });
+            resolve({ success: true });
+            return;
+          }
+        } catch (error) {
+          console.error('Share failed, falling back to download:', error);
         }
       }
-    }
 
-    const pdfBlob = await generateInvoicePdf({ invoice, items, settings: resolvedSettings || undefined });
-    const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
-
-    if (Capacitor.isNativePlatform()) {
-      // Native (iOS/Android) implementation
-      const base64Data = await blobToBase64(pdfBlob);
-      const savedFile = await Filesystem.writeFile({
-        path: filename,
-        data: base64Data,
-        directory: Directory.Cache,
-      });
-
-      await Share.share({
-        title: `Invoice ${invoice.invoiceNumber}`,
-        text: message,
-        url: savedFile.uri,
-        dialogTitle: 'Share Invoice PDF',
-      });
-      return true;
-    } else {
-      // Web implementation
-      const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
-      const navAny = navigator as any;
-      const canShareFiles = !!(navAny?.canShare ? navAny.canShare({ files: [pdfFile] }) : navAny?.share);
-      if (canShareFiles && navAny?.share) {
-        await navAny.share({ title: filename, text: message, files: [pdfFile] });
-        return true;
-      }
-    }
-
-    openWhatsAppWithText(message);
-    return false;
-  } catch (err) {
-    console.error('Failed to share PDF by ID natively:', err);
-    openWhatsAppWithText(message);
-    return false;
-  } finally {
-    isSharing = false; // Reset the flag after the operation completes
-  }
-}
-
-// Helper to convert Blob to Base64
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
-        resolve(reader.result.split(',')[1]);
-      } else {
-        reject(new Error('Failed to convert blob to base64'));
-      }
-    };
-    reader.readAsDataURL(blob);
+      // Fallback: download
+      downloadBlob(blob, filename);
+      resolve({ success: true });
+    }, 'image/png');
   });
-}
-
+};

@@ -17,7 +17,6 @@ import { LogOut, LayoutDashboard, Settings, User } from 'lucide-react';
 import { useAuth, useUser } from '@/supabase/provider';
 import { useRouter, usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { ShopSwitcher } from '@/components/shop-switcher';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     DropdownMenu,
@@ -80,7 +79,15 @@ export default function AdminLayout({
                 <Sidebar className="border-r border-gold-500/10 bg-background/80 backdrop-blur-xl">
                     <SidebarHeader className="relative overflow-hidden">
                         <div className="px-4 py-3 relative z-10 pt-[max(0.75rem,env(safe-area-inset-top))]">
-                            <ShopSwitcher className="w-full" />
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-gold-500 to-maroon-600 flex items-center justify-center text-white font-bold text-sm">
+                                    SV
+                                </div>
+                                <div>
+                                    <p className="font-heading font-bold text-sm">Swarnavyapar</p>
+                                    <p className="text-[10px] text-muted-foreground">Global Admin</p>
+                                </div>
+                            </div>
                         </div>
                         <div className="px-4 pb-3">
                             <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-gold-500/30 to-transparent"></div>

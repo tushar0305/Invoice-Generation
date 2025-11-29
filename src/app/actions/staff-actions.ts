@@ -107,7 +107,7 @@ export async function recordPaymentAction(formData: z.infer<typeof paymentSchema
         if (!user) throw new Error('Unauthorized');
 
         // Get staff_id from staff_profiles using user_id
-        const { data: staffProfile } = await supabase
+        let { data: staffProfile } = await supabase
             .from('staff_profiles')
             .select('id')
             .eq('user_id', formData.staffUserId)
@@ -115,7 +115,22 @@ export async function recordPaymentAction(formData: z.infer<typeof paymentSchema
             .single();
 
         if (!staffProfile) {
-            throw new Error('Staff profile not found');
+            // Auto-create profile if it doesn't exist
+            const { data: newProfile, error: createError } = await supabase
+                .from('staff_profiles')
+                .insert({
+                    shop_id: formData.shopId,
+                    user_id: formData.staffUserId,
+                    // We might need other fields, but assuming defaults or nulls are allowed
+                })
+                .select('id')
+                .single();
+
+            if (createError) {
+                console.error('Failed to auto-create staff profile:', createError);
+                throw new Error('Staff profile not found and could not be created');
+            }
+            staffProfile = newProfile;
         }
 
         const { error } = await supabase.from('staff_payments').insert({
@@ -144,7 +159,7 @@ export async function markAttendanceAction(formData: z.infer<typeof attendanceSc
         if (!user) throw new Error('Unauthorized');
 
         // Get staff_id from staff_profiles using user_id
-        const { data: staffProfile } = await supabase
+        let { data: staffProfile } = await supabase
             .from('staff_profiles')
             .select('id')
             .eq('user_id', formData.staffUserId)
@@ -152,7 +167,21 @@ export async function markAttendanceAction(formData: z.infer<typeof attendanceSc
             .single();
 
         if (!staffProfile) {
-            throw new Error('Staff profile not found');
+            // Auto-create profile if it doesn't exist
+            const { data: newProfile, error: createError } = await supabase
+                .from('staff_profiles')
+                .insert({
+                    shop_id: formData.shopId,
+                    user_id: formData.staffUserId,
+                })
+                .select('id')
+                .single();
+
+            if (createError) {
+                console.error('Failed to auto-create staff profile:', createError);
+                throw new Error('Staff profile not found and could not be created');
+            }
+            staffProfile = newProfile;
         }
 
         const { error } = await supabase.from('staff_attendance').upsert({

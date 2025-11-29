@@ -60,9 +60,22 @@ async function getDashboardData(shopId: string) {
   return data as DashboardStats;
 }
 
+async function getMarketRates() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('market_rates')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .single();
+  return data;
+}
+
 export default async function DashboardPage({ params }: { params: Promise<{ shopId: string }> }) {
   const { shopId } = await params;
   const stats = await getDashboardData(shopId);
+
+  const marketRates = await getMarketRates();
 
   if (!stats) {
     return (
@@ -85,7 +98,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
       />
 
       {/* Gold & Silver Ticker */}
-      <GoldSilverTicker />
+      <GoldSilverTicker initialData={marketRates} />
 
       {/* Quick Actions Grid */}
       <MotionWrapper className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -156,9 +169,18 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No recent invoices</p>
+              <div className="text-center py-12">
+                <div className="mx-auto w-16 h-16 rounded-full bg-gold-500/10 flex items-center justify-center mb-4">
+                  <FileText className="h-8 w-8 text-gold-500/50" />
+                </div>
+                <p className="text-sm font-medium text-foreground mb-1">No invoices yet</p>
+                <p className="text-xs text-muted-foreground mb-4">Create your first invoice to get started</p>
+                <Button asChild size="sm" variant="outline" className="gap-2">
+                  <Link href={`/shop/${shopId}/invoices/new`}>
+                    <Plus className="h-4 w-4" />
+                    Create Invoice
+                  </Link>
+                </Button>
               </div>
             )}
           </CardContent>

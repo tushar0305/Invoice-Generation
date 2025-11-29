@@ -101,6 +101,7 @@ export async function createInvoiceAction(formData: {
         const itemsToInsert = formData.items.map((item) => ({
             id: item.id,
             invoice_id: invoice.id,
+            shop_id: formData.shopId,
             description: item.description,
             purity: item.purity,
             gross_weight: item.grossWeight,
@@ -190,6 +191,7 @@ export async function updateInvoiceAction(
             const itemsToUpsert = formData.items.map((item) => ({
                 id: item.id,
                 invoice_id: invoiceId,
+                shop_id: shopId,
                 description: item.description,
                 purity: item.purity,
                 gross_weight: item.grossWeight,
