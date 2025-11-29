@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
+import { useActiveShop } from '@/hooks/use-active-shop';
 
 import { cn } from '@/lib/utils';
 
@@ -10,28 +11,8 @@ type LogoProps = {
 };
 
 export function Logo({ generic, className }: LogoProps) {
-  const { user } = useUser();
-  const [shopName, setShopName] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      if (!user || generic) { setShopName(null); return; }
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('shop_name')
-        .eq('user_id', user.uid)
-        .single();
-      if (cancelled) return;
-      if (!error && data) {
-        setShopName(data.shop_name || null);
-      } else {
-        setShopName(null);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [user?.uid, generic]);
+  const { activeShop } = useActiveShop();
+  const shopName = activeShop?.shopName;
 
   const brand = generic ? 'Invoice Maker' : (shopName || 'Jewellers Store');
 

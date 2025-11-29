@@ -16,11 +16,28 @@ export type Invoice = {
   createdByName?: string; // Name of the user who created this invoice
   updatedBy?: string; // User who last updated this invoice
   invoiceNumber: string; // user-facing id
+
+  // Normalized Link
+  customerId?: string;
+
+  // Snapshot Data (Preserves history)
+  customerSnapshot?: {
+    name: string;
+    address?: string;
+    state?: string;
+    pincode?: string;
+    phone?: string;
+    gstNumber?: string;
+    email?: string;
+  };
+
+  // Legacy Columns (Deprecated but kept for now)
   customerName: string;
   customerAddress: string;
   customerState?: string;
   customerPincode?: string;
   customerPhone: string;
+
   invoiceDate: string; // YYYY-MM-DD
   discount: number; // as a currency value
   sgst: number; // as a percentage
@@ -32,23 +49,6 @@ export type Invoice = {
   updatedAt?: any;
 };
 
-export type UserSettings = {
-  id: string;
-  userId: string;
-  cgstRate: number;
-  sgstRate: number;
-  shopName?: string; // Display name of the shop
-  gstNumber?: string; // GST identification number
-  panNumber?: string; // PAN number
-  address?: string; // Shop address / location
-  state?: string;   // State / Region
-  pincode?: string; // Postal code / PIN
-  phoneNumber?: string; // Contact phone number
-  email?: string; // Contact email (defaults to auth email, not editable in UI)
-  logoUrl?: string; // Shop logo URL from Supabase storage
-  templateId?: string; // Invoice template ID (classic, modern, minimal)
-  migratedToShopId?: string; // DEPRECATED: Reference to migrated shop ID
-};
 
 export type StockItem = {
   id: string; // Document ID
@@ -68,6 +68,97 @@ export type StockItem = {
   isActive: boolean; // Whether this item is available for invoices
   createdAt?: any;
   updatedAt?: any;
+};
+
+
+// ============================================
+// Enhanced Customer Types
+// ============================================
+
+export type Customer = {
+  id: string;
+  userId: string;
+  shopId: string;
+  createdBy?: string;
+  updatedBy?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  gstNumber?: string;
+  loyaltyPoints: number;
+  totalSpent: number;
+  lastVisitAt?: string;
+  notes?: string;
+  tags?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CustomerLoyaltyLog = {
+  id: string;
+  customerId: string;
+  shopId: string;
+  invoiceId?: string;
+  pointsChange: number;
+  reason?: string;
+  createdAt: string;
+};
+
+export type CustomerLedgerEntry = {
+  id: string;
+  customerId: string;
+  shopId: string;
+  invoiceId?: string;
+  type: 'credit' | 'debit';
+  amount: number;
+  description?: string;
+  dueDate?: string;
+  isCleared: boolean;
+  createdAt: string;
+  createdBy?: string;
+};
+
+// ============================================
+// Staff Management Types
+// ============================================
+
+export type StaffProfile = {
+  id: string;
+  userId?: string; // Link to auth user if they have login
+  shopId: string;
+  fullName: string;
+  designation?: string;
+  phoneNumber?: string;
+  joiningDate?: string;
+  salaryType?: 'monthly' | 'daily' | 'commission';
+  baseSalary?: number;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type StaffAttendance = {
+  id: string;
+  staffId: string;
+  shopId: string;
+  date: string; // YYYY-MM-DD
+  status: 'present' | 'absent' | 'half_day' | 'leave';
+  checkInTime?: string;
+  checkOutTime?: string;
+  notes?: string;
+  createdAt: string;
+};
+
+export type StaffPayment = {
+  id: string;
+  staffId: string;
+  shopId: string;
+  amount: number;
+  paymentDate: string; // YYYY-MM-DD
+  paymentType: 'salary' | 'advance' | 'bonus' | 'commission';
+  description?: string;
+  createdBy?: string;
+  createdAt: string;
 };
 
 // ============================================
@@ -113,10 +204,50 @@ export type UserShopRole = {
 export type UserPreferences = {
   userId: string;
   lastActiveShopId?: string;
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'system';
   language: string;
+  notificationsEnabled: boolean;
+  currency: string;
+  onboardingCompleted?: boolean;
+  onboardingStep?: number;
+  onboardingCompletedAt?: string;
   createdAt?: string;
   updatedAt?: string;
+};
+
+// Onboarding state tracking
+export type OnboardingState = {
+  step: number; // 0 = not started, 1 = basic info, 2 = business details, 3 = branding
+  completed: boolean;
+  shopId?: string;
+  data: Partial<ShopSetupData>;
+};
+
+export type ShopSetupData = {
+  // Step 1: Basic Info
+  shopName: string;
+  phoneNumber: string;
+  email: string;
+
+  // Step 2: Business Details
+  address: string;
+  state: string;
+  pincode: string;
+  gstNumber?: string;
+  panNumber?: string;
+
+  // Step 3: Branding
+  logoUrl?: string;
+  cgstRate: number;
+  sgstRate: number;
+  templateId: string;
+};
+
+// Backward Compatibility: UserSettings type alias
+// Many components still reference UserSettings - this maps to Shop type
+export type UserSettings = Shop & {
+  userId: string; // Maps to createdBy
+  migratedToShopId?: string; // Legacy field
 };
 
 // Permission helper type

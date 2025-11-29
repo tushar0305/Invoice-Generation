@@ -1,110 +1,53 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useFieldArray, useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { format } from 'date-fns';
-import { CalendarIcon, Loader2, PlusCircle, Trash2, ArrowLeft, ShoppingCart, AlertCircle, Search, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import type { Invoice, InvoiceItem, StockItem, UserSettings } from '@/lib/definitions';
-import { cn, formatCurrency } from '@/lib/utils';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useUser } from '@/supabase/provider';
-import { supabase } from '@/supabase/client';
-import { useActiveShop } from '@/hooks/use-active-shop';
-import { useStockItems } from '@/hooks/use-stock-items';
-import { isShopSetupComplete } from '@/lib/shop-setup';
-import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { LiveInvoicePreview } from '@/components/invoice-preview';
+import { Loader2, Save, ArrowLeft, Eye, EyeOff, AlertCircle, Users, Search } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { haptics } from '@/lib/haptics';
-import { NotificationType, ImpactStyle } from '@capacitor/haptics';
+import { useUser } from '@/supabase/provider';
+import { useActiveShop } from '@/hooks/use-active-shop';
+import { createInvoiceAction, updateInvoiceAction } from '@/app/actions/invoice-actions';
+import { CustomerSelector } from '@/components/invoice/CustomerSelector';
+import { LineItemsTable } from '@/components/invoice/LineItemsTable';
+import { InvoiceSummary } from '@/components/invoice/InvoiceSummary';
+import { LiveInvoicePreview } from '@/components/invoice-preview';
+import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
+import { supabase } from '@/supabase/client';
+import type { Invoice } from '@/lib/definitions';
 
-
-const formSchema = z.object({
-  customerName: z.string().min(2, 'Customer name is required'),
-  customerAddress: z.string().min(5, 'Customer address is required'),
-  customerState: z.string().trim().optional().default(''),
-  customerPincode: z.string().trim().optional().default(''),
-  customerPhone: z.string().min(10, 'A valid phone number is required'),
-  invoiceDate: z.date({ required_error: 'Invoice date is required' }),
+const invoiceSchema = z.object({
+  customerName: z.string().min(1, 'Customer name is required'),
+  customerAddress: z.string().optional(),
+  customerState: z.string().optional(),
+  customerPincode: z.string().optional(),
+  customerPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  invoiceDate: z.date(),
   items: z.array(z.object({
     id: z.string(),
     description: z.string().min(1, 'Description is required'),
-    purity: z.enum(["10", "12", "14", "18", "20", "22", "24"], { required_error: 'Purity is required.' }),
-    grossWeight: z.coerce.number().positive('Gross Wt. must be positive'),
-    netWeight: z.coerce.number().positive('Net Wt. must be positive'),
-    rate: z.coerce.number().min(0, 'Rate is required'),
-    making: z.coerce.number().min(0, 'Making charges are required'),
+    purity: z.string().optional(),
+    grossWeight: z.number().min(0),
+    netWeight: z.number().min(0),
+    rate: z.number().min(0),
+    making: z.number().min(0),
   })).min(1, 'At least one item is required'),
-  discount: z.coerce.number().min(0, 'Discount cannot be negative'),
-  sgst: z.coerce.number().min(0).max(100, 'SGST should be a percentage'),
-  cgst: z.coerce.number().min(0).max(100, 'CGST should be a percentage'),
+  discount: z.number().min(0).optional(),
   status: z.enum(['paid', 'due']),
 });
 
-type InvoiceFormValues = z.infer<typeof formSchema>;
+type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 interface InvoiceFormProps {
-  invoice?: Invoice & { items: InvoiceItem[] };
+  invoice?: Invoice & { items?: any[] };
 }
-
-async function getNextInvoiceNumberSupabase(shopId: string): Promise<string> {
-  const currentYear = new Date().getFullYear();
-  const { data, error } = await supabase
-    .from('invoices')
-    .select('invoice_number, created_at')
-    .eq('shop_id', shopId)
-    .order('created_at', { ascending: false })
-    .limit(1000);
-  if (error) throw new Error(error.message);
-
-  let latestSeqForYear = 0;
-  const NEW_FMT = /^INV(\d{4})(\d+)$/; // INV2025###
-  const OLD_FMT = /^INV-(\d{4})-(\d+)$/; // legacy support
-  (data ?? []).forEach((row: any) => {
-    const invNum: string | undefined = row?.invoice_number;
-    if (!invNum) return;
-    let match: RegExpExecArray | null = null;
-    if ((match = NEW_FMT.exec(invNum)) || (match = OLD_FMT.exec(invNum))) {
-      const year = parseInt(match[1], 10);
-      const seq = parseInt(match[2], 10);
-      if (year === currentYear && !Number.isNaN(seq)) {
-        latestSeqForYear = Math.max(latestSeqForYear, seq);
-      }
-    }
-  });
-  const nextSeq = latestSeqForYear + 1;
-  return `INV${currentYear}${String(nextSeq).padStart(3, '0')}`;
-}
-
-const calculateTotals = (items: InvoiceFormValues['items'], discount: number, sgst: number, cgst: number) => {
-  const subtotal = items.reduce((acc, item) => {
-    const itemTotal = (Number(item.netWeight) || 0) * (Number(item.rate) || 0) + ((Number(item.netWeight) || 0) * (Number(item.making) || 0));
-    return acc + itemTotal;
-  }, 0);
-  const totalBeforeTax = subtotal - (discount || 0);
-  const sgstAmount = totalBeforeTax * ((sgst || 0) / 100);
-  const cgstAmount = totalBeforeTax * ((cgst || 0) / 100);
-  const grandTotal = totalBeforeTax + sgstAmount + cgstAmount;
-  return { subtotal, grandTotal, sgstAmount, cgstAmount };
-};
 
 export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const router = useRouter();
@@ -112,14 +55,14 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const [isPending, startTransition] = useTransition();
   const { user } = useUser();
   const { activeShop, isLoading: shopLoading, permissions } = useActiveShop();
-  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [settings, setSettings] = useState<any | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
-  const [showPreview, setShowPreview] = useState(false); // Mobile toggle
-  const [stockSearchTerm, setStockSearchTerm] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [customers, setCustomers] = useState<any[]>([]);
 
+  // Load settings
   useEffect(() => {
     const loadSettings = async () => {
-      // If we have an active shop, use its details for settings
       if (activeShop) {
         setSettings({
           id: activeShop.id,
@@ -137,644 +80,311 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           templateId: activeShop.templateId || 'classic',
         });
         setSettingsLoading(false);
-        return;
-      }
-
-      // Fallback to user_settings (legacy/owner only)
-      if (!user?.uid) {
-        setSettingsLoading(false);
-        return;
-      }
-      try {
-        const { data } = await supabase
-          .from('user_settings')
-          .select('*')
-          .eq('user_id', user.uid)
-          .maybeSingle();
-        if (data) {
-          setSettings({
-            id: data.user_id,
-            userId: data.user_id,
-            cgstRate: Number(data.cgst_rate) || 0,
-            sgstRate: Number(data.sgst_rate) || 0,
-            shopName: data.shop_name || 'Jewellers Store',
-            gstNumber: data.gst_number || '',
-            panNumber: data.pan_number || '',
-            address: data.address || '',
-            state: data.state || '',
-            pincode: data.pincode || '',
-            phoneNumber: data.phone_number || '',
-            email: data.email || user.email || '',
-          });
-        }
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      } finally {
+      } else {
         setSettingsLoading(false);
       }
     };
     loadSettings();
-  }, [user?.uid, activeShop]);
+  }, [activeShop, user]);
 
-  const defaultValues: Partial<InvoiceFormValues> = invoice
-    ? {
-      ...invoice,
-      invoiceDate: new Date(invoice.invoiceDate),
-      items: invoice.items.map(item => ({ ...item, purity: item.purity as InvoiceFormValues['items'][number]['purity'] })),
-      sgst: (invoice as any).sgst ?? 1.5,
-      cgst: (invoice as any).cgst ?? 1.5,
-      customerState: (invoice as any).customerState || '',
-      customerPincode: (invoice as any).customerPincode || '',
-    }
-    : {
-      customerName: '',
-      customerAddress: '',
-      customerState: '',
-      customerPincode: '',
-      customerPhone: '',
-      invoiceDate: new Date(),
-      items: [{ id: uuidv4(), description: '', purity: '22', grossWeight: '' as any, netWeight: '' as any, rate: '' as any, making: '' as any }],
-      discount: 0,
-      sgst: 1.5,
-      cgst: 1.5,
-      status: 'due',
+  // Fetch recent customers
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      if (!activeShop?.id) return;
+      try {
+        const { data } = await supabase
+          .from('invoices')
+          .select('customer_name, customer_address, customer_phone, customer_state, customer_pincode')
+          .eq('shop_id', activeShop.id)
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        const uniqueCustomers = Array.from(
+          new Map(
+            data?.map(c => [
+              c.customer_name.toLowerCase(),
+              {
+                name: c.customer_name,
+                address: c.customer_address || '',
+                phone: c.customer_phone || '',
+                state: c.customer_state || '',
+                pincode: c.customer_pincode || '',
+              }
+            ]) || []
+          ).values()
+        );
+        setCustomers(uniqueCustomers);
+      } catch (err) {
+        console.error('Error fetching customers:', err);
+      }
     };
+    fetchCustomers();
+  }, [activeShop?.id]);
 
   const form = useForm<InvoiceFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues,
-    mode: 'onChange',
+    resolver: zodResolver(invoiceSchema),
+    defaultValues: {
+      customerName: invoice?.customerName || '',
+      customerAddress: invoice?.customerAddress || '',
+      customerState: invoice?.customerState || '',
+      customerPincode: invoice?.customerPincode || '',
+      customerPhone: invoice?.customerPhone || '',
+      invoiceDate: invoice ? new Date(invoice.invoiceDate) : new Date(),
+      items: invoice?.items?.map(item => ({
+        id: item.id,
+        description: item.description,
+        purity: item.purity || '',
+        grossWeight: Number(item.gross_weight) || 0,
+        netWeight: Number(item.net_weight) || 0,
+        rate: Number(item.rate) || 0,
+        making: Number(item.making) || 0,
+      })) || [{
+        id: crypto.randomUUID(),
+        description: '',
+        purity: '',
+        grossWeight: 0,
+        netWeight: 0,
+        rate: 0,
+        making: 0,
+      }],
+      discount: invoice?.discount || 0,
+      status: (invoice?.status as 'paid' | 'due') || 'paid',
+    },
   });
-
-  const { items: stockItems } = useStockItems(activeShop?.id);
-  const [showStockDialog, setShowStockDialog] = useState(false);
-
-  useEffect(() => {
-    if (settings && !invoice) {
-      form.setValue('sgst', settings.sgstRate ?? 1.5);
-      form.setValue('cgst', settings.cgstRate ?? 1.5);
-    }
-  }, [settings, invoice, form]);
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'items',
-  });
-
-  const handleAddStockItem = (stockItem: StockItem) => {
-    append({
-      id: uuidv4(),
-      description: stockItem.name,
-      purity: stockItem.purity as any,
-      grossWeight: stockItem.baseWeight || 0,
-      netWeight: stockItem.baseWeight || 0,
-      rate: 0,
-      making: stockItem.makingChargePerGram || 0,
-    });
-    setShowStockDialog(false);
-    toast({
-      title: "Item Added",
-      description: `${stockItem.name} added to invoice.`,
-    });
-  };
 
   const watchedValues = form.watch();
-  const { subtotal, grandTotal } = calculateTotals(watchedValues.items, watchedValues.discount, watchedValues.sgst, watchedValues.cgst);
 
-  const filteredStockItems = stockItems.filter(item =>
-    item.name.toLowerCase().includes(stockSearchTerm.toLowerCase()) ||
-    item.purity.includes(stockSearchTerm)
+  // Calculate totals
+  const calculateTotals = (items: any[], discount: number = 0) => {
+    const subtotal = items.reduce((acc, item) => {
+      return acc + ((Number(item.netWeight) * Number(item.rate)) + Number(item.making));
+    }, 0);
+
+    const taxableAmount = Math.max(0, subtotal - discount);
+    const sgstRate = settings?.sgstRate || 1.5;
+    const cgstRate = settings?.cgstRate || 1.5;
+
+    const sgstAmount = taxableAmount * (sgstRate / 100);
+    const cgstAmount = taxableAmount * (cgstRate / 100);
+    const grandTotal = taxableAmount + sgstAmount + cgstAmount;
+
+    return { subtotal, sgstAmount, cgstAmount, grandTotal };
+  };
+
+  const { subtotal, sgstAmount, cgstAmount, grandTotal } = calculateTotals(
+    watchedValues.items || [],
+    watchedValues.discount || 0
   );
 
-  async function onSubmit(data: InvoiceFormValues) {
-    if (!user) {
-      toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to save an invoice.' });
+  const onSubmit = async (data: InvoiceFormValues) => {
+    if (!activeShop?.id || !user?.uid) {
+      toast({
+        title: 'Error',
+        description: 'Shop or user information missing',
+        variant: 'destructive',
+      });
       return;
     }
-
-    if (!activeShop) {
-      toast({ variant: 'destructive', title: 'Shop Required', description: 'No active shop selected. Please refresh the page.' });
-      return;
-    }
-
-    console.log('Submitting invoice with shop:', activeShop.id, 'isTemp:', activeShop.id.startsWith('temp-'));
 
     startTransition(async () => {
       try {
-        const { items, ...invoiceMainData } = data;
-        // Calculate totals
-        const { grandTotal: finalGrandTotal, subtotal, sgstAmount, cgstAmount } = calculateTotals(items, data.discount, data.sgst, data.cgst);
+        const totals = calculateTotals(data.items, data.discount);
 
+        console.log('Submitting invoice for shop:', activeShop.id);
+        const payload = {
+          shopId: activeShop.id,
+          userId: user.uid,
+          ...data,
+          discount: data.discount || 0,
+          grandTotal: totals.grandTotal,
+          subtotal: totals.subtotal,
+          sgstAmount: totals.sgstAmount,
+          cgstAmount: totals.cgstAmount,
+          sgst: settings?.sgstRate || 1.5,
+          cgst: settings?.cgstRate || 1.5,
+          items: data.items.map(item => ({
+            ...item,
+            purity: item.purity || '22K', // Default purity if missing
+          })),
+        };
+
+        let result;
         if (invoice) {
-          const invoiceId = invoice.id;
-          const updateData: any = {
-            customer_name: invoiceMainData.customerName,
-            customer_address: invoiceMainData.customerAddress,
-            customer_state: invoiceMainData.customerState,
-            customer_pincode: invoiceMainData.customerPincode,
-            customer_phone: invoiceMainData.customerPhone,
-            invoice_date: format(invoiceMainData.invoiceDate, 'yyyy-MM-dd'),
-            discount: invoiceMainData.discount,
-            sgst: invoiceMainData.sgst,
-            cgst: invoiceMainData.cgst,
-            status: invoiceMainData.status,
-            grand_total: finalGrandTotal,
-            subtotal: subtotal,
-            sgst_amount: sgstAmount,
-            cgst_amount: cgstAmount,
-            updated_at: new Date().toISOString(),
-            updated_by: user.uid,
-          };
-
-          const { error: invErr } = await supabase
-            .from('invoices')
-            .update(updateData)
-            .eq('id', invoiceId)
-            .eq('user_id', user.uid);
-          if (invErr) throw invErr;
-
-          const { data: existingItems, error: itemsFetchErr } = await supabase
-            .from('invoice_items')
-            .select('id')
-            .eq('invoice_id', invoiceId);
-          if (itemsFetchErr) throw itemsFetchErr;
-          const existingIds = new Set((existingItems ?? []).map((r: any) => r.id));
-          const newIds = new Set(items.map(i => i.id));
-          const toDelete = [...existingIds].filter(id => !newIds.has(id));
-          if (toDelete.length > 0) {
-            const { error: delErr } = await supabase
-              .from('invoice_items')
-              .delete()
-              .in('id', toDelete);
-            if (delErr) throw delErr;
-          }
-          const upsertRows = items.map(i => ({
-            id: i.id,
-            invoice_id: invoiceId,
-            description: i.description,
-            purity: i.purity,
-            gross_weight: Number(i.grossWeight) || 0,
-            net_weight: Number(i.netWeight) || 0,
-            rate: Number(i.rate) || 0,
-            making: Number(i.making) || 0,
-          }));
-          if (upsertRows.length > 0) {
-            const { error: upErr } = await supabase
-              .from('invoice_items')
-              .upsert(upsertRows, { onConflict: 'id' });
-            if (upErr) throw upErr;
-          }
-          var invoiceIdToNavigate = invoiceId;
+          result = await updateInvoiceAction(invoice.id, activeShop.id, payload);
         } else {
-          const invoiceNumber = await getNextInvoiceNumberSupabase(activeShop.id);
-
-          console.log('=== INVOICE SAVE DEBUG ===');
-          console.log('activeShop:', activeShop);
-          console.log('activeShop?.id:', activeShop?.id);
-          console.log('user.uid:', user.uid);
-
-          // Only include shop_id if not temporary (migration complete)
-          const invoiceData: any = {
-            user_id: user.uid,
-            created_by: user.uid,
-            invoice_number: invoiceNumber,
-            customer_name: invoiceMainData.customerName,
-            customer_address: invoiceMainData.customerAddress,
-            customer_state: invoiceMainData.customerState,
-            customer_pincode: invoiceMainData.customerPincode,
-            customer_phone: invoiceMainData.customerPhone,
-            invoice_date: format(invoiceMainData.invoiceDate, 'yyyy-MM-dd'),
-            discount: invoiceMainData.discount,
-            sgst: invoiceMainData.sgst,
-            cgst: invoiceMainData.cgst,
-            status: invoiceMainData.status,
-            grand_total: finalGrandTotal,
-            subtotal: subtotal,
-            sgst_amount: sgstAmount,
-            cgst_amount: cgstAmount,
-          };
-
-          // Always include shop_id if we have an active shop
-          // The database requires it (NOT NULL constraint), so we must send it.
-          // If it's a temp ID and migration hasn't run, the DB won't enforce FK constraint yet (or will fail with FK error, not NULL error)
-          if (activeShop?.id) {
-            invoiceData.shop_id = activeShop.id;
-            invoiceData.created_by = user.uid;
-            invoiceData.created_by_name = user.user_metadata?.full_name || user.email || 'Unknown';
-            console.log('✅ Adding shop_id to invoiceData:', activeShop.id);
-          } else {
-            console.error('❌ activeShop or activeShop.id is missing!');
-            console.error('activeShop:', activeShop);
-          }
-
-          console.log('Final invoiceData:', invoiceData);
-          console.log('=== END DEBUG ===');
-
-          const { data: insertInv, error: insErr } = await supabase
-            .from('invoices')
-            .insert([invoiceData])
-            .select('id')
-            .single();
-          if (insErr) throw insErr;
-          const newInvoiceId = (insertInv as any).id as string;
-          const rows = items.map(i => ({
-            id: i.id,
-            invoice_id: newInvoiceId,
-            description: i.description,
-            purity: i.purity,
-            gross_weight: Number(i.grossWeight) || 0,
-            net_weight: Number(i.netWeight) || 0,
-            rate: Number(i.rate) || 0,
-            making: Number(i.making) || 0,
-          }));
-          if (rows.length > 0) {
-            const { error: insItemsErr } = await supabase
-              .from('invoice_items')
-              .insert(rows);
-            if (insItemsErr) throw insItemsErr;
-          }
-          var invoiceIdToNavigate = newInvoiceId;
+          result = await createInvoiceAction(payload);
         }
 
-        haptics.notification(NotificationType.Success);
-        toast({
-          title: `Invoice ${invoice ? 'updated' : 'created'} successfully!`,
-          description: `Redirecting to view invoice...`,
-        });
-
-        router.push(`/dashboard/invoices/view?id=${invoiceIdToNavigate}`);
-
+        if (result.success) {
+          toast({
+            title: 'Success',
+            description: invoice ? 'Invoice updated successfully' : 'Invoice created successfully',
+          });
+          router.push(`/shop/${activeShop.id}/invoices`);
+        } else {
+          throw new Error(result.error);
+        }
       } catch (error: any) {
-        console.error("Failed to save invoice:", error);
-        console.error("Error details:", JSON.stringify(error, null, 2));
-        if (error?.message) {
-          console.error("Error message:", error.message);
-        }
-        if (error?.details) {
-          console.error("Error details:", error.details);
-        }
-        if (error?.hint) {
-          console.error("Error hint:", error.hint);
-        }
-        haptics.notification(NotificationType.Error);
         toast({
+          title: 'Error',
+          description: error.message || 'Failed to save invoice',
           variant: 'destructive',
-          title: 'An error occurred',
-          description: 'Failed to save the invoice. Please try again.',
         });
       }
     });
+  };
+
+  if (shopLoading || settingsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
-  const isShopSetupValid = isShopSetupComplete(settings);
+
+  const isShopSetupValid = settings?.gstNumber && settings?.address;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="h-full">
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8 h-full">
-          {/* Left Column: Form Inputs */}
-          <div className="lg:col-span-7 flex flex-col gap-6 h-full overflow-y-auto pb-20 lg:pb-0 no-scrollbar">
-            <MotionWrapper className="space-y-6">
-              {/* Header Actions */}
-              <div className="flex items-center justify-between">
-                <Button type="button" variant="ghost" onClick={() => router.back()} className="gap-2 hover:bg-white/5">
-                  <ArrowLeft className="h-4 w-4" /> Back
-                </Button>
-                <div className="flex items-center gap-2 lg:hidden">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="bg-white/5 border-white/10 hover:bg-white/10">
-                    {showPreview ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-                    {showPreview ? 'Hide Preview' : 'Show Preview'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Shop Setup Warning - Only for owners */}
-              {permissions.canEditSettings && !isShopSetupValid && !settingsLoading && (
-                <FadeIn>
-                  <Alert className="border-amber-500/60 bg-amber-50 text-amber-800">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <AlertTitle className="text-amber-700 font-semibold">Finish Shop Setup</AlertTitle>
-                    <AlertDescription className="text-amber-700/80 text-sm">
-                      Complete your shop address & tax details to enable invoice creation.
-                      <Button type="button" variant="link" className="ml-2 p-0 text-amber-700 hover:text-amber-600 font-medium" onClick={() => router.push('/dashboard/settings')}>
-                        Go to Settings →
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                </FadeIn>
-              )}
-
-              {/* Mobile Preview (if toggled) */}
-              {showPreview && (
-                <div className="lg:hidden mb-6 h-[500px] rounded-lg overflow-hidden border border-white/10 shadow-xl">
-                  <LiveInvoicePreview data={watchedValues} settings={settings} />
-                </div>
-              )}
-
-              {/* Customer Details */}
-              <Card className="glass-card border-t-4 border-t-primary">
-                <CardHeader>
-                  <CardTitle className="text-lg font-heading text-primary">Customer Details</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2">
-                  <FormField control={form.control} name="customerName" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Customer Name</FormLabel>
-                      <FormControl><Input placeholder="John Doe" {...field} className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="customerPhone" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl><Input placeholder="+91 98765 43210" inputMode="tel" {...field} className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="customerAddress" render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Address</FormLabel>
-                      <FormControl><Textarea placeholder="Full address" {...field} className="bg-background/50 min-h-[80px]" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="customerState" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>State (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-background/50">
-                            <SelectValue placeholder="Select State" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {[
-                            "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
-                            "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
-                            "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
-                            "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh",
-                            "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
-                          ].map((state) => (
-                            <SelectItem key={state} value={state}>
-                              {state}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="customerPincode" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pincode (Optional)</FormLabel>
-                      <FormControl><Input placeholder="Pincode" inputMode="numeric" pattern="[0-9]*" {...field} className="bg-background/50" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="invoiceDate" render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Invoice Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal bg-background/50", !field.value && "text-muted-foreground")}>
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </CardContent>
-              </Card>
-
-              {/* Items List */}
-              <Card className="glass-card border-t-4 border-t-primary">
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <CardTitle className="text-lg font-heading text-primary">Invoice Items</CardTitle>
-                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                    <Button type="button" variant="outline" size="sm" onClick={() => setShowStockDialog(true)} className="bg-white/5 border-white/10 hover:bg-white/10 flex-1 sm:flex-none">
-                      <Search className="h-4 w-4 mr-2" /> Add from Stock
-                    </Button>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => append({ id: uuidv4(), description: '', purity: '22', grossWeight: '' as any, netWeight: '' as any, rate: '' as any, making: '' as any })} className="flex-1 sm:flex-none">
-                      <PlusCircle className="h-4 w-4 mr-2" /> Add Manual
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {fields.map((field, index) => (
-                      <div key={field.id} className="p-4 rounded-lg border border-white/10 bg-white/5 space-y-4 relative group">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-2 right-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => remove(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-
-                        <div className="grid gap-4 sm:grid-cols-12">
-                          <div className="sm:col-span-4">
-                            <FormField control={form.control} name={`items.${index}.description`} render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">Description</FormLabel>
-                                <FormControl><Input {...field} className="h-9 bg-background/50" placeholder="Item name" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <FormField control={form.control} name={`items.${index}.purity`} render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">Purity</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className="h-9 bg-background/50">
-                                      <SelectValue placeholder="Select" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {["10", "12", "14", "18", "20", "22", "24"].map(p => (
-                                      <SelectItem key={p} value={p}>{p}K</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <FormField control={form.control} name={`items.${index}.grossWeight`} render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">Gross Wt (g)</FormLabel>
-                                <FormControl><Input type="number" inputMode="decimal" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <FormField control={form.control} name={`items.${index}.netWeight`} render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">Net Wt (g)</FormLabel>
-                                <FormControl><Input type="number" inputMode="decimal" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <FormField control={form.control} name={`items.${index}.rate`} render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">Rate (₹)</FormLabel>
-                                <FormControl><Input type="number" inputMode="decimal" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <FormField control={form.control} name={`items.${index}.making`} render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">Making (₹)</FormLabel>
-                                <FormControl><Input type="number" inputMode="decimal" {...field} className="h-9 bg-background/50" onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {fields.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground border border-dashed border-white/10 rounded-lg">
-                        No items added. Add items manually or from stock.
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Summary & Actions */}
-              <Card className="glass-card border-t-4 border-t-primary mb-20 lg:mb-0">
-                <CardHeader><CardTitle className="text-lg font-heading text-primary">Summary</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-                  <FormField control={form.control} name="discount" render={({ field }) => (
-                    <FormItem className="flex items-center justify-between space-y-0 gap-4">
-                      <FormLabel className="whitespace-nowrap">Discount</FormLabel>
-                      <FormControl><Input type="number" inputMode="decimal" className="w-24 text-right h-8 bg-background/50" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <div className="flex gap-4">
-                    <FormField control={form.control} name="sgst" render={({ field }) => (
-                      <FormItem className="flex-1 flex items-center justify-between space-y-0 gap-2">
-                        <FormLabel className="whitespace-nowrap text-xs">SGST %</FormLabel>
-                        <FormControl><Input type="number" inputMode="decimal" className="w-16 text-right h-8 bg-background/50" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="cgst" render={({ field }) => (
-                      <FormItem className="flex-1 flex items-center justify-between space-y-0 gap-2">
-                        <FormLabel className="whitespace-nowrap text-xs">CGST %</FormLabel>
-                        <FormControl><Input type="number" inputMode="decimal" className="w-16 text-right h-8 bg-background/50" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
-                      </FormItem>
-                    )} />
-                  </div>
-                  <Separator className="bg-white/10" />
-                  <div className="flex justify-between font-bold text-lg text-primary">
-                    <span>Grand Total</span>
-                    <span>{formatCurrency(grandTotal)}</span>
-                  </div>
-
-                  <FormField control={form.control} name="status" render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-white/10 p-4 bg-white/5 transition-all hover:bg-white/10">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base font-semibold text-primary">
-                          Payment Status
-                        </FormLabel>
-                        <p className="text-xs text-muted-foreground">
-                          {field.value === 'paid' ? 'Payment Received' : 'Payment Pending'}
-                        </p>
-                      </div>
-                      <FormControl>
-                        <div
-                          className={cn(
-                            "w-14 h-8 rounded-full relative cursor-pointer transition-colors duration-300 ease-in-out",
-                            field.value === 'paid' ? "bg-emerald-500" : "bg-slate-600"
-                          )}
-                          onClick={() => {
-                            field.onChange(field.value === 'paid' ? 'due' : 'paid');
-                            haptics.impact(ImpactStyle.Medium);
-                          }}
-                        >
-                          <div
-                            className={cn(
-                              "absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-300 ease-in-out flex items-center justify-center",
-                              field.value === 'paid' ? "translate-x-6" : "translate-x-0"
-                            )}
-                          >
-                            {field.value === 'paid' && <div className="w-2 h-2 bg-emerald-500 rounded-full" />}
-                          </div>
-                        </div>
-                      </FormControl>
-                    </FormItem>
-                  )} />
-
-                  <Button type="submit" variant="premium" className="w-full h-12 text-lg shadow-lg mt-4" disabled={isPending || settingsLoading || shopLoading || !isShopSetupValid || !activeShop}>
-                    {(isPending || settingsLoading || shopLoading) && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                    {!activeShop ? 'Loading shop...' : !isShopSetupValid ? 'Setup Required' : (invoice ? 'Update Invoice' : 'Create Invoice')}
-                  </Button>
-                </CardContent>
-              </Card>
-            </MotionWrapper>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-4rem)]">
+      {/* Left Column - Form */}
+      <div className="lg:col-span-7 flex flex-col gap-6 h-full overflow-y-auto pb-20 lg:pb-0 no-scrollbar">
+        <MotionWrapper className="space-y-6">
+          {/* Header Actions */}
+          <div className="flex items-center justify-between">
+            <Button type="button" variant="ghost" onClick={() => router.back()} className="gap-2 hover:bg-white/5">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </Button>
+            <div className="flex items-center gap-2 lg:hidden">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="bg-white/5 border-white/10 hover:bg-white/10">
+                {showPreview ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                {showPreview ? 'Hide Preview' : 'Show Preview'}
+              </Button>
+            </div>
           </div>
 
-          {/* Right Column: Live Preview (Desktop) */}
-          <div className="hidden lg:block lg:col-span-5">
-            <div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto no-scrollbar">
+          {/* Shop Setup Warning */}
+          {permissions.canEditSettings && !isShopSetupValid && !settingsLoading && (
+            <FadeIn>
+              <Alert className="border-amber-500/60 bg-amber-50 text-amber-800">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-700 font-semibold">Finish Shop Setup</AlertTitle>
+                <AlertDescription className="text-amber-700/80 text-sm">
+                  Complete your shop address & tax details to enable invoice creation.
+                  <Button type="button" variant="link" className="ml-2 p-0 text-amber-700 hover:text-amber-600 font-medium" onClick={() => router.push('/dashboard/settings')}>
+                    Go to Settings →
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            </FadeIn>
+          )}
+
+          {/* Mobile Preview */}
+          {showPreview && (
+            <div className="lg:hidden mb-6 h-[500px] rounded-lg overflow-hidden border border-white/10 shadow-xl">
               <LiveInvoicePreview data={watchedValues} settings={settings} />
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Stock Search Sheet */}
-        <Sheet open={showStockDialog} onOpenChange={setShowStockDialog}>
-          <SheetContent side="bottom" className="h-[80vh] max-h-[calc(100vh-var(--safe-area-inset-top)-4rem)] rounded-t-xl px-0">
-            <SheetHeader>
-              <SheetTitle className="font-heading text-primary">Select Stock Item</SheetTitle>
-            </SheetHeader>
-            <div className="space-y-4 mt-4 h-full overflow-y-auto pb-10">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search stock..."
-                  className="pl-10 bg-background/50"
-                  value={stockSearchTerm}
-                  onChange={(e) => setStockSearchTerm(e.target.value)}
-                />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {/* Customer Details */}
+              <Card className="glass-card border-t-2 border-t-primary/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-primary">
+                    <Users className="h-5 w-5" />
+                    Customer Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CustomerSelector
+                    value={{
+                      customerName: watchedValues.customerName,
+                      customerAddress: watchedValues.customerAddress || '',
+                      customerPhone: watchedValues.customerPhone,
+                      customerState: watchedValues.customerState,
+                      customerPincode: watchedValues.customerPincode,
+                    }}
+                    onChange={(customer) => {
+                      if (customer.name !== undefined) form.setValue('customerName', customer.name);
+                      if (customer.address !== undefined) form.setValue('customerAddress', customer.address);
+                      if (customer.phone !== undefined) form.setValue('customerPhone', customer.phone);
+                      if (customer.state !== undefined) form.setValue('customerState', customer.state);
+                      if (customer.pincode !== undefined) form.setValue('customerPincode', customer.pincode);
+                    }}
+                    customers={customers}
+                    disabled={isPending}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Line Items */}
+              <Card className="glass-card border-t-2 border-t-gold-500/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gold-600 dark:text-gold-400">
+                    Items
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <LineItemsTable
+                    items={watchedValues.items.map(item => ({ ...item, purity: item.purity || '22K' }))}
+                    onItemsChange={(items) => form.setValue('items', items)}
+                    disabled={isPending}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Summary */}
+              <InvoiceSummary
+                subtotal={subtotal}
+                discount={watchedValues.discount || 0}
+                sgst={settings?.sgstRate || 1.5}
+                cgst={settings?.cgstRate || 1.5}
+                grandTotal={grandTotal}
+                sgstAmount={sgstAmount}
+                cgstAmount={cgstAmount}
+                onDiscountChange={(val) => form.setValue('discount', val)}
+                editable={!isPending}
+              />
+
+              {/* Actions */}
+              <div className="flex justify-end gap-4 pt-4 pb-8">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending || !isShopSetupValid}
+                  className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white shadow-lg shadow-gold-500/20"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      {invoice ? 'Update Invoice' : 'Create Invoice'}
+                    </>
+                  )}
+                </Button>
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                {filteredStockItems.map(item => (
-                  <div key={item.id} className="p-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 cursor-pointer transition-colors flex justify-between items-center group" onClick={() => handleAddStockItem(item)}>
-                    <div>
-                      <div className="font-medium text-primary">{item.name}</div>
-                      <div className="text-xs text-muted-foreground">{item.purity} • {item.baseWeight}g</div>
-                    </div>
-                    <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100">Add</Button>
-                  </div>
-                ))}
-                {filteredStockItems.length === 0 && (
-                  <div className="col-span-full text-center py-8 text-muted-foreground">
-                    No items found.
-                  </div>
-                )}
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </form>
-    </Form>
+            </form>
+          </Form>
+        </MotionWrapper>
+      </div>
+
+      {/* Right Column - Live Preview (Desktop) */}
+      <div className="hidden lg:col-span-5 lg:block sticky top-6 self-start">
+        <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-slate-900/50 backdrop-blur-xl p-4">
+          <LiveInvoicePreview data={watchedValues} settings={settings} />
+        </div>
+      </div>
+    </div>
   );
 }

@@ -14,7 +14,7 @@ interface SchemaStatus {
   stockItems: boolean;
   invoices: boolean;
   invoiceItems: boolean;
-  userSettings: boolean;
+  invoiceItems: boolean;
   allReady: boolean;
 }
 
@@ -28,7 +28,7 @@ export function useSchemaCheck() {
       try {
         // Use a relative import to avoid path resolution issues
         const { supabase } = await import('../supabase/client');
-        
+
         // Check each table
         const checkTable = async (tableName: string) => {
           try {
@@ -43,14 +43,14 @@ export function useSchemaCheck() {
           checkTable('stock_items'),
           checkTable('invoices'),
           checkTable('invoice_items'),
-          checkTable('user_settings'),
+          checkTable('invoice_items'),
         ]);
-        const allReady = stockResult && invoicesResult && itemsResult && settingsResult;
+        const allReady = stockResult && invoicesResult && itemsResult;
         setStatus({
           stockItems: stockResult,
           invoices: invoicesResult,
           invoiceItems: itemsResult,
-          userSettings: settingsResult,
+          invoiceItems: itemsResult,
           allReady,
         });
       } catch (error) {
@@ -59,7 +59,7 @@ export function useSchemaCheck() {
           stockItems: false,
           invoices: false,
           invoiceItems: false,
-          userSettings: false,
+          invoiceItems: false,
           allReady: false,
         });
       } finally {

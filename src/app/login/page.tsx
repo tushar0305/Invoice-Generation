@@ -19,7 +19,6 @@ import { MotionWrapper } from '@/components/ui/motion-wrapper';
 const authSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  shopName: z.string().optional(),
 });
 
 type AuthFormValues = z.infer<typeof authSchema>;
@@ -36,7 +35,6 @@ export default function LoginPage() {
     defaultValues: {
       email: '',
       password: '',
-      shopName: '',
     },
   });
 
@@ -44,58 +42,39 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       if (isSignUp) {
-        if (!data.shopName || data.shopName.trim().length < 2) {
-          toast({
-            variant: 'destructive',
-            title: 'Shop name required',
-            description: 'Please enter your Shop Name to continue.',
-          });
-          setIsLoading(false);
-          return;
-        }
+        // Simplified signup - only email + password
         const { error } = await supabase.auth.signUp({
           email: data.email,
           password: data.password,
         });
         if (error) throw error;
 
-        try {
-          const { data: sessionData } = await supabase.auth.getSession();
-
-          if (sessionData.session) {
-            const { error: createShopError } = await supabase.rpc('create_new_shop', {
-              p_shop_name: data.shopName.trim()
-            });
-
-            if (createShopError) {
-              console.error('Failed to create shop:', createShopError);
-            } else {
-              console.log('✅ Shop created successfully during signup');
-            }
-          } else {
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('pendingShopName', data.shopName.trim());
-            }
-          }
-        } catch (err) {
-          console.error('Error creating shop:', err);
-        }
         toast({
           title: 'Account created!',
-          description: 'Please check your email to verify your account.',
+          description: 'Redirecting to shop setup...',
         });
+
+        // Redirect to onboarding wizard
+        router.push('/onboarding/shop-setup');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
           email: data.email,
           password: data.password,
         });
-        if (error) throw error;
+
+        if (error) {
+          throw error;
+        }
 
         toast({
           title: 'Welcome back!',
-          description: 'Successfully logged in.',
+          description: 'Redirecting...',
         });
-        router.push('/dashboard');
+
+        // We do NOT redirect here manually anymore.
+        // The AuthWrapper component detects the user login state change
+        // and handles the redirect to the correct shop/admin page.
+        // This prevents race conditions.
       }
     } catch (error: any) {
       toast({
@@ -207,7 +186,7 @@ export default function LoginPage() {
               {isSignUp ? 'Create an account' : 'Welcome back'}
             </h2>
             <p className="text-slate-500">
-              {isSignUp ? 'Enter your details to start your free trial.' : 'Please enter your details to sign in.'}
+              {isSignUp ? 'Start managing your jewellery business in minutes.' : 'Please enter your details to sign in.'}
             </p>
           </div>
 
@@ -222,29 +201,6 @@ export default function LoginPage() {
                   transition={{ duration: 0.2 }}
                   className="space-y-5"
                 >
-                  {isSignUp && (
-                    <FormField
-                      control={form.control}
-                      name="shopName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-slate-700">Shop Name</FormLabel>
-                          <FormControl>
-                            <div className="relative group">
-                              <Building2 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-gold-600 transition-colors" />
-                              <Input
-                                placeholder="e.g. Shree Jewellers"
-                                className="pl-10 h-12 bg-slate-50 border-slate-200 focus:border-gold-500 focus:ring-gold-500/20 transition-all"
-                                {...field}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
                   <FormField
                     control={form.control}
                     name="email"
@@ -256,7 +212,7 @@ export default function LoginPage() {
                             <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-gold-600 transition-colors" />
                             <Input
                               placeholder="name@example.com"
-                              className="pl-10 h-12 bg-slate-50 border-slate-200 focus:border-gold-500 focus:ring-gold-500/20 transition-all"
+                              className="pl-10 h-12 bg-slate-50 border-slate-200 focus:border-gold-500 focus:ring-gold-500/20 transition-all text-slate-900"
                               {...field}
                             />
                           </div>
@@ -278,7 +234,7 @@ export default function LoginPage() {
                             <Input
                               type={showPassword ? 'text' : 'password'}
                               placeholder="••••••••"
-                              className="pl-10 pr-10 h-12 bg-slate-50 border-slate-200 focus:border-gold-500 focus:ring-gold-500/20 transition-all"
+                              className="pl-10 pr-10 h-12 bg-slate-50 border-slate-200 focus:border-gold-500 focus:ring-gold-500/20 transition-all text-slate-900"
                               {...field}
                             />
                             <button

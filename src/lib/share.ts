@@ -6,7 +6,7 @@ import { supabase } from '@/supabase/client';
 
 export function composeWhatsAppInvoiceMessage(
   invoice: Invoice,
-  settings?: Partial<UserSettings>
+  settings?: any
 ) {
   const dateStr = format(new Date(invoice.invoiceDate), 'dd MMM, yyyy');
   const shop = settings?.shopName || 'Jewellers Store';
@@ -61,7 +61,7 @@ import { Capacitor } from '@capacitor/core';
 export async function shareInvoicePdf(
   invoice: Invoice,
   items: InvoiceItem[],
-  settings?: Partial<UserSettings> | null
+  settings?: any | null
 ) {
   // Guard: only run in the browser
   if (typeof window === 'undefined') {
@@ -124,7 +124,7 @@ let isSharing = false; // Add a global or module-level flag
 export async function shareInvoicePdfById(
   invoiceId: string,
   invoiceForMessage?: Invoice,
-  settings?: Partial<UserSettings> | null
+  settings?: any | null
 ) {
   if (isSharing) {
     console.warn('Share operation already in progress');
@@ -207,32 +207,6 @@ export async function shareInvoicePdfById(
             phoneNumber: shopDetails.phone_number || '',
             email: shopDetails.email || '',
             templateId: shopDetails.template_id || 'classic',
-          } as any;
-        }
-      }
-
-      // Fallback to user_settings if shop fetch failed or no shopId
-      if (!resolvedSettings) {
-        const { data: userSettings } = await supabase
-          .from('user_settings')
-          .select('*')
-          .eq('user_id', inv.user_id)
-          .single();
-        if (userSettings) {
-          resolvedSettings = {
-            id: userSettings.user_id,
-            userId: userSettings.user_id,
-            cgstRate: Number(userSettings.cgst_rate) || 0,
-            sgstRate: Number(userSettings.sgst_rate) || 0,
-            shopName: userSettings.shop_name || 'Jewellers Store',
-            gstNumber: userSettings.gst_number || '',
-            panNumber: userSettings.pan_number || '',
-            address: userSettings.address || '',
-            state: userSettings.state || '',
-            pincode: userSettings.pincode || '',
-            phoneNumber: userSettings.phone_number || '',
-            email: userSettings.email || '',
-            templateId: userSettings.template_id || 'classic',
           } as any;
         }
       }

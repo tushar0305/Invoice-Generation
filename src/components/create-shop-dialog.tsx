@@ -65,9 +65,9 @@ export function CreateShopDialog() {
             handleClose();
             setNewShopName('');
 
-            // Switch to the new shop and reload to ensure fresh state
+            // Switch to the new shop and navigate
             await switchShop(shopId);
-            window.location.reload();
+            router.push(`/shop/${shopId}/dashboard`);
 
         } catch (error: any) {
             console.error('Error creating shop:', error);

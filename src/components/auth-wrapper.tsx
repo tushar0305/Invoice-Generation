@@ -2,36 +2,147 @@
 
 import { useUser } from '@/supabase/provider';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '@/supabase/client';
 
 export function AuthWrapper({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [roleChecked, setRoleChecked] = useState(false);
+  const [hasAnyRole, setHasAnyRole] = useState(false);
+
+  // Check onboarding status and role when user loads
+  useEffect(() => {
+    const checkOnboardingAndRole = async () => {
+      if (!user) {
+        setOnboardingChecked(true);
+        setRoleChecked(true);
+        return;
+      }
+
+      try {
+        // Check onboarding status
+        const { data: prefs, error: prefsError } = await supabase
+          .from('user_preferences')
+          .select('onboarding_completed')
+          .eq('user_id', user.uid)
+          .maybeSingle();
+
+        if (prefsError) {
+          console.error('Error checking onboarding:', prefsError);
+          setOnboardingComplete(false);
+        } else {
+          setOnboardingComplete(prefs?.onboarding_completed ?? false);
+        }
+
+        // Check if user has ANY role in any shop
+        const { data: roles, error: rolesError } = await supabase
+          .from('user_shop_roles')
+          .select('role')
+          .eq('user_id', user.uid)
+          .eq('is_active', true);
+
+        if (!rolesError && roles && roles.length > 0) {
+          setHasAnyRole(true);
+          const hasOwnerRole = roles.some((r: any) => r.role === 'owner');
+          setIsOwner(hasOwnerRole);
+        } else {
+          setHasAnyRole(false);
+          setIsOwner(false);
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        setOnboardingComplete(false);
+      } finally {
+        setOnboardingChecked(true);
+        setRoleChecked(true);
+      }
+    };
+
+    if (!isUserLoading) {
+      checkOnboardingAndRole();
+    }
+  }, [user, isUserLoading]);
 
   useEffect(() => {
-    // If auth state is determined and there's no user, redirect to login.
-    // Skip redirect for public paths: login and root (landing page)
-    if (!isUserLoading && !user && pathname !== '/login' && pathname !== '/') {
+    // Wait for user, onboarding status, AND role to be checked
+    if (isUserLoading || !onboardingChecked || !roleChecked) return;
+
+    // If not logged in and not on public pages, redirect to login
+    if (!user && pathname !== '/login' && pathname !== '/') {
       router.replace('/login');
+      return;
     }
-    // If the user is logged in and on the login page, redirect to dashboard.
-    if (!isUserLoading && user && pathname === '/login') {
-      router.replace('/dashboard');
+
+    // If logged in but onboarding not complete
+    // SKIP shop setup if user already has a role (e.g. invited staff)
+    if (user && !onboardingComplete && !hasAnyRole && !pathname.startsWith('/onboarding')) {
+      router.replace('/onboarding/shop-setup');
+      return;
     }
-  }, [user, isUserLoading, router, pathname]);
 
-  // While loading, show a full-screen loader.
-  // Allow rendering for public paths even without user
-  if (isUserLoading || (!user && pathname !== '/login' && pathname !== '/')) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+    // If logged in, onboarding complete (OR has role), and on login page
+    if (user && (onboardingComplete || hasAnyRole) && pathname === '/login') {
+      // Fetch last active shop or first available shop
+      const getLastActiveShop = async () => {
+        let targetShopId = null;
 
-  // If user is loaded and on the correct page, render children.
+        // Try to get from preferences first
+        const { data: prefs } = await supabase
+          .from('user_preferences')
+          .select('last_active_shop_id')
+          .eq('user_id', user.uid)
+          .maybeSingle();
+
+        if (prefs?.last_active_shop_id) {
+          targetShopId = prefs.last_active_shop_id;
+        } else {
+          // Fallback to first shop role
+          const { data: roles } = await supabase
+            .from('user_shop_roles')
+            .select('shop_id')
+            .eq('user_id', user.uid)
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle();
+
+          if (roles?.shop_id) {
+            targetShopId = roles.shop_id;
+          }
+        }
+
+        if (targetShopId) {
+          // Check role for this shop to determine landing page
+          const { data: roleData } = await supabase
+            .from('user_shop_roles')
+            .select('role')
+            .eq('user_id', user.uid)
+            .eq('shop_id', targetShopId)
+            .maybeSingle();
+
+          const role = roleData?.role;
+
+          if (role === 'owner') {
+            router.replace('/admin');
+          } else {
+            router.replace(`/shop/${targetShopId}/dashboard`);
+          }
+        } else {
+          // Fallback if no shop found (shouldn't happen if hasAnyRole is true, but safe fallback)
+          router.replace('/onboarding/shop-setup');
+        }
+      };
+
+      getLastActiveShop();
+      return;
+    }
+  }, [user, isUserLoading, onboardingChecked, onboardingComplete, roleChecked, isOwner, hasAnyRole, router, pathname]);
+
+  // Render children immediately without loading screen
   return <>{children}</>;
 }

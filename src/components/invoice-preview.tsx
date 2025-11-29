@@ -30,7 +30,7 @@ export function LiveInvoicePreview({ data, settings, invoiceNumber = "INV-PREVIE
     const grandTotal = taxableAmount + sgstAmount + cgstAmount;
 
     return (
-        <Card className="h-full overflow-hidden bg-white text-slate-900 shadow-2xl print:shadow-none border-0 relative">
+        <Card className="w-full aspect-[210/297] overflow-hidden bg-white text-slate-900 shadow-2xl print:shadow-none border-0 relative mx-auto max-w-[800px]">
             {/* Decorative Background Pattern */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                 style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #000 1px, transparent 0)', backgroundSize: '20px 20px' }}>

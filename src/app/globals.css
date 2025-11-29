@@ -4,13 +4,18 @@
 
 @layer base {
   html {
-    font-size: 16px; /* Ensure base font size is 16px for readability */
-    -webkit-text-size-adjust: 100%; /* Prevent font scaling in landscape */
+    font-size: 16px;
+    /* Ensure base font size is 16px for readability */
+    -webkit-text-size-adjust: 100%;
+    /* Prevent font scaling in landscape */
   }
 
   /* Prevent auto-zoom on iOS inputs */
   @media screen and (max-width: 768px) {
-    input, select, textarea {
+
+    input,
+    select,
+    textarea {
       font-size: 16px !important;
     }
   }
@@ -170,18 +175,21 @@
   }
 
   .dark .glass-panel {
-    background: hsla(240, 4%, 8%, 0.70);
+    background: hsla(240, 4%, 8%, 0.85);
+    /* Increased opacity from 0.70 to 0.85 for better contrast */
     backdrop-filter: blur(24px) saturate(120%);
-    border: 1px solid hsla(45, 20%, 15%, 0.6);
+    border: 1px solid hsla(45, 10%, 20%, 0.6);
+    /* Desaturated border color */
     box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.3),
+      0 4px 16px rgba(0, 0, 0, 0.4),
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .glass-card {
     background: hsla(40, 35%, 99%, 0.75);
     backdrop-filter: blur(16px) saturate(110%);
-    border: 1px solid hsla(42, 25%, 90%, 0.7);
+    border: 1px solid hsla(42, 10%, 90%, 0.7);
+    /* Desaturated border */
     box-shadow:
       var(--shadow-gold-sm),
       inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -194,22 +202,28 @@
       var(--shadow-gold-md),
       inset 0 1px 0 rgba(255, 255, 255, 1);
     transform: translateY(-2px);
+    border-color: hsla(42, 75%, 55%, 0.3);
+    /* Only show gold hint on hover */
   }
 
   .dark .glass-card {
-    background: hsla(240, 4%, 8%, 0.50);
+    background: hsla(240, 4%, 8%, 0.60);
+    /* Increased opacity */
     backdrop-filter: blur(20px) saturate(120%);
-    border: 1px solid hsla(45, 20%, 15%, 0.5);
+    border: 1px solid hsla(45, 10%, 20%, 0.5);
+    /* Desaturated border */
     box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
   .dark .glass-card:hover {
-    background: hsla(240, 4%, 10%, 0.70);
+    background: hsla(240, 4%, 10%, 0.80);
     box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.3),
+      0 4px 16px rgba(0, 0, 0, 0.4),
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border-color: hsla(45, 63%, 52%, 0.3);
+    /* Gold hint on hover */
   }
 
   /* ==================== TEXT EFFECTS ==================== */

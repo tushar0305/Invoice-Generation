@@ -25,8 +25,10 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.error('Session error:', error);
-          // Clear invalid session
+          // Clear invalid session and local storage
           await supabase.auth.signOut();
+          localStorage.clear();
+          sessionStorage.clear();
         }
         if (!mounted) return;
         setSession(data.session);
@@ -35,6 +37,10 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Auth initialization error:', err);
         if (mounted) {
+          // Clear everything on auth error
+          await supabase.auth.signOut();
+          localStorage.clear();
+          sessionStorage.clear();
           setSession(null);
           setUser(null);
         }
@@ -47,6 +53,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     init();
 
     const { data: sub } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
+      console.log('Auth state change:', event, !!newSession);
       if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);

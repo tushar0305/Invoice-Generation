@@ -13,7 +13,6 @@ interface SchemaStatus {
   stockItems: boolean;
   invoices: boolean;
   invoiceItems: boolean;
-  userSettings: boolean;
   allReady: boolean;
 }
 
@@ -30,17 +29,15 @@ export function useSchemaCheck() {
           checkTable(supabase, 'stock_items'),
           checkTable(supabase, 'invoices'),
           checkTable(supabase, 'invoice_items'),
-          checkTable(supabase, 'user_settings'),
         ]);
 
-        const [stockItems, invoices, invoiceItems, userSettings] = checks;
-        const allReady = stockItems && invoices && invoiceItems && userSettings;
+        const [stockItems, invoices, invoiceItems] = checks;
+        const allReady = stockItems && invoices && invoiceItems;
 
         setStatus({
           stockItems,
           invoices,
           invoiceItems,
-          userSettings,
           allReady,
         });
       } catch (error) {
@@ -49,7 +46,6 @@ export function useSchemaCheck() {
           stockItems: false,
           invoices: false,
           invoiceItems: false,
-          userSettings: false,
           allReady: false,
         });
       } finally {
@@ -84,7 +80,7 @@ export function SchemaStatusBanner() {
   if (!status.stockItems) missingTables.push('stock_items');
   if (!status.invoices) missingTables.push('invoices');
   if (!status.invoiceItems) missingTables.push('invoice_items');
-  if (!status.userSettings) missingTables.push('user_settings');
+  if (!status.invoiceItems) missingTables.push('invoice_items');
 
   return React.createElement(
     'div',

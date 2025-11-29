@@ -7,28 +7,14 @@ import Link from 'next/link';
 import { useUser } from '@/supabase/provider';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/supabase/client';
+import { useActiveShop } from '@/hooks/use-active-shop';
 
 export function DashboardHero() {
     const { user } = useUser();
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-    const [shopName, setShopName] = useState<string | null>(null);
-
-    useEffect(() => {
-        let active = true;
-        const load = async () => {
-            if (!user?.uid) { setShopName(null); return; }
-            const { data } = await supabase
-                .from('user_settings')
-                .select('shop_name')
-                .eq('user_id', user.uid)
-                .maybeSingle();
-            if (!active) return;
-            setShopName(data?.shop_name || null);
-        };
-        load();
-        return () => { active = false; };
-    }, [user?.uid]);
+    const { activeShop } = useActiveShop();
+    const shopName = activeShop?.shopName;
 
     return (
         <MotionWrapper className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-[#090E1A] p-6 md:p-8 text-primary-foreground shadow-2xl border border-white/10">
