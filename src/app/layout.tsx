@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     siteName: 'SwarnaVyapar',
     images: [
       {
-        url: 'https://swarnavyapar.in/logo/swarnavyapar.png',
+        url: 'https://swarnavyapar.in/logo/browser.webp',
         width: 1200,
         height: 630,
         alt: 'SwarnaVyapar Logo',
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     description:
       'Transform your jewellery business with SwarnaVyapar. Elegant invoicing, smart inventory tracking, and seamless customer management.',
     creator: '@swarnavyapar',
-    images: ['https://swarnavyapar.in/logo/swarnavyapar.png'],
+    images: ['https://swarnavyapar.in/logo/browser.webp'],
   },
   robots: {
     index: true,

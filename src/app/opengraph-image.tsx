@@ -27,9 +27,9 @@ export default async function Image() {
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 20 }}>
-                    {/* Use the official PNG logo to ensure consistent branding in OpenGraph */}
+                    {/* Use browser.webp for better Google search visibility */}
                     <img
-                        src="https://swarnavyapar.in/logo/swarnavyapar.png"
+                        src="https://swarnavyapar.in/logo/browser.webp"
                         alt="SwarnaVyapar"
                         width={160}
                         height={160}

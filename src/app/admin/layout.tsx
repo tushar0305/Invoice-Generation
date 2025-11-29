@@ -1,6 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import { AuthWrapper } from '@/components/auth-wrapper';
+import { useTheme } from '@/components/theme-provider';
 import {
     SidebarProvider,
     Sidebar,
@@ -67,6 +69,10 @@ export default function AdminLayout({
     const auth = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const { theme } = useTheme();
+
+    // Calculate logo based on theme
+    const logoSrc = theme === 'dark' ? '/logo/swarnavyapar_dark.webp' : '/logo/swarnavyapar.webp';
 
     const handleSignOut = async () => {
         await auth.signOut();
@@ -79,13 +85,15 @@ export default function AdminLayout({
                 <Sidebar className="border-r border-gold-500/10 bg-background/80 backdrop-blur-xl">
                     <SidebarHeader className="relative overflow-hidden">
                         <div className="px-4 py-3 relative z-10 pt-[max(0.75rem,env(safe-area-inset-top))]">
-                            <div className="flex items-center gap-2">
-                                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-gold-500 to-maroon-600 flex items-center justify-center text-white font-bold text-sm">
-                                    SV
-                                </div>
-                                <div>
-                                    <p className="font-heading font-bold text-sm">Swarnavyapar</p>
-                                    <p className="text-[10px] text-muted-foreground">Global Admin</p>
+                            <div className="flex items-center justify-center gap-2">
+                                <div className="h-12 w-32 relative">
+                                    <Image
+                                        src={logoSrc}
+                                        alt="Swarnavyapar Logo"
+                                        fill
+                                        className="object-contain"
+                                        priority
+                                    />
                                 </div>
                             </div>
                         </div>

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -71,6 +71,11 @@ export function InvoicesClient({
     const [invoiceToChangeStatus, setInvoiceToChangeStatus] = useState<{ id: string; currentStatus: string } | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
     const { user } = useUser();
+
+    // Sync local state when server data changes
+    useEffect(() => {
+        setInvoices(initialInvoices);
+    }, [initialInvoices]);
 
     const handleDeleteConfirmation = (invoiceId: string) => {
         setInvoiceToDelete(invoiceId);
@@ -398,6 +403,7 @@ export function InvoicesClient({
                         size="sm"
                         onClick={() => {
                             haptics.impact(ImpactStyle.Light);
+                            setStatusFilter(status);
                             router.push(`/shop/${shopId}/invoices?status=${status}`);
                         }}
                         className={cn(

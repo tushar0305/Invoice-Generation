@@ -51,6 +51,7 @@ export function ShopSwitcher({ className }: { className?: string }) {
                         "transition-all duration-200 hover:border-white/20",
                         className
                     )}
+                    suppressHydrationWarning
                 >
                     <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
                     <span className="font-medium truncate flex-1 text-left">{displayName}</span>
