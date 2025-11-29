@@ -101,14 +101,6 @@ export default function LandingPage() {
 
   return (
     <>
-      {/* Skip to main content for accessibility */}
-      <a 
-        href="#main-content" 
-        className="skip-link"
-      >
-        Skip to main content
-      </a>
-      
       <main 
         id="main-content"
         className="flex min-h-screen flex-col bg-white overflow-x-hidden"

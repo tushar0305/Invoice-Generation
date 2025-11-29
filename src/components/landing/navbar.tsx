@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Menu, X } from 'lucide-react';
+import Image from 'next/image';
 
 const navLinks = [
     { href: '#features', label: 'Features' },
@@ -72,18 +73,21 @@ export function Navbar() {
             >
                 <div className="container mx-auto px-4 md:px-6">
                     <div className="flex items-center justify-between h-16 md:h-20">
-                        {/* Logo */}
-                        <Link 
-                            href="/" 
-                            className="flex items-center gap-2 md:gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 rounded-lg"
+                        {/* Logo (image) */}
+                        <Link
+                            href="/"
+                            className="flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 rounded-lg"
                             aria-label="SwarnaVyapar Home"
                         >
-                            <div className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shadow-lg shadow-gold-500/20 ring-1 ring-white/50">
-                                <span className="text-white font-bold text-lg md:text-xl font-heading" aria-hidden="true">S</span>
+                            <div className="relative h-12 w-[200px] md:h-14 md:w-[260px] -ml-10 md:-ml-15">
+                                    <Image
+                                    src="/logo/swarnavyapar.png"
+                                    alt="SwarnaVyapar"
+                                    fill
+                                    style={{ objectFit: 'contain' }}
+                                    priority={true}
+                                    />
                             </div>
-                            <span className="text-lg md:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 tracking-tight font-heading">
-                                SwarnaVyapar
-                            </span>
                         </Link>
 
                         {/* Desktop Navigation */}

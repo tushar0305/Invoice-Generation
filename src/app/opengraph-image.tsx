@@ -23,40 +23,25 @@ export default async function Image() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontFamily: 'serif',
+                    fontFamily: 'Inter, system-ui, -apple-system, Arial, sans-serif',
                 }}
             >
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: '20px',
-                    }}
-                >
-                    <div
-                        style={{
-                            width: '80px',
-                            height: '80px',
-                            borderRadius: '20px',
-                            background: 'linear-gradient(to bottom right, #fbbf24, #d97706)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 10px 30px rgba(217, 119, 6, 0.3)',
-                            marginRight: '20px',
-                        }}
-                    >
-                        <span style={{ color: 'white', fontSize: '48px', fontWeight: 'bold' }}>S</span>
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 20 }}>
+                    {/* Use the official PNG logo to ensure consistent branding in OpenGraph */}
+                    <img
+                        src="https://swarnavyapar.in/logo/swarnavyapar.png"
+                        alt="SwarnaVyapar"
+                        width={160}
+                        height={160}
+                        style={{ borderRadius: 20, boxShadow: '0 20px 50px rgba(0,0,0,0.08)' }}
+                    />
                     <h1
                         style={{
-                            fontSize: '80px',
-                            fontWeight: 'bold',
-                            background: 'linear-gradient(to right, #0f172a, #334155)',
-                            backgroundClip: 'text',
-                            color: 'transparent',
+                            fontSize: 72,
+                            fontWeight: 700,
+                            color: '#0f172a',
                             margin: 0,
+                            letterSpacing: -1,
                         }}
                     >
                         SwarnaVyapar
@@ -64,26 +49,16 @@ export default async function Image() {
                 </div>
                 <p
                     style={{
-                        fontSize: '32px',
+                        fontSize: 28,
                         color: '#475569',
                         textAlign: 'center',
-                        maxWidth: '800px',
+                        maxWidth: '900px',
                         lineHeight: 1.4,
+                        margin: '0 40px',
                     }}
                 >
-                    India's Most Premium Jewellery Management Suite
+                    India's Most Premium Jewellery Management Suite — Invoicing, Inventory, CRM.
                 </p>
-                <div
-                    style={{
-                        marginTop: '40px',
-                        display: 'flex',
-                        gap: '20px',
-                    }}
-                >
-                    <div style={{ padding: '10px 20px', background: '#f1f5f9', borderRadius: '10px', color: '#334155', fontSize: '20px' }}>Invoicing</div>
-                    <div style={{ padding: '10px 20px', background: '#f1f5f9', borderRadius: '10px', color: '#334155', fontSize: '20px' }}>Inventory</div>
-                    <div style={{ padding: '10px 20px', background: '#f1f5f9', borderRadius: '10px', color: '#334155', fontSize: '20px' }}>CRM</div>
-                </div>
             </div>
         ),
         {

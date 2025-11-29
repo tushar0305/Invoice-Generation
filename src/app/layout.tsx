@@ -34,6 +34,14 @@ export const metadata: Metadata = {
     description:
       'Transform your jewellery business with SwarnaVyapar. Elegant invoicing, smart inventory tracking, and seamless customer management.',
     siteName: 'SwarnaVyapar',
+    images: [
+      {
+        url: 'https://swarnavyapar.in/logo/swarnavyapar.png',
+        width: 1200,
+        height: 630,
+        alt: 'SwarnaVyapar Logo',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -41,6 +49,7 @@ export const metadata: Metadata = {
     description:
       'Transform your jewellery business with SwarnaVyapar. Elegant invoicing, smart inventory tracking, and seamless customer management.',
     creator: '@swarnavyapar',
+    images: ['https://swarnavyapar.in/logo/swarnavyapar.png'],
   },
   robots: {
     index: true,
@@ -76,16 +85,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap"
-          rel="stylesheet"
-        />
+        {/* Favicons and touch icons */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/logo/swarnavyapar.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/logo/swarnavyapar.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/logo/swarnavyapar.png" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+
+        {/* Preload self-hosted fonts (place WOFF2 files under /public/fonts/) */}
+        <link rel="preload" href="/fonts/Inter-Variable.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/PlayfairDisplay-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/PlayfairDisplay-Italic.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body className="font-body antialiased bg-mesh min-h-screen" suppressHydrationWarning>
         <SupabaseProvider>
