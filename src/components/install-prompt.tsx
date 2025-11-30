@@ -11,7 +11,10 @@ export function InstallPrompt() {
     const [support, setSupport] = useState<{ platform: 'ios' | 'android' | 'desktop' } | null>(null);
 
     useEffect(() => {
+        console.log('[InstallPrompt] Component mounted, listening for beforeinstallprompt');
+        
         const handler = (e: any) => {
+            console.log('[InstallPrompt] beforeinstallprompt event fired!');
             e.preventDefault();
             setDeferredPrompt(e);
             setIsVisible(true);

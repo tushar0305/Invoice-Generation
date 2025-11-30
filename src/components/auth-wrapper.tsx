@@ -81,13 +81,14 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
 
     // If logged in but onboarding not complete
     // SKIP shop setup if user already has a role (e.g. invited staff)
-    if (user && !onboardingComplete && !hasAnyRole && !pathname.startsWith('/onboarding')) {
+    // Also skip if we're already on a shop page or admin (prevents flash)
+    if (user && !onboardingComplete && !hasAnyRole && !pathname.startsWith('/onboarding') && !pathname.startsWith('/shop') && !pathname.startsWith('/admin')) {
       router.replace('/onboarding/shop-setup');
       return;
     }
 
-    // If logged in, onboarding complete (OR has role), and on login page
-    if (user && (onboardingComplete || hasAnyRole) && pathname === '/login') {
+    // If logged in, onboarding complete (OR has role), and on login/landing page
+    if (user && (onboardingComplete || hasAnyRole) && (pathname === '/login' || pathname === '/')) {
       // Fetch last active shop or first available shop
       const getLastActiveShop = async () => {
         let targetShopId = null;
@@ -143,6 +144,18 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
     }
   }, [user, isUserLoading, onboardingChecked, onboardingComplete, roleChecked, isOwner, hasAnyRole, router, pathname]);
 
-  // Render children immediately without loading screen
+  // Show loading screen during initial checks to prevent flash
+  if (isUserLoading || !onboardingChecked || !roleChecked) {
+    // Only show loader if we're navigating (not on public pages)
+    if (pathname !== '/login' && pathname !== '/') {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+  }
+
+  // Render children immediately for public pages or after checks complete
   return <>{children}</>;
 }

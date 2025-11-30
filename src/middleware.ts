@@ -54,19 +54,31 @@ export async function middleware(request: NextRequest) {
 
     // 2. If logged in and trying to access auth route -> Redirect to Shop or Onboarding
     if (user && isAuthRoute) {
-        // Check onboarding status
+        // Check onboarding status and shop roles
         const { data: prefs } = await supabase
             .from('user_preferences')
             .select('onboarding_completed, last_active_shop_id')
             .eq('user_id', user.id)
-            .single()
+            .maybeSingle()
+
+        // Check if user has any shop roles (might be invited staff)
+        const { data: roles } = await supabase
+            .from('user_shop_roles')
+            .select('shop_id, role')
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle()
 
         const url = request.nextUrl.clone()
 
-        if (!prefs?.onboarding_completed) {
-            url.pathname = '/onboarding/shop-setup'
+        // If user has a shop role, redirect to that shop (staff/invited user)
+        if (roles?.shop_id) {
+            url.pathname = `/shop/${roles.shop_id}/dashboard`
         } else if (prefs?.last_active_shop_id) {
             url.pathname = `/shop/${prefs.last_active_shop_id}/dashboard`
+        } else if (!prefs?.onboarding_completed) {
+            url.pathname = '/onboarding/shop-setup'
         } else {
             // Fallback if no shop found but onboarding complete (rare)
             url.pathname = '/onboarding/shop-setup'
