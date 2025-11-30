@@ -300,7 +300,7 @@ export function ViewInvoiceClient() {
                             Mark as Paid
                         </Button>
                     ) : (
-                        <Button variant="secondary" onClick={() => handleStatusChange('due')} disabled={isPending}>
+                        <Button variant="outline" onClick={() => handleStatusChange('due')} disabled={isPending}>
                             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
                             Mark as Due
                         </Button>

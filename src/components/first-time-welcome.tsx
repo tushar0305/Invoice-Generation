@@ -48,7 +48,7 @@ export function FirstTimeWelcome({ settings, isLoading, hasInvoices }: FirstTime
                     <h4 className="font-semibold mb-2">{hasShopName ? 'Shop Name Added' : 'Add Shop Name'}</h4>
                     <p className="text-sm text-muted-foreground mb-3">{hasShopName ? 'Great! Your shop name is saved.' : 'Provide a custom shop name shown on invoices.'}</p>
                     <Link href="/dashboard/settings">
-                      <Button size="sm" variant={hasShopName ? 'secondary' : 'outline'} className="w-full">
+                      <Button size="sm" variant={hasShopName ? 'outline' : 'outline'} className="w-full">
                         {hasShopName ? 'Edit Details' : 'Set Name'} <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </Link>

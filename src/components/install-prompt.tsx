@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export function InstallPrompt() {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isVisible, setIsVisible] = useState(false);
+    const [support, setSupport] = useState<{ platform: 'ios' | 'android' | 'desktop' } | null>(null);
 
     useEffect(() => {
         const handler = (e: any) => {
@@ -17,6 +18,12 @@ export function InstallPrompt() {
         };
 
         window.addEventListener('beforeinstallprompt', handler);
+
+        // Basic platform detection
+        const ua = navigator.userAgent.toLowerCase();
+        if (/iphone|ipad|ipod/.test(ua)) setSupport({ platform: 'ios' });
+        else if (/android/.test(ua)) setSupport({ platform: 'android' });
+        else setSupport({ platform: 'desktop' });
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handler);
@@ -52,13 +59,15 @@ export function InstallPrompt() {
                         </div>
                         <div>
                             <h3 className="font-bold text-sm">Install SwarnaVyapar</h3>
-                            <p className="text-xs text-slate-400">Add to Home Screen</p>
+                            <p className="text-xs text-slate-400">
+                              {support?.platform === 'ios' ? 'Share > Add to Home Screen' : 'Add to Home Screen'}
+                            </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button
                             size="sm"
-                            variant="secondary"
+                            variant="outline"
                             onClick={handleInstall}
                             className="h-8 text-xs bg-gold-500 text-slate-900 hover:bg-gold-400 border-0"
                         >

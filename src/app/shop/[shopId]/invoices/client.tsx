@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, FilePlus2, Trash2, Loader2, Calendar as CalendarIcon, Download, RefreshCw, Share2, Scan } from 'lucide-react';
+import { Search, FilePlus2, Trash2, Loader2, Calendar as CalendarIcon, Download, RefreshCw, Share2, Scan, Banknote, Undo2 } from 'lucide-react';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -40,9 +40,12 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
-import { format, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { format, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfDay, endOfDay } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { InvoiceMobileCard } from '@/components/dashboard/invoice-mobile-card';
+import { useDebounce } from '@/hooks/use-debounce';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type InvoicesClientProps = {
     initialInvoices: Invoice[];
@@ -68,7 +71,12 @@ export function InvoicesClient({
     const [dialogOpen, setDialogOpen] = useState(false);
     const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
     const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+    const [isStatusUpdating, setIsStatusUpdating] = useState(false);
     const [invoiceToChangeStatus, setInvoiceToChangeStatus] = useState<{ id: string; currentStatus: string } | null>(null);
+    const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+    const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
+    const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+
     const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
     const { user } = useUser();
 
@@ -121,6 +129,7 @@ export function InvoicesClient({
 
     const confirmStatusChange = async () => {
         if (!invoiceToChangeStatus) return;
+        setIsStatusUpdating(true);
 
         try {
             const currentStatus = invoiceToChangeStatus.currentStatus;
@@ -146,6 +155,8 @@ export function InvoicesClient({
                 title: 'Success',
                 description: `Invoice marked as ${newStatus}`
             });
+            setStatusDialogOpen(false);
+            setInvoiceToChangeStatus(null);
         } catch (error) {
             toast({
                 variant: 'destructive',
@@ -153,8 +164,7 @@ export function InvoicesClient({
                 description: 'Failed to update status'
             });
         } finally {
-            setStatusDialogOpen(false);
-            setInvoiceToChangeStatus(null);
+            setIsStatusUpdating(false);
         }
     };
 
@@ -204,20 +214,46 @@ export function InvoicesClient({
             }
 
             haptics.impact(ImpactStyle.Light);
-            toast({ description: 'List refreshed!' });
+            setLastRefreshed(new Date());
+            toast({
+                title: 'Refreshed!',
+                description: 'Invoice list updated successfully',
+            });
         } catch (error) {
-            toast({ variant: 'destructive', description: 'Failed to refresh' });
+            toast({ variant: 'destructive', title: 'Refresh Failed', description: 'Unable to refresh data' });
         } finally {
             setIsRefreshing(false);
         }
     };
+
+    // Format relative time for last refresh
+    const getRelativeTime = (date: Date | null) => {
+        if (!date) return null;
+
+        const now = new Date();
+        const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+        if (diffInSeconds < 10) return 'just now';
+        if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours}h ago`;
+
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays}d ago`;
+    };
+
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
     // Client-side filtering for search and date range (status filter already server-side)
     const filteredInvoices = useMemo(() => {
         let result = invoices;
 
         // Search filter (client-side for instant feedback)
-        const lower = searchTerm.toLowerCase();
+        const lower = debouncedSearchTerm.toLowerCase();
         if (lower) {
             result = result.filter(inv =>
                 inv.customerName.toLowerCase().includes(lower) ||
@@ -227,17 +263,69 @@ export function InvoicesClient({
 
         // Date Range Filter
         if (dateRange?.from) {
-            const startStr = format(dateRange.from, 'yyyy-MM-dd');
-            const endStr = dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : startStr;
+            // Create start and end dates for comparison
+            const startDate = startOfDay(dateRange.from);
+            const endDate = endOfDay(dateRange.to || dateRange.from);
 
             result = result.filter(inv => {
-                const d = inv.invoiceDate;
-                return d >= startStr && d <= endStr;
+                const invDate = new Date(inv.invoiceDate);
+                return invDate >= startDate && invDate <= endDate;
             });
         }
 
         return result;
-    }, [invoices, searchTerm, dateRange]);
+    }, [invoices, debouncedSearchTerm, dateRange]);
+
+    // Batch Operations - Defined AFTER filteredInvoices
+    const toggleSelectAll = () => {
+        if (selectedInvoices.size === filteredInvoices.length) {
+            setSelectedInvoices(new Set());
+        } else {
+            setSelectedInvoices(new Set(filteredInvoices.map(inv => inv.id)));
+        }
+    };
+
+    const toggleSelectInvoice = (id: string) => {
+        const newSelected = new Set(selectedInvoices);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedInvoices(newSelected);
+    };
+
+    const handleBatchDelete = () => {
+        if (selectedInvoices.size === 0) return;
+        setBatchDeleteDialogOpen(true);
+    };
+
+    const executeBatchDelete = () => {
+        startDeleteTransition(async () => {
+            try {
+                const idsToDelete = Array.from(selectedInvoices);
+                const { error } = await supabase.from('invoices').delete().in('id', idsToDelete).eq('user_id', user?.uid || '');
+                if (error) throw error;
+
+                setInvoices(prev => prev.filter(inv => !selectedInvoices.has(inv.id)));
+                setSelectedInvoices(new Set());
+
+                toast({
+                    title: 'Batch Delete Successful',
+                    description: `Successfully deleted ${idsToDelete.length} invoices.`,
+                });
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Error',
+                    description: 'Failed to delete selected invoices.',
+                });
+            } finally {
+                setBatchDeleteDialogOpen(false);
+            }
+        });
+    };
 
     const applyPreset = (preset: 'today' | 'week' | 'month' | 'year' | 'all') => {
         switch (preset) {
@@ -403,7 +491,6 @@ export function InvoicesClient({
                         size="sm"
                         onClick={() => {
                             haptics.impact(ImpactStyle.Light);
-                            setStatusFilter(status);
                             router.push(`/shop/${shopId}/invoices?status=${status}`);
                         }}
                         className={cn(
@@ -428,9 +515,25 @@ export function InvoicesClient({
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button variant="outline" size="icon" onClick={handleRefresh} className="shrink-0">
-                        <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={handleRefresh}
+                            className="shrink-0 transition-all duration-300 hover:shadow-md interactive-scale"
+                            title={lastRefreshed ? `Last updated: ${getRelativeTime(lastRefreshed)}` : 'Refresh'}
+                        >
+                            <RefreshCw className={cn(
+                                "h-4 w-4 transition-transform duration-500",
+                                isRefreshing && "animate-spin"
+                            )} />
+                        </Button>
+                        {lastRefreshed && (
+                            <span className="text-xs text-muted-foreground hidden sm:inline animate-in fade-in">
+                                Updated {getRelativeTime(lastRefreshed)}
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -446,10 +549,10 @@ export function InvoicesClient({
                                 <div>
                                     <div className="mb-2 text-xs font-medium text-muted-foreground">Quick ranges</div>
                                     <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
-                                        <Button size="sm" variant="secondary" onClick={() => applyPreset('today')}>Today</Button>
-                                        <Button size="sm" variant="secondary" onClick={() => applyPreset('week')}>This Week</Button>
-                                        <Button size="sm" variant="secondary" onClick={() => applyPreset('month')}>This Month</Button>
-                                        <Button size="sm" variant="secondary" onClick={() => applyPreset('year')}>This Year</Button>
+                                        <Button size="sm" variant="outline" onClick={() => applyPreset('today')}>Today</Button>
+                                        <Button size="sm" variant="outline" onClick={() => applyPreset('week')}>This Week</Button>
+                                        <Button size="sm" variant="outline" onClick={() => applyPreset('month')}>This Month</Button>
+                                        <Button size="sm" variant="outline" onClick={() => applyPreset('year')}>This Year</Button>
                                         <Button size="sm" variant="ghost" onClick={() => applyPreset('all')}>All Time</Button>
                                     </div>
                                 </div>
@@ -472,8 +575,12 @@ export function InvoicesClient({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => exportInvoices('filtered')}>Export filtered</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => exportInvoices('all')}>Export all</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportInvoices('filtered')}>
+                                Export filtered as Excel
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportInvoices('all')}>
+                                Export all as Excel
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
 
@@ -493,46 +600,118 @@ export function InvoicesClient({
                 </div>
             </div>
 
+            {/* Batch Action Bar */}
+            {selectedInvoices.size > 0 && (
+                <div className="flex items-center justify-between p-4 bg-primary/10 border border-primary/20 rounded-lg animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-primary">
+                            {selectedInvoices.size} selected
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleBatchDelete}
+                            className="h-8 gap-2"
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete Selected
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedInvoices(new Set())}
+                            className="h-8"
+                        >
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {/* Content */}
             <div className="space-y-4">
-                {/* Desktop Table View */}
-                <div className="rounded-md border border-border/50 overflow-hidden hidden md:block bg-card">
-                    <Table className="table-modern">
+                {/* Desktop/Tablet Table View */}
+                <div className="rounded-md border border-border/50 overflow-x-auto hidden md:block bg-card">
+                    <Table className="table-modern min-w-[600px]">
                         <TableHeader className="bg-muted/50">
                             <TableRow className="hover:bg-transparent border-b-border/50">
-                                <TableHead className="text-primary">Invoice #</TableHead>
-                                <TableHead className="text-primary">Date</TableHead>
-                                <TableHead className="text-primary">Customer</TableHead>
-                                <TableHead className="text-primary">Status</TableHead>
-                                <TableHead className="text-right text-primary">Amount</TableHead>
-                                <TableHead className="text-right text-primary">Actions</TableHead>
+                                <TableHead className="w-[40px] px-4">
+                                    <Checkbox
+                                        checked={filteredInvoices.length > 0 && selectedInvoices.size === filteredInvoices.length}
+                                        onCheckedChange={toggleSelectAll}
+                                        aria-label="Select all"
+                                    />
+                                </TableHead>
+                                <TableHead className="text-primary text-xs lg:text-sm">Invoice #</TableHead>
+                                <TableHead className="text-primary text-xs lg:text-sm">Date</TableHead>
+                                <TableHead className="text-primary text-xs lg:text-sm">Customer</TableHead>
+                                <TableHead className="text-primary text-xs lg:text-sm">Status</TableHead>
+                                <TableHead className="text-right text-primary text-xs lg:text-sm">Amount</TableHead>
+                                <TableHead className="text-right text-primary text-xs lg:text-sm">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredInvoices.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                                        No invoices found.
+                                    <TableCell colSpan={7} className="h-96 text-center">
+                                        <EmptyState
+                                            icon={FilePlus2}
+                                            title="No invoices found"
+                                            description={
+                                                statusFilter !== 'all' || searchTerm
+                                                    ? "Try adjusting your filters or search terms to find what you're looking for."
+                                                    : "Get started by creating your first invoice."
+                                            }
+                                            action={
+                                                statusFilter !== 'all' || searchTerm
+                                                    ? { label: 'Clear filters', onClick: () => { setStatusFilter('all'); setSearchTerm(''); } }
+                                                    : { label: 'Create Invoice', onClick: () => router.push(`/shop/${shopId}/invoices/new`) }
+                                            }
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 filteredInvoices.map((invoice) => (
                                     <TableRow
                                         key={invoice.id}
-                                        className="hover:bg-muted/50 border-b-border/50 transition-colors cursor-pointer"
+                                        className={cn(
+                                            "hover:bg-muted/50 border-b-border/50 transition-colors cursor-pointer",
+                                            selectedInvoices.has(invoice.id) && "bg-primary/5"
+                                        )}
                                         onClick={() => router.push(`/shop/${shopId}/invoices/view?id=${invoice.id}`)}
                                     >
-                                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                                        <TableCell>{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
-                                        <TableCell>{invoice.customerName}</TableCell>
+                                        <TableCell className="px-4" onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox
+                                                checked={selectedInvoices.has(invoice.id)}
+                                                onCheckedChange={() => toggleSelectInvoice(invoice.id)}
+                                                aria-label={`Select invoice ${invoice.invoiceNumber}`}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="font-medium text-xs lg:text-sm">{invoice.invoiceNumber}</TableCell>
+                                        <TableCell className="text-xs lg:text-sm">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
+                                        <TableCell className="text-xs lg:text-sm truncate max-w-[150px] lg:max-w-none">{invoice.customerName}</TableCell>
                                         <TableCell>
-                                            <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'}>
+                                            <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'} className="text-xs">
                                                 {invoice.status}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right font-bold text-primary">₹{invoice.grandTotal.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right font-bold text-primary text-xs lg:text-sm">₹{invoice.grandTotal.toFixed(2)}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    title={invoice.status === 'paid' ? 'Mark as Due' : 'Mark as Paid'}
+                                                    onClick={() => handleMarkPaid(invoice.id)}
+                                                >
+                                                    {invoice.status === 'paid' ? (
+                                                        <Undo2 className="h-4 w-4 text-muted-foreground" />
+                                                    ) : (
+                                                        <Banknote className="h-4 w-4 text-green-600" />
+                                                    )}
+                                                </Button>
                                                 <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(invoice.id)}>
                                                     <Download className="h-4 w-4" />
                                                 </Button>
@@ -551,9 +730,21 @@ export function InvoicesClient({
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-3">
                     {filteredInvoices.length === 0 ? (
-                        <div className="p-8 text-center text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-                            <p>No invoices found.</p>
-                            {statusFilter !== 'all' && <Button variant="link" onClick={() => setStatusFilter('all')}>Clear filters</Button>}
+                        <div className="py-12">
+                            <EmptyState
+                                icon={FilePlus2}
+                                title="No invoices found"
+                                description={
+                                    statusFilter !== 'all' || searchTerm
+                                        ? "Try adjusting your filters or search terms to find what you're looking for."
+                                        : "Get started by creating your first invoice."
+                                }
+                                action={
+                                    statusFilter !== 'all' || searchTerm
+                                        ? { label: 'Clear filters', onClick: () => { setStatusFilter('all'); setSearchTerm(''); } }
+                                        : { label: 'Create Invoice', onClick: () => router.push(`/shop/${shopId}/invoices/new`) }
+                                }
+                            />
                         </div>
                     ) : (
                         filteredInvoices.map((invoice) => (
@@ -571,10 +762,33 @@ export function InvoicesClient({
                 </div>
             </div>
 
+            {/* Search/Filter Results Feedback */}
+            {(searchTerm || statusFilter !== 'all' || dateRange) && (
+                <div className="flex items-center justify-between py-2 px-4 bg-muted/30 rounded-lg border border-border/40">
+                    <div className="text-sm text-muted-foreground">
+                        Showing <span className="font-semibold text-foreground">{filteredInvoices.length}</span> of <span className="font-semibold text-foreground">{invoices.length}</span> invoices
+                    </div>
+                    {(searchTerm || dateRange) && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                setSearchTerm('');
+                                setDateRange(undefined);
+                            }}
+                            className="h-7 text-xs"
+                        >
+                            Clear filters
+                        </Button>
+                    )}
+                </div>
+            )}
+
+            {/* Delete Confirmation Dialog */}
             <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete Invoice?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the invoice
                             and all of its associated data.
@@ -600,16 +814,43 @@ export function InvoicesClient({
                     <AlertDialogHeader>
                         <AlertDialogTitle>Change Invoice Status?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to mark this invoice as {invoiceToChangeStatus?.currentStatus === 'paid' ? 'due' : 'paid'}?
+                            {invoiceToChangeStatus?.currentStatus === 'paid'
+                                ? 'Mark this invoice as due (unpaid)?'
+                                : 'Mark this invoice as paid?'}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmStatusChange}
-                            className="bg-primary text-primary-foreground hover:bg-primary/90"
+                            disabled={isStatusUpdating}
                         >
+                            {isStatusUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             Confirm
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Batch Delete Confirmation Dialog */}
+            <AlertDialog open={batchDeleteDialogOpen} onOpenChange={setBatchDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {selectedInvoices.size} Invoices?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the selected invoices
+                            and all of their associated data.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={executeBatchDelete}
+                            disabled={isDeleting}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Delete Selected
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

@@ -61,6 +61,7 @@ import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 import { FloatingNewInvoiceButton } from '@/components/floating-new-invoice';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { CommandPalette } from '@/components/command-palette';
 import type { Shop, UserShopRole, Permission } from '@/lib/definitions';
 
 type ShopLayoutClientProps = {
@@ -120,10 +121,27 @@ function ShopLayoutInner({
     const pathname = usePathname();
     const router = useRouter();
     const { setOpenMobile } = useSidebar();
-    const { theme } = useTheme();
+    const { theme, setPalette } = useTheme();
 
     // Calculate logo based on theme
     const logoSrc = theme === 'dark' ? '/logo/swarnavyapar_dark.webp' : '/logo/swarnavyapar.webp';
+
+    // Apply shop branding palette if available
+    useEffect(() => {
+        const saved = localStorage.getItem(`shop_palette_${shopId}`) as any;
+        if (saved) {
+            setPalette(saved);
+        } else {
+            // If shop has branding preference, set it; else default to gold
+            const preferred = (shopData.activeShop as any)?.brandPalette as any;
+            if (preferred) {
+                setPalette(preferred);
+                localStorage.setItem(`shop_palette_${shopId}`, preferred);
+            } else {
+                setPalette('gold');
+            }
+        }
+    }, [shopId, setPalette, shopData.activeShop]);
 
     // Calculate permissions based on role
     const permissions: Permission = {
@@ -172,8 +190,7 @@ function ShopLayoutInner({
         {
             title: 'Analytics',
             items: [
-                { icon: BarChart3, label: 'Insights', href: `/shop/${shopId}/insights` },
-                { icon: CalendarDays, label: 'Calculator', href: `/shop/${shopId}/calculator` },
+                { icon: BarChart3, label: 'Sales Analytics', href: `/shop/${shopId}/insights` },
             ],
         },
         {
@@ -207,15 +224,18 @@ function ShopLayoutInner({
 
     return (
         <div className="flex h-screen w-full overflow-hidden bg-gray-50/50 dark:bg-slate-950">
+            {/* Command Palette */}
+            <CommandPalette shopId={shopId} />
+            
             {/* Sidebar - Shows on desktop always, on mobile when triggered */}
-            <Sidebar className="border-r-0 bg-white/80 backdrop-blur-xl shadow-2xl dark:bg-slate-900/80 dark:shadow-slate-900/20 z-50">
+            <Sidebar className="bg-background border-r border-border backdrop-blur-xl shadow-2xl z-50">
                 <SidebarHeader className="p-4 pb-2">
                     <div className="flex items-center justify-center w-full mb-6">
                         <Link href={`/shop/${shopId}/dashboard`} className="flex items-center justify-center group" onClick={handleNavClick}>
                             <div className="h-14 w-40 relative flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
                                 <Image
                                     src={logoSrc}
-                                    alt="Swarnavyapar Logo"
+                                    alt="Swarnavyapar logo"
                                     fill
                                     className="object-contain drop-shadow-sm"
                                     priority
@@ -228,13 +248,14 @@ function ShopLayoutInner({
                     </div>
                 </SidebarHeader>
 
-                <SidebarContent className="px-4 py-2">
-                    <div className="space-y-6">
-                        {navGroups.map((group) => (
-                            <div key={group.title} className="space-y-2">
-                                <h3 className="px-4 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
-                                    {group.title}
-                                </h3>
+                <SidebarContent className="px-4 py-4">
+                    <div className="space-y-3">
+                        {navGroups.map((group, groupIndex) => (
+                            <div key={group.title}>
+                                {/* Visual separator between groups instead of text headers */}
+                                {groupIndex > 0 && (
+                                    <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent my-4" />
+                                )}
                                 <div className="space-y-1">
                                     {group.items.map((item) => {
                                         // Check permission if required
@@ -247,22 +268,19 @@ function ShopLayoutInner({
                                             <SidebarMenuItem key={item.href} className="list-none">
                                                 <SidebarMenuButton asChild isActive={isActive}
                                                     className={cn(
-                                                        "w-full justify-start gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ease-in-out group relative overflow-hidden",
+                                                        "w-full justify-start gap-3 px-4 py-3 rounded-xl transition-colors duration-200 group relative overflow-hidden focus-ring",
                                                         isActive
-                                                            ? "bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20"
-                                                            : "text-muted-foreground hover:bg-primary/5 hover:text-primary hover:shadow-sm"
+                                                            ? "bg-primary text-primary-foreground font-semibold shadow-md"
+                                                            : "text-sidebar-foreground hover:bg-primary/10 hover:text-primary"
                                                     )}
                                                 >
                                                     <Link
                                                         href={item.href}
-                                                        className="flex items-center gap-3"
+                                                        className="flex items-center gap-3 w-full"
                                                         onClick={handleNavClick}
                                                     >
-                                                        <item.icon className={cn("h-4 w-4 transition-transform duration-200 group-hover:scale-110", isActive && "animate-pulse-subtle")} />
-                                                        <span>{item.label}</span>
-                                                        {isActive && (
-                                                            <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/20" />
-                                                        )}
+                                                        <item.icon className="h-5 w-5" />
+                                                        <span className="text-sm font-medium">{item.label}</span>
                                                     </Link>
                                                 </SidebarMenuButton>
                                             </SidebarMenuItem>
@@ -296,10 +314,10 @@ function ShopLayoutInner({
                             </div>
                             <Button
                                 variant="ghost"
-                                className="w-full justify-start gap-2 h-9 px-3 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg text-xs"
+                                className="w-full justify-start gap-2 h-11 px-3 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg text-sm font-medium"
                                 onClick={handleLogout}
                             >
-                                <LogOut className="h-3.5 w-3.5" />
+                                <LogOut className="h-4 w-4" />
                                 Logout
                             </Button>
                         </div>
@@ -311,17 +329,48 @@ function ShopLayoutInner({
             <SidebarInset className="flex-1 flex flex-col overflow-hidden bg-gray-50/50 dark:bg-slate-950">
                 {/* Desktop Header */}
                 {!isMobile && (
-                    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-border/40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-6 shadow-sm">
+                    <header className="flex h-14 items-center gap-4 border-b border-border/40 bg-background/95 backdrop-blur-xl px-4 lg:px-6 shadow-sm w-full">
                         <SidebarTrigger className="-ml-2" />
+                        <div className="flex-1">
+                            <nav aria-label="Breadcrumb" className="flex items-center">
+                                <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                    <li className="flex items-center gap-1.5">
+                                        <Link href={`/shop/${shopId}/dashboard`} className="hover:text-foreground transition-colors">
+                                            Dashboard
+                                        </Link>
+                                    </li>
+                                    {pathname !== `/shop/${shopId}/dashboard` && (
+                                        <>
+                                            <li className="opacity-50">/</li>
+                                            <li className="font-medium text-foreground">
+                                                {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
+                                                {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
+                                                {pathname === `/shop/${shopId}/invoices/edit` && 'Edit Invoice'}
+                                                {pathname === `/shop/${shopId}/customers` && 'Customers'}
+                                                {pathname === `/shop/${shopId}/customers/view` && 'Customer Details'}
+                                                {pathname === `/shop/${shopId}/stock` && 'Stock'}
+                                                {pathname === `/shop/${shopId}/stock/new` && 'Add Stock Item'}
+                                                {pathname === `/shop/${shopId}/staff` && 'Staff Management'}
+                                                {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
+                                                {pathname === `/shop/${shopId}/loyalty` && 'Loyalty Program'}
+                                                {/* Analytics pages removed */}
+                                                {pathname === `/shop/${shopId}/templates` && 'Templates'}
+                                                {pathname === `/shop/${shopId}/settings` && 'Settings'}
+                                            </li>
+                                        </>
+                                    )}
+                                </ol>
+                            </nav>
+                        </div>
                     </header>
                 )}
 
                 {/* Mobile Header */}
                 {isMobile && (
-                    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-border/40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-6 shadow-sm">
+                    <header className="flex h-12 items-center border-b border-border/40 bg-background/95 backdrop-blur-xl px-5 shadow-sm w-full">
                         <SidebarTrigger className="-ml-2" />
                         <div className="flex-1 text-center">
-                            <h1 className="font-semibold text-lg tracking-tight text-gray-900 dark:text-gray-100">
+                            <h1 className="font-semibold text-base tracking-tight text-gray-900 dark:text-gray-100">
                                 {pathname === `/shop/${shopId}/dashboard` && 'Dashboard'}
                                 {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
                                 {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
@@ -333,20 +382,33 @@ function ShopLayoutInner({
                                 {pathname === `/shop/${shopId}/staff` && 'Staff Management'}
                                 {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
                                 {pathname === `/shop/${shopId}/loyalty` && 'Loyalty Program'}
-                                {pathname === `/shop/${shopId}/insights` && 'Insights'}
-                                {pathname === `/shop/${shopId}/calculator` && 'Calculator'}
+                                {/* Analytics pages removed */}
                                 {pathname === `/shop/${shopId}/templates` && 'Templates'}
                                 {pathname === `/shop/${shopId}/settings` && 'Settings'}
                                 {!pathname.includes(shopId) && 'Swarnavyapar'}
                             </h1>
                         </div>
-                        <div className="w-8" /> {/* Spacer for centering */}
+                        <div className="w-6" /> {/* Spacer for centering */}
                     </header>
                 )}
 
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8">
+                <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
                     {children}
                 </main>
+
+                {/* Footer - only on desktop */}
+                {!isMobile && (
+                    <footer className="py-3 px-6 border-t border-border/40 bg-background/60 backdrop-blur-sm">
+                        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium">Swarnavyapar</span>
+                                <span className="opacity-50">•</span>
+                                <span>v{process.env.npm_package_version || '0.1.0'}</span>
+                            </div>
+                            <span>© {new Date().getFullYear()}</span>
+                        </div>
+                    </footer>
+                )}
             </SidebarInset>
 
             {/* Mobile Navigation */}

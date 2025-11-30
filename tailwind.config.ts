@@ -122,6 +122,40 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      // Standardized Typography Scale
+      fontSize: {
+        // Body text
+        'xs': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.01em' }],      // 12px
+        'sm': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.01em' }],  // 14px
+        'base': ['1rem', { lineHeight: '1.5rem', letterSpacing: '0' }],          // 16px
+        'lg': ['1.125rem', { lineHeight: '1.75rem', letterSpacing: '-0.01em' }], // 18px
+
+        // Headings
+        'xl': ['1.25rem', { lineHeight: '1.75rem', letterSpacing: '-0.01em', fontWeight: '600' }],   // 20px - H4
+        '2xl': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.02em', fontWeight: '600' }],      // 24px - H3
+        '3xl': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.02em', fontWeight: '700' }], // 30px - H2
+        '4xl': ['2.25rem', { lineHeight: '2.5rem', letterSpacing: '-0.03em', fontWeight: '700' }],   // 36px - H1
+        '5xl': ['3rem', { lineHeight: '1', letterSpacing: '-0.03em', fontWeight: '800' }],           // 48px - Hero
+        '6xl': ['3.75rem', { lineHeight: '1', letterSpacing: '-0.04em', fontWeight: '800' }],        // 60px - Large Hero
+      },
+      // Standardized Spacing Scale
+      spacing: {
+        '0': '0',
+        '1': '0.25rem',   // 4px
+        '2': '0.5rem',    // 8px
+        '3': '0.75rem',   // 12px
+        '4': '1rem',      // 16px
+        '5': '1.25rem',   // 20px
+        '6': '1.5rem',    // 24px
+        '7': '1.75rem',   // 28px
+        '8': '2rem',      // 32px
+        '10': '2.5rem',   // 40px
+        '12': '3rem',     // 48px
+        '14': '3.5rem',   // 56px
+        '16': '4rem',     // 64px
+        '20': '5rem',     // 80px
+        '24': '6rem',     // 96px
+      },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',

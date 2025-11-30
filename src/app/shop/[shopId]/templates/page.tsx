@@ -156,7 +156,7 @@ export default function TemplatesPage() {
               <p className="text-xs text-white/80 mb-3 line-clamp-2">{template.description}</p>
               <Button
                 size="sm"
-                variant={currentTemplate === template.id ? "default" : "secondary"}
+                variant={currentTemplate === template.id ? "default" : "outline"}
                 className="w-full h-8 text-xs"
                 disabled={isSaving === template.id || currentTemplate === template.id}
               >

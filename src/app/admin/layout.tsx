@@ -138,15 +138,24 @@ export default function AdminLayout({
                     </SidebarFooter>
                 </Sidebar>
 
-                <SidebarInset className="bg-slate-50 dark:bg-slate-950">
+                <SidebarInset className="bg-slate-50 dark:bg-slate-950 flex flex-col">
                     <header className="flex h-14 items-center gap-4 border-b bg-background/60 px-6 backdrop-blur-xl lg:h-[60px]">
                         <div className="flex-1">
                             <h1 className="text-lg font-semibold font-heading text-foreground">Global Admin</h1>
                         </div>
                     </header>
-                    <main className="flex-1 p-6 pt-8">
+                    <main className="flex-1 p-6 pt-8 overflow-y-auto">
                         {children}
                     </main>
+                    <footer className="py-3 px-6 border-t border-border/40 bg-background/60 backdrop-blur-sm mt-auto">
+                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                            <span>Swarnavyapar Admin</span>
+                            <span className="opacity-50">•</span>
+                            <span>v{process.env.npm_package_version || '0.1.0'}</span>
+                            <span className="opacity-50">•</span>
+                            <span>© {new Date().getFullYear()}</span>
+                        </div>
+                    </footer>
                 </SidebarInset>
             </SidebarProvider>
         </AuthWrapper>

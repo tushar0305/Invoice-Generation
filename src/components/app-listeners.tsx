@@ -7,9 +7,7 @@ import { useEffect } from 'react';
 
 export function AppListeners() {
     useEffect(() => {
-        // No-op for web
-        // Mobile app listeners will be handled in the separate native app
-        return;
+        // No analytics: reserved for future listeners if needed.
     }, []);
 
     return null;

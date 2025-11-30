@@ -28,6 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
 import { ImpactStyle } from '@/lib/haptics';
 import { useActiveShop } from '@/hooks/use-active-shop';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type StockClientProps = {
     initialItems: StockItem[];
@@ -140,13 +141,15 @@ export function StockClient({
                 </div>
 
                 {initialItems.length === 0 && !searchTerm && filter === 'all' ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                        <Package className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                        <p className="text-sm sm:text-base">No stock items yet. Add your first item to get started.</p>
-                        <Button onClick={() => router.push(`/shop/${shopId}/stock/new`)} variant="outline" className="mt-4">
-                            Add Item
-                        </Button>
-                    </div>
+                    <EmptyState
+                        icon={Package}
+                        title="No stock items yet"
+                        description="Add your first item to get started with inventory management."
+                        action={{
+                            label: 'Add Item',
+                            onClick: () => router.push(`/shop/${shopId}/stock/new`)
+                        }}
+                    />
                 ) : (
                     <>
                         {/* Filter Pills */}
@@ -172,8 +175,16 @@ export function StockClient({
                         </div>
 
                         {initialItems.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground text-sm">
-                                No items match this filter.
+                            <div className="py-12">
+                                <EmptyState
+                                    icon={Package}
+                                    title="No items found"
+                                    description="Try adjusting your filters or search terms."
+                                    action={{
+                                        label: 'Clear filters',
+                                        onClick: () => { handleFilterChange('all'); setSearchTerm(''); }
+                                    }}
+                                />
                             </div>
                         ) : (
                             <>

@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
+import { PaletteSwitcher } from '@/components/palette-switcher';
 
 const settingsFormSchema = z.object({
   cgstRate: z.coerce.number().min(0, 'CGST rate must be positive'),
@@ -492,6 +493,24 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Branding & Theme Card */}
+                <Card className="border-white/10 bg-background/40 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 group">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
+                        <Receipt className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-lg">Branding & Theme</CardTitle>
+                    </div>
+                    <CardDescription>Choose your brand color palette</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {activeShop?.id && (
+                      <PaletteSwitcher shopId={activeShop.id} />
+                    )}
                   </CardContent>
                 </Card>
 

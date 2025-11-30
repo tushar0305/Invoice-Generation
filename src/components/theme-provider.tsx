@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "light" | "dark" | "obsidian" | "system";
+type Palette = "gold" | "emerald" | "maroon" | "ivory" | "blue" | "rose";
 
 type ThemeProviderProps = {
     children: React.ReactNode;
@@ -13,11 +14,15 @@ type ThemeProviderProps = {
 type ThemeProviderState = {
     theme: Theme;
     setTheme: (theme: Theme) => void;
+    palette: Palette;
+    setPalette: (p: Palette) => void;
 };
 
 const initialState: ThemeProviderState = {
     theme: "light",
     setTheme: () => null,
+    palette: "gold",
+    setPalette: () => null,
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
@@ -28,6 +33,7 @@ export function ThemeProvider({
     storageKey = "vite-ui-theme",
 }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>(defaultTheme);
+    const [palette, setPalette] = useState<Palette>("gold");
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -59,13 +65,17 @@ export function ThemeProvider({
 
         root.classList.add(theme);
         localStorage.setItem(storageKey, theme);
-    }, [theme, storageKey, mounted]);
+        // Apply palette via data attribute for CSS variables
+        root.setAttribute('data-palette', palette);
+    }, [theme, storageKey, mounted, palette]);
 
     const value = {
         theme,
         setTheme: (theme: Theme) => {
             setTheme(theme);
         },
+        palette,
+        setPalette: (p: Palette) => setPalette(p),
     };
 
     return (

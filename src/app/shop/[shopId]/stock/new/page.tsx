@@ -325,7 +325,7 @@ export default function NewStockItemPage() {
                                     />
                                 </div>
 
-                                <Button type="submit" disabled={isPending} variant="premium" className="w-full h-12 text-lg">
+                                <Button type="submit" disabled={isPending} variant="default" className="w-full h-12 text-lg bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-white border-0">
                                     {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                                     {editId ? 'Update Stock Item' : 'Add Stock Item'}
                                 </Button>

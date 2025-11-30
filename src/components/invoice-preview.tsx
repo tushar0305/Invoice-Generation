@@ -30,15 +30,15 @@ export function LiveInvoicePreview({ data, settings, invoiceNumber = "INV-PREVIE
     const grandTotal = taxableAmount + sgstAmount + cgstAmount;
 
     return (
-        <Card className="w-full aspect-[210/297] overflow-hidden bg-white text-slate-900 shadow-2xl print:shadow-none border-0 relative mx-auto max-w-[800px]">
+        <Card className="w-full h-full bg-white text-slate-900 shadow-2xl print:shadow-none border-0 relative mx-auto flex flex-col">
             {/* Decorative Background Pattern */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                 style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #000 1px, transparent 0)', backgroundSize: '20px 20px' }}>
             </div>
 
-            <CardContent className="p-0 h-full flex flex-col text-xs font-serif leading-relaxed overflow-y-auto relative z-10">
+            <CardContent className="p-0 flex-grow flex flex-col text-xs font-serif leading-relaxed overflow-y-auto relative z-10">
                 {/* Top Gold Bar */}
-                <div className="h-2 w-full bg-gradient-to-r from-[#D4AF37] via-[#F2D06B] to-[#D4AF37]"></div>
+                <div className="h-2 w-full bg-gradient-to-r from-[#D4AF37] via-[#F2D06B] to-[#D4AF37] flex-shrink-0"></div>
 
                 <div className="p-8 flex-grow flex flex-col">
                     {/* Header */}
@@ -56,7 +56,7 @@ export function LiveInvoicePreview({ data, settings, invoiceNumber = "INV-PREVIE
                         <div className="text-right space-y-1">
                             <div className="inline-block px-4 py-1 bg-slate-900 text-[#D4AF37] text-xs font-bold tracking-widest uppercase mb-2">Tax Invoice</div>
                             <p className="font-mono font-bold text-lg text-slate-800">{invoiceNumber}</p>
-                            <p className="text-slate-500">Date: {data.invoiceDate ? format(data.invoiceDate, "dd MMM yyyy") : format(new Date(), "dd MMM yyyy")}</p>
+                            <p className="text-slate-500">Date: {data.invoiceDate ? format(new Date(data.invoiceDate), "dd MMM yyyy") : format(new Date(), "dd MMM yyyy")}</p>
                             <div className="mt-3 text-[10px] text-slate-400 space-y-0.5">
                                 {settings?.gstNumber && <p>GSTIN: <span className="font-mono text-slate-600">{settings.gstNumber}</span></p>}
                                 {settings?.panNumber && <p>PAN: <span className="font-mono text-slate-600">{settings.panNumber}</span></p>}
@@ -77,7 +77,7 @@ export function LiveInvoicePreview({ data, settings, invoiceNumber = "INV-PREVIE
                             </div>
                             <div className="text-slate-600 mt-2 font-mono text-[11px]">{data.customerPhone}</div>
                         </div>
-                        <div className="w-1/3 hidden sm:block bg-slate-50/50 p-5 rounded-xl border border-slate-100">
+                        <div className="w-1/3 bg-slate-50/50 p-5 rounded-xl border border-slate-100">
                             <h3 className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest mb-3">Payment Status</h3>
                             <div className={cn(
                                 "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",

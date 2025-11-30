@@ -17,13 +17,14 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, Trophy, Calendar, Download } from 'lucide-react';
+import { Search, Trophy, Calendar, Download, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { haptics } from '@/lib/haptics';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type CustomerStats = {
     totalPurchase: number;
@@ -82,16 +83,16 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
             {/* Top Customer Card */}
             {topCustomer && (
                 <FadeIn>
-                    <Card className="bg-gradient-to-br from-gold-500/10 to-primary/5 border-gold-500/20">
+                    <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
                         <CardContent className="p-6 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-gold-500/20 rounded-full">
-                                    <Trophy className="h-8 w-8 text-gold-600" />
+                                <div className="p-3 bg-primary/20 rounded-full">
+                                    <Trophy className="h-8 w-8 text-primary" />
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium text-muted-foreground">Top Customer</p>
                                     <h3 className="text-2xl font-bold text-foreground">{topCustomer[0]}</h3>
-                                    <p className="text-sm text-gold-600 font-medium">
+                                    <p className="text-sm text-primary font-medium">
                                         {formatCurrency(topCustomer[1].totalPurchase)} Lifetime Spend
                                     </p>
                                 </div>
@@ -189,8 +190,21 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                         ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center h-32 text-muted-foreground">
-                                            No customers found.
+                                        <TableCell colSpan={4} className="h-96 text-center">
+                                            <EmptyState
+                                                icon={Users}
+                                                title="No customers found"
+                                                description={
+                                                    searchTerm
+                                                        ? "Try adjusting your search terms."
+                                                        : "Your customer list is empty."
+                                                }
+                                                action={
+                                                    searchTerm
+                                                        ? { label: 'Clear search', onClick: () => setSearchTerm('') }
+                                                        : undefined
+                                                }
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -237,8 +251,21 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                     </div>
                                 ))
                         ) : (
-                            <div className="text-center py-8 text-muted-foreground">
-                                No customers found.
+                            <div className="py-12">
+                                <EmptyState
+                                    icon={Users}
+                                    title="No customers found"
+                                    description={
+                                        searchTerm
+                                            ? "Try adjusting your search terms."
+                                            : "Your customer list is empty."
+                                    }
+                                    action={
+                                        searchTerm
+                                            ? { label: 'Clear search', onClick: () => setSearchTerm('') }
+                                            : undefined
+                                    }
+                                />
                             </div>
                         )}
                     </div>

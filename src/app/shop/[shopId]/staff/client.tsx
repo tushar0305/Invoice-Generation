@@ -223,7 +223,7 @@ export function StaffClient({
 
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                     <DialogTrigger asChild>
-                        <Button className="bg-gold-500 hover:bg-gold-600 text-white shadow-gold-sm">
+                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md">
                             <UserPlus className="mr-2 h-4 w-4" />
                             Invite Staff
                         </Button>
@@ -270,13 +270,13 @@ export function StaffClient({
                     <h3 className="text-lg font-semibold text-muted-foreground">Pending Invitations</h3>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {initialInvitations.map((invite) => (
-                            <Card key={invite.id} className="glass-card border-l-4 border-l-amber-500">
+                            <Card key={invite.id} className="glass-card border-l-4 border-l-primary">
                                 <CardContent className="p-4 flex justify-between items-center">
                                     <div>
                                         <div className="font-medium">{invite.email}</div>
                                         <div className="text-xs text-muted-foreground capitalize">{invite.role} • {format(new Date(invite.created_at), 'MMM d')}</div>
                                     </div>
-                                    <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">Pending</Badge>
+                                    <Badge variant="outline" className="text-primary border-primary/30 bg-primary/10">Pending</Badge>
                                 </CardContent>
                             </Card>
                         ))}
@@ -404,7 +404,7 @@ export function StaffClient({
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <Button onClick={handleRecordPayment} disabled={isPending} className="bg-green-600 hover:bg-green-700 text-white">
+                                <Button onClick={handleRecordPayment} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                                     <IndianRupee className="mr-2 h-4 w-4" />
                                     Pay
                                 </Button>
@@ -448,7 +448,7 @@ export function StaffClient({
                                 <div className="flex gap-2">
                                     <Button size="sm" variant="outline" onClick={() => handleMarkAttendance('absent')} disabled={isPending}>Mark Absent</Button>
                                     <Button size="sm" variant="outline" onClick={() => handleMarkAttendance('half_day')} disabled={isPending}>Half Day</Button>
-                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleMarkAttendance('present')} disabled={isPending}>Mark Present</Button>
+                                    <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => handleMarkAttendance('present')} disabled={isPending}>Mark Present</Button>
                                 </div>
                             </div>
 
