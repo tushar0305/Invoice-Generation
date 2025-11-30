@@ -37,6 +37,7 @@ export type Invoice = {
   customerState?: string;
   customerPincode?: string;
   customerPhone: string;
+  customerEmail?: string;
 
   invoiceDate: string; // YYYY-MM-DD
   discount: number; // as a currency value

@@ -3,7 +3,7 @@ const ASSETS = [
   '/',
   '/favicon.ico',
   '/manifest.webmanifest',
-  '/logo/swarnavyapar.png',
+  '/logo/swarnavyapar.webp',
   '/fonts/Inter-Variable.woff2',
   '/fonts/PlayfairDisplay-Regular.woff2',
   '/fonts/PlayfairDisplay-Italic.woff2',

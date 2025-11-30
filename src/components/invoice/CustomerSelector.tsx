@@ -42,9 +42,12 @@ export function CustomerSelector({ value, onChange, customers, disabled }: Custo
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Filter customers based on search term
-    const filteredCustomers = customers.filter((c) =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm)
-    );
+    const filteredCustomers = searchTerm.trim() === ""
+        ? customers // Show all customers when no search term
+        : customers.filter((c) =>
+            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.phone.includes(searchTerm)
+        );
 
     // Handle clicking outside to close dropdown
     useEffect(() => {
@@ -98,11 +101,13 @@ export function CustomerSelector({ value, onChange, customers, disabled }: Custo
                     />
 
                     {/* Dropdown Results */}
-                    {showDropdown && (
+                    {showDropdown && customers.length > 0 && (
                         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95 duration-100">
                             {filteredCustomers.length > 0 ? (
                                 <div className="p-1">
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Found {filteredCustomers.length} existing customers</div>
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                        {searchTerm.trim() ? `Found ${filteredCustomers.length} matching customers` : `${filteredCustomers.length} recent customers`}
+                                    </div>
                                     {filteredCustomers.map((customer, index) => (
                                         <button
                                             key={index}

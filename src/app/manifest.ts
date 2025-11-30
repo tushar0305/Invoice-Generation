@@ -13,14 +13,14 @@ export default function manifest(): MetadataRoute.Manifest {
         theme_color: '#ffffff',
         icons: [
             {
-                src: '/logo/swarnavyapar.png',
-                sizes: '512x512',
-                type: 'image/png',
+                src: '/swarnavyapar.webp',
+                sizes: '192x192',
+                type: 'image/webp',
             },
             {
-                src: '/logo/swarnavyapar.png',
-                sizes: '192x192',
-                type: 'image/png',
+                src: '/swarnavyapar.webp',
+                sizes: '512x512',
+                type: 'image/webp',
             },
         ],
     };

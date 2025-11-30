@@ -12,7 +12,6 @@ import {
     Plus,
     ArrowRight,
     Settings,
-    Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -20,12 +19,20 @@ import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/supabase/client';
 import type { Shop } from '@/lib/definitions';
+import { BusinessHealthWidget } from '@/components/dashboard/business-health';
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 
 export default function AdminDashboardPage() {
     const { user } = useUser();
     const router = useRouter();
     const [userShops, setUserShops] = useState<Shop[]>([]);
-    const [stats, setStats] = useState({ revenue: 0, invoices: 0 });
+    const [stats, setStats] = useState({
+        revenue: 0,
+        invoices: 0,
+        thisMonthRevenue: 0,
+        lastMonthRevenue: 0,
+        thisMonthOrders: 0
+    });
     const [isLoading, setIsLoading] = useState(true);
 
     // Fetch user shops and stats
@@ -78,13 +85,13 @@ export default function AdminDashboardPage() {
                 const shopIds = shops.map(shop => shop.id);
 
                 if (shopIds.length === 0) {
-                    setStats({ revenue: 0, invoices: 0 });
+                    setStats({ revenue: 0, invoices: 0, thisMonthRevenue: 0, lastMonthRevenue: 0, thisMonthOrders: 0 });
                     return;
                 }
 
                 const { data: invoices, error: invoicesError } = await supabase
                     .from('invoices')
-                    .select('grand_total')
+                    .select('grand_total, invoice_date')
                     .in('shop_id', shopIds);
 
                 if (invoicesError) throw invoicesError;
@@ -92,9 +99,30 @@ export default function AdminDashboardPage() {
                 const totalRevenue = invoices?.reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0) || 0;
                 const totalInvoices = invoices?.length || 0;
 
+                // Calculate Monthly Stats
+                const now = new Date();
+                const currentMonthStart = startOfMonth(now);
+                const currentMonthEnd = endOfMonth(now);
+                const lastMonthStart = startOfMonth(subMonths(now, 1));
+                const lastMonthEnd = endOfMonth(subMonths(now, 1));
+
+                const thisMonthInvoices = invoices?.filter(inv =>
+                    isWithinInterval(new Date(inv.invoice_date), { start: currentMonthStart, end: currentMonthEnd })
+                ) || [];
+
+                const lastMonthInvoices = invoices?.filter(inv =>
+                    isWithinInterval(new Date(inv.invoice_date), { start: lastMonthStart, end: lastMonthEnd })
+                ) || [];
+
+                const thisMonthRevenue = thisMonthInvoices.reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
+                const lastMonthRevenue = lastMonthInvoices.reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
+
                 setStats({
                     revenue: totalRevenue,
-                    invoices: totalInvoices
+                    invoices: totalInvoices,
+                    thisMonthRevenue,
+                    lastMonthRevenue,
+                    thisMonthOrders: thisMonthInvoices.length
                 });
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -147,44 +175,55 @@ export default function AdminDashboardPage() {
                 </Button>
             </div>
 
-            {/* Aggregated Stats */}
-            <div className="grid gap-4 md:grid-cols-3">
-                <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border-none shadow-xl">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-300">Total Revenue</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-gold-400" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(stats.revenue)}</div>
-                        <p className="text-xs text-slate-400 mt-1">
-                            Across {totalShops} shops
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Shops</CardTitle>
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{totalShops}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Active locations
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.invoices}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Lifetime generated
-                        </p>
-                    </CardContent>
-                </Card>
+            {/* Founder Widgets */}
+            <div className="grid gap-6 md:grid-cols-3">
+                <div className="md:col-span-1">
+                    <BusinessHealthWidget
+                        totalRevenue={stats.thisMonthRevenue}
+                        totalOrders={stats.thisMonthOrders}
+                        previousRevenue={stats.lastMonthRevenue}
+                    />
+                </div>
+
+                {/* Global Stats Cards (Condensed) */}
+                <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
+                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border-none shadow-xl">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-slate-300">Lifetime Revenue</CardTitle>
+                            <TrendingUp className="h-4 w-4 text-gold-400" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(stats.revenue)}</div>
+                            <p className="text-xs text-slate-400 mt-1">
+                                Across {totalShops} shops
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.invoices}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Lifetime generated
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <Card className="md:col-span-2">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Active Shops</CardTitle>
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{totalShops}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Locations managing business
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
             {/* Shop List */}

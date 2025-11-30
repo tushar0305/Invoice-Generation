@@ -88,9 +88,9 @@ export default function RootLayout({
       <head>
         {/* Favicons and touch icons */}
         <link rel="icon" href="/favicon.ico" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/logo/swarnavyapar.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/logo/swarnavyapar.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/logo/swarnavyapar.png" />
+        <link rel="icon" type="image/webp" sizes="32x32" href="/logo/swarnavyapar.webp" />
+        <link rel="icon" type="image/webp" sizes="16x16" href="/logo/swarnavyapar.webp" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/logo/swarnavyapar.webp" />
         <link rel="manifest" href="/manifest.webmanifest" />
 
         {/* Preload self-hosted fonts (place WOFF2 files under /public/fonts/) */}
@@ -108,7 +108,8 @@ export default function RootLayout({
                 {children}
                 <InstallPrompt />
                 {/* Service worker registration */}
-                <script dangerouslySetInnerHTML={{ __html: `
+                <script dangerouslySetInnerHTML={{
+                  __html: `
                   if ('serviceWorker' in navigator) {
                     window.addEventListener('load', function() {
                       navigator.serviceWorker.register('/sw.js').catch(function(e){console.debug('SW reg failed', e)});

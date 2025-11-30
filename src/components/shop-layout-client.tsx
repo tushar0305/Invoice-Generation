@@ -62,6 +62,8 @@ import { FloatingNewInvoiceButton } from '@/components/floating-new-invoice';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { CommandPalette } from '@/components/command-palette';
+import { PageTransition } from '@/components/page-transition';
+import { PremiumHeader } from '@/components/premium-header';
 import type { Shop, UserShopRole, Permission } from '@/lib/definitions';
 
 type ShopLayoutClientProps = {
@@ -226,7 +228,7 @@ function ShopLayoutInner({
         <div className="flex h-screen w-full overflow-hidden bg-gray-50/50 dark:bg-slate-950">
             {/* Command Palette */}
             <CommandPalette shopId={shopId} />
-            
+
             {/* Sidebar - Shows on desktop always, on mobile when triggered */}
             <Sidebar className="bg-background border-r border-border backdrop-blur-xl shadow-2xl z-50">
                 <SidebarHeader className="p-4 pb-2">
@@ -327,42 +329,15 @@ function ShopLayoutInner({
 
             {/* Main Content */}
             <SidebarInset className="flex-1 flex flex-col overflow-hidden bg-gray-50/50 dark:bg-slate-950">
-                {/* Desktop Header */}
+                {/* Premium Header - Desktop Only */}
                 {!isMobile && (
-                    <header className="flex h-14 items-center gap-4 border-b border-border/40 bg-background/95 backdrop-blur-xl px-4 lg:px-6 shadow-sm w-full">
-                        <SidebarTrigger className="-ml-2" />
-                        <div className="flex-1">
-                            <nav aria-label="Breadcrumb" className="flex items-center">
-                                <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                    <li className="flex items-center gap-1.5">
-                                        <Link href={`/shop/${shopId}/dashboard`} className="hover:text-foreground transition-colors">
-                                            Dashboard
-                                        </Link>
-                                    </li>
-                                    {pathname !== `/shop/${shopId}/dashboard` && (
-                                        <>
-                                            <li className="opacity-50">/</li>
-                                            <li className="font-medium text-foreground">
-                                                {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
-                                                {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
-                                                {pathname === `/shop/${shopId}/invoices/edit` && 'Edit Invoice'}
-                                                {pathname === `/shop/${shopId}/customers` && 'Customers'}
-                                                {pathname === `/shop/${shopId}/customers/view` && 'Customer Details'}
-                                                {pathname === `/shop/${shopId}/stock` && 'Stock'}
-                                                {pathname === `/shop/${shopId}/stock/new` && 'Add Stock Item'}
-                                                {pathname === `/shop/${shopId}/staff` && 'Staff Management'}
-                                                {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
-                                                {pathname === `/shop/${shopId}/loyalty` && 'Loyalty Program'}
-                                                {/* Analytics pages removed */}
-                                                {pathname === `/shop/${shopId}/templates` && 'Templates'}
-                                                {pathname === `/shop/${shopId}/settings` && 'Settings'}
-                                            </li>
-                                        </>
-                                    )}
-                                </ol>
-                            </nav>
-                        </div>
-                    </header>
+                    <PremiumHeader
+                        shopName={shopData.activeShop?.shopName || 'Jewellery Shop'}
+                        shopId={shopId}
+                        userId={userId}
+                        userEmail={userEmail}
+                        logoUrl={shopData.activeShop?.logoUrl}
+                    />
                 )}
 
                 {/* Mobile Header */}

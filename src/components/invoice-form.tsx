@@ -9,13 +9,33 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, ArrowLeft, Eye, EyeOff, AlertCircle, Users, Search, FileText, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import {
+  Loader2,
+  Save,
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Calendar as CalendarIcon,
+  Users,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  FileText,
+  AlertCircle,
+  Search,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useUser } from '@/supabase/provider';
 import { useActiveShop } from '@/hooks/use-active-shop';
 import { createInvoiceAction, updateInvoiceAction } from '@/app/actions/invoice-actions';
-import { CustomerSelector } from '@/components/invoice/CustomerSelector';
+import { PremiumCustomerAutocomplete } from '@/components/invoice/PremiumCustomerAutocomplete';
+import { CompactTotalsSummary } from '@/components/invoice/CompactTotalsSummary';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { LineItemsTable } from '@/components/invoice/LineItemsTable';
 import { InvoiceSummary } from '@/components/invoice/InvoiceSummary';
 import { LiveInvoicePreview } from '@/components/invoice-preview';
@@ -23,14 +43,16 @@ import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
 import { CelebrationModal } from '@/components/celebration-modal';
 import { supabase } from '@/supabase/client';
 import type { Invoice } from '@/lib/definitions';
-import { cn } from '@/lib/utils';
+import type { LoyaltySettings } from '@/lib/loyalty-types';
+import { cn, formatCurrency } from '@/lib/utils';
 
 const invoiceSchema = z.object({
   customerName: z.string().min(1, 'Customer name is required'),
   customerAddress: z.string().optional(),
   customerState: z.string().optional(),
   customerPincode: z.string().optional(),
-  customerPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  customerPhone: z.string().optional(),
+  customerEmail: z.string().email().optional().or(z.literal('')),
   invoiceDate: z.date(),
   items: z.array(z.object({
     id: z.string(),
@@ -43,6 +65,8 @@ const invoiceSchema = z.object({
   })).min(1, 'At least one item is required'),
   discount: z.number().min(0).optional(),
   status: z.enum(['paid', 'due']),
+  redeemPoints: z.boolean().optional(),
+  pointsToRedeem: z.number().min(0).optional(),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -64,6 +88,13 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const [customers, setCustomers] = useState<any[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
 
+  // Loyalty State
+  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings | null>(null);
+  const [customerPoints, setCustomerPoints] = useState<number>(0);
+  const [pointsToEarn, setPointsToEarn] = useState<number>(0);
+  const [maxRedeemablePoints, setMaxRedeemablePoints] = useState<number>(0);
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState<number>(0);
+
   // Load settings
   useEffect(() => {
     const loadSettings = async () => {
@@ -83,6 +114,18 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           email: activeShop.email || '',
           templateId: activeShop.templateId || 'classic',
         });
+
+        // Load Loyalty Settings
+        const { data: loyaltyData } = await supabase
+          .from('shop_loyalty_settings')
+          .select('*')
+          .eq('shop_id', activeShop.id)
+          .single();
+
+        if (loyaltyData && loyaltyData.is_enabled) {
+          setLoyaltySettings(loyaltyData);
+        }
+
         setSettingsLoading(false);
       } else {
         setSettingsLoading(false);
@@ -98,9 +141,11 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       try {
         const { getCustomers } = await import('@/services/customers');
         const customerData = await getCustomers(activeShop.id);
+        console.log('📊 Fetched customers:', customerData.length, 'customers');
+        console.log('📋 Sample customer:', customerData[0]);
         setCustomers(customerData);
       } catch (err) {
-        console.error('Error fetching customers:', err);
+        console.error('❌ Error fetching customers:', err);
       }
     };
     fetchCustomers();
@@ -114,7 +159,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       customerState: invoice?.customerState || '',
       customerPincode: invoice?.customerPincode || '',
       customerPhone: invoice?.customerPhone || '',
-      invoiceDate: invoice ? new Date(invoice.invoiceDate) : new Date(),
+      customerEmail: invoice?.customerEmail || '',
+      invoiceDate: invoice?.invoiceDate ? new Date(invoice.invoiceDate) : new Date(),
       items: invoice?.items?.map((item: any) => ({
         id: item.id,
         description: item.description,
@@ -134,11 +180,48 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       }],
       discount: invoice?.discount || 0,
       status: (invoice?.status as 'paid' | 'due') || 'paid',
+      redeemPoints: false,
+      pointsToRedeem: 0,
     },
     mode: 'onChange', // Enable real-time validation
   });
 
   const watchedValues = form.watch();
+
+  // Fetch customer points when phone changes
+  useEffect(() => {
+    const fetchCustomerPoints = async () => {
+      if (!activeShop?.id || !watchedValues.customerPhone || watchedValues.customerPhone.length < 10) {
+        setCustomerPoints(0);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('customers')
+        .select('loyalty_points')
+        .eq('shop_id', activeShop.id)
+        .eq('phone', watchedValues.customerPhone)
+        .single();
+
+      if (data) {
+        setCustomerPoints(data.loyalty_points || 0);
+      }
+    };
+
+    // Debounce fetch
+    const timeoutId = setTimeout(fetchCustomerPoints, 500);
+    return () => clearTimeout(timeoutId);
+  }, [activeShop?.id, watchedValues.customerPhone]);
+
+  // Calculate Loyalty Discount
+  useEffect(() => {
+    if (watchedValues.redeemPoints && watchedValues.pointsToRedeem && loyaltySettings) {
+      const discount = (watchedValues.pointsToRedeem * loyaltySettings.redemption_conversion_rate);
+      setLoyaltyDiscount(discount);
+    } else {
+      setLoyaltyDiscount(0);
+    }
+  }, [watchedValues.redeemPoints, watchedValues.pointsToRedeem, loyaltySettings]);
 
   // Calculate totals
   const calculateTotals = (items: any[], discount: number = 0) => {
@@ -241,260 +324,437 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const isShopSetupValid = settings?.gstNumber && settings?.address;
 
   return (
-    <div className={`grid grid-cols-1 ${previewCollapsed ? '' : 'lg:grid-cols-12'} gap-6 h-[calc(100vh-4rem)] relative`}>
-      {/* Left Column - Form */}
-      <div className={`${previewCollapsed ? 'lg:col-span-12' : 'lg:col-span-7'} flex flex-col gap-6 h-full overflow-y-auto pb-20 lg:pb-6 pt-2 no-scrollbar`}>
-        <MotionWrapper className="space-y-6">
-          {/* Header Actions */}
-          <div className="flex items-center justify-between">
-             <div className="flex items-center gap-2">
-                <Button type="button" variant="ghost" onClick={() => router.back()} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" /> Back
-                </Button>
-             </div>
-             <div className="flex items-center gap-2">
-                {/* Mobile preview toggle */}
-                <div className="lg:hidden">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="bg-white/5 border-white/10 hover:bg-white/10">
-                    {showPreview ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-                    {showPreview ? 'Hide' : 'Preview'}
-                  </Button>
-                </div>
-                {/* Desktop collapse toggle */}
-                <div className="hidden lg:block">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setPreviewCollapsed((s) => !s)} className="p-2">
-                    {previewCollapsed ? <><ChevronsRight className="h-4 w-4" /> Show Preview</> : <><ChevronsLeft className="h-4 w-4" /> Collapse Preview</>}
-                  </Button>
-                </div>
-             </div>
+    <MotionWrapper className="min-h-screen pb-24">
+      {/* Main Content - 2 Column Layout */}
+      <div className="container mx-auto px-4 py-6">
+        {/* Back Button & Mobile Preview Toggle */}
+        <div className="mb-4 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="gap-2 -ml-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPreview(true)}
+            className="gap-2 lg:hidden"
+          >
+            <Eye className="h-4 w-4" />
+            Preview
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr,400px] gap-6">
+          {/* Left Column - Form */}
+          <div className="space-y-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Customer Section - Premium Autocomplete */}
+                <Card className="border-2 relative z-20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-primary" />
+                        Customer Details
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          const fetchCustomers = async () => {
+                            if (!activeShop?.id) return;
+                            const { getCustomers } = await import('@/services/customers');
+                            const data = await getCustomers(activeShop.id);
+                            setCustomers(data);
+                            console.log('Refreshed customers:', data.length);
+                          };
+                          fetchCustomers();
+                        }}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <PremiumCustomerAutocomplete
+                      customers={customers}
+                      value={{
+                        name: watchedValues.customerName || '',
+                        phone: watchedValues.customerPhone,
+                        address: watchedValues.customerAddress,
+                        state: watchedValues.customerState,
+                        pincode: watchedValues.customerPincode,
+                        email: watchedValues.customerEmail,
+                      }}
+                      onChange={(customer) => {
+                        if (customer.name !== undefined) form.setValue('customerName', customer.name);
+                        if (customer.phone !== undefined) form.setValue('customerPhone', customer.phone);
+                        if (customer.address !== undefined) form.setValue('customerAddress', customer.address);
+                        if (customer.state !== undefined) form.setValue('customerState', customer.state);
+                        if (customer.pincode !== undefined) form.setValue('customerPincode', customer.pincode);
+                        if (customer.email !== undefined) form.setValue('customerEmail', customer.email);
+                      }}
+                      onSearch={async (query) => {
+                        if (!activeShop?.id) return;
+                        try {
+                          const { searchCustomers } = await import('@/services/customers');
+                          const results = await searchCustomers(activeShop.id, query);
+                          setCustomers(results);
+                        } catch (err) {
+                          console.error('Error searching customers:', err);
+                        }
+                      }}
+                      disabled={isPending}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Invoice Details - Compact */}
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      Invoice Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="invoiceDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invoice Date</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                              onChange={(e) => field.onChange(new Date(e.target.value))}
+                              className="h-10"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Status</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2 p-1 bg-muted rounded-lg border h-10">
+                              <Button
+                                type="button"
+                                variant={field.value === 'paid' ? 'default' : 'ghost'}
+                                className={cn("flex-1 h-8", field.value === 'paid' && "bg-emerald-600 hover:bg-emerald-700 text-white")}
+                                onClick={() => field.onChange('paid')}
+                              >
+                                Paid
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={field.value === 'due' ? 'default' : 'ghost'}
+                                className={cn("flex-1 h-8", field.value === 'due' && "bg-amber-600 hover:bg-amber-700 text-white")}
+                                onClick={() => field.onChange('due')}
+                              >
+                                Due
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Items Table */}
+                <Card className="border-2">
+                  <CardContent className="pt-6">
+                    <LineItemsTable
+                      items={watchedValues.items.map(item => ({ ...item, purity: item.purity || '22K' }))}
+                      onItemsChange={(items) => form.setValue('items', items)}
+                      disabled={isPending}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Loyalty Redemption */}
+                {loyaltySettings && watchedValues.customerPhone && watchedValues.customerPhone.length >= 10 && (
+                  <Card className="border-2 border-purple-500/20 bg-purple-50/50 dark:bg-purple-900/10">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-400 text-base">
+                        <div className="p-1.5 rounded-full bg-purple-100 dark:bg-purple-900/50">
+                          <Users className="h-4 w-4" />
+                        </div>
+                        Loyalty Program
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Available Points</p>
+                          <p className="text-2xl font-bold text-purple-700 dark:text-purple-400">{customerPoints}</p>
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="redeemPoints"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-medium cursor-pointer">
+                                Redeem Points
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {watchedValues.redeemPoints && (
+                        <div className="space-y-4 animate-in slide-in-from-top-2">
+                          <FormField
+                            control={form.control}
+                            name="pointsToRedeem"
+                            render={({ field }) => (
+                              <FormItem>
+                                <div className="flex justify-between text-sm mb-1.5">
+                                  <FormLabel>Points to Redeem</FormLabel>
+                                  <span className="text-muted-foreground">
+                                    Max: {Math.min(customerPoints, Math.floor(subtotal * ((loyaltySettings.max_redemption_percentage || 100) / 100) / loyaltySettings.redemption_conversion_rate))}
+                                  </span>
+                                </div>
+                                <FormControl>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max={customerPoints}
+                                      value={field.value || ''}
+                                      onChange={(e) => field.onChange(Number(e.target.value))}
+                                      className="h-10"
+                                    />
+                                    <div className="flex items-center px-3 rounded-md bg-muted text-sm font-medium min-w-[100px] justify-center">
+                                      - ₹{loyaltyDiscount.toFixed(2)}
+                                    </div>
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+
+              </form>
+            </Form>
           </div>
 
-          {/* Shop Setup Warning */}
-          {permissions.canEditSettings && !isShopSetupValid && !settingsLoading && (
-            <FadeIn>
-              <Alert className="border-amber-500/60 bg-amber-50 text-amber-800">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="text-amber-700 font-semibold">Finish Shop Setup</AlertTitle>
-                <AlertDescription className="text-amber-700/80 text-sm">
-                  Complete your shop address & tax details to enable invoice creation.
-                  <Button type="button" variant="link" className="ml-2 p-0 text-amber-700 hover:text-amber-600 font-medium" onClick={() => router.push('/dashboard/settings')}>
-                    Go to Settings →
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            </FadeIn>
-          )}
+          {/* Right Column - Sticky Summary & Preview (Desktop Only) */}
+          <div className="hidden lg:block space-y-6 sticky top-10 self-start z-10">
+            {/* Compact Totals Summary */}
+            <CompactTotalsSummary
+              subtotal={subtotal}
+              discount={watchedValues.discount || 0}
+              loyaltyDiscount={loyaltyDiscount}
+              sgstAmount={sgstAmount}
+              cgstAmount={cgstAmount}
+              grandTotal={grandTotal}
+              sgstRate={settings?.sgstRate || 1.5}
+              cgstRate={settings?.cgstRate || 1.5}
+              onDiscountChange={(val) => form.setValue('discount', val)}
+            />
 
-          {/* Mobile Preview */}
-          {showPreview && (
-            <div className="lg:hidden mb-6 h-[500px] rounded-lg overflow-hidden border border-white/10 shadow-xl">
-              <LiveInvoicePreview data={watchedValues} settings={settings} />
+            {/* Action Buttons - Desktop */}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                className="flex-1 h-12"
+                size="lg"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                onClick={form.handleSubmit(onSubmit)}
+                className="flex-1 h-12 text-lg font-semibold shadow-lg shadow-primary/20"
+                size="lg"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-5 w-5" />
+                    {invoice ? 'Update' : 'Create'}
+                  </>
+                )}
+              </Button>
             </div>
-          )}
 
-          <Form {...form}>
-            <form id="invoice-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              {/* Customer Details */}
-              <Card className="glass-card border-t-2 border-t-primary/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-primary">
-                    <Users className="h-5 w-5" />
-                    Customer Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CustomerSelector
-                    value={{
-                      customerName: watchedValues.customerName,
-                      customerAddress: watchedValues.customerAddress || '',
-                      customerPhone: watchedValues.customerPhone,
-                      customerState: watchedValues.customerState,
-                      customerPincode: watchedValues.customerPincode,
-                    }}
-                    onChange={(customer) => {
-                      if (customer.name !== undefined) form.setValue('customerName', customer.name);
-                      if (customer.address !== undefined) form.setValue('customerAddress', customer.address);
-                      if (customer.phone !== undefined) form.setValue('customerPhone', customer.phone);
-                      if (customer.state !== undefined) form.setValue('customerState', customer.state);
-                      if (customer.pincode !== undefined) form.setValue('customerPincode', customer.pincode);
-                    }}
-                    customers={customers}
-                    disabled={isPending}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Invoice Details */}
-              <Card className="glass-card border-t-2 border-t-primary/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-primary">
-                    <FileText className="h-5 w-5" />
-                    Invoice Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="invoiceDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Invoice Date</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Payment Status</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center gap-2 p-1 bg-muted rounded-lg border">
-                            <Button
-                              type="button"
-                              variant={field.value === 'paid' ? 'default' : 'ghost'}
-                              className={cn("flex-1", field.value === 'paid' && "bg-emerald-600 hover:bg-emerald-700 text-white")}
-                              onClick={() => field.onChange('paid')}
-                            >
-                              Paid
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={field.value === 'due' ? 'default' : 'ghost'}
-                              className={cn("flex-1", field.value === 'due' && "bg-amber-600 hover:bg-amber-700 text-white")}
-                              onClick={() => field.onChange('due')}
-                            >
-                              Due
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Line Items */}
-              <Card className="glass-card border-t-2 border-t-gold-500/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-gold-600 dark:text-gold-400">
-                    Items
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <LineItemsTable
-                    items={watchedValues.items.map(item => ({ ...item, purity: item.purity || '22K' }))}
-                    onItemsChange={(items) => form.setValue('items', items)}
-                    disabled={isPending}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Summary */}
-              <InvoiceSummary
-                subtotal={subtotal}
-                discount={watchedValues.discount || 0}
-                sgst={settings?.sgstRate || 1.5}
-                cgst={settings?.cgstRate || 1.5}
-                grandTotal={grandTotal}
-                sgstAmount={sgstAmount}
-                cgstAmount={cgstAmount}
-                onDiscountChange={(val) => form.setValue('discount', val)}
-                editable={!isPending}
-              />
-
-              {/* Form Actions (Desktop) */}
-              <div className="hidden lg:flex items-center justify-end gap-4 pt-4 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.back()}
-                  disabled={isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isPending || !isShopSetupValid}
-                  className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white shadow-lg shadow-gold-500/20 min-w-[120px]"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      {invoice ? 'Update Invoice' : 'Create Invoice'}
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Mobile Actions - Floating Bottom Bar */}
-              <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border/40 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-50">
-                <div className="flex gap-3 max-w-lg mx-auto">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => router.back()}
-                    disabled={isPending}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isPending || !isShopSetupValid}
-                    className="flex-1 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white shadow-lg shadow-gold-500/20"
-                  >
-                    {isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        {invoice ? 'Update' : 'Create'}
-                      </>
-                    )}
-                  </Button>
+            {/* Live Invoice Preview */}
+            <Card className="border-2 overflow-hidden bg-background shadow-lg">
+              <CardHeader className="pb-3 bg-slate-50 dark:bg-slate-900/50 border-b">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold">Live Preview</CardTitle>
+                  <Badge variant="outline" className="text-xs">Real-time</Badge>
                 </div>
-              </div>
-            </form>
-          </Form>
-        </MotionWrapper>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="overflow-hidden bg-white dark:bg-slate-950 rounded-lg border max-h-[460px]">
+                  <div className="scale-[0.5] origin-top-left w-[200%]">
+                    <LiveInvoicePreview
+                      data={{
+                        customerName: watchedValues.customerName,
+                        customerAddress: watchedValues.customerAddress,
+                        customerState: watchedValues.customerState,
+                        customerPincode: watchedValues.customerPincode,
+                        customerPhone: watchedValues.customerPhone,
+                        invoiceDate: watchedValues.invoiceDate,
+                        items: watchedValues.items,
+                        discount: watchedValues.discount,
+                        status: watchedValues.status,
+                        sgst: settings?.sgstRate || 1.5,
+                        cgst: settings?.cgstRate || 1.5,
+                      }}
+                      settings={settings}
+                      invoiceNumber="Preview"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
-      {/* Right Column - Live Preview (Desktop) */}
-      {!previewCollapsed && (
-        <div className="hidden lg:col-span-5 lg:block sticky top-20 self-start h-[calc(100vh-6rem)] pt-2">
-          <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-transparent p-0 h-full flex items-start justify-center">
-            <div className="w-full max-w-[700px] p-4">
-              <MotionWrapper>
-                <LiveInvoicePreview data={watchedValues} settings={settings} />
-              </MotionWrapper>
+      {/* Mobile Sticky Footer with Summary & Actions */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t shadow-2xl z-50">
+        {/* Compact Summary */}
+        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Subtotal:</span>
+            <span className="font-medium">{formatCurrency(subtotal)}</span>
+          </div>
+          {(watchedValues.discount || loyaltyDiscount > 0) && (
+            <div className="flex items-center justify-between text-sm mt-1">
+              <span className="text-muted-foreground">Discount:</span>
+              <span className="font-medium text-green-600">-{formatCurrency((watchedValues.discount || 0) + loyaltyDiscount)}</span>
             </div>
+          )}
+          <div className="flex items-center justify-between text-sm mt-1">
+            <span className="text-muted-foreground">Tax:</span>
+            <span className="font-medium">+{formatCurrency(sgstAmount + cgstAmount)}</span>
+          </div>
+          <div className="flex items-center justify-between font-bold text-base mt-2 pt-2 border-t">
+            <span>Grand Total:</span>
+            <span className="text-primary">{formatCurrency(grandTotal)}</span>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="px-4 py-3 flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            className="flex-1 h-12"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending}
+            onClick={form.handleSubmit(onSubmit)}
+            className="flex-1 h-12 text-base font-semibold shadow-lg"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                {invoice ? 'Update' : 'Create'}
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-background z-50 overflow-y-auto lg:hidden">
+          <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between">
+            <h2 className="font-semibold">Invoice Preview</h2>
+            <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
+              <EyeOff className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="p-4">
+            <LiveInvoicePreview
+              data={{
+                customerName: watchedValues.customerName,
+                customerAddress: watchedValues.customerAddress,
+                customerState: watchedValues.customerState,
+                customerPincode: watchedValues.customerPincode,
+                customerPhone: watchedValues.customerPhone,
+                invoiceDate: watchedValues.invoiceDate,
+                items: watchedValues.items,
+                discount: watchedValues.discount,
+                status: watchedValues.status,
+                sgst: settings?.sgstRate || 1.5,
+                cgst: settings?.cgstRate || 1.5,
+              }}
+              settings={settings}
+              invoiceNumber="Preview"
+            />
           </div>
         </div>
       )}
 
       {/* Celebration Modal */}
-      <CelebrationModal 
-        isOpen={showCelebration} 
-        onClose={() => setShowCelebration(false)} 
+      <CelebrationModal
+        isOpen={showCelebration}
+        onClose={() => setShowCelebration(false)}
       />
-    </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: hsl(var(--muted-foreground) / 0.3);
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: hsl(var(--muted-foreground) / 0.5);
+        }
+      `}</style>
+    </MotionWrapper>
   );
 }

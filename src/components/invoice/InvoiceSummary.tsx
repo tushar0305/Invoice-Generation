@@ -6,6 +6,7 @@ import { formatCurrency } from '@/lib/utils';
 interface InvoiceSummaryProps {
     subtotal: number;
     discount: number;
+    loyaltyDiscount?: number;
     sgst: number;
     cgst: number;
     grandTotal: number;
@@ -18,6 +19,7 @@ interface InvoiceSummaryProps {
 export function InvoiceSummary({
     subtotal,
     discount,
+    loyaltyDiscount = 0,
     sgst,
     cgst,
     grandTotal,
@@ -45,9 +47,16 @@ export function InvoiceSummary({
                             placeholder="0"
                         />
                     ) : (
-                        <span className="font-medium">{formatCurrency(discount)}</span>
+                        <span className="font-medium text-red-500">-{formatCurrency(discount)}</span>
                     )}
                 </div>
+
+                {loyaltyDiscount > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                        <span className="text-purple-600 dark:text-purple-400 font-medium">Loyalty Redemption</span>
+                        <span className="font-medium text-purple-600 dark:text-purple-400">-{formatCurrency(loyaltyDiscount)}</span>
+                    </div>
+                )}
 
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">SGST ({sgst}%)</span>

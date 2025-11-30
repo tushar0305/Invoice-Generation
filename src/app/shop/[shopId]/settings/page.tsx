@@ -7,7 +7,8 @@ import {
   Loader2, Upload, X, Image as ImageIcon,
   Store, Building2, Receipt, Shield,
   Save, Trash2, AlertTriangle, CreditCard,
-  MapPin, Phone, Mail, FileText, Percent
+  MapPin, Phone, Mail, FileText, Percent,
+  Gift
 } from 'lucide-react';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { useRouter } from 'next/navigation';
@@ -36,6 +37,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { PaletteSwitcher } from '@/components/palette-switcher';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LoyaltySettingsForm } from '@/components/loyalty-settings-form';
 
 const settingsFormSchema = z.object({
   cgstRate: z.coerce.number().min(0, 'CGST rate must be positive'),
@@ -328,16 +331,23 @@ export default function SettingsPage() {
 
   return (
     <MotionWrapper className="max-w-5xl mx-auto space-y-8 pb-24">
-      {isLoading ? (
-        <div className="space-y-6">
-          <Skeleton className="h-64 w-full rounded-3xl bg-white/5" />
-          <div className="grid md:grid-cols-2 gap-6">
-            <Skeleton className="h-48 w-full rounded-3xl bg-white/5" />
-            <Skeleton className="h-48 w-full rounded-3xl bg-white/5" />
-          </div>
-        </div>
-      ) : (
-        <Form {...form}>
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsTrigger value="general">General Settings</TabsTrigger>
+          <TabsTrigger value="loyalty">Loyalty Program</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general">
+          {isLoading ? (
+            <div className="space-y-6">
+              <Skeleton className="h-64 w-full rounded-3xl bg-white/5" />
+              <div className="grid md:grid-cols-2 gap-6">
+                <Skeleton className="h-48 w-full rounded-3xl bg-white/5" />
+                <Skeleton className="h-48 w-full rounded-3xl bg-white/5" />
+              </div>
+            </div>
+          ) : (
+            <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <fieldset disabled={!permissions.canEditSettings} className="space-y-8">
 
@@ -647,8 +657,14 @@ export default function SettingsPage() {
 
             </fieldset>
           </form>
-        </Form>
-      )}
+            </Form>
+          )}
+        </TabsContent>
+
+        <TabsContent value="loyalty">
+          <LoyaltySettingsForm />
+        </TabsContent>
+      </Tabs>
 
       <CelebrationModal
         isOpen={showCelebration}

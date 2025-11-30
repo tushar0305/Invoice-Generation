@@ -13,12 +13,19 @@ import {
     MapPin,
     FileText,
     Upload,
-    Check,
     ArrowRight,
-    ArrowLeft,
     Loader2,
     Sparkles,
     X,
+    Store,
+    CreditCard,
+    Palette,
+    Globe,
+    ShieldCheck,
+    TrendingUp,
+    Receipt,
+    Hammer,
+    Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +43,7 @@ import { useUser } from '@/supabase/provider';
 import { cn } from '@/lib/utils';
 import type { ShopSetupData } from '@/lib/definitions';
 
-// Validation schemas for each step
+// --- Validation Schemas ---
 const step1Schema = z.object({
     shopName: z.string().min(2, 'Shop name must be at least 2 characters'),
     phoneNumber: z.string().regex(/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number'),
@@ -66,9 +73,244 @@ const INDIAN_STATES = [
     'Delhi', 'Puducherry', 'Jammu and Kashmir', 'Ladakh',
 ];
 
+// --- Components ---
+
+function FloatingIcon({ icon: Icon, delay = 0 }: { icon: any, delay?: number }) {
+    return (
+        <motion.div
+            animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
+            transition={{ duration: 4, repeat: Infinity, delay, ease: "easeInOut" }}
+            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 shadow-lg shadow-gold-500/30 flex items-center justify-center mb-6 mx-auto relative z-10"
+        >
+            <div className="absolute inset-0 bg-white/20 rounded-2xl backdrop-blur-sm" />
+            <Icon className="w-8 h-8 text-white relative z-10" />
+        </motion.div>
+    );
+}
+
+function ShopBuildingAnimation() {
+    return (
+        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
+            {/* Ambient Background */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gold-900/20 via-slate-950 to-slate-950" />
+            <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.05]" />
+
+            {/* 3D Construction Scene */}
+            <div className="relative w-[400px] h-[400px] perspective-1000">
+                <motion.div
+                    className="w-full h-full relative preserve-3d"
+                    animate={{ rotateX: [60, 60], rotateZ: [0, 360] }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                >
+                    {/* Base Platform */}
+                    <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="absolute inset-0 m-auto w-64 h-64 bg-slate-800/50 border border-gold-500/30 rounded-full shadow-[0_0_50px_rgba(234,179,8,0.2)]"
+                        style={{ transform: 'translateZ(0px)' }}
+                    />
+
+                    {/* Floor */}
+                    <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.8, delay: 0.5, ease: "backOut" }}
+                        className="absolute inset-0 m-auto w-40 h-40 bg-slate-900 border border-gold-500/50"
+                        style={{ transform: 'translateZ(20px)' }}
+                    />
+
+                    {/* Walls Rising */}
+                    {[0, 90, 180, 270].map((deg, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 60, opacity: 1 }}
+                            transition={{ duration: 1, delay: 1 + (i * 0.2), ease: "easeOut" }}
+                            className="absolute bottom-1/2 left-1/2 w-40 h-0 bg-gradient-to-t from-gold-500/20 to-transparent border-x border-gold-500/30 origin-bottom"
+                            style={{
+                                transform: `translate(-50%, 0) rotateZ(${deg}deg) translateY(20px) rotateX(-90deg)`,
+                                transformOrigin: 'bottom'
+                            }}
+                        />
+                    ))}
+
+                    {/* Roof / Top */}
+                    <motion.div
+                        initial={{ opacity: 0, z: 100 }}
+                        animate={{ opacity: 1, z: 80 }}
+                        transition={{ duration: 0.8, delay: 2.5, ease: "easeOut" }}
+                        className="absolute inset-0 m-auto w-44 h-44 bg-gold-500/10 border border-gold-400/50 shadow-[0_0_30px_rgba(234,179,8,0.3)] backdrop-blur-sm"
+                        style={{ transform: 'translateZ(80px)' }}
+                    >
+                        {/* Logo Hologram */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <Store className="w-16 h-16 text-gold-400 animate-pulse" />
+                        </div>
+                    </motion.div>
+
+                    {/* Scanning Lasers */}
+                    <motion.div
+                        animate={{ top: ['0%', '100%'] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-0 w-full h-2 bg-gold-400/50 blur-md shadow-[0_0_20px_rgba(234,179,8,0.8)]"
+                        style={{ transform: 'translateZ(50px) rotateX(0deg)' }}
+                    />
+                </motion.div>
+            </div>
+
+            {/* Text Status */}
+            <div className="relative z-10 text-center mt-12 space-y-2">
+                <motion.h2
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="text-3xl font-bold font-heading text-white"
+                >
+                    Constructing Your Empire
+                </motion.h2>
+                <div className="h-6 overflow-hidden">
+                    <motion.div
+                        animate={{ y: [-24, -48, -72, -96, 0] }} // Cycle through messages
+                        transition={{ duration: 4, times: [0, 0.25, 0.5, 0.75, 1], repeat: Infinity }}
+                        className="flex flex-col items-center"
+                    >
+                        <p className="h-6 text-gold-400 font-medium">Laying foundations...</p>
+                        <p className="h-6 text-gold-400 font-medium">Installing security vaults...</p>
+                        <p className="h-6 text-gold-400 font-medium">Polishing the counters...</p>
+                        <p className="h-6 text-gold-400 font-medium">Stocking inventory...</p>
+                        <p className="h-6 text-gold-400 font-medium">Opening doors...</p>
+                    </motion.div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function BrandShowcase({ step }: { step: number }) {
+    const content = [
+        {
+            title: "The Heart of Your Business",
+            description: "Centralize your inventory, sales, and customers in one premium workspace designed for modern jewellers.",
+            icon: Store,
+            visual: (
+                <div className="relative w-full h-48 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-4 flex flex-col gap-3 overflow-hidden">
+                    <div className="flex gap-2">
+                        <div className="w-2/3 h-20 bg-white/10 rounded-lg animate-pulse" />
+                        <div className="w-1/3 h-20 bg-gold-500/20 rounded-lg" />
+                    </div>
+                    <div className="w-full h-12 bg-white/5 rounded-lg" />
+                    <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-gold-500/30 rounded-full blur-2xl" />
+                </div>
+            )
+        },
+        {
+            title: "Compliance Made Simple",
+            description: "Seamlessly handle GST, billing, and regional regulations. We take care of the math so you can focus on sales.",
+            icon: ShieldCheck,
+            visual: (
+                <div className="relative w-full h-48 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
+                    <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                        className="w-32 h-32 border-2 border-dashed border-gold-400/50 rounded-full flex items-center justify-center"
+                    >
+                        <div className="w-24 h-24 bg-gold-500/10 rounded-full backdrop-blur-md flex items-center justify-center border border-gold-500/30">
+                            <ShieldCheck className="w-10 h-10 text-gold-400" />
+                        </div>
+                    </motion.div>
+                    <div className="absolute top-4 right-4 bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30">
+                        GST Ready
+                    </div>
+                </div>
+            )
+        },
+        {
+            title: "Your Brand, Elevated",
+            description: "Impress customers with professional, branded invoices and loyalty programs that keep them coming back.",
+            icon: Receipt,
+            visual: (
+                <div className="relative w-full h-48 flex items-center justify-center perspective-1000">
+                    <motion.div
+                        animate={{ rotateY: [0, 10, 0] }}
+                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                        className="w-32 h-40 bg-white shadow-2xl rounded-lg p-3 flex flex-col gap-2 transform rotate-6"
+                    >
+                        <div className="w-8 h-8 bg-gold-500 rounded-full mb-2" />
+                        <div className="w-full h-2 bg-slate-100 rounded" />
+                        <div className="w-2/3 h-2 bg-slate-100 rounded" />
+                        <div className="mt-auto w-full h-8 bg-slate-50 rounded border border-dashed border-slate-200" />
+                    </motion.div>
+                    <div className="absolute -z-10 w-40 h-40 bg-gold-500/20 blur-3xl" />
+                </div>
+            )
+        }
+    ];
+
+    const current = content[step - 1];
+
+    return (
+        <div className="h-full flex flex-col justify-center p-8 lg:p-12 text-white relative overflow-hidden">
+            {/* Background Effects */}
+            <div className="absolute inset-0 bg-slate-900" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-gold-900/40 via-slate-900 to-slate-900" />
+            <div className="absolute top-0 right-0 w-96 h-96 bg-gold-500/10 rounded-full blur-[100px] translate-x-1/2 -translate-y-1/2" />
+
+            <div className="relative z-10 space-y-8">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={step}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <div className="mb-8">
+                            {current.visual}
+                        </div>
+
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 bg-gold-500/20 rounded-lg border border-gold-500/30">
+                                <current.icon className="w-6 h-6 text-gold-400" />
+                            </div>
+                            <span className="text-gold-400 font-bold tracking-wider text-sm uppercase">
+                                Step {step} of 3
+                            </span>
+                        </div>
+
+                        <h2 className="text-4xl font-bold font-heading mb-4 leading-tight">
+                            {current.title}
+                        </h2>
+                        <p className="text-slate-400 text-lg leading-relaxed">
+                            {current.description}
+                        </p>
+                    </motion.div>
+                </AnimatePresence>
+
+                {/* Testimonials or Trust Indicators */}
+                <div className="pt-8 border-t border-white/10">
+                    <div className="flex -space-x-3 mb-3">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="w-10 h-10 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-xs text-slate-400">
+                                U{i}
+                            </div>
+                        ))}
+                        <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-gold-600 flex items-center justify-center text-xs font-bold text-white">
+                            +2k
+                        </div>
+                    </div>
+                    <p className="text-sm text-slate-500">Trusted by 2,000+ jewellers across India</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function ShopSetupPage() {
     const [currentStep, setCurrentStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
+    const [isBuilding, setIsBuilding] = useState(false); // New state for animation
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string>('');
     const router = useRouter();
@@ -82,11 +324,10 @@ export default function ShopSetupPage() {
         templateId: 'classic',
     });
 
-    // Restore onboarding step from database
+    // Restore onboarding step
     useEffect(() => {
         const restoreProgress = async () => {
             if (!user) return;
-
             try {
                 const { data, error } = await supabase
                     .from('user_preferences')
@@ -95,7 +336,6 @@ export default function ShopSetupPage() {
                     .maybeSingle();
 
                 if (!error && data?.onboarding_step) {
-                    // Only restore if step is valid (1, 2, or 3)
                     if (data.onboarding_step >= 1 && data.onboarding_step <= 3) {
                         setCurrentStep(data.onboarding_step);
                     }
@@ -104,7 +344,6 @@ export default function ShopSetupPage() {
                 console.warn('Failed to restore onboarding progress:', err);
             }
         };
-
         restoreProgress();
     }, [user]);
 
@@ -171,18 +410,19 @@ export default function ShopSetupPage() {
 
     const handleFinalSubmit = step3Form.handleSubmit(async (data) => {
         setIsLoading(true);
-        try {
-            const finalData = { ...formData, ...data };
+        setIsBuilding(true); // Start the animation immediately
 
-            // Upload logo only if file provided (make it truly optional)
+        try {
+            // Minimum animation duration (4.5 seconds)
+            const animationPromise = new Promise(resolve => setTimeout(resolve, 4500));
+
+            const finalData = { ...formData, ...data };
             let logoUrl = '';
             if (logoFile) {
                 try {
                     const fileExt = logoFile.name.split('.').pop();
                     const fileName = `${user?.uid}-${Date.now()}.${fileExt}`;
-
-                    // Try to upload, but don't fail if bucket doesn't exist
-                    const { data: uploadData, error: uploadError } = await supabase.storage
+                    const { error: uploadError } = await supabase.storage
                         .from('ShopLogo')
                         .upload(fileName, logoFile);
 
@@ -191,18 +431,14 @@ export default function ShopSetupPage() {
                             .from('ShopLogo')
                             .getPublicUrl(fileName);
                         logoUrl = publicUrl;
-                    } else {
-                        console.warn('Logo upload failed (non-critical):', uploadError);
-                        // Continue without logo
                     }
                 } catch (logoErr) {
-                    console.warn('Logo upload error (non-critical):', logoErr);
-                    // Continue without logo
+                    console.warn('Logo upload error:', logoErr);
                 }
             }
 
-            // Create shop with ALL details at once (avoids RLS issues)
-            const { data: shopId, error: shopError } = await supabase.rpc('create_new_shop_with_details', {
+            // Perform API call
+            const apiCallPromise = supabase.rpc('create_new_shop_with_details', {
                 p_shop_name: finalData.shopName!,
                 p_phone_number: finalData.phoneNumber || null,
                 p_email: finalData.email || null,
@@ -217,103 +453,84 @@ export default function ShopSetupPage() {
                 p_template_id: finalData.templateId || 'classic',
             });
 
-            if (shopError) {
-                console.error('Shop creation error:', shopError);
-                throw new Error('Failed to create shop: ' + (shopError.message || 'Unknown error'));
-            }
+            // Wait for both animation and API call
+            const [_, { data: shopId, error: shopError }] = await Promise.all([
+                animationPromise,
+                apiCallPromise
+            ]);
 
-            // Mark onboarding as complete
-            const { error: onboardingError } = await supabase.rpc('complete_onboarding', { p_shop_id: shopId });
+            if (shopError) throw new Error(shopError.message);
 
-            if (onboardingError) {
-                console.warn('Onboarding completion warning:', onboardingError);
-                // Don't fail, just warn
-            }
+            await supabase.rpc('complete_onboarding', { p_shop_id: shopId });
 
-            toast({
-                title: '🎉 Shop created successfully!',
-                description: 'Welcome to SwarnaVyapar',
-            });
+            // Redirect to the shop dashboard
+            window.location.href = `/shop/${shopId}/dashboard`;
 
-            // Use window.location.href instead of router.push to force full page reload
-            // This ensures AuthWrapper refreshes onboarding_completed status
-            setTimeout(() => {
-                window.location.href = '/dashboard/admin';
-            }, 500);
         } catch (error: any) {
-            console.error('Shop setup error:', error);
+            setIsBuilding(false); // Stop animation on error
             toast({
                 variant: 'destructive',
                 title: 'Setup failed',
-                description: error.message || 'Please try again. Contact support if issue persists.',
+                description: error.message,
             });
         } finally {
             setIsLoading(false);
         }
     });
 
+    // --- Render Helpers ---
+
+    const InputField = ({ label, icon: Icon, error, ...props }: any) => (
+        <div className="space-y-2 group">
+            <Label className="text-sm font-medium text-slate-600 ml-1 group-focus-within:text-gold-600 transition-colors">{label}</Label>
+            <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-gold-200 to-gold-100 rounded-xl blur opacity-0 group-focus-within:opacity-40 transition-opacity duration-500" />
+                <div className="relative">
+                    <Icon className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-gold-600 transition-colors" />
+                    <Input
+                        className="pl-11 h-14 bg-white border-slate-200 focus:border-gold-400 focus:ring-4 focus:ring-gold-100 transition-all text-slate-900 rounded-xl shadow-sm text-base"
+                        {...props}
+                    />
+                </div>
+            </div>
+            {error && <p className="text-sm text-red-500 ml-1">{error.message}</p>}
+        </div>
+    );
+
     const renderStep1 = () => (
         <div className="space-y-6">
-            <div className="text-center space-y-2 mb-8">
-                <h2 className="text-3xl font-bold font-heading bg-gradient-to-r from-gold-600 to-amber-600 bg-clip-text text-transparent">
-                    Welcome! Let's Get Started
-                </h2>
-                <p className="text-muted-foreground">Tell us about your jewellery shop</p>
+            <div className="text-center mb-8">
+                <FloatingIcon icon={Store} />
+                <h2 className="text-2xl font-bold font-heading text-slate-900">Name Your Empire</h2>
+                <p className="text-slate-500">Start by giving your business an identity.</p>
             </div>
 
             <div className="space-y-5">
-                <div className="space-y-2">
-                    <Label htmlFor="shopName" className="text-sm font-semibold">Shop Name *</Label>
-                    <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gold-500" />
-                        <Input
-                            id="shopName"
-                            placeholder="e.g., Shree Jewellers"
-                            className="pl-11 h-12 text-lg bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:border-gold-500 focus:ring-gold-500/20"
-                            {...step1Form.register('shopName')}
-                        />
-                    </div>
-                    {step1Form.formState.errors.shopName && (
-                        <p className="text-sm text-destructive">{step1Form.formState.errors.shopName.message}</p>
-                    )}
-                </div>
+                <InputField
+                    label="Shop Name *"
+                    icon={Building2}
+                    error={step1Form.formState.errors.shopName}
+                    placeholder="e.g. Royal Jewellers"
+                    {...step1Form.register('shopName')}
+                />
+                <InputField
+                    label="Phone Number *"
+                    icon={Phone}
+                    error={step1Form.formState.errors.phoneNumber}
+                    placeholder="9876543210"
+                    maxLength={10}
+                    {...step1Form.register('phoneNumber')}
+                />
+                <InputField
+                    label="Business Email *"
+                    icon={Mail}
+                    error={step1Form.formState.errors.email}
+                    placeholder="contact@royaljewellers.com"
+                    {...step1Form.register('email')}
+                />
 
-                <div className="space-y-2">
-                    <Label htmlFor="phoneNumber" className="text-sm font-semibold">Phone Number *</Label>
-                    <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gold-500" />
-                        <Input
-                            id="phoneNumber"
-                            placeholder="9876543210"
-                            maxLength={10}
-                            className="pl-11 h-12 text-lg bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:border-gold-500 focus:ring-gold-500/20"
-                            {...step1Form.register('phoneNumber')}
-                        />
-                    </div>
-                    {step1Form.formState.errors.phoneNumber && (
-                        <p className="text-sm text-destructive">{step1Form.formState.errors.phoneNumber.message}</p>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-semibold">Email *</Label>
-                    <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gold-500" />
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="shop@example.com"
-                            className="pl-11 h-12 text-lg bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:border-gold-500 focus:ring-gold-500/20"
-                            {...step1Form.register('email')}
-                        />
-                    </div>
-                    {step1Form.formState.errors.email && (
-                        <p className="text-sm text-destructive">{step1Form.formState.errors.email.message}</p>
-                    )}
-                </div>
-
-                <Button onClick={handleStep1Next} className="w-full h-13 text-lg font-semibold mt-8 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 shadow-lg shadow-gold-500/25">
-                    Continue
+                <Button onClick={handleStep1Next} className="w-full h-14 text-base font-bold rounded-xl mt-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-xl shadow-slate-900/20 hover:shadow-2xl hover:scale-[1.02] transition-all">
+                    Continue Step
                     <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
             </div>
@@ -322,107 +539,66 @@ export default function ShopSetupPage() {
 
     const renderStep2 = () => (
         <div className="space-y-6">
-            <div className="text-center space-y-2 mb-8">
-                <h2 className="text-3xl font-bold font-heading bg-gradient-to-r from-gold-600 to-amber-600 bg-clip-text text-transparent">
-                    Business Details
-                </h2>
-                <p className="text-muted-foreground">Help us complete your business profile</p>
+            <div className="text-center mb-8">
+                <FloatingIcon icon={MapPin} delay={0.2} />
+                <h2 className="text-2xl font-bold font-heading text-slate-900">Location & Legal</h2>
+                <p className="text-slate-500">Where can customers find you?</p>
             </div>
 
             <div className="space-y-5">
-                <div className="space-y-2">
-                    <Label htmlFor="address" className="text-sm font-semibold">Address *</Label>
-                    <div className="relative">
-                        <MapPin className="absolute left-3 top-3 h-5 w-5 text-gold-500" />
-                        <Input
-                            id="address"
-                            placeholder="123, Main Street, Shop No. 5"
-                            className="pl-11 h-12 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:border-gold-500 focus:ring-gold-500/20"
-                            {...step2Form.register('address')}
-                        />
-                    </div>
-                    {step2Form.formState.errors.address && (
-                        <p className="text-sm text-destructive">{step2Form.formState.errors.address.message}</p>
-                    )}
-                </div>
+                <InputField
+                    label="Address *"
+                    icon={MapPin}
+                    error={step2Form.formState.errors.address}
+                    placeholder="Shop No. 1, Gold Market"
+                    {...step2Form.register('address')}
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="state" className="text-sm font-semibold">State *</Label>
+                        <Label className="text-sm font-medium text-slate-600 ml-1">State *</Label>
                         <Select
                             value={step2Form.watch('state')}
                             onValueChange={(value) => step2Form.setValue('state', value)}
                         >
-                            <SelectTrigger className="h-12 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                                <SelectValue placeholder="Select state" />
+                            <SelectTrigger className="h-14 bg-white border-slate-200 rounded-xl focus:ring-gold-100 focus:border-gold-400">
+                                <SelectValue placeholder="Select State" />
                             </SelectTrigger>
-                            <SelectContent className="max-h-[300px]">
+                            <SelectContent>
                                 {INDIAN_STATES.map(state => (
                                     <SelectItem key={state} value={state}>{state}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                        {step2Form.formState.errors.state && (
-                            <p className="text-sm text-destructive">{step2Form.formState.errors.state.message}</p>
-                        )}
+                        {step2Form.formState.errors.state && <p className="text-sm text-red-500">{step2Form.formState.errors.state.message}</p>}
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="pincode" className="text-sm font-semibold">Pincode *</Label>
-                        <Input
-                            id="pincode"
-                            placeholder="400001"
-                            maxLength={6}
-                            className="h-12 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:border-gold-500 focus:ring-gold-500/20"
-                            {...step2Form.register('pincode')}
-                        />
-                        {step2Form.formState.errors.pincode && (
-                            <p className="text-sm text-destructive">{step2Form.formState.errors.pincode.message}</p>
-                        )}
-                    </div>
+                    <InputField
+                        label="Pincode *"
+                        icon={MapPin}
+                        error={step2Form.formState.errors.pincode}
+                        placeholder="400001"
+                        maxLength={6}
+                        {...step2Form.register('pincode')}
+                    />
                 </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="gstNumber" className="text-sm font-semibold">GSTIN <span className="text-muted-foreground font-normal">(Optional)</span></Label>
-                    <div className="relative">
-                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gold-500" />
-                        <Input
-                            id="gstNumber"
-                            placeholder="22AAAAA0000A1Z5"
-                            className="pl-11 h-12 uppercase bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:border-gold-500 focus:ring-gold-500/20"
-                            maxLength={15}
-                            {...step2Form.register('gstNumber')}
-                        />
-                    </div>
-                    {step2Form.formState.errors.gstNumber && (
-                        <p className="text-sm text-destructive">{step2Form.formState.errors.gstNumber.message}</p>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="panNumber" className="text-sm font-semibold">PAN <span className="text-muted-foreground font-normal">(Optional)</span></Label>
-                    <div className="relative">
-                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gold-500" />
-                        <Input
-                            id="panNumber"
-                            placeholder="ABCDE1234F"
-                            className="pl-11 h-12 uppercase bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:border-gold-500 focus:ring-gold-500/20"
-                            maxLength={10}
-                            {...step2Form.register('panNumber')}
-                        />
-                    </div>
-                    {step2Form.formState.errors.panNumber && (
-                        <p className="text-sm text-destructive">{step2Form.formState.errors.panNumber.message}</p>
-                    )}
-                </div>
+                <InputField
+                    label="GSTIN (Optional)"
+                    icon={FileText}
+                    error={step2Form.formState.errors.gstNumber}
+                    placeholder="22AAAAA0000A1Z5"
+                    maxLength={15}
+                    className="uppercase pl-11 h-14 bg-white border-slate-200 focus:border-gold-400 focus:ring-4 focus:ring-gold-100 transition-all text-slate-900 rounded-xl shadow-sm text-base"
+                    {...step2Form.register('gstNumber')}
+                />
 
                 <div className="flex gap-4 mt-8">
-                    <Button variant="outline" onClick={() => setCurrentStep(1)} className="flex-1 h-12 border-slate-300">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
+                    <Button variant="ghost" onClick={() => setCurrentStep(1)} className="flex-1 h-14 text-slate-500 hover:text-slate-800">
                         Back
                     </Button>
-                    <Button onClick={handleStep2Next} className="flex-1 h-12 font-semibold bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 shadow-lg shadow-gold-500/25">
-                        Continue
+                    <Button onClick={handleStep2Next} className="flex-1 h-14 text-base font-bold rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-xl shadow-slate-900/20 hover:shadow-2xl hover:scale-[1.02] transition-all">
+                        Next Step
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                 </div>
@@ -432,108 +608,95 @@ export default function ShopSetupPage() {
 
     const renderStep3 = () => (
         <div className="space-y-6">
-            <div className="text-center space-y-2 mb-8">
-                <h2 className="text-3xl font-bold font-heading bg-gradient-to-r from-gold-600 to-amber-600 bg-clip-text text-transparent">
-                    Final Touches
-                </h2>
-                <p className="text-muted-foreground">Customize your shop's appearance</p>
+            <div className="text-center mb-8">
+                <FloatingIcon icon={Palette} delay={0.4} />
+                <h2 className="text-2xl font-bold font-heading text-slate-900">Brand Identity</h2>
+                <p className="text-slate-500">Make it yours with a logo and tax settings.</p>
             </div>
 
             <div className="space-y-6">
-                <div className="space-y-3">
-                    <Label className="text-sm font-semibold">Shop Logo <span className="text-muted-foreground font-normal">(Optional)</span></Label>
-                    <div
-                        className={cn(
-                            "relative border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200",
-                            logoPreview
-                                ? "border-gold-500 bg-gold-50 dark:bg-gold-950/10"
-                                : "border-slate-200 dark:border-slate-800 hover:border-gold-400 hover:bg-slate-50 dark:hover:bg-slate-900"
-                        )}
-                        onClick={() => document.getElementById('logo-upload')?.click()}
-                    >
-                        {logoPreview ? (
-                            <div className="space-y-4">
-                                <div className="relative mx-auto w-32 h-32 rounded-xl overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
-                                    <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gold-700 dark:text-gold-400">Logo uploaded successfully!</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Click to change</p>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setLogoFile(null);
-                                        setLogoPreview('');
-                                    }}
-                                    className="mt-2"
-                                >
-                                    <X className="h-3 w-3 mr-1" />
-                                    Remove
-                                </Button>
+                {/* Logo Upload */}
+                <div
+                    className={cn(
+                        "relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 group",
+                        logoPreview
+                            ? "border-gold-500 bg-gold-50/50"
+                            : "border-slate-200 hover:border-gold-400 hover:bg-slate-50"
+                    )}
+                    onClick={() => document.getElementById('logo-upload')?.click()}
+                >
+                    {logoPreview ? (
+                        <div className="space-y-4">
+                            <div className="relative mx-auto w-24 h-24 rounded-xl overflow-hidden border-4 border-white shadow-lg">
+                                <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain" />
                             </div>
-                        ) : (
-                            <>
-                                <Upload className="mx-auto h-14 w-14 text-gold-500 mb-4" />
-                                <p className="text-base font-semibold mb-1">Upload Your Shop Logo</p>
-                                <p className="text-sm text-muted-foreground">PNG, JPG up to 5MB</p>
-                            </>
-                        )}
-                        <input
-                            id="logo-upload"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleLogoUpload}
-                        />
-                    </div>
+                            <p className="text-sm font-medium text-gold-700">Logo Ready!</p>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setLogoFile(null);
+                                    setLogoPreview('');
+                                }}
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            >
+                                <X className="h-3 w-3 mr-1" /> Remove
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-gold-100 transition-colors">
+                                <Upload className="h-6 w-6 text-slate-400 group-hover:text-gold-600" />
+                            </div>
+                            <p className="text-sm font-semibold text-slate-700">Upload Logo</p>
+                            <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
+                        </div>
+                    )}
+                    <input
+                        id="logo-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                    />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="cgst" className="text-sm font-semibold">CGST Rate (%)</Label>
-                        <Input
-                            id="cgst"
-                            type="number"
-                            step="0.01"
-                            className="h-12 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:border-gold-500 focus:ring-gold-500/20"
-                            {...step3Form.register('cgstRate', { valueAsNumber: true })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="sgst" className="text-sm font-semibold">SGST Rate (%)</Label>
-                        <Input
-                            id="sgst"
-                            type="number"
-                            step="0.01"
-                            className="h-12 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:border-gold-500 focus:ring-gold-500/20"
-                            {...step3Form.register('sgstRate', { valueAsNumber: true })}
-                        />
-                    </div>
+                    <InputField
+                        label="CGST (%)"
+                        icon={CreditCard}
+                        type="number"
+                        step="0.01"
+                        {...step3Form.register('cgstRate', { valueAsNumber: true })}
+                    />
+                    <InputField
+                        label="SGST (%)"
+                        icon={CreditCard}
+                        type="number"
+                        step="0.01"
+                        {...step3Form.register('sgstRate', { valueAsNumber: true })}
+                    />
                 </div>
 
                 <div className="flex gap-4 mt-8">
-                    <Button variant="outline" onClick={() => setCurrentStep(2)} className="flex-1 h-12 border-slate-300">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
+                    <Button variant="ghost" onClick={() => setCurrentStep(2)} className="flex-1 h-14 text-slate-500 hover:text-slate-800">
                         Back
                     </Button>
                     <Button
                         onClick={handleFinalSubmit}
                         disabled={isLoading}
-                        className="flex-1 h-13 text-lg font-semibold bg-gradient-to-r from-gold-500 via-gold-600 to-amber-600 hover:from-gold-600 hover:via-gold-700 hover:to-amber-700 shadow-xl shadow-gold-500/30"
+                        className="flex-1 h-14 text-base font-bold rounded-xl bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-xl shadow-gold-500/30 hover:shadow-2xl hover:scale-[1.02] transition-all relative overflow-hidden"
                     >
                         {isLoading ? (
-                            <>
-                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                Creating Your Shop...
-                            </>
+                            <Loader2 className="h-5 w-5 animate-spin" />
                         ) : (
                             <>
-                                <Sparkles className="mr-2 h-5 w-5" />
-                                Complete Setup
+                                <span className="relative z-10 flex items-center">
+                                    Launch Shop <Sparkles className="ml-2 h-5 w-5" />
+                                </span>
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
                             </>
                         )}
                     </Button>
@@ -543,67 +706,70 @@ export default function ShopSetupPage() {
     );
 
     return (
-        <div className="w-full max-w-xl mx-auto px-4 py-8">
-            {/* Enhanced Progress Indicator - Better aligned */}
-            <div className="mb-12">
-                <div className="flex items-center justify-center mb-6">
-                    {[1, 2, 3].map((step, index) => (
-                        <div key={step} className="flex items-center">
-                            {/* Step Circle */}
-                            <div className="relative flex-shrink-0">
-                                <div
+        <>
+            {/* Full Screen Construction Animation */}
+            <AnimatePresence>
+                {isBuilding && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50"
+                    >
+                        <ShopBuildingAnimation />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <div className="w-full max-w-6xl mx-auto lg:h-[800px] flex flex-col lg:flex-row bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
+
+                {/* --- Left Side: Form --- */}
+                <div className="flex-1 p-8 lg:p-12 overflow-y-auto bg-[#FDFBF7]">
+                    {/* Progress Bar */}
+                    <div className="mb-10">
+                        <div className="flex justify-between mb-2">
+                            {['Identity', 'Location', 'Branding'].map((label, idx) => (
+                                <span
+                                    key={label}
                                     className={cn(
-                                        "flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 transition-all duration-300 font-bold text-base sm:text-lg",
-                                        currentStep >= step
-                                            ? "border-gold-500 bg-gradient-to-br from-gold-500 to-gold-600 text-white shadow-lg shadow-gold-500/40"
-                                            : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-400 dark:text-slate-600"
+                                        "text-xs font-bold uppercase tracking-wider transition-colors duration-300",
+                                        currentStep > idx ? "text-gold-600" : "text-slate-300"
                                     )}
                                 >
-                                    {currentStep > step ? (
-                                        <Check className="h-5 w-5 sm:h-6 sm:w-6" />
-                                    ) : (
-                                        <span>{step}</span>
-                                    )}
-                                </div>
-                                {currentStep === step && (
-                                    <div className="absolute inset-0 rounded-full bg-gold-500 animate-ping opacity-20"></div>
-                                )}
-                            </div>
-                            {/* Connector Line */}
-                            {index < 2 && (
-                                <div
-                                    className={cn(
-                                        "w-12 sm:w-20 h-1 mx-2 sm:mx-3 rounded-full transition-all duration-500",
-                                        currentStep > step
-                                            ? "bg-gradient-to-r from-gold-500 to-gold-600"
-                                            : "bg-slate-200 dark:bg-slate-800"
-                                    )}
-                                />
-                            )}
+                                    {label}
+                                </span>
+                            ))}
                         </div>
-                    ))}
-                </div>
-                <p className="text-center text-sm sm:text-base font-semibold text-gold-700 dark:text-gold-400">
-                    Step {currentStep} of 3 • {currentStep === 1 ? 'Basic Info' : currentStep === 2 ? 'Business Details' : 'Final Touches'}
-                </p>
-            </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <motion.div
+                                className="h-full bg-gradient-to-r from-gold-400 to-gold-600"
+                                initial={{ width: '0%' }}
+                                animate={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+                                transition={{ duration: 0.5, ease: "easeInOut" }}
+                            />
+                        </div>
+                    </div>
 
-            {/* Step Content with Glass Effect */}
-            <div className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-8 md:p-12">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentStep}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        {currentStep === 1 && renderStep1()}
-                        {currentStep === 2 && renderStep2()}
-                        {currentStep === 3 && renderStep3()}
-                    </motion.div>
-                </AnimatePresence>
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentStep}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            {currentStep === 1 && renderStep1()}
+                            {currentStep === 2 && renderStep2()}
+                            {currentStep === 3 && renderStep3()}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+
+                {/* --- Right Side: Brand Experience Panel --- */}
+                <div className="hidden lg:block w-[45%] bg-slate-900 relative">
+                    <BrandShowcase step={currentStep} />
+                </div>
             </div>
-        </div>
+        </>
     );
 }

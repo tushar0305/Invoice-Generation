@@ -10,6 +10,13 @@ const inviteSchema = z.object({
     shopId: z.string(),
 });
 
+const createStaffSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    role: z.enum(['manager', 'staff']),
+    shopId: z.string(),
+});
+
 const paymentSchema = z.object({
     shopId: z.string(),
     staffUserId: z.string(),
@@ -28,6 +35,10 @@ const attendanceSchema = z.object({
 });
 
 export async function inviteStaffAction(formData: z.infer<typeof inviteSchema>) {
+    // ... existing code ...
+}
+
+export async function createStaffAction(formData: z.infer<typeof createStaffSchema>) {
     const supabase = await createClient();
     try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -45,23 +56,66 @@ export async function inviteStaffAction(formData: z.infer<typeof inviteSchema>) 
             throw new Error('Permission denied');
         }
 
-        // Create invitation
-        const { error } = await supabase.from('shop_invitations').insert({
-            shop_id: formData.shopId,
+        // Initialize Admin Client
+        const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+        const supabaseAdmin = createAdminClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            {
+                auth: {
+                    autoRefreshToken: false,
+                    persistSession: false
+                }
+            }
+        );
+
+        // 1. Create User
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
             email: formData.email,
-            role: formData.role,
-            invited_by: user.id,
+            password: formData.password,
+            email_confirm: true,
+            user_metadata: {
+                role: formData.role
+            }
         });
 
-        if (error) {
-            if (error.code === '23505') throw new Error('Invitation already exists for this email');
-            throw error;
+        if (createError) throw createError;
+        if (!newUser.user) throw new Error('Failed to create user');
+
+        // 2. Assign Role
+        const { error: roleError } = await supabaseAdmin
+            .from('user_shop_roles')
+            .insert({
+                user_id: newUser.user.id,
+                shop_id: formData.shopId,
+                role: formData.role
+            });
+
+        if (roleError) {
+            // Rollback user creation if role assignment fails? 
+            // Ideally yes, but for now just throw
+            await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+            throw roleError;
+        }
+
+        // 3. Create Staff Profile
+        const { error: profileError } = await supabaseAdmin
+            .from('staff_profiles')
+            .insert({
+                user_id: newUser.user.id,
+                shop_id: formData.shopId,
+                // Add other default fields if necessary
+            });
+
+        if (profileError) {
+            console.error('Error creating staff profile:', profileError);
+            // Non-critical, can be created later
         }
 
         revalidatePath(`/shop/${formData.shopId}/staff`);
         return { success: true };
     } catch (error: any) {
-        console.error('inviteStaffAction error:', error);
+        console.error('createStaffAction error:', error);
         return { success: false, error: error.message };
     }
 }
