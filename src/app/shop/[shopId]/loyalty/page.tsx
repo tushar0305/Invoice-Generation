@@ -12,6 +12,7 @@ import { supabase } from '@/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
 export default function LoyaltyProgramPage() {
     const router = useRouter();

@@ -35,7 +35,43 @@ const attendanceSchema = z.object({
 });
 
 export async function inviteStaffAction(formData: z.infer<typeof inviteSchema>) {
-    // ... existing code ...
+    const supabase = await createClient();
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Unauthorized');
+
+        // Only owners can invite staff
+        const { data: roleData } = await supabase
+            .from('user_shop_roles')
+            .select('role')
+            .eq('shop_id', formData.shopId)
+            .eq('user_id', user.id)
+            .single();
+
+        if (!roleData || roleData.role !== 'owner') {
+            throw new Error('Only shop owners can invite staff');
+        }
+
+        // Insert invitation record
+        const { error } = await supabase
+            .from('shop_invitations')
+            .insert({
+                shop_id: formData.shopId,
+                email: formData.email,
+                role: formData.role,
+                invited_by: user.id,
+            });
+
+        if (error) throw error;
+
+        // Optionally send email here (omitted)
+
+        revalidatePath(`/shop/${formData.shopId}/staff`);
+        return { success: true };
+    } catch (error: any) {
+        console.error('inviteStaffAction error:', error);
+        return { success: false, error: error.message };
+    }
 }
 
 export async function createStaffAction(formData: z.infer<typeof createStaffSchema>) {
