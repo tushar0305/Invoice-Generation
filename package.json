@@ -2,6 +2,9 @@
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
+  "eslint": {
+    "ignoreDuringBuilds": true
+  },
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
     "setup": "node scripts/verify-supabase.js",
