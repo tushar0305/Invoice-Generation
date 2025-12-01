@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -97,8 +97,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
   // Load settings
   useEffect(() => {
+    let isMounted = true;
+
     const loadSettings = async () => {
       if (activeShop) {
+        if (!isMounted) return;
+
         setSettings({
           id: activeShop.id,
           userId: user?.uid || '',
@@ -122,33 +126,49 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           .eq('shop_id', activeShop.id)
           .single();
 
-        if (loyaltyData && loyaltyData.is_enabled) {
+        if (isMounted && loyaltyData && loyaltyData.is_enabled) {
           setLoyaltySettings(loyaltyData);
         }
 
-        setSettingsLoading(false);
-      } else {
+        if (isMounted) {
+          setSettingsLoading(false);
+        }
+      } else if (isMounted) {
         setSettingsLoading(false);
       }
     };
+
     loadSettings();
+
+    return () => {
+      isMounted = false;
+    };
   }, [activeShop, user]);
 
   // Fetch recent customers
   useEffect(() => {
+    let isMounted = true;
+
     const fetchCustomers = async () => {
       if (!activeShop?.id) return;
       try {
         const { getCustomers } = await import('@/services/customers');
         const customerData = await getCustomers(activeShop.id);
-        console.log('📊 Fetched customers:', customerData.length, 'customers');
-        console.log('📋 Sample customer:', customerData[0]);
-        setCustomers(customerData);
+        if (isMounted) {
+          console.log('📊 Fetched customers:', customerData.length, 'customers');
+          console.log('📋 Sample customer:', customerData[0]);
+          setCustomers(customerData);
+        }
       } catch (err) {
         console.error('❌ Error fetching customers:', err);
       }
     };
+
     fetchCustomers();
+
+    return () => {
+      isMounted = false;
+    };
   }, [activeShop?.id]);
 
   const form = useForm<InvoiceFormValues>({
@@ -223,27 +243,59 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     }
   }, [watchedValues.redeemPoints, watchedValues.pointsToRedeem, loyaltySettings]);
 
-  // Calculate totals
-  const calculateTotals = (items: any[], discount: number = 0) => {
-    const subtotal = items.reduce((acc, item) => {
+
+  // Calculate totals - Memoized to prevent recalculation on every render
+  const { subtotal, sgstAmount, cgstAmount, grandTotal } = useMemo(() => {
+    const items = watchedValues.items || [];
+    const discount = (watchedValues.discount || 0) + loyaltyDiscount;
+
+    const calculatedSubtotal = items.reduce((acc, item) => {
       return acc + ((Number(item.netWeight) * Number(item.rate)) + Number(item.making));
     }, 0);
 
-    const taxableAmount = Math.max(0, subtotal - discount);
+    const taxableAmount = Math.max(0, calculatedSubtotal - discount);
     const sgstRate = settings?.sgstRate || 1.5;
     const cgstRate = settings?.cgstRate || 1.5;
 
-    const sgstAmount = taxableAmount * (sgstRate / 100);
-    const cgstAmount = taxableAmount * (cgstRate / 100);
-    const grandTotal = taxableAmount + sgstAmount + cgstAmount;
+    const calculatedSgstAmount = taxableAmount * (sgstRate / 100);
+    const calculatedCgstAmount = taxableAmount * (cgstRate / 100);
+    const calculatedGrandTotal = taxableAmount + calculatedSgstAmount + calculatedCgstAmount;
 
-    return { subtotal, sgstAmount, cgstAmount, grandTotal };
-  };
+    return {
+      subtotal: calculatedSubtotal,
+      sgstAmount: calculatedSgstAmount,
+      cgstAmount: calculatedCgstAmount,
+      grandTotal: calculatedGrandTotal
+    };
+  }, [watchedValues.items, watchedValues.discount, loyaltyDiscount, settings?.sgstRate, settings?.cgstRate]);
 
-  const { subtotal, sgstAmount, cgstAmount, grandTotal } = calculateTotals(
-    watchedValues.items || [],
-    watchedValues.discount || 0
-  );
+  // Calculate Points to Earn
+  useEffect(() => {
+    if (!loyaltySettings || !loyaltySettings.is_enabled) {
+      setPointsToEarn(0);
+      return;
+    }
+
+    // Calculate eligible amount (subtract tax if needed, currently using grandTotal or subtotal?)
+    // Usually points are on taxable amount or grand total. Let's use grandTotal for now, or subtotal if tax excluded.
+    // Let's use subtotal to be safe/standard, or grandTotal. 
+    // Checking settings: "earn_on_discounted_items".
+    // For simplicity, let's use the final grandTotal (amount customer pays).
+
+    const amountForPoints = grandTotal;
+    let points = 0;
+
+    if (loyaltySettings.earning_type === 'flat' && loyaltySettings.flat_points_ratio) {
+      points = Math.floor(amountForPoints * loyaltySettings.flat_points_ratio);
+    } else if (loyaltySettings.earning_type === 'percentage' && loyaltySettings.percentage_back) {
+      // Assuming percentage_back is points per 100 units? Or % of value returned as points?
+      // Let's assume it calculates points directly proportional to value.
+      // If percentage_back is 1 (1%), and amount is 100, points = 1.
+      points = Math.floor(amountForPoints * (loyaltySettings.percentage_back / 100));
+    }
+
+    setPointsToEarn(points);
+  }, [grandTotal, loyaltySettings]);
 
   const onSubmit = async (data: InvoiceFormValues) => {
     if (!activeShop?.id || !user?.uid) {
@@ -257,18 +309,17 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
     startTransition(async () => {
       try {
-        const totals = calculateTotals(data.items, data.discount);
-
+        // Totals are already calculated in useMemo above
         console.log('Submitting invoice for shop:', activeShop.id);
         const payload = {
           shopId: activeShop.id,
           userId: user.uid,
           ...data,
           discount: data.discount || 0,
-          grandTotal: totals.grandTotal,
-          subtotal: totals.subtotal,
-          sgstAmount: totals.sgstAmount,
-          cgstAmount: totals.cgstAmount,
+          subtotal: subtotal,
+          sgstAmount: sgstAmount,
+          cgstAmount: cgstAmount,
+          grandTotal: grandTotal,
           sgst: settings?.sgstRate || 1.5,
           cgst: settings?.cgstRate || 1.5,
           items: data.items.map(item => ({
@@ -353,7 +404,17 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           {/* Left Column - Form */}
           <div className="space-y-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                  console.error('Form validation errors:', errors);
+                  toast({
+                    title: 'Validation Error',
+                    description: 'Please check the form for errors. Ensure all required fields are filled.',
+                    variant: 'destructive',
+                  });
+                })}
+                className="space-y-6"
+              >
                 {/* Customer Section - Premium Autocomplete */}
                 <Card className="border-2 relative z-20">
                   <CardHeader>
@@ -503,6 +564,13 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                           <p className="text-sm font-medium text-muted-foreground">Available Points</p>
                           <p className="text-2xl font-bold text-purple-700 dark:text-purple-400">{customerPoints}</p>
                         </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-muted-foreground">Points to Earn</p>
+                          <div className="flex items-center justify-end gap-1 text-emerald-600 dark:text-emerald-400">
+                            <Plus className="h-4 w-4" />
+                            <p className="text-xl font-bold">{pointsToEarn}</p>
+                          </div>
+                        </div>
                         <FormField
                           control={form.control}
                           name="redeemPoints"
@@ -544,6 +612,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                       value={field.value || ''}
                                       onChange={(e) => field.onChange(Number(e.target.value))}
                                       className="h-10"
+                                      aria-label="Points to redeem"
                                     />
                                     <div className="flex items-center px-3 rounded-md bg-muted text-sm font-medium min-w-[100px] justify-center">
                                       - ₹{loyaltyDiscount.toFixed(2)}
@@ -594,7 +663,6 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
               <Button
                 type="submit"
                 disabled={isPending}
-                onClick={form.handleSubmit(onSubmit)}
                 className="flex-1 h-12 text-lg font-semibold shadow-lg shadow-primary/20"
                 size="lg"
               >
@@ -685,7 +753,6 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           <Button
             type="submit"
             disabled={isPending}
-            onClick={form.handleSubmit(onSubmit)}
             className="flex-1 h-12 text-base font-semibold shadow-lg"
           >
             {isPending ? (

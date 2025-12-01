@@ -46,4 +46,4 @@ firebase-debug.log
 firestore-debug.log
 
 # Documentation files moved to docs folder
-docs/*.md
+docs/*.md.env.local

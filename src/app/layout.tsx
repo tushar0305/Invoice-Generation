@@ -102,7 +102,7 @@ export default function RootLayout({
         <SupabaseProvider>
           <QueryProvider>
             <AuthWrapper>
-              <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+              <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
                 {/* Global listeners: analytics + heatmap */}
                 <AppListeners />
                 {children}

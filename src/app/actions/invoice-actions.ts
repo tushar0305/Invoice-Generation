@@ -269,13 +269,35 @@ export async function createInvoiceAction(formData: {
 
         // ===== STEP 4: Update Customer Analytics =====
         if (customerId) {
-            await supabase
-                .from('customers')
-                .update({
-                    last_visit_at: new Date().toISOString(),
-                    total_spent: formData.grandTotal, // Note: This should be incrementing, not replacing
-                })
-                .eq('id', customerId);
+            try {
+                // Fetch current customer data to increment total_spent
+                const { data: currentCustomer, error: fetchError } = await supabase
+                    .from('customers')
+                    .select('total_spent')
+                    .eq('id', customerId)
+                    .single();
+
+                if (fetchError) {
+                    console.error('Error fetching customer data:', fetchError);
+                    // Continue with invoice creation even if customer update fails
+                } else {
+                    const { error: updateError } = await supabase
+                        .from('customers')
+                        .update({
+                            last_visit_at: new Date().toISOString(),
+                            total_spent: (currentCustomer?.total_spent || 0) + formData.grandTotal,
+                        })
+                        .eq('id', customerId);
+
+                    if (updateError) {
+                        console.error('Error updating customer analytics:', updateError);
+                        // Continue with invoice creation even if customer update fails
+                    }
+                }
+            } catch (err) {
+                console.error('Unexpected error updating customer:', err);
+                // Continue with invoice creation even if customer update fails
+            }
         }
 
         // Revalidate relevant paths

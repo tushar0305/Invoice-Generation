@@ -157,6 +157,8 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
 
     const PriceItem = ({ label, price, unit, trend, offset }: { label: string, price: number, unit: string, trend: string, offset: number }) => {
         const [showUp, setShowUp] = useState(offset === 0);
+        const [isAnimating, setIsAnimating] = useState(false);
+        const [prevPrice, setPrevPrice] = useState(price);
 
         useEffect(() => {
             // Each item has different timing, creating varied animations.
@@ -169,80 +171,140 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
             return () => clearInterval(interval);
         }, [offset]);
 
+        // Trigger animation when price changes
+        useEffect(() => {
+            if (price !== prevPrice) {
+                setIsAnimating(true);
+                const timer = setTimeout(() => setIsAnimating(false), 600);
+                setPrevPrice(price);
+                return () => clearTimeout(timer);
+            }
+        }, [price, prevPrice]);
+
+        // Gold vs Silver styling
+        const isGold = label.toLowerCase().includes('gold');
+        const gradientBg = isGold 
+            ? 'bg-gradient-to-br from-amber-50/90 via-yellow-50/80 to-orange-50/70 dark:from-amber-900/30 dark:via-yellow-900/20 dark:to-amber-800/20'
+            : 'bg-gradient-to-br from-slate-50/90 via-gray-50/80 to-zinc-50/70 dark:from-slate-800/30 dark:via-gray-800/20 dark:to-slate-700/20';
+        
+        const borderColor = isGold
+            ? 'border-amber-300/50 dark:border-amber-500/30'
+            : 'border-slate-300/50 dark:border-slate-500/30';
+        
+        const labelColor = isGold
+            ? 'text-amber-700 dark:text-amber-400'
+            : 'text-slate-600 dark:text-slate-400';
+
+        const priceGlow = isAnimating
+            ? isGold 
+                ? 'shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+                : 'shadow-[0_0_12px_rgba(148,163,184,0.25)]'
+            : '';
+
         return (
-            <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-1.5 md:py-2 bg-white/5 rounded-full border border-gold-500/10 backdrop-blur-sm shadow-sm hover:bg-gold-500/5 transition-colors flex-shrink-0">
+            <motion.div 
+                className={cn(
+                    "flex items-center px-3.5 md:px-4 py-2 md:py-2.5 rounded-[14px] border backdrop-blur-sm flex-shrink-0 transition-all duration-200",
+                    gradientBg,
+                    borderColor,
+                    priceGlow,
+                    "hover:scale-[1.01]"
+                )}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: offset * 0.08, duration: 0.3 }}
+            >
                 <div className="flex flex-col">
-                    <span className="text-[9px] md:text-[10px] uppercase tracking-wider text-gold-600 dark:text-gold-400 font-bold flex items-center gap-1">
+                    <span className={cn(
+                        "text-[9px] md:text-[10px] uppercase tracking-wider font-bold flex items-center gap-1.5",
+                        labelColor
+                    )}>
                         {label}
                         <motion.div
                             key={showUp ? 'up' : 'down'}
-                            initial={{ y: showUp ? 5 : -5, opacity: 0 }}
+                            initial={{ y: showUp ? 4 : -4, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: showUp ? -5 : 5, opacity: 0 }}
-                            transition={{ duration: 0.6, ease: 'easeOut' }}
+                            exit={{ y: showUp ? -4 : 4, opacity: 0 }}
+                            transition={{ duration: 0.4, ease: 'easeOut' }}
+                            className={cn(
+                                "flex items-center justify-center w-3.5 h-3.5 rounded-full",
+                                showUp ? "bg-emerald-100/80 dark:bg-emerald-900/30" : "bg-red-100/80 dark:bg-red-900/30"
+                            )}
                         >
                             {showUp ? (
-                                <TrendingUp className="h-3 w-3 text-green-500" />
+                                <TrendingUp className="h-2 w-2 text-emerald-600 dark:text-emerald-400" />
                             ) : (
-                                <TrendingDown className="h-3 w-3 text-red-500" />
+                                <TrendingDown className="h-2 w-2 text-red-500 dark:text-red-400" />
                             )}
                         </motion.div>
                     </span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-baseline gap-0.5 mt-0.5">
                         <AnimatePresence mode="popLayout">
                             <motion.span
                                 key={price}
-                                initial={{ y: 10, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                exit={{ y: -10, opacity: 0 }}
-                                className="font-mono font-bold text-xs md:text-sm text-foreground"
+                                initial={{ y: 8, opacity: 0 }}
+                                animate={{ 
+                                    y: 0, 
+                                    opacity: 1, 
+                                    color: isAnimating 
+                                        ? (price > prevPrice ? '#10b981' : '#ef4444') 
+                                        : 'inherit'
+                                }}
+                                exit={{ y: -8, opacity: 0 }}
+                                transition={{ duration: 0.3, ease: 'easeOut' }}
+                                className={cn(
+                                    "font-mono font-bold text-xs md:text-sm text-foreground tabular-nums"
+                                )}
                             >
                                 ₹{price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                                <span className="text-[10px] text-muted-foreground ml-0.5 font-sans font-medium">/{unit}</span>
                             </motion.span>
                         </AnimatePresence>
+                        <span className="text-[9px] md:text-[10px] text-muted-foreground font-sans font-medium opacity-60">/{unit}</span>
                     </div>
                 </div>
-            </div>
+            </motion.div>
         );
     };
 
     return (
-        <div className="w-full py-2">
-            <div className="flex items-center justify-between gap-2 md:gap-4 w-full">
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-[10px] md:text-xs font-bold text-gold-600 dark:text-gold-400 whitespace-nowrap tracking-widest flex-shrink-0">
-                        <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2 mr-1">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-500 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-full w-full bg-gold-500"></span>
+        <div className="w-full py-2.5 px-3 md:px-4 rounded-[18px] bg-gradient-to-r from-amber-50/40 via-white/60 to-amber-50/40 dark:from-amber-950/15 dark:via-slate-900/30 dark:to-amber-950/15 border border-amber-200/25 dark:border-amber-800/15 backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-2 md:gap-3 w-full">
+                <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap tracking-widest flex-shrink-0">
+                        <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-60"></span>
+                            <span className="relative inline-flex rounded-full h-full w-full bg-amber-500"></span>
                         </span>
-                        LIVE PRICE
+                        LIVE
                     </div>
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 rounded-full hover:bg-gold-500/10"
+                        className="h-6 w-6 rounded-full bg-white/50 dark:bg-slate-800/40 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 border border-amber-200/30 dark:border-amber-700/20"
                         onClick={handleRefresh}
                         disabled={isRefreshing}
                     >
-                        <RefreshCw className={cn("h-3 w-3 text-muted-foreground", isRefreshing && "animate-spin")} />
+                        <RefreshCw className={cn("h-3 w-3 text-amber-600 dark:text-amber-400", isRefreshing && "animate-spin")} />
                     </Button>
                     {lastUpdated && (
-                        <span className="text-[10px] text-muted-foreground hidden sm:inline-block" suppressHydrationWarning>
+                        <span className="text-[9px] text-muted-foreground/60 hidden sm:inline-block font-medium" suppressHydrationWarning>
                             {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                         </span>
                     )}
                 </div>
 
-                <div className="flex items-center gap-2 md:gap-3 overflow-x-auto scrollbar-hide md:overflow-visible md:ml-auto">
+                <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto scrollbar-hide md:overflow-visible md:ml-auto">
                     {prices.gold24k.value > 0 ? (
                         <>
-                            <PriceItem label="Gold 24K" price={prices.gold24k.value} unit="10g" trend={prices.gold24k.trend} offset={0} />
-                            <PriceItem label="Gold 22K" price={prices.gold22k.value} unit="10g" trend={prices.gold22k.trend} offset={1} />
-                            <PriceItem label="Silver" price={prices.silver.value} unit="1kg" trend={prices.silver.trend} offset={2} />
+                            <PriceItem label="24K" price={prices.gold24k.value} unit="10g" trend={prices.gold24k.trend} offset={0} />
+                            <PriceItem label="22K" price={prices.gold22k.value} unit="10g" trend={prices.gold22k.trend} offset={1} />
+                            <PriceItem label="Silver" price={prices.silver.value} unit="kg" trend={prices.silver.trend} offset={2} />
                         </>
                     ) : (
-                        <div className="text-xs text-muted-foreground animate-pulse">Fetching rates...</div>
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-[14px] bg-white/40 dark:bg-slate-800/30 border border-amber-200/20 dark:border-amber-800/15">
+                            <div className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                            <span className="text-[10px] text-muted-foreground font-medium">Fetching...</span>
+                        </div>
                     )}
                 </div>
             </div>

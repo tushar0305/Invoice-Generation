@@ -59,6 +59,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 import { FloatingNewInvoiceButton } from '@/components/floating-new-invoice';
+import { GlobalFAB } from '@/components/global-fab';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { CommandPalette } from '@/components/command-palette';
@@ -272,8 +273,8 @@ function ShopLayoutInner({
                                                     className={cn(
                                                         "w-full justify-start gap-3 px-4 py-3 rounded-xl transition-colors duration-200 group relative overflow-hidden focus-ring",
                                                         isActive
-                                                            ? "bg-primary text-primary-foreground font-semibold shadow-md"
-                                                            : "text-sidebar-foreground hover:bg-primary/10 hover:text-primary"
+                                                            ? "bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))] font-semibold shadow-md"
+                                                            : "text-sidebar-foreground hover:bg-[hsl(var(--sidebar-primary))]/10 hover:text-[hsl(var(--sidebar-primary))]"
                                                     )}
                                                 >
                                                     <Link
@@ -298,7 +299,7 @@ function ShopLayoutInner({
                     <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-3 border border-gray-100 dark:border-slate-700/50 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
                             <Avatar className="h-9 w-9 border-2 border-white dark:border-slate-700 shadow-sm shrink-0">
-                                <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-white font-bold text-xs">
+                                <AvatarFallback className="bg-gradient-to-br from-[hsl(var(--primary))]/80 to-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] font-bold text-xs">
                                     {getUserInitials()}
                                 </AvatarFallback>
                             </Avatar>
@@ -328,7 +329,7 @@ function ShopLayoutInner({
             </Sidebar>
 
             {/* Main Content */}
-            <SidebarInset className="flex-1 flex flex-col overflow-hidden bg-gray-50/50 dark:bg-slate-950">
+            <SidebarInset className="flex-1 flex flex-col overflow-hidden bg-gray-50/50 dark:bg-slate-950 !mt-0 !pt-0">
                 {/* Premium Header - Desktop Only */}
                 {!isMobile && (
                     <PremiumHeader
@@ -342,7 +343,7 @@ function ShopLayoutInner({
 
                 {/* Mobile Header */}
                 {isMobile && (
-                    <header className="flex h-12 items-center border-b border-border/40 bg-background/95 backdrop-blur-xl px-5 shadow-sm w-full">
+                    <header className="sticky top-0 z-20 flex h-12 items-center border-b border-border/40 bg-background/95 backdrop-blur-xl px-5 shadow-sm w-full mt-0 pt-0">
                         <SidebarTrigger className="-ml-2" />
                         <div className="flex-1 text-center">
                             <h1 className="font-semibold text-base tracking-tight text-gray-900 dark:text-gray-100">
@@ -390,7 +391,7 @@ function ShopLayoutInner({
             {isMobile && (
                 <>
                     <MobileBottomNav shopId={shopId} />
-                    <FloatingNewInvoiceButton shopId={shopId} />
+                    <GlobalFAB shopId={shopId} />
                 </>
             )}
         </div>

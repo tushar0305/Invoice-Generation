@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { evaluate } from 'mathjs';
 import { useToast } from '@/hooks/use-toast';
 
@@ -122,30 +122,30 @@ export default function CalculatorPage() {
   return (
     <MotionWrapper className="h-full flex flex-col">
       <Tabs defaultValue="calculator" className="flex-1 flex flex-col h-full">
-        {/* Custom Glassy Tabs - Minimal spacing */}
-        <div className="px-4 pt-2 pb-3 shrink-0">
-          <TabsList className="w-full h-auto p-1 rounded-2xl bg-background/40 backdrop-blur-xl border border-white/10 shadow-lg grid grid-cols-2 gap-2">
+        {/* Custom Glassy Tabs - Fixed alignment with safe area */}
+        <div className="px-4 pt-3 pb-3 shrink-0">
+          <TabsList className="w-full h-auto p-1.5 rounded-[18px] bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-amber-100/40 dark:border-amber-900/30 shadow-sm grid grid-cols-2 gap-1.5">
             <TabsTrigger
               value="calculator"
-              className="h-10 rounded-xl data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-lg data-[state=active]:shadow-primary/20 transition-all duration-300 backdrop-blur-sm border border-transparent data-[state=active]:border-primary/30 hover:bg-white/5"
+              className="h-11 rounded-[14px] data-[state=active]:bg-gradient-to-b data-[state=active]:from-amber-400 data-[state=active]:to-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-amber-500/20 transition-all duration-200 text-gray-600 dark:text-gray-400 hover:bg-amber-50/50 dark:hover:bg-amber-900/20 font-medium"
             >
               <CalcIcon className="h-4 w-4 mr-2" />
-              <span className="font-medium text-sm">Calculator</span>
+              <span className="text-sm">Calculator</span>
             </TabsTrigger>
             <TabsTrigger
               value="tools"
-              className="h-10 rounded-xl data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-lg data-[state=active]:shadow-primary/20 transition-all duration-300 backdrop-blur-sm border border-transparent data-[state=active]:border-primary/30 hover:bg-white/5"
+              className="h-11 rounded-[14px] data-[state=active]:bg-gradient-to-b data-[state=active]:from-amber-400 data-[state=active]:to-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-amber-500/20 transition-all duration-200 text-gray-600 dark:text-gray-400 hover:bg-amber-50/50 dark:hover:bg-amber-900/20 font-medium"
             >
               <Coins className="h-4 w-4 mr-2" />
-              <span className="font-medium text-sm">Gold Tools</span>
+              <span className="text-sm">Gold Tools</span>
             </TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="calculator" className="flex-1 flex flex-col mt-0 h-full overflow-hidden">
           {/* Display Area - Reduced padding */}
-          <div className="flex-1 flex flex-col justify-end items-end px-4 pt-2 pb-3 space-y-1 bg-gradient-to-b from-transparent to-background/50 min-h-0">
-            <div className="text-muted-foreground text-xs h-12 overflow-y-auto w-full text-right no-scrollbar opacity-60">
+          <div className="flex-1 flex flex-col justify-end items-end px-4 pt-2 pb-4 space-y-1 bg-gradient-to-b from-transparent to-amber-50/20 dark:to-amber-950/10 min-h-0">
+            <div className="text-muted-foreground text-xs h-12 overflow-y-auto w-full text-right no-scrollbar opacity-50">
               {history.map((h, i) => (
                 <div key={i} className="mb-1">{h}</div>
               ))}
@@ -156,18 +156,33 @@ export default function CalculatorPage() {
             </div>
           </div>
 
-          {/* Keypad - Optimized spacing */}
-          <div className="grid grid-cols-4 gap-2 p-3 bg-background/40 backdrop-blur-lg rounded-t-3xl border-t border-white/10 shadow-2xl flex-shrink-0">
-            {buttons.map((btn, i) => (
-              <Button
-                key={i}
-                variant={btn.variant as any}
-                onClick={btn.onClick}
-                className={`h-14 rounded-xl text-xl shadow-sm active:scale-95 transition-transform ${btn.className || ''}`}
-              >
-                {btn.icon ? <btn.icon className="h-5 w-5" /> : btn.label}
-              </Button>
-            ))}
+          {/* Keypad - Improved contrast and = button styling */}
+          <div className="grid grid-cols-4 gap-2.5 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-t-[24px] border-t border-amber-100/30 dark:border-amber-900/20 shadow-lg flex-shrink-0">
+            {buttons.map((btn, i) => {
+              const isEquals = btn.label === '=';
+              const isOperator = ['÷', '×', '-', '+'].includes(btn.label);
+              const isClear = btn.label === 'C';
+              
+              return (
+                <Button
+                  key={i}
+                  variant={btn.variant as any}
+                  onClick={btn.onClick}
+                  className={cn(
+                    "h-14 rounded-[14px] text-xl transition-all duration-150 active:scale-95",
+                    // Default number keys - improved contrast
+                    !isEquals && !isOperator && !isClear && "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700",
+                    // Operator keys
+                    isOperator && "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40",
+                    // Equals key - prominent with shadow
+                    isEquals && "bg-gradient-to-b from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/25 hover:from-amber-500 hover:to-amber-600",
+                    btn.className || ''
+                  )}
+                >
+                  {btn.icon ? <btn.icon className="h-5 w-5" /> : btn.label}
+                </Button>
+              );
+            })}
           </div>
         </TabsContent>
 

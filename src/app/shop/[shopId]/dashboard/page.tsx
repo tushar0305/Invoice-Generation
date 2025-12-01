@@ -17,6 +17,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/supabase/server';
 import { SmartHero } from '@/components/dashboard/smart-hero';
+import { MetricsStrip } from '@/components/dashboard/metrics-strip';
+import { DesktopQuickActions } from '@/components/dashboard/desktop-quick-actions';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { startOfMonth, endOfMonth, startOfWeek, startOfDay, subMonths } from 'date-fns';
 
@@ -141,8 +143,13 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   // If we have 0 recent invoices, AOV is 0.
 
   return (
-    <div className="space-y-6 md:space-y-8 pb-24 md:pb-8 w-full">
-      {/* Smart Hero Section */}
+    <div className="flex flex-col gap-4 lg:gap-5 p-1 md:p-6 lg:pt-1 lg:px-8 xl:px-1 2xl:px-16">
+      {/* Desktop Quick Actions - Top Right */}
+      <div className="hidden lg:flex justify-end mb-2">
+        <DesktopQuickActions shopId={shopId} />
+      </div>
+
+      {/* Smart Hero Section - Compact on mobile, expanded on desktop */}
       <SmartHero
         invoices={stats.recentInvoices}
         revenueMoM={stats.revenueMoM}
@@ -151,15 +158,24 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
         totalTodayRevenue={stats.totalPaidToday}
       />
 
+      {/* Horizontal Scrollable Metrics Strip */}
+      <MetricsStrip
+        invoices={stats.recentInvoices}
+        totalRevenue={stats.totalPaidThisMonth}
+        totalWeekRevenue={stats.totalPaidThisWeek}
+        totalTodayRevenue={stats.totalPaidToday}
+        totalCustomers={totalUniqueCustomers}
+      />
+
       {/* Gold & Silver Ticker */}
       <GoldSilverTicker initialData={marketRates} />
 
-      {/* Founder Widgets Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Founder Widgets Grid - Two columns on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5">
         <BusinessHealthWidget
           totalRevenue={stats.totalPaidThisMonth}
-          totalOrders={recentCount > 0 ? Math.round(stats.totalPaidThisMonth / (recentTotal / recentCount)) : 0} // Estimate total orders based on recent AOV
-          previousRevenue={stats.totalPaidThisMonth / (1 + (stats.revenueMoM / 100))} // Reverse calculate previous revenue
+          totalOrders={recentCount > 0 ? Math.round(stats.totalPaidThisMonth / (recentTotal / recentCount)) : 0}
+          previousRevenue={stats.totalPaidThisMonth / (1 + (stats.revenueMoM / 100))}
         />
         <CustomerInsightsWidget
           newCustomers={newCustomers}
@@ -167,51 +183,61 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
           topCustomer={topCustomer}
         />
         <QuickMarketingWidget
-          shopName="My Jewellery Shop" // Ideally fetch this from shop details
+          shopName="My Jewellery Shop"
           customerCount={totalUniqueCustomers}
         />
       </div>
 
-      {/* Quick Actions Grid */}
-      <MotionWrapper className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      {/* Quick Actions Grid - Mobile only (desktop uses top-right dropdown) */}
+      <MotionWrapper className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:hidden">
         {[
-          { label: 'New Invoice', icon: Plus, href: `/shop/${shopId}/invoices/new`, color: 'text-gold-600 dark:text-gold-400' },
+          { label: 'New Invoice', icon: Plus, href: `/shop/${shopId}/invoices/new`, color: 'text-amber-600 dark:text-amber-400' },
           { label: 'View Customers', icon: Users, href: `/shop/${shopId}/customers`, color: 'text-blue-500 dark:text-blue-400' },
           { label: 'Add Stock', icon: PackagePlus, href: `/shop/${shopId}/stock`, color: 'text-emerald-500 dark:text-emerald-400' },
           { label: 'Sales Insights', icon: TrendingUp, href: `/shop/${shopId}/insights`, color: 'text-purple-500 dark:text-purple-400' },
         ].map((action, i) => (
-          <Link key={i} href={action.href} className="focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 rounded-xl stagger-item">
-            <Card className="glass-card card-lift hover:bg-gold-500/5 cursor-pointer h-full border-white/10 hover:border-gold-500/30 group min-h-[120px]">
-              <CardContent className="p-3 md:p-4 flex flex-col items-center justify-center gap-2 md:gap-3 text-center h-full min-h-[110px]">
-                <div className={cn("p-3 rounded-full bg-white/5 group-hover:scale-110 transition-all duration-300 border border-white/5 group-hover:border-gold-500/20 group-hover:shadow-md min-w-[44px] min-h-[44px] flex items-center justify-center", action.color)}>
+          <Link key={i} href={action.href} className="focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 radius-premium stagger-item">
+            <Card className="premium-card cursor-pointer h-full group min-h-[120px]">
+              <CardContent className="card-padding-sm flex flex-col items-center justify-center gap-2 md:gap-3 text-center h-full min-h-[110px]">
+                <div className={cn(
+                  "p-3 rounded-full",
+                  "bg-gradient-to-br from-white/80 to-amber-50/40 dark:from-gray-800/80 dark:to-amber-900/20",
+                  "group-hover:scale-110 transition-all duration-300",
+                  "border border-amber-100/50 dark:border-amber-800/30",
+                  "group-hover:border-amber-300/60 dark:group-hover:border-amber-700/50",
+                  "group-hover:shadow-lg group-hover:shadow-amber-500/10",
+                  "min-w-[44px] min-h-[44px] flex items-center justify-center",
+                  action.color
+                )}>
                   <action.icon className="h-5 w-5 md:h-6 md:w-6" />
                 </div>
-                <span className="font-bold text-xs md:text-sm font-heading tracking-wide">{action.label}</span>
+                <span className="font-bold text-xs md:text-sm font-heading tracking-wide text-gray-700 dark:text-gray-200 group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">{action.label}</span>
               </CardContent>
             </Card>
           </Link>
         ))}
       </MotionWrapper>
 
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+      {/* Desktop: Two-column layout for activity cards / Mobile: Stacked */}
+      <div className="grid gap-4 lg:gap-5 grid-cols-1 lg:grid-cols-2">
         {/* Recent Invoices */}
-        <Card className="glass-panel card-lift border-gold-500/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-gold-500/5">
+        <Card className="border-2 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-900">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b-2 border-gray-200 dark:border-gray-700">
             <CardTitle className="text-lg font-heading font-bold text-foreground">Recent Activity</CardTitle>
-            <Button variant="ghost" size="sm" className="text-xs h-8 text-muted-foreground hover:text-gold-500 transition-colors" asChild>
+            <Button variant="ghost" size="sm" className="text-xs h-8 text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 transition-colors" asChild>
               <Link href={`/shop/${shopId}/invoices`}>
                 View All <ArrowRight className="ml-1 h-3 w-3" />
               </Link>
             </Button>
           </CardHeader>
-          <CardContent className="pt-4">
+          <CardContent className="pt-4 card-padding-sm">
             {stats.recentInvoices.length > 0 ? (
               <div className="space-y-2">
                 {stats.recentInvoices.map((invoice, index) => (
                   <Link
                     key={invoice.id}
                     href={`/shop/${shopId}/invoices/view?id=${invoice.id}`}
-                    className="flex items-center justify-between group cursor-pointer p-3 rounded-lg hover:bg-gold-500/5 transition-all duration-200 border border-transparent hover:border-gold-500/10 stagger-item"
+                    className="flex items-center justify-between group cursor-pointer p-3 rounded-xl hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-all duration-200 border border-transparent hover:border-amber-200/50 dark:hover:border-amber-800/30 stagger-item"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-center gap-4">
@@ -224,7 +250,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
                         <FileText className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="font-semibold text-sm text-foreground group-hover:text-gold-600 transition-colors">{invoice.customer_name}</p>
+                        <p className="font-semibold text-sm text-foreground group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">{invoice.customer_name}</p>
                         <p className="text-xs text-muted-foreground">{invoice.invoice_number} • {new Date(invoice.invoice_date).toLocaleDateString()}</p>
                       </div>
                     </div>
@@ -241,13 +267,13 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="mx-auto w-16 h-16 rounded-full bg-gold-500/10 flex items-center justify-center mb-4">
-                  <FileText className="h-8 w-8 text-gold-500/50" />
+              <div className="text-center py-8">
+                <div className="mx-auto w-14 h-14 rounded-full bg-amber-100/50 dark:bg-amber-900/20 flex items-center justify-center mb-3 border border-amber-200/50 dark:border-amber-800/30">
+                  <FileText className="h-7 w-7 text-amber-500/60" />
                 </div>
                 <p className="text-sm font-medium text-foreground mb-1">No invoices yet</p>
-                <p className="text-xs text-muted-foreground mb-4">Create your first invoice to get started</p>
-                <Button asChild size="sm" variant="outline" className="gap-2">
+                <p className="text-xs text-muted-foreground mb-3">Create your first invoice to get started</p>
+                <Button asChild size="sm" variant="outline" className="gap-2 border-amber-200/60 hover:border-amber-300 hover:bg-amber-50/50 dark:border-amber-800/40 dark:hover:border-amber-700 dark:hover:bg-amber-900/20">
                   <Link href={`/shop/${shopId}/invoices/new`}>
                     <Plus className="h-4 w-4" />
                     Create Invoice
@@ -259,8 +285,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
         </Card>
 
         {/* Pending Actions */}
-        <Card className="glass-panel card-lift border-gold-500/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-gold-500/5">
+        <Card className="border-2 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-900">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b-2 border-gray-200 dark:border-gray-700">
             <CardTitle className="text-lg font-heading font-bold text-foreground">Pending Actions</CardTitle>
             <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
               {stats.dueInvoices.length}
@@ -292,8 +318,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Eye className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <div className="text-center py-6 text-muted-foreground">
+                <Eye className="h-7 w-7 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No pending invoices</p>
               </div>
             )}

@@ -156,6 +156,15 @@ export function PremiumCustomerAutocomplete({
                             setIsOpen(true);
                         }}
                         onFocus={() => setIsOpen(true)}
+                        onBlur={() => {
+                            // Small timeout to allow click events on dropdown items to fire first
+                            setTimeout(() => {
+                                if (search.trim() && !value.name) {
+                                    onChange({ name: search.trim() });
+                                    setIsOpen(false);
+                                }
+                            }, 200);
+                        }}
                         disabled={disabled}
                         className="pl-10 h-12 text-base bg-background border-2 focus:border-primary transition-colors"
                         autoComplete="off"

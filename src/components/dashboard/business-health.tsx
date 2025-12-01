@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Activity, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface BusinessHealthProps {
@@ -26,70 +26,124 @@ export function BusinessHealthWidget({ totalRevenue, totalOrders, previousRevenu
         : 100;
 
     return (
-        <Card className="glass-panel border-gold-500/10 h-full">
-            <CardHeader className="pb-2 border-b border-gold-500/5">
-                <CardTitle className="text-lg font-heading font-bold text-foreground flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-gold-500" />
+        <Card className="h-full min-h-[400px] overflow-hidden relative flex flex-col border-2 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-900">
+            {/* Subtle gradient overlay - muted tones */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/8 via-transparent to-amber-500/8 pointer-events-none" />
+
+            <CardHeader className="pb-3 border-b-2 border-gray-200 dark:border-gray-700 relative">
+                <CardTitle className="text-lg font-heading font-bold text-[#1D1F23] dark:text-white flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-gradient-to-br from-[#2AA198]/15 to-[#2AA198]/5 dark:from-[#2AA198]/20 dark:to-[#2AA198]/10 border border-[#2AA198]/20 dark:border-[#2AA198]/30">
+                        <Activity className="w-4 h-4 text-[#2AA198] dark:text-[#2AA198]" />
+                    </div>
                     Business Health
                 </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 space-y-6">
+            <CardContent className="pt-5 space-y-5 relative">
                 {/* Profit Section */}
-                <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground font-medium">Estimated Net Profit</p>
-                    <div className="flex items-baseline gap-2">
-                        <h3 className="text-3xl font-bold text-foreground font-heading">
-                            {formatCurrency(estimatedProfit)}
-                        </h3>
-                        <span className="text-xs font-medium text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                <div className="space-y-3 p-4 rounded-2xl bg-gradient-to-br from-[#2AA198]/8 to-white dark:from-[#2AA198]/15 dark:to-slate-900/50 border border-[#2AA198]/20 dark:border-[#2AA198]/30">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground font-medium">Estimated Net Profit</p>
+                        <span className="text-[10px] font-bold text-[#2AA198] bg-[#2AA198]/10 dark:bg-[#2AA198]/20 px-2.5 py-1 rounded-full border border-[#2AA198]/20 dark:border-[#2AA198]/30 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
                             ~20% Margin
                         </span>
                     </div>
-                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <motion.h3
+                        className="text-3xl font-bold text-[#1D1F23] dark:text-white font-heading tabular-nums"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                    >
+                        {formatCurrency(estimatedProfit)}
+                    </motion.h3>
+                    <div className="w-full h-2.5 bg-[#2AA198]/15 dark:bg-[#2AA198]/20 rounded-full overflow-hidden">
                         <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: '20%' }}
-                            transition={{ duration: 1, delay: 0.5 }}
-                            className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600"
+                            transition={{ duration: 1.2, delay: 0.5, ease: "easeOut" }}
+                            className="h-full bg-gradient-to-r from-[#2AA198] via-[#2AA198]/90 to-[#2AA198]/80 rounded-full shadow-sm shadow-[#2AA198]/30"
                         />
                     </div>
                 </div>
 
                 {/* Grid Metrics */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 rounded-xl bg-gold-500/5 border border-gold-500/10 space-y-1">
-                        <div className="flex items-center gap-2 text-gold-600 dark:text-gold-400">
-                            <ShoppingBag className="w-4 h-4" />
-                            <span className="text-xs font-bold uppercase tracking-wider">Orders</span>
+                <div className="grid grid-cols-2 gap-3">
+                    <motion.div
+                        className="p-4 rounded-xl bg-gradient-to-br from-[#E8D6B8]/20 to-white dark:from-[#A5833A]/15 dark:to-slate-900/50 border border-[#CBB27A]/30 dark:border-[#A5833A]/30 space-y-2"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.4, delay: 0.3 }}
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[#A5833A] dark:text-[#CBB27A]">
+                                <ShoppingBag className="w-4 h-4" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Orders</span>
+                            </div>
+                            {/* Desktop mini sparkline */}
+                            <div className="hidden lg:flex items-end gap-0.5 h-4">
+                                {[35, 50, 40, 65, 55, 80, 70].map((h, i) => (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ height: 0 }}
+                                        animate={{ height: `${h}%` }}
+                                        transition={{ delay: 0.5 + i * 0.05, duration: 0.25 }}
+                                        className={`w-1 rounded-full ${i === 6 ? 'bg-[#A5833A]' : 'bg-[#CBB27A]/50'}`}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                        <p className="text-xl font-bold text-foreground">{totalOrders}</p>
-                    </div>
+                        <p className="text-2xl font-bold text-[#1D1F23] dark:text-white tabular-nums">{totalOrders}</p>
+                    </motion.div>
 
-                    <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 space-y-1">
-                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                            <DollarSign className="w-4 h-4" />
-                            <span className="text-xs font-bold uppercase tracking-wider">Avg. Order</span>
+                    <motion.div
+                        className="p-4 rounded-xl bg-gradient-to-br from-[#A08CD5]/10 to-white dark:from-[#A08CD5]/15 dark:to-slate-900/50 border border-[#A08CD5]/30 dark:border-[#A08CD5]/30 space-y-2"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.4, delay: 0.4 }}
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[#A08CD5]">
+                                <DollarSign className="w-4 h-4" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Avg. Order</span>
+                            </div>
+                            {/* Desktop mini donut */}
+                            <div className="hidden lg:block w-6 h-6 rounded-full bg-gradient-to-r from-[#A08CD5] to-[#A08CD5]/80 relative">
+                                <div className="absolute inset-1 rounded-full bg-gradient-to-br from-[#A08CD5]/10 to-white dark:from-[#A08CD5]/20 dark:to-slate-900" />
+                            </div>
                         </div>
-                        <p className="text-xl font-bold text-foreground">{formatCurrency(aov)}</p>
-                    </div>
+                        <p className="text-2xl font-bold text-[#1D1F23] dark:text-white tabular-nums">{formatCurrency(aov)}</p>
+                    </motion.div>
                 </div>
 
                 {/* Insight */}
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-                    {isPositive ? (
-                        <TrendingUp className="w-5 h-5 text-emerald-500 mt-0.5" />
-                    ) : (
-                        <TrendingDown className="w-5 h-5 text-red-500 mt-0.5" />
-                    )}
+                <motion.div
+                    className={`flex items-start gap-3 p-4 rounded-xl border ${isPositive
+                        ? 'bg-gradient-to-r from-[#2AA198]/8 to-white dark:from-[#2AA198]/15 dark:to-slate-900/50 border-[#2AA198]/20 dark:border-[#2AA198]/30'
+                        : 'bg-gradient-to-r from-[#D97A5F]/10 to-white dark:from-[#D97A5F]/15 dark:to-slate-900/50 border-[#D97A5F]/30 dark:border-[#D97A5F]/30'
+                        }`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.5 }}
+                >
+                    <div className={`p-2 rounded-lg ${isPositive
+                        ? 'bg-[#2AA198]/15 dark:bg-[#2AA198]/25'
+                        : 'bg-[#D97A5F]/15 dark:bg-[#D97A5F]/25'
+                        }`}>
+                        {isPositive ? (
+                            <TrendingUp className="w-4 h-4 text-[#2AA198]" />
+                        ) : (
+                            <TrendingDown className="w-4 h-4 text-[#D97A5F]" />
+                        )}
+                    </div>
                     <div>
-                        <p className="text-sm font-medium text-foreground">
-                            {isPositive ? "Growth on track" : "Revenue dip"}
+                        <p className="text-sm font-semibold text-[#1D1F23] dark:text-white">
+                            {isPositive ? "Growth on track 📈" : "Revenue dip 📉"}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                            Revenue is {isPositive ? "up" : "down"} by {Math.abs(trendPercentage).toFixed(1)}% compared to last period.
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Revenue is {isPositive ? "up" : "down"} by <span className={`font-semibold ${isPositive ? 'text-[#2AA198]' : 'text-[#D97A5F]'}`}>{Math.abs(trendPercentage).toFixed(1)}%</span> compared to last period.
                         </p>
                     </div>
-                </div>
+                </motion.div>
             </CardContent>
         </Card>
     );

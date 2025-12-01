@@ -311,12 +311,12 @@ function StockCard({ item, onEdit, onDelete, canManage }: { item: StockItem; onE
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className="p-4">
-                    <div className="absolute right-0 top-0 h-16 w-16 -translate-y-8 translate-x-8 rounded-full bg-[#D4AF37]/10 blur-xl"></div>
+                    <div className="absolute right-0 top-0 h-16 w-16 -translate-y-8 translate-x-8 rounded-full bg-[hsl(var(--primary))]/10 blur-xl"></div>
 
                     <div className="flex justify-between items-start mb-3">
                         <div>
                             <div className="flex items-center gap-2 mb-0.5">
-                                <div className="text-xs text-[#D4AF37] font-medium">{item.purity}</div>
+                                <div className="text-xs text-[hsl(var(--primary))] font-medium">{item.purity}</div>
                                 {item.quantity === 0 && <div className="text-[10px] bg-destructive/20 text-destructive px-1.5 rounded">Out</div>}
                                 {item.quantity > 0 && item.quantity < 3 && <div className="text-[10px] bg-amber-500/20 text-amber-500 px-1.5 rounded">Low</div>}
                             </div>
@@ -325,7 +325,7 @@ function StockCard({ item, onEdit, onDelete, canManage }: { item: StockItem; onE
                         </div>
                         <div className="text-right">
                             <div className="text-xs text-muted-foreground mb-0.5">Base Price</div>
-                            <div className="font-serif text-xl font-bold text-[#D4AF37]">₹{item.basePrice.toFixed(0)}</div>
+                            <div className="font-serif text-xl font-bold text-[hsl(var(--primary))]">₹{item.basePrice.toFixed(0)}</div>
                         </div>
                     </div>
 

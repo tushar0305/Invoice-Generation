@@ -258,12 +258,31 @@ export default function LoginPage() {
         toast({ title: 'Account created!', description: 'Redirecting to shop setup...' });
         router.push('/onboarding/shop-setup');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        // Sign in
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
           email: data.email,
           password: data.password,
         });
         if (error) throw error;
-        toast({ title: 'Welcome back!', description: 'Redirecting...' });
+
+        // Check if user has shops to route correctly and prevent redirect flash
+        if (authData.user) {
+          const { data: roles } = await supabase
+            .from('user_shop_roles')
+            .select('shop_id')
+            .eq('user_id', authData.user.id)
+            .limit(1);
+
+          if (roles && roles.length > 0) {
+            // User has shops - redirect to admin dashboard
+            toast({ title: 'Welcome back!', description: 'Loading your dashboard...' });
+            router.push('/admin');
+          } else {
+            // No shops - redirect to setup
+            toast({ title: 'Welcome!', description: 'Let\'s set up your first shop...' });
+            router.push('/onboarding/shop-setup');
+          }
+        }
       }
     } catch (error: any) {
       toast({

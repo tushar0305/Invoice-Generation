@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { Invoice } from '@/lib/definitions';
 import { subDays, startOfDay, isWithinInterval, format } from 'date-fns';
+import { SmartAIInsights } from '@/components/smart-ai-insights';
 
 const container = {
     hidden: { opacity: 0 },
@@ -251,6 +252,15 @@ export function InsightsClient({ invoices, invoiceItems }: InsightsClientProps) 
     return (
         <LazyMotion features={domAnimation}>
             <div className="p-4 md:p-6 space-y-6 min-h-screen pb-24 md:pb-6">
+                {/* Smart AI Insights - Premium glassmorphism component */}
+                <SmartAIInsights 
+                    className="mb-2"
+                    onAskQuestion={(question) => {
+                        console.log('[AI Insights] User asked:', question);
+                        // TODO: Connect to actual AI backend
+                    }}
+                />
+
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
