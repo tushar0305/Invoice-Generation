@@ -52,7 +52,10 @@ const invoiceSchema = z.object({
   customerState: z.string().optional(),
   customerPincode: z.string().optional(),
   customerPhone: z.string().optional(),
-  customerEmail: z.string().email().optional().or(z.literal('')),
+  customerEmail: z.string().optional().refine(
+    (val) => !val || val === '' || z.string().email().safeParse(val).success,
+    { message: 'Invalid email format' }
+  ),
   invoiceDate: z.date(),
   items: z.array(z.object({
     id: z.string(),
@@ -298,7 +301,14 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   }, [grandTotal, loyaltySettings]);
 
   const onSubmit = async (data: InvoiceFormValues) => {
+    console.log('🚀 Form submitted with data:', {
+      customerName: data.customerName,
+      itemsCount: data.items?.length,
+      invoiceDate: data.invoiceDate
+    });
+
     if (!activeShop?.id || !user?.uid) {
+      console.error('❌ Missing activeShop or user:', { activeShop: activeShop?.id, user: user?.uid });
       toast({
         title: 'Error',
         description: 'Shop or user information missing',
@@ -309,13 +319,25 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
     startTransition(async () => {
       try {
-        // Totals are already calculated in useMemo above
-        console.log('Submitting invoice for shop:', activeShop.id);
+        console.log('✅ Starting server action...');
+
+        // Convert Date to ISO string for server action serialization
+        const invoiceDateISO = data.invoiceDate instanceof Date
+          ? data.invoiceDate.toISOString()
+          : new Date(data.invoiceDate).toISOString();
+
         const payload = {
           shopId: activeShop.id,
           userId: user.uid,
-          ...data,
+          customerName: data.customerName,
+          customerAddress: data.customerAddress,
+          customerState: data.customerState,
+          customerPincode: data.customerPincode,
+          customerPhone: data.customerPhone,
+          customerEmail: data.customerEmail,
+          invoiceDate: new Date(invoiceDateISO), // Convert back to Date for server
           discount: data.discount || 0,
+          status: data.status,
           subtotal: subtotal,
           sgstAmount: sgstAmount,
           cgstAmount: cgstAmount,
@@ -324,18 +346,30 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           cgst: settings?.cgstRate || 1.5,
           items: data.items.map(item => ({
             ...item,
-            purity: item.purity || '22K', // Default purity if missing
+            purity: item.purity || '22K',
           })),
         };
 
+        console.log('📦 Payload prepared:', {
+          shopId: payload.shopId,
+          itemsCount: payload.items.length,
+          grandTotal: payload.grandTotal,
+          invoiceDate: payload.invoiceDate
+        });
+
         let result;
         if (invoice) {
+          console.log('🔄 Updating existing invoice:', invoice.id);
           result = await updateInvoiceAction(invoice.id, activeShop.id, payload);
         } else {
+          console.log('➕ Creating new invoice...');
           result = await createInvoiceAction(payload);
         }
 
+        console.log('📬 Server action result:', result);
+
         if (result.success) {
+          console.log('✅ Invoice saved successfully!');
           // Show celebration for new invoice creation
           if (!invoice) {
             setShowCelebration(true);
@@ -351,9 +385,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             router.push(`/shop/${activeShop.id}/invoices`);
           }
         } else {
+          console.error('❌ Server action returned error:', result.error);
           throw new Error(result.error);
         }
       } catch (error: any) {
+        console.error('💥 Error in onSubmit:', error);
+        console.error('Error stack:', error.stack);
         toast({
           title: 'Error',
           description: error.message || 'Failed to save invoice',
@@ -405,11 +442,19 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           <div className="space-y-6">
             <Form {...form}>
               <form
+                id="invoice-form"
                 onSubmit={form.handleSubmit(onSubmit, (errors) => {
-                  console.error('Form validation errors:', errors);
+                  console.error('❌ FORM VALIDATION FAILED!');
+                  console.error('Errors object:', errors);
+                  console.error('Form state:', form.formState);
+                  console.error('Current values:', form.getValues());
+                  console.error('Items count:', form.getValues('items')?.length || 0);
+                  console.error('Is form valid?', form.formState.isValid);
+                  console.error('Field errors:', form.formState.errors);
+
                   toast({
                     title: 'Validation Error',
-                    description: 'Please check the form for errors. Ensure all required fields are filled.',
+                    description: `Please check the form. Items: ${form.getValues('items')?.length || 0}. Check console for details.`,
                     variant: 'destructive',
                   });
                 })}
@@ -630,6 +675,60 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                 )}
 
 
+                {/* Mobile Sticky Footer with Summary & Actions - INSIDE FORM */}
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t shadow-2xl z-50">
+                  {/* Compact Summary */}
+                  <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal:</span>
+                      <span className="font-medium">{formatCurrency(subtotal)}</span>
+                    </div>
+                    {(watchedValues.discount || loyaltyDiscount > 0) && (
+                      <div className="flex items-center justify-between text-sm mt-1">
+                        <span className="text-muted-foreground">Discount:</span>
+                        <span className="font-medium text-green-600">-{formatCurrency((watchedValues.discount || 0) + loyaltyDiscount)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-sm mt-1">
+                      <span className="text-muted-foreground">Tax:</span>
+                      <span className="font-medium">+{formatCurrency(sgstAmount + cgstAmount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between font-bold text-base mt-2 pt-2 border-t">
+                      <span>Grand Total:</span>
+                      <span className="text-primary">{formatCurrency(grandTotal)}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="px-4 py-3 flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => router.back()}
+                      className="flex-1 h-12"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isPending}
+                      className="flex-1 h-12 text-base font-semibold shadow-lg"
+                    >
+                      {isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          {invoice ? 'Update' : 'Create'}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
               </form>
             </Form>
           </div>
@@ -650,7 +749,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             />
 
             {/* Action Buttons - Desktop */}
-            <div className="flex gap-3">
+              <div className="flex gap-3">
               <Button
                 type="button"
                 variant="outline"
@@ -662,6 +761,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
               </Button>
               <Button
                 type="submit"
+                form="invoice-form"
                 disabled={isPending}
                 className="flex-1 h-12 text-lg font-semibold shadow-lg shadow-primary/20"
                 size="lg"
@@ -716,59 +816,6 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         </div>
       </div>
 
-      {/* Mobile Sticky Footer with Summary & Actions */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t shadow-2xl z-50">
-        {/* Compact Summary */}
-        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal:</span>
-            <span className="font-medium">{formatCurrency(subtotal)}</span>
-          </div>
-          {(watchedValues.discount || loyaltyDiscount > 0) && (
-            <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-muted-foreground">Discount:</span>
-              <span className="font-medium text-green-600">-{formatCurrency((watchedValues.discount || 0) + loyaltyDiscount)}</span>
-            </div>
-          )}
-          <div className="flex items-center justify-between text-sm mt-1">
-            <span className="text-muted-foreground">Tax:</span>
-            <span className="font-medium">+{formatCurrency(sgstAmount + cgstAmount)}</span>
-          </div>
-          <div className="flex items-center justify-between font-bold text-base mt-2 pt-2 border-t">
-            <span>Grand Total:</span>
-            <span className="text-primary">{formatCurrency(grandTotal)}</span>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="px-4 py-3 flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.back()}
-            className="flex-1 h-12"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isPending}
-            className="flex-1 h-12 text-base font-semibold shadow-lg"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                {invoice ? 'Update' : 'Create'}
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
 
       {/* Mobile Preview Modal */}
       {showPreview && (
