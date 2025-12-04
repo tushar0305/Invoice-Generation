@@ -214,7 +214,7 @@ export function StaffClient({
     }
 
     return (
-        <MotionWrapper className="space-y-6 p-6 pb-24 md:pb-6">
+        <MotionWrapper className="space-y-6 p-6 pb-24 md:pb-6 max-w-[1800px] mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight font-heading text-foreground">Staff Management</h1>
@@ -270,7 +270,7 @@ export function StaffClient({
                     <h3 className="text-lg font-semibold text-muted-foreground">Pending Invitations</h3>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {initialInvitations.map((invite) => (
-                            <Card key={invite.id} className="glass-card border-l-4 border-l-primary">
+                            <Card key={invite.id} className="border border-border shadow-sm">
                                 <CardContent className="p-4 flex justify-between items-center">
                                     <div>
                                         <div className="font-medium">{invite.email}</div>

@@ -481,9 +481,9 @@ export function InvoicesClient({
     };
 
     return (
-        <MotionWrapper className="space-y-4 pb-24">
-            {/* Quick Filters */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+        <MotionWrapper className="space-y-4 pb-24 pt-1 px-2 sm:px-4">
+            {/* Quick Filters - Enhanced */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
                 {['all', 'paid', 'due', 'overdue'].map((status) => (
                     <Button
                         key={status}
@@ -494,8 +494,10 @@ export function InvoicesClient({
                             router.push(`/shop/${shopId}/invoices?status=${status}`);
                         }}
                         className={cn(
-                            "capitalize rounded-full h-8 px-4 text-xs",
-                            statusFilter === status ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+                            "capitalize rounded-full h-9 px-5 text-xs font-semibold border transition-all",
+                            statusFilter === status
+                                ? "bg-primary text-primary-foreground border-primary shadow-glow-sm"
+                                : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50 text-muted-foreground"
                         )}
                     >
                         {status}
@@ -510,7 +512,7 @@ export function InvoicesClient({
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search invoices..."
-                            className="pl-9 bg-background h-10"
+                            className="pl-9 h-10 bg-white dark:bg-white/5 border-gray-400 dark:border-white/30 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -520,7 +522,7 @@ export function InvoicesClient({
                             variant="outline"
                             size="icon"
                             onClick={handleRefresh}
-                            className="shrink-0 transition-all duration-300 hover:shadow-md interactive-scale"
+                            className="shrink-0 transition-all duration-300 hover:shadow-glow-sm interactive-scale bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10"
                             title={lastRefreshed ? `Last updated: ${getRelativeTime(lastRefreshed)}` : 'Refresh'}
                         >
                             <RefreshCw className={cn(
@@ -539,12 +541,12 @@ export function InvoicesClient({
                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0">
+                            <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10">
                                 <CalendarIcon className="h-3.5 w-3.5" />
                                 <span className="text-xs">{formatRangeLabel()}</span>
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-3" align="start">
+                        <PopoverContent className="w-auto p-3 bg-white/95 dark:bg-card/95 backdrop-blur-xl border-gray-200 dark:border-white/10" align="start">
                             <div className="flex flex-col sm:flex-row gap-3">
                                 <div>
                                     <div className="mb-2 text-xs font-medium text-muted-foreground">Quick ranges</div>
@@ -569,12 +571,12 @@ export function InvoicesClient({
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0" disabled={isExporting}>
+                            <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10" disabled={isExporting}>
                                 {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                                 <span className="text-xs">Export</span>
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="bg-white/95 dark:bg-card/95 backdrop-blur-xl border-gray-200 dark:border-white/10">
                             <DropdownMenuItem onClick={() => exportInvoices('filtered')}>
                                 Export filtered as Excel
                             </DropdownMenuItem>
@@ -584,14 +586,14 @@ export function InvoicesClient({
                         </DropdownMenuContent>
                     </DropdownMenu>
 
-                    <Button asChild size="sm" variant="outline" className="h-9 gap-2 shrink-0 border-primary/20 hover:bg-primary/5">
+                    <Button asChild size="sm" variant="outline" className="h-9 gap-2 shrink-0 border-primary/20 hover:bg-primary/10 text-primary hover:text-primary">
                         <Link href={`/shop/${shopId}/invoices/scan`}>
                             <Scan className="h-3.5 w-3.5" />
                             <span className="text-xs">Scan</span>
                         </Link>
                     </Button>
 
-                    <Button asChild size="sm" className="h-9 gap-2 shrink-0 bg-primary hover:bg-primary/90">
+                    <Button asChild size="sm" className="h-9 gap-2 shrink-0 bg-primary hover:bg-primary/90 shadow-glow-sm">
                         <Link href={`/shop/${shopId}/invoices/new`}>
                             <FilePlus2 className="h-3.5 w-3.5" />
                             <span className="text-xs">New</span>
@@ -602,9 +604,9 @@ export function InvoicesClient({
 
             {/* Batch Action Bar */}
             {selectedInvoices.size > 0 && (
-                <div className="flex items-center justify-between p-4 bg-primary/10 border border-primary/20 rounded-lg animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center justify-between p-4 bg-primary/10 border border-primary/20 rounded-lg animate-in fade-in slide-in-from-top-2 backdrop-blur-md">
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-primary">
+                        <span className="text-sm font-medium text-primary glow-text-sm">
                             {selectedInvoices.size} selected
                         </span>
                     </div>
@@ -613,7 +615,7 @@ export function InvoicesClient({
                             variant="destructive"
                             size="sm"
                             onClick={handleBatchDelete}
-                            className="h-8 gap-2"
+                            className="h-8 gap-2 shadow-sm"
                         >
                             <Trash2 className="h-3.5 w-3.5" />
                             Delete Selected
@@ -622,7 +624,7 @@ export function InvoicesClient({
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedInvoices(new Set())}
-                            className="h-8"
+                            className="h-8 hover:bg-gray-100 dark:hover:bg-white/10"
                         >
                             Cancel
                         </Button>
@@ -633,23 +635,24 @@ export function InvoicesClient({
             {/* Content */}
             <div className="space-y-4">
                 {/* Desktop/Tablet Table View */}
-                <div className="rounded-md border border-border/50 overflow-x-auto hidden md:block bg-card">
+                <div className="rounded-xl border border-gray-200 dark:border-white/10 overflow-x-auto hidden md:block bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
                     <Table className="table-modern min-w-[600px]">
-                        <TableHeader className="bg-muted/50">
-                            <TableRow className="hover:bg-transparent border-b-border/50">
-                                <TableHead className="w-[40px] px-4">
+                        <TableHeader className="bg-gray-100/90 dark:bg-white/10 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 sticky top-0 z-10">
+                            <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="w-[40px] px-4 h-12">
                                     <Checkbox
                                         checked={filteredInvoices.length > 0 && selectedInvoices.size === filteredInvoices.length}
                                         onCheckedChange={toggleSelectAll}
                                         aria-label="Select all"
+                                        className="border-gray-400 dark:border-white/40 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                     />
                                 </TableHead>
-                                <TableHead className="text-primary text-xs lg:text-sm">Invoice #</TableHead>
-                                <TableHead className="text-primary text-xs lg:text-sm">Date</TableHead>
-                                <TableHead className="text-primary text-xs lg:text-sm">Customer</TableHead>
-                                <TableHead className="text-primary text-xs lg:text-sm">Status</TableHead>
-                                <TableHead className="text-right text-primary text-xs lg:text-sm">Amount</TableHead>
-                                <TableHead className="text-right text-primary text-xs lg:text-sm">Actions</TableHead>
+                                <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Invoice #</TableHead>
+                                <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Date</TableHead>
+                                <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Customer</TableHead>
+                                <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Status</TableHead>
+                                <TableHead className="text-right text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Amount</TableHead>
+                                <TableHead className="text-right text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -677,7 +680,7 @@ export function InvoicesClient({
                                     <TableRow
                                         key={invoice.id}
                                         className={cn(
-                                            "hover:bg-muted/50 border-b-border/50 transition-colors cursor-pointer",
+                                            "hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5 transition-colors cursor-pointer group",
                                             selectedInvoices.has(invoice.id) && "bg-primary/5"
                                         )}
                                         onClick={() => router.push(`/shop/${shopId}/invoices/view?id=${invoice.id}`)}
@@ -687,35 +690,42 @@ export function InvoicesClient({
                                                 checked={selectedInvoices.has(invoice.id)}
                                                 onCheckedChange={() => toggleSelectInvoice(invoice.id)}
                                                 aria-label={`Select invoice ${invoice.invoiceNumber}`}
+                                                className="border-gray-300 dark:border-white/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                             />
                                         </TableCell>
-                                        <TableCell className="font-medium text-xs lg:text-sm">{invoice.invoiceNumber}</TableCell>
-                                        <TableCell className="text-xs lg:text-sm">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
-                                        <TableCell className="text-xs lg:text-sm truncate max-w-[150px] lg:max-w-none">{invoice.customerName}</TableCell>
+                                        <TableCell className="font-medium text-xs lg:text-sm text-gray-900 dark:text-foreground group-hover:text-primary transition-colors">{invoice.invoiceNumber}</TableCell>
+                                        <TableCell className="text-xs lg:text-sm text-gray-500 dark:text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
+                                        <TableCell className="text-xs lg:text-sm truncate max-w-[150px] lg:max-w-none text-gray-900 dark:text-foreground">{invoice.customerName}</TableCell>
                                         <TableCell>
-                                            <Badge variant={invoice.status === 'paid' ? 'success' : 'warning'} className="text-xs">
+                                            <div className={cn(
+                                                "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border",
+                                                invoice.status === 'paid' 
+                                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20" 
+                                                    : "bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20"
+                                            )}>
                                                 {invoice.status}
-                                            </Badge>
+                                            </div>
                                         </TableCell>
-                                        <TableCell className="text-right font-bold text-primary text-xs lg:text-sm">₹{invoice.grandTotal.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right font-bold text-gray-900 dark:text-foreground text-xs lg:text-sm">₹{invoice.grandTotal.toFixed(2)}</TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
                                                     title={invoice.status === 'paid' ? 'Mark as Due' : 'Mark as Paid'}
                                                     onClick={() => handleMarkPaid(invoice.id)}
+                                                    className="hover:bg-gray-100 dark:hover:bg-white/10"
                                                 >
                                                     {invoice.status === 'paid' ? (
-                                                        <Undo2 className="h-4 w-4 text-muted-foreground" />
+                                                        <Undo2 className="h-4 w-4 text-gray-500 dark:text-muted-foreground" />
                                                     ) : (
-                                                        <Banknote className="h-4 w-4 text-green-600" />
+                                                        <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
                                                     )}
                                                 </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(invoice.id)}>
-                                                    <Download className="h-4 w-4" />
+                                                <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(invoice.id)} className="hover:bg-gray-100 dark:hover:bg-white/10">
+                                                    <Download className="h-4 w-4 text-primary" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteConfirmation(invoice.id)}>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteConfirmation(invoice.id)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>

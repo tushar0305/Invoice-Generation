@@ -331,7 +331,7 @@ export async function updateInvoiceAction(
         sgstAmount?: number;
         cgstAmount?: number;
         items?: Array<{
-            id: string;
+            id?: string;
             description: string;
             purity: string;
             grossWeight: number;
@@ -341,6 +341,9 @@ export async function updateInvoiceAction(
         }>;
     }
 ) {
+    // Use server-side Supabase to bypass RLS
+    const supabase = await createClient();
+
     try {
         const updateData: any = {};
         if (formData.customerName !== undefined) updateData.customer_name = formData.customerName;
@@ -358,33 +361,58 @@ export async function updateInvoiceAction(
         if (formData.sgstAmount !== undefined) updateData.sgst_amount = formData.sgstAmount;
         if (formData.cgstAmount !== undefined) updateData.cgst_amount = formData.cgstAmount;
 
-        await updateInvoiceService(invoiceId, updateData);
+        // Update invoice using server-side supabase
+        const { error: updateError } = await supabase
+            .from('invoices')
+            .update(updateData)
+            .eq('id', invoiceId);
 
-        // Handle items if provided
+        if (updateError) throw updateError;
+
+        // Handle items if provided - use server-side supabase
         if (formData.items) {
-            const existingItems = await getInvoiceItems(invoiceId);
-            const existingIds = new Set(existingItems.map((item) => item.id));
-            const newIds = new Set(formData.items.map((item) => item.id));
+            // Get existing items
+            const { data: existingItems, error: fetchError } = await supabase
+                .from('invoice_items')
+                .select('id')
+                .eq('invoice_id', invoiceId);
+
+            if (fetchError) throw fetchError;
+
+            const existingIds = new Set((existingItems || []).map((item) => item.id));
+            const newIds = new Set(formData.items.map((item) => item.id).filter(Boolean));
 
             // Delete removed items
             const toDelete = [...existingIds].filter((id) => !newIds.has(id));
             if (toDelete.length > 0) {
-                await deleteInvoiceItems(toDelete);
+                const { error: deleteError } = await supabase
+                    .from('invoice_items')
+                    .delete()
+                    .in('id', toDelete);
+                if (deleteError) throw deleteError;
             }
 
             // Upsert all items
-            const itemsToUpsert = formData.items.map((item) => ({
-                id: item.id,
-                invoice_id: invoiceId,
-                description: item.description,
-                purity: item.purity,
-                gross_weight: item.grossWeight,
-                net_weight: item.netWeight,
-                rate: item.rate,
-                making: item.making,
-            }));
+            const itemsToUpsert = formData.items.map((item) => {
+                const itemData: any = {
+                    invoice_id: invoiceId,
+                    description: item.description,
+                    purity: item.purity,
+                    gross_weight: item.grossWeight,
+                    net_weight: item.netWeight,
+                    rate: item.rate,
+                    making: item.making,
+                };
+                if (item.id) itemData.id = item.id;
+                return itemData;
+            });
 
-            await upsertInvoiceItems(itemsToUpsert);
+            if (itemsToUpsert.length > 0) {
+                const { error: upsertError } = await supabase
+                    .from('invoice_items')
+                    .upsert(itemsToUpsert, { onConflict: 'id' });
+                if (upsertError) throw upsertError;
+            }
         }
 
         // Revalidate relevant paths

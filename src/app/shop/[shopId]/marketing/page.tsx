@@ -76,18 +76,18 @@ export default function MarketingPage() {
                     <div className="text-center space-y-6 mb-16">
                         {/* Badge */}
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 backdrop-blur-sm">
-                            <Megaphone className="h-4 w-4 text-blue-500" />
-                            <span className="text-blue-500 font-semibold text-sm">Coming Soon</span>
+                            <Megaphone className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+                            <span className="text-blue-600 dark:text-blue-500 font-semibold text-sm">Coming Soon</span>
                         </div>
 
                         {/* Title */}
-                        <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500">
+                        <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 dark:from-blue-500 dark:via-indigo-400 dark:to-purple-500">
                             Smart Marketing
                         </h1>
 
                         {/* Subtitle */}
                         <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                            Reach the right customers at the right time. Boost sales with <span className="text-blue-500 font-bold">automated campaigns</span> and intelligent targeting.
+                            Reach the right customers at the right time. Boost sales with <span className="text-blue-600 dark:text-blue-500 font-bold">automated campaigns</span> and intelligent targeting.
                         </p>
                     </div>
 

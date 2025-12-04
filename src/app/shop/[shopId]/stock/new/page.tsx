@@ -120,55 +120,53 @@ export default function NewStockItemPage() {
                     return;
                 }
 
-                const itemDb: any = {
+                const payload = {
+                    shopId: activeShop.id,
                     name: data.name,
-                    description: data.description || null,
+                    description: data.description,
                     purity: data.purity,
-                    base_price: data.basePrice,
-                    making_charge_per_gram: data.makingChargePerGram,
+                    basePrice: data.basePrice,
+                    baseWeight: data.baseWeight,
+                    makingChargePerGram: data.makingChargePerGram,
                     quantity: data.quantity,
                     unit: data.unit,
-                    category: data.category || null,
-                    is_active: data.isActive,
+                    category: data.category,
+                    isActive: data.isActive,
                 };
 
+                let response;
                 if (editId) {
                     // Update existing item
-                    const { error } = await supabase
-                        .from('stock_items')
-                        .update(itemDb)
-                        .eq('id', editId)
-                        .eq('shop_id', activeShop.id);
-
-                    if (error) throw error;
-
-                    haptics.notification(NotificationType.Success);
-                    toast({ title: 'Success', description: 'Stock item updated successfully' });
+                    response = await fetch(`/api/v1/stock/${editId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
                 } else {
                     // Create new item
-                    itemDb.user_id = user.uid;
-                    itemDb.shop_id = activeShop.id;
-
-                    const { error } = await supabase
-                        .from('stock_items')
-                        .insert([itemDb]);
-
-                    if (error) throw error;
-
-                    haptics.notification(NotificationType.Success);
-                    toast({ title: 'Success', description: 'Stock item added successfully' });
+                    response = await fetch('/api/v1/stock', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
                 }
 
-                router.push('/dashboard/stock');
-            } catch (err: any) {
-                console.error('Error saving stock item:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-                console.error('Error details:', {
-                    message: err?.message,
-                    code: err?.code,
-                    details: err?.details,
-                    hint: err?.hint,
-                    full: JSON.stringify(err)
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to save stock item');
+                }
+
+                haptics.notification(NotificationType.Success);
+                toast({
+                    title: 'Success',
+                    description: editId ? 'Stock item updated successfully' : 'Stock item added successfully'
                 });
+
+                router.push(`/shop/${activeShop.id}/stock`);
+                router.refresh();
+            } catch (err: any) {
+                console.error('Error saving stock item:', err);
                 toast({
                     variant: 'destructive',
                     title: 'Error',

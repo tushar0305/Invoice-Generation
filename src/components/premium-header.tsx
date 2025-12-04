@@ -59,7 +59,7 @@ export function PremiumHeader({ shopName, shopId, userId, userEmail, logoUrl }: 
         if (pathname.includes('/insights')) return 'Sales Insights';
         if (pathname.includes('/templates')) return 'Templates';
         if (pathname.includes('/settings')) return 'Settings';
-        if (pathname.includes('/calculator')) return 'Calculator';
+
         if (pathname.includes('/marketing')) return 'Marketing';
         return 'Dashboard';
     };
@@ -71,24 +71,27 @@ export function PremiumHeader({ shopName, shopId, userId, userEmail, logoUrl }: 
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="hidden md:block sticky top-0 z-40 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md"
+                className="hidden md:block sticky top-0 z-40 border-b border-white/5 bg-background/60 backdrop-blur-xl shadow-sm"
             >
                 <div className="flex items-center justify-between h-16 px-6">
                     {/* Left: Current Page Name */}
                     <div className="flex items-center gap-4">
-                        <h1 className="text-xl font-bold text-slate-900 dark:text-white">{getPageName()}</h1>
+                        <h1 className="text-xl font-bold text-foreground tracking-tight glow-text-primary">{getPageName()}</h1>
                     </div>
 
                     {/* Center: Search Bar */}
                     <div className="flex-1 max-w-xl mx-8">
                         <button
                             onClick={() => setIsSearchOpen(true)}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 transition-all duration-200 group"
+                            className="w-full flex items-center gap-3 px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all duration-200 group shadow-inner-light"
                         >
-                            <Search className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
-                            <span className="flex-1 text-left text-sm text-slate-500 dark:text-slate-400">
+                            <Search className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <span className="flex-1 text-left text-sm text-muted-foreground">
                                 Search invoices, customers, stock...
                             </span>
+                            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                                <span className="text-xs">⌘</span>K
+                            </kbd>
                         </button>
                     </div>
 

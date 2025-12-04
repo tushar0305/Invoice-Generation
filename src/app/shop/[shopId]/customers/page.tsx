@@ -6,7 +6,7 @@
 import { Suspense } from 'react';
 import { createClient } from '@/supabase/server';
 import { CustomersClient } from './client';
-import { Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type CustomerStats = {
     totalPurchase: number;
@@ -14,11 +14,14 @@ type CustomerStats = {
     lastPurchase: string;
 };
 
+import { MobileCustomerList } from '@/components/mobile/mobile-customer-list';
+
 // Loading component for Suspense boundary
 function CustomersLoading() {
     return (
-        <div className="flex h-[50vh] items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-6 p-6 pb-24 md:pb-6 max-w-[1800px] mx-auto">
+            <Skeleton className="h-48 w-full rounded-xl border border-border shadow-sm" />
+            <Skeleton className="h-96 w-full rounded-xl border border-border shadow-sm" />
         </div>
     );
 }
@@ -63,7 +66,10 @@ export default async function CustomersPage({
 
     return (
         <Suspense fallback={<CustomersLoading />}>
-            <CustomersClient customerData={customerData} shopId={shopId} />
+            <MobileCustomerList shopId={shopId} customerData={customerData} />
+            <div className="hidden md:block">
+                <CustomersClient customerData={customerData} shopId={shopId} />
+            </div>
         </Suspense>
     );
 }

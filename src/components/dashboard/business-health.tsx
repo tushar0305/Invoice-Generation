@@ -26,42 +26,42 @@ export function BusinessHealthWidget({ totalRevenue, totalOrders, previousRevenu
         : 100;
 
     return (
-        <Card className="h-full min-h-[400px] overflow-hidden relative flex flex-col border-2 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-900">
+        <Card className="h-full min-h-[400px] overflow-hidden relative flex flex-col bg-card/40 backdrop-blur-md border-white/10 shadow-lg hover:shadow-glow-sm transition-all duration-300">
             {/* Subtle gradient overlay - muted tones */}
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/8 via-transparent to-amber-500/8 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-amber-500/5 pointer-events-none" />
 
-            <CardHeader className="pb-3 border-b-2 border-gray-200 dark:border-gray-700 relative">
-                <CardTitle className="text-lg font-heading font-bold text-[#1D1F23] dark:text-white flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-gradient-to-br from-[#2AA198]/15 to-[#2AA198]/5 dark:from-[#2AA198]/20 dark:to-[#2AA198]/10 border border-[#2AA198]/20 dark:border-[#2AA198]/30">
-                        <Activity className="w-4 h-4 text-[#2AA198] dark:text-[#2AA198]" />
+            <CardHeader className="pb-3 border-b border-white/5 relative">
+                <CardTitle className="text-lg font-heading font-bold text-foreground flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                        <Activity className="w-4 h-4 text-emerald-500" />
                     </div>
                     Business Health
                 </CardTitle>
             </CardHeader>
             <CardContent className="pt-5 space-y-5 relative">
                 {/* Profit Section */}
-                <div className="space-y-3 p-4 rounded-2xl bg-gradient-to-br from-[#2AA198]/8 to-white dark:from-[#2AA198]/15 dark:to-slate-900/50 border border-[#2AA198]/20 dark:border-[#2AA198]/30">
+                <div className="space-y-3 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
                     <div className="flex items-center justify-between">
                         <p className="text-sm text-muted-foreground font-medium">Estimated Net Profit</p>
-                        <span className="text-[10px] font-bold text-[#2AA198] bg-[#2AA198]/10 dark:bg-[#2AA198]/20 px-2.5 py-1 rounded-full border border-[#2AA198]/20 dark:border-[#2AA198]/30 flex items-center gap-1">
+                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
                             <Sparkles className="w-3 h-3" />
                             ~20% Margin
                         </span>
                     </div>
                     <motion.h3
-                        className="text-3xl font-bold text-[#1D1F23] dark:text-white font-heading tabular-nums"
+                        className="text-3xl font-bold text-foreground font-heading tabular-nums glow-text-primary"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
                         {formatCurrency(estimatedProfit)}
                     </motion.h3>
-                    <div className="w-full h-2.5 bg-[#2AA198]/15 dark:bg-[#2AA198]/20 rounded-full overflow-hidden">
+                    <div className="w-full h-2.5 bg-emerald-500/10 rounded-full overflow-hidden">
                         <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: '20%' }}
                             transition={{ duration: 1.2, delay: 0.5, ease: "easeOut" }}
-                            className="h-full bg-gradient-to-r from-[#2AA198] via-[#2AA198]/90 to-[#2AA198]/80 rounded-full shadow-sm shadow-[#2AA198]/30"
+                            className="h-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                         />
                     </div>
                 </div>
@@ -69,13 +69,13 @@ export function BusinessHealthWidget({ totalRevenue, totalOrders, previousRevenu
                 {/* Grid Metrics */}
                 <div className="grid grid-cols-2 gap-3">
                     <motion.div
-                        className="p-4 rounded-xl bg-gradient-to-br from-[#E8D6B8]/20 to-white dark:from-[#A5833A]/15 dark:to-slate-900/50 border border-[#CBB27A]/30 dark:border-[#A5833A]/30 space-y-2"
+                        className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2 hover:bg-white/10 transition-colors"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, delay: 0.3 }}
                     >
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-[#A5833A] dark:text-[#CBB27A]">
+                            <div className="flex items-center gap-2 text-amber-500">
                                 <ShoppingBag className="w-4 h-4" />
                                 <span className="text-[10px] font-bold uppercase tracking-wider">Orders</span>
                             </div>
@@ -87,17 +87,18 @@ export function BusinessHealthWidget({ totalRevenue, totalOrders, previousRevenu
                                         initial={{ height: 0 }}
                                         animate={{ height: `${h}%` }}
                                         transition={{ delay: 0.5 + i * 0.05, duration: 0.25 }}
-                                        className={`w-1 rounded-full ${i === 6 ? 'bg-[#A5833A]' : 'bg-[#CBB27A]/50'}`}
+                                        className={`w-1 rounded-full ${i === 6 ? 'bg-amber-500' : 'bg-amber-500/30'}`}
                                     />
                                 ))}
                             </div>
                         </div>
-                        <p className="text-2xl font-bold text-[#1D1F23] dark:text-white tabular-nums">{totalOrders}</p>
+                        <p className="text-2xl font-bold text-foreground tabular-nums">{totalOrders}</p>
                     </motion.div>
 
                     <motion.div
-                        className="p-4 rounded-xl bg-gradient-to-br from-[#A08CD5]/10 to-white dark:from-[#A08CD5]/15 dark:to-slate-900/50 border border-[#A08CD5]/30 dark:border-[#A08CD5]/30 space-y-2"
+                        className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2 hover:bg-white/10 transition-colors"
                         initial={{ opacity: 0, x: 10 }}
+
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, delay: 0.4 }}
                     >

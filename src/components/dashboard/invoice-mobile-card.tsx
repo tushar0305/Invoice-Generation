@@ -118,7 +118,7 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
                 onDragStart={() => setIsDragging(true)}
                 onDragEnd={handleDragEnd}
                 style={{ x, touchAction: 'none', background: 'hsl(var(--card))' }}
-                className="relative z-10 overflow-hidden rounded-xl border border-white/10 bg-card shadow-sm transition-shadow active:shadow-md"
+                className="relative z-10 overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 bg-card shadow-sm transition-shadow active:shadow-md"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 onTouchMove={handleTouchEnd} // Cancel long press on move
@@ -130,7 +130,7 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
                 <div className="p-4" onClick={() => !isDragging && onView(invoice.id)}>
                     <div className="flex justify-between items-start mb-3">
                         <div>
-                            <div className="text-xs text-[#D4AF37] font-medium mb-0.5">#{invoice.invoiceNumber}</div>
+                            <div className="text-xs text-primary font-medium mb-0.5">#{invoice.invoiceNumber}</div>
                             <h3 className="font-serif text-lg font-bold text-foreground">{invoice.customerName}</h3>
                             <div className="text-xs text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</div>
                         </div>
@@ -139,18 +139,18 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
                         </Badge>
                     </div>
 
-                    <div className="flex justify-between items-end border-t border-white/5 pt-3">
+                    <div className="flex justify-between items-end border-t border-gray-100 dark:border-white/5 pt-3">
                         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 hover:bg-[#D4AF37] hover:text-[#0F172A] hover:border-[#D4AF37]" onClick={() => onDownload(invoice.id)}>
+                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-primary hover:text-primary-foreground hover:border-primary" onClick={() => onDownload(invoice.id)}>
                                 <Download className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-white/10 bg-white/5 hover:bg-primary hover:text-primary-foreground" onClick={() => onShare(invoice.id)}>
+                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-primary hover:text-primary-foreground" onClick={() => onShare(invoice.id)}>
                                 <Share2 className="h-3.5 w-3.5" />
                             </Button>
                         </div>
                         <div className="text-right">
                             <div className="text-xs text-muted-foreground mb-0.5">Total Amount</div>
-                            <div className="font-serif text-xl font-bold text-[#D4AF37]">₹{invoice.grandTotal.toLocaleString()}</div>
+                            <div className="font-serif text-xl font-bold text-primary">₹{invoice.grandTotal.toLocaleString()}</div>
                         </div>
                     </div>
                 </div>

@@ -138,7 +138,7 @@ export function CustomerDetailsClient() {
                                 <CreditCard className="h-4 w-4" />
                                 <span>Total Spent</span>
                             </div>
-                            <span className="font-bold text-lg text-gold-400">
+                            <span className="font-bold text-lg text-amber-600 dark:text-gold-400">
                                 {isLoading ? <Skeleton className="h-6 w-20" /> : formatCurrency(stats.totalSpent)}
                             </span>
                         </div>
@@ -208,10 +208,10 @@ export function CustomerDetailsClient() {
                     <CardDescription>Recent transactions with this customer.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-md border border-white/10 overflow-hidden">
+                    <div className="rounded-md border border-gray-200 dark:border-white/10 overflow-hidden">
                         <Table>
                             <TableHeader className="bg-muted/50">
-                                <TableRow className="hover:bg-transparent border-b-white/10">
+                                <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
                                     <TableHead className="text-primary">Invoice #</TableHead>
                                     <TableHead className="text-primary">Date</TableHead>
                                     <TableHead className="text-primary">Status</TableHead>
@@ -221,7 +221,7 @@ export function CustomerDetailsClient() {
                             <TableBody>
                                 {isLoading ? (
                                     Array.from({ length: 3 }).map((_, i) => (
-                                        <TableRow key={i} className="border-b-white/5">
+                                        <TableRow key={i} className="border-b-gray-100 dark:border-b-white/5">
                                             <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                                             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                             <TableCell><Skeleton className="h-5 w-16" /></TableCell>
@@ -232,7 +232,7 @@ export function CustomerDetailsClient() {
                                     invoices.map((inv) => (
                                         <TableRow
                                             key={inv.id}
-                                            className="hover:bg-white/5 border-b-white/5 cursor-pointer transition-colors"
+                                            className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
                                             onClick={() => router.push(`/dashboard/invoices/view?id=${inv.id}`)}
                                         >
                                             <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
@@ -242,7 +242,7 @@ export function CustomerDetailsClient() {
                                                     {inv.status}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-right font-medium text-gold-400">
+                                            <TableCell className="text-right font-medium text-amber-600 dark:text-gold-400">
                                                 {formatCurrency(inv.grandTotal)}
                                             </TableCell>
                                         </TableRow>

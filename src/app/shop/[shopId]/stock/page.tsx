@@ -9,6 +9,8 @@ import { StockClient } from './client';
 import { Loader2 } from 'lucide-react';
 import type { StockItem } from '@/lib/definitions';
 
+import { MobileStockList } from '@/components/mobile/mobile-stock-list';
+
 // Loading component for Suspense boundary
 function StockLoading() {
     return (
@@ -29,25 +31,8 @@ export default async function StockPage({
     const { filter, q } = await searchParams;
     const supabase = await createClient();
 
-    // 1. Get counts for tabs (all, low, out)
-    // We need separate queries or a way to count filtered groups.
-    // For performance, we can fetch all items (if not too many) or run count queries.
-    // Given stock usually isn't massive for small shops, fetching all ID+quantity might be okay,
-    // but let's do it properly with count queries to be scalable.
-
-    // Actually, to avoid multiple round trips, let's fetch all items for this shop 
-    // if we assume < 1000 items. If > 1000, we should paginate.
-    // For now, let's stick to the pattern of fetching what's needed for the view.
-    // But we need counts for the tabs...
-    // Let's fetch all items (lightweight select) to calculate counts client-side or server-side?
-    // The previous implementation fetched ALL items and filtered client-side.
-    // To keep it performant but scalable, let's fetch filtered items for the list,
-    // and maybe a separate lightweight query for counts if needed.
-    // OR, just fetch all items like before but on the server?
-    // Fetching 500 items on server is faster than sending 500 items to client.
-    // Let's fetch ALL items on server, calculate counts, AND apply filters there.
-    // This avoids sending unnecessary data to client.
-
+    // Fetch all items for mobile view (client-side filtering)
+    // and filtered items for desktop view (server-side filtering)
     const { data: allItems } = await supabase
         .from('stock_items')
         .select('*')
@@ -100,13 +85,16 @@ export default async function StockPage({
 
     return (
         <Suspense fallback={<StockLoading />}>
-            <StockClient
-                initialItems={filteredItems}
-                counts={counts}
-                shopId={shopId}
-                initialFilter={filter || 'all'}
-                initialSearch={q || ''}
-            />
+            <MobileStockList shopId={shopId} items={items} />
+            <div className="hidden md:block">
+                <StockClient
+                    initialItems={filteredItems}
+                    shopId={shopId}
+                    counts={counts}
+                    initialFilter={filter || 'all'}
+                    initialSearch={q || ''}
+                />
+            </div>
         </Suspense>
     );
 }

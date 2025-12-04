@@ -184,31 +184,31 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
         // Gold vs Silver styling
         const isGold = label.toLowerCase().includes('gold');
         const gradientBg = isGold 
-            ? 'bg-gradient-to-br from-amber-50/90 via-yellow-50/80 to-orange-50/70 dark:from-amber-900/30 dark:via-yellow-900/20 dark:to-amber-800/20'
-            : 'bg-gradient-to-br from-slate-50/90 via-gray-50/80 to-zinc-50/70 dark:from-slate-800/30 dark:via-gray-800/20 dark:to-slate-700/20';
+            ? 'bg-amber-500/5 dark:bg-amber-500/10 hover:bg-amber-500/10 dark:hover:bg-amber-500/20'
+            : 'bg-slate-500/5 dark:bg-slate-500/10 hover:bg-slate-500/10 dark:hover:bg-slate-500/20';
         
         const borderColor = isGold
-            ? 'border-amber-300/50 dark:border-amber-500/30'
-            : 'border-slate-300/50 dark:border-slate-500/30';
+            ? 'border-amber-500/20 dark:border-amber-500/20'
+            : 'border-slate-500/20 dark:border-slate-500/20';
         
         const labelColor = isGold
-            ? 'text-amber-700 dark:text-amber-400'
+            ? 'text-amber-600 dark:text-amber-400'
             : 'text-slate-600 dark:text-slate-400';
 
         const priceGlow = isAnimating
             ? isGold 
-                ? 'shadow-[0_0_12px_rgba(245,158,11,0.25)]'
-                : 'shadow-[0_0_12px_rgba(148,163,184,0.25)]'
+                ? 'shadow-[0_0_15px_rgba(245,158,11,0.3)] border-amber-500/40'
+                : 'shadow-[0_0_15px_rgba(148,163,184,0.3)] border-slate-500/40'
             : '';
 
         return (
             <motion.div 
                 className={cn(
-                    "flex items-center px-3.5 md:px-4 py-2 md:py-2.5 rounded-[14px] border backdrop-blur-sm flex-shrink-0 transition-all duration-200",
+                    "flex items-center px-3.5 md:px-4 py-2 md:py-2.5 rounded-xl border backdrop-blur-md flex-shrink-0 transition-all duration-300",
                     gradientBg,
                     borderColor,
                     priceGlow,
-                    "hover:scale-[1.01]"
+                    "hover:scale-[1.02] hover:shadow-lg"
                 )}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -228,13 +228,13 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
                             transition={{ duration: 0.4, ease: 'easeOut' }}
                             className={cn(
                                 "flex items-center justify-center w-3.5 h-3.5 rounded-full",
-                                showUp ? "bg-emerald-100/80 dark:bg-emerald-900/30" : "bg-red-100/80 dark:bg-red-900/30"
+                                showUp ? "bg-emerald-500/10" : "bg-red-500/10"
                             )}
                         >
                             {showUp ? (
-                                <TrendingUp className="h-2 w-2 text-emerald-600 dark:text-emerald-400" />
+                                <TrendingUp className="h-2 w-2 text-emerald-500" />
                             ) : (
-                                <TrendingDown className="h-2 w-2 text-red-500 dark:text-red-400" />
+                                <TrendingDown className="h-2 w-2 text-red-500" />
                             )}
                         </motion.div>
                     </span>
@@ -253,7 +253,7 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
                                 exit={{ y: -8, opacity: 0 }}
                                 transition={{ duration: 0.3, ease: 'easeOut' }}
                                 className={cn(
-                                    "font-mono font-bold text-xs md:text-sm text-foreground tabular-nums"
+                                    "font-mono font-bold text-xs md:text-sm text-foreground tabular-nums tracking-tight"
                                 )}
                             >
                                 ₹{price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -267,24 +267,24 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
     };
 
     return (
-        <div className="w-full py-2.5 px-3 md:px-4 rounded-[18px] bg-gradient-to-r from-amber-50/40 via-white/60 to-amber-50/40 dark:from-amber-950/15 dark:via-slate-900/30 dark:to-amber-950/15 border border-amber-200/25 dark:border-amber-800/15 backdrop-blur-sm">
+        <div className="w-full py-2.5 px-3 md:px-4 rounded-2xl bg-card/30 backdrop-blur-xl border border-white/5 shadow-sm">
             <div className="flex items-center justify-between gap-2 md:gap-3 w-full">
                 <div className="flex items-center gap-2.5">
-                    <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap tracking-widest flex-shrink-0">
+                    <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-amber-500 whitespace-nowrap tracking-widest flex-shrink-0">
                         <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-60"></span>
-                            <span className="relative inline-flex rounded-full h-full w-full bg-amber-500"></span>
+                            <span className="relative inline-flex rounded-full h-full w-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
                         </span>
                         LIVE
                     </div>
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 rounded-full bg-white/50 dark:bg-slate-800/40 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 border border-amber-200/30 dark:border-amber-700/20"
+                        className="h-6 w-6 rounded-full bg-white/5 hover:bg-white/10 border border-white/10"
                         onClick={handleRefresh}
                         disabled={isRefreshing}
                     >
-                        <RefreshCw className={cn("h-3 w-3 text-amber-600 dark:text-amber-400", isRefreshing && "animate-spin")} />
+                        <RefreshCw className={cn("h-3 w-3 text-muted-foreground", isRefreshing && "animate-spin")} />
                     </Button>
                     {lastUpdated && (
                         <span className="text-[9px] text-muted-foreground/60 hidden sm:inline-block font-medium" suppressHydrationWarning>
@@ -301,8 +301,8 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
                             <PriceItem label="Silver" price={prices.silver.value} unit="kg" trend={prices.silver.trend} offset={2} />
                         </>
                     ) : (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-[14px] bg-white/40 dark:bg-slate-800/30 border border-amber-200/20 dark:border-amber-800/15">
-                            <div className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                            <div className="h-1.5 w-1.5 rounded-full bg-amber-500/50 animate-pulse" />
                             <span className="text-[10px] text-muted-foreground font-medium">Fetching...</span>
                         </div>
                     )}

@@ -172,7 +172,7 @@ export function PremiumCustomerAutocomplete({
 
                     {/* Dropdown */}
                     {isOpen && (
-                        <div className="absolute z-50 w-full mt-2 bg-popover border-2 border-border rounded-xl shadow-2xl max-h-[400px] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
+                        <div className="absolute z-50 w-[calc(100%+20px)] -left-[10px] mt-1 bg-popover border-2 border-border rounded-xl shadow-2xl max-h-[400px] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
                             {/* Results */}
                             <div className="overflow-y-auto max-h-[360px] custom-scrollbar">
                                 {filteredCustomers.length > 0 ? (

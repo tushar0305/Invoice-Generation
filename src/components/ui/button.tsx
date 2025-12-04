@@ -16,6 +16,10 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm font-semibold",
 
+        // Secondary - Alternative actions
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
+
         // Outline - Secondary actions (Cancel, View, Edit)
         outline:
           "border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-accent",

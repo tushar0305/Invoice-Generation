@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { MobileLoyalty } from '@/components/mobile/mobile-loyalty';
 
 export default function LoyaltyProgramPage() {
     const router = useRouter();
@@ -116,14 +117,14 @@ export default function LoyaltyProgramPage() {
     if (!settings?.is_enabled) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4 space-y-6">
-                <div className="p-4 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
+                <div className="p-4 rounded-full bg-purple-500/20 text-purple-400 shadow-[0_0_30px_rgba(168,85,247,0.3)]">
                     <Crown className="h-12 w-12" />
                 </div>
-                <h1 className="text-3xl font-bold">Loyalty Program Not Enabled</h1>
-                <p className="text-muted-foreground max-w-md">
+                <h1 className="text-3xl font-bold text-white glow-text-sm">Loyalty Program Not Enabled</h1>
+                <p className="text-gray-400 max-w-md">
                     Start rewarding your customers today. Enable the loyalty program in settings to track points, set redemption rules, and boost customer retention.
                 </p>
-                <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] border-none">
                     <Link href={`/shop/${activeShop?.id}/settings`}>
                         <Settings className="mr-2 h-4 w-4" />
                         Configure Settings
@@ -134,15 +135,22 @@ export default function LoyaltyProgramPage() {
     }
 
     return (
-        <MotionWrapper className="p-6 space-y-8 max-w-7xl mx-auto pb-24">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <>
+            <MobileLoyalty 
+                shopId={activeShop?.id || ''} 
+                stats={stats} 
+                recentLogs={recentLogs} 
+                topCustomers={topCustomers} 
+            />
+            <MotionWrapper className="hidden md:block p-6 space-y-8 max-w-7xl mx-auto pb-24">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">
+                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 glow-text-sm">
                         Loyalty Dashboard
                     </h1>
-                    <p className="text-muted-foreground">Track points, redemptions, and customer engagement</p>
+                    <p className="text-muted-foreground dark:text-gray-400">Track points, redemptions, and customer engagement</p>
                 </div>
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" className="border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-foreground dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-foreground dark:hover:text-white">
                     <Link href={`/shop/${activeShop?.id}/settings`}>
                         <Settings className="mr-2 h-4 w-4" />
                         Settings
@@ -152,62 +160,62 @@ export default function LoyaltyProgramPage() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-purple-100 dark:border-purple-900/20 bg-purple-50/50 dark:bg-purple-900/10">
+                <Card className="border-purple-500/20 bg-purple-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(168,85,247,0.1)]">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600">
+                            <div className="p-2 bg-purple-500/20 rounded-lg text-purple-600 dark:text-purple-400">
                                 <TrendingUp className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">Lifetime</span>
+                            <span className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-1 rounded-full border border-purple-500/20">Lifetime</span>
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-2xl font-bold text-purple-700 dark:text-purple-300">{stats.totalIssued.toLocaleString()}</h3>
-                            <p className="text-sm text-muted-foreground">Total Points Issued</p>
+                            <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400 glow-text-sm">{stats.totalIssued.toLocaleString()}</h3>
+                            <p className="text-sm text-purple-600/60 dark:text-purple-400/60">Total Points Issued</p>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-pink-100 dark:border-pink-900/20 bg-pink-50/50 dark:bg-pink-900/10">
+                <Card className="border-pink-500/20 bg-pink-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(236,72,153,0.1)]">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-pink-100 dark:bg-pink-900/30 rounded-lg text-pink-600">
+                            <div className="p-2 bg-pink-500/20 rounded-lg text-pink-600 dark:text-pink-400">
                                 <Gift className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-medium text-pink-600 bg-pink-100 px-2 py-1 rounded-full">Redeemed</span>
+                            <span className="text-xs font-medium text-pink-600 dark:text-pink-400 bg-pink-500/10 px-2 py-1 rounded-full border border-pink-500/20">Redeemed</span>
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-2xl font-bold text-pink-700 dark:text-pink-300">{stats.totalRedeemed.toLocaleString()}</h3>
-                            <p className="text-sm text-muted-foreground">Total Points Redeemed</p>
+                            <h3 className="text-2xl font-bold text-pink-600 dark:text-pink-400 glow-text-sm">{stats.totalRedeemed.toLocaleString()}</h3>
+                            <p className="text-sm text-pink-600/60 dark:text-pink-400/60">Total Points Redeemed</p>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-amber-100 dark:border-amber-900/20 bg-amber-50/50 dark:bg-amber-900/10">
+                <Card className="border-amber-500/20 bg-amber-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(245,158,11,0.1)]">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-amber-600">
+                            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-600 dark:text-amber-400">
                                 <Crown className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-medium text-amber-600 bg-amber-100 px-2 py-1 rounded-full">Active</span>
+                            <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full border border-amber-500/20">Active</span>
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-2xl font-bold text-amber-700 dark:text-amber-300">{stats.totalCustomers.toLocaleString()}</h3>
-                            <p className="text-sm text-muted-foreground">Customers with Points</p>
+                            <h3 className="text-2xl font-bold text-amber-600 dark:text-amber-400 glow-text-sm">{stats.totalCustomers.toLocaleString()}</h3>
+                            <p className="text-sm text-amber-600/60 dark:text-amber-400/60">Customers with Points</p>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-blue-100 dark:border-blue-900/20 bg-blue-50/50 dark:bg-blue-900/10">
+                <Card className="border-blue-500/20 bg-blue-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.1)]">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600">
+                            <div className="p-2 bg-blue-500/20 rounded-lg text-blue-600 dark:text-blue-400">
                                 <Zap className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded-full">Liability</span>
+                            <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">Liability</span>
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-2xl font-bold text-blue-700 dark:text-blue-300">{formatCurrency(stats.liability)}</h3>
-                            <p className="text-sm text-muted-foreground">Outstanding Value</p>
+                            <h3 className="text-2xl font-bold text-blue-600 dark:text-blue-400 glow-text-sm">{formatCurrency(stats.liability)}</h3>
+                            <p className="text-sm text-blue-600/60 dark:text-blue-400/60">Outstanding Value</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -215,36 +223,36 @@ export default function LoyaltyProgramPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Recent Activity */}
-                <Card className="lg:col-span-2">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <History className="h-5 w-5 text-muted-foreground" />
+                <Card className="lg:col-span-2 border-gray-200 dark:border-white/10 bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
+                    <CardHeader className="border-b border-gray-200 dark:border-white/10">
+                        <CardTitle className="flex items-center gap-2 text-foreground dark:text-white">
+                            <History className="h-5 w-5 text-primary glow-text-sm" />
                             Recent Activity
                         </CardTitle>
-                        <CardDescription>Latest point transactions</CardDescription>
+                        <CardDescription className="text-muted-foreground dark:text-gray-400">Latest point transactions</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         <div className="space-y-4">
                             {recentLogs.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">No recent activity</div>
+                                <div className="text-center py-8 text-muted-foreground dark:text-gray-500">No recent activity</div>
                             ) : (
                                 recentLogs.map((log, i) => (
-                                    <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
+                                    <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-white/5">
                                         <div className="flex items-center gap-3">
                                             <div className={cn(
                                                 "p-2 rounded-full",
-                                                log.points_change > 0 ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"
+                                                log.points_change > 0 ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/20 text-rose-600 dark:text-rose-400"
                                             )}>
                                                 {log.points_change > 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownLeft className="h-4 w-4" />}
                                             </div>
                                             <div>
-                                                <p className="font-medium">{log.customer?.name || 'Unknown Customer'}</p>
-                                                <p className="text-xs text-muted-foreground">{format(new Date(log.created_at), 'MMM d, h:mm a')}</p>
+                                                <p className="font-medium text-foreground dark:text-gray-200">{log.customer?.name || 'Unknown Customer'}</p>
+                                                <p className="text-xs text-muted-foreground dark:text-gray-500">{format(new Date(log.created_at), 'MMM d, h:mm a')}</p>
                                             </div>
                                         </div>
                                         <div className={cn(
                                             "font-bold",
-                                            log.points_change > 0 ? "text-emerald-600" : "text-rose-600"
+                                            log.points_change > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                                         )}>
                                             {log.points_change > 0 ? '+' : ''}{log.points_change} pts
                                         </div>
@@ -256,31 +264,31 @@ export default function LoyaltyProgramPage() {
                 </Card>
 
                 {/* Top Customers */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Star className="h-5 w-5 text-amber-500" />
+                <Card className="border-gray-200 dark:border-white/10 bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
+                    <CardHeader className="border-b border-gray-200 dark:border-white/10">
+                        <CardTitle className="flex items-center gap-2 text-foreground dark:text-white">
+                            <Star className="h-5 w-5 text-amber-500 dark:text-amber-400 glow-text-sm" />
                             Top Loyalists
                         </CardTitle>
-                        <CardDescription>Customers with most points</CardDescription>
+                        <CardDescription className="text-muted-foreground dark:text-gray-400">Customers with most points</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         <div className="space-y-4">
                             {topCustomers.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">No data yet</div>
+                                <div className="text-center py-8 text-muted-foreground dark:text-gray-500">No data yet</div>
                             ) : (
                                 topCustomers.map((customer, i) => (
-                                    <div key={customer.id} className="flex items-center justify-between">
+                                    <div key={customer.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                                         <div className="flex items-center gap-3">
-                                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-bold text-sm">
+                                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-sm border border-amber-500/20">
                                                 {i + 1}
                                             </div>
                                             <div>
-                                                <p className="font-medium text-sm">{customer.name}</p>
-                                                <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                                                <p className="font-medium text-sm text-foreground dark:text-gray-200">{customer.name}</p>
+                                                <p className="text-xs text-muted-foreground dark:text-gray-500">{customer.phone}</p>
                                             </div>
                                         </div>
-                                        <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
+                                        <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
                                             {customer.loyalty_points} pts
                                         </Badge>
                                     </div>
@@ -291,6 +299,7 @@ export default function LoyaltyProgramPage() {
                 </Card>
             </div>
         </MotionWrapper>
+        </>
     );
 }
 

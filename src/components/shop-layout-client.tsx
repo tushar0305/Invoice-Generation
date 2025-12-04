@@ -44,6 +44,7 @@ import {
     CalendarDays,
     TrendingUp,
     FilePlus2,
+    Coins,
 } from 'lucide-react';
 import { ShopSwitcher } from '@/components/shop-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -58,8 +59,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { MobileBottomNav } from '@/components/mobile-bottom-nav';
-import { FloatingNewInvoiceButton } from '@/components/floating-new-invoice';
-import { GlobalFAB } from '@/components/global-fab';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { CommandPalette } from '@/components/command-palette';
@@ -186,6 +185,7 @@ function ShopLayoutInner({
             title: 'Management',
             items: [
                 { icon: Users, label: 'Staff', href: `/shop/${shopId}/staff`, permission: 'canInviteStaff' },
+                { icon: Coins, label: 'Loans', href: `/shop/${shopId}/loans` },
                 { icon: BookOpen, label: 'Khata Book', href: `/shop/${shopId}/khata` },
                 { icon: Crown, label: 'Loyalty', href: `/shop/${shopId}/loyalty` },
             ],
@@ -226,7 +226,7 @@ function ShopLayoutInner({
     };
 
     return (
-        <div className="flex h-screen w-full overflow-hidden bg-gray-50/50 dark:bg-slate-950">
+        <div className="flex h-screen w-full overflow-hidden bg-gray-50/50 dark:bg-[hsl(220,10%,4%)]">
             {/* Command Palette */}
             <CommandPalette shopId={shopId} />
 
@@ -296,7 +296,7 @@ function ShopLayoutInner({
                 </SidebarContent>
 
                 <SidebarFooter className="p-4 mt-auto overflow-hidden">
-                    <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-3 border border-gray-100 dark:border-slate-700/50 shadow-sm">
+                    <div className="bg-white/50 dark:bg-[hsl(220,10%,10%)]/80 backdrop-blur-sm rounded-2xl p-3 border border-gray-100 dark:border-[hsl(220,8%,18%)]/50 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
                             <Avatar className="h-9 w-9 border-2 border-white dark:border-slate-700 shadow-sm shrink-0">
                                 <AvatarFallback className="bg-gradient-to-br from-[hsl(var(--primary))]/80 to-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] font-bold text-xs">
@@ -329,16 +329,21 @@ function ShopLayoutInner({
             </Sidebar>
 
             {/* Main Content */}
-            <SidebarInset className="flex-1 flex flex-col overflow-hidden bg-gray-50/50 dark:bg-slate-950 !mt-0 !pt-0">
-                {/* Premium Header - Desktop Only */}
+            <SidebarInset className="flex-1 flex flex-col overflow-hidden bg-gray-50/50 dark:bg-[hsl(220,10%,4%)] !mt-0 !pt-0">
+                {/* Desktop Header with Sidebar Toggle */}
                 {!isMobile && (
-                    <PremiumHeader
-                        shopName={shopData.activeShop?.shopName || 'Jewellery Shop'}
-                        shopId={shopId}
-                        userId={userId}
-                        userEmail={userEmail}
-                        logoUrl={shopData.activeShop?.logoUrl}
-                    />
+                    <div className="flex items-center gap-3 px-6 py-3 border-b border-border/40 bg-background/95 backdrop-blur-xl">
+                        <SidebarTrigger className="h-9 w-9 hover:bg-accent rounded-lg transition-colors" />
+                        <div className="flex-1">
+                            <PremiumHeader
+                                shopName={shopData.activeShop?.shopName || 'Jewellery Shop'}
+                                shopId={shopId}
+                                userId={userId}
+                                userEmail={userEmail}
+                                logoUrl={shopData.activeShop?.logoUrl}
+                            />
+                        </div>
+                    </div>
                 )}
 
                 {/* Mobile Header */}
@@ -356,6 +361,9 @@ function ShopLayoutInner({
                                 {pathname === `/shop/${shopId}/stock` && 'Stock'}
                                 {pathname === `/shop/${shopId}/stock/new` && 'Add Stock Item'}
                                 {pathname === `/shop/${shopId}/staff` && 'Staff Management'}
+                                {pathname === `/shop/${shopId}/loans` && 'Loans'}
+                                {pathname === `/shop/${shopId}/loans/new` && 'New Loan'}
+                                {pathname.includes(`/shop/${shopId}/loans/`) && !pathname.includes('/new') && 'Loan Details'}
                                 {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
                                 {pathname === `/shop/${shopId}/loyalty` && 'Loyalty Program'}
                                 {/* Analytics pages removed */}
@@ -368,7 +376,7 @@ function ShopLayoutInner({
                     </header>
                 )}
 
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+                <main id="shop-main-content" className="flex-1 overflow-y-auto px-4 py-2 md:px-6 md:py-3 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-6">
                     {children}
                 </main>
 
@@ -391,7 +399,6 @@ function ShopLayoutInner({
             {isMobile && (
                 <>
                     <MobileBottomNav shopId={shopId} />
-                    <GlobalFAB shopId={shopId} />
                 </>
             )}
         </div>

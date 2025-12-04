@@ -1,136 +1,97 @@
 'use client';
 
 import { useActiveShop } from '@/hooks/use-active-shop';
+import { useInvoices } from '@/hooks/use-cached-data';
 
 import { useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Eye,
-  MessageCircle,
   FileText,
   ArrowRight,
   Plus,
-  UserPlus,
   PackagePlus,
-  Settings,
   TrendingUp,
   Users
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { GoldSilverTicker } from '@/components/dashboard/gold-silver-ticker';
 import { useToast } from '@/hooks/use-toast';
-import { haptics } from '@/lib/haptics';
-import { ImpactStyle } from '@/lib/haptics';
-import type { Invoice, InvoiceItem } from '@/lib/definitions';
+import type { Invoice } from '@/lib/definitions';
 import { formatCurrency, cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval, startOfDay } from 'date-fns';
 import { useUser } from '@/supabase/provider';
-import { supabase } from '@/supabase/client';
-// import type { UserSettings } from '@/lib/definitions';
-import { ShopSetupBanner } from '@/components/shop-setup-banner';
-import { FirstTimeWelcome } from '@/components/first-time-welcome';
-import { SmartHero } from '@/components/dashboard/smart-hero';
+import { KPICard } from '@/components/dashboard/kpi-card';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
+import { FirstTimeWelcome } from '@/components/first-time-welcome';
+import { ShopSetupBanner } from '@/components/shop-setup-banner';
+import { SmartHero } from '@/components/dashboard/smart-hero';
+
+// Helper to generate sparkline data from invoices
+function generateSparklineFromInvoices(invoices: Invoice[], days: number = 7): number[] {
+  const now = new Date();
+  const data: number[] = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const targetDate = new Date(now);
+    targetDate.setDate(now.getDate() - i);
+    const dateStr = targetDate.toISOString().split('T')[0];
+
+    const dayTotal = invoices
+      .filter(inv => inv.invoiceDate?.startsWith(dateStr) && inv.status === 'paid')
+      .reduce((sum, inv) => sum + Number(inv.grandTotal || 0), 0);
+
+    data.push(dayTotal);
+  }
+
+  // Normalize to 0-100 scale
+  const max = Math.max(...data, 1);
+  return data.map(v => (v / max) * 100);
+}
 
 export default function DashboardPage() {
   const { user } = useUser();
   const { activeShop, userRole, isLoading: shopLoading } = useActiveShop();
   const { toast } = useToast();
   const router = useRouter();
-  const [invoices, setInvoices] = useState<Invoice[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // ✅ Use React Query for cached data fetching
+  const { data: invoices = [], isLoading } = useInvoices(activeShop?.id);
+
   const [settings, setSettings] = useState<any | null>(null);
 
-  // Redirect to new shop-specific route
+  // Redirect to new shop-specific dashboard route
   useEffect(() => {
     if (!shopLoading && activeShop?.id) {
-      console.log('Redirecting from /dashboard to /shop/[shopId]/dashboard');
       router.replace(`/shop/${activeShop.id}/dashboard`);
     }
   }, [activeShop?.id, shopLoading, router]);
 
+  // Set settings from activeShop
   useEffect(() => {
-    let active = true;
-    const load = async () => {
-      if (!user) {
-        setInvoices([]);
-        setSettings(null);
-        setIsLoading(false);
-        return;
-      }
-
-      // If user is loaded but no active shop, stop loading and show empty state
-      if (!activeShop?.id) {
-        setInvoices([]);
-        setSettings(null);
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      const { data: inv, error: invErr } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('shop_id', activeShop.id);
-
-      if (!active) return;
-      if (invErr) {
-        console.error('Error fetching invoices:', invErr.message || invErr);
-        setInvoices([]);
-      } else {
-        const mapped = (inv ?? []).map((r: any) => ({
-          id: r.id,
-          userId: r.user_id,
-          shopId: r.shop_id,
-          createdBy: r.created_by,
-          invoiceNumber: r.invoice_number,
-          customerName: r.customer_name,
-          customerAddress: r.customer_address || '',
-          customerState: r.customer_state || '',
-          customerPincode: r.customer_pincode || '',
-          customerPhone: r.customer_phone || '',
-          invoiceDate: r.invoice_date,
-          discount: Number(r.discount) || 0,
-          sgst: Number(r.sgst) || 0,
-          cgst: Number(r.cgst) || 0,
-          status: r.status,
-          grandTotal: Number(r.grand_total) || 0,
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
-        } as Invoice));
-        setInvoices(mapped);
-      }
-
-      // Use activeShop for settings
-      if (activeShop) {
-        setSettings({
-          id: activeShop.id,
-          userId: user.uid,
-          cgstRate: Number(activeShop.cgstRate) || 0,
-          sgstRate: Number(activeShop.sgstRate) || 0,
-          shopName: activeShop.shopName || 'Jewellers Store',
-          gstNumber: activeShop.gstNumber || '',
-          panNumber: activeShop.panNumber || '',
-          address: activeShop.address || '',
-          state: activeShop.state || '',
-          pincode: activeShop.pincode || '',
-          phoneNumber: activeShop.phoneNumber || '',
-          email: activeShop.email || '',
-        } as any);
-      } else {
-        setSettings(null);
-      }
-
-      setIsLoading(false);
-    };
-    load();
-    // pendingShopName logic removed as user_settings is deprecated
-    return () => { active = false; };
-  }, [user?.uid, activeShop?.id]);
+    if (activeShop && user) {
+      setSettings({
+        id: activeShop.id,
+        userId: user.uid,
+        cgstRate: Number(activeShop.cgstRate) || 0,
+        sgstRate: Number(activeShop.sgstRate) || 0,
+        shopName: activeShop.shopName || 'Jewellers Store',
+        gstNumber: activeShop.gstNumber || '',
+        panNumber: activeShop.panNumber || '',
+        address: activeShop.address || '',
+        state: activeShop.state || '',
+        pincode: activeShop.pincode || '',
+        phoneNumber: activeShop.phoneNumber || '',
+        email: activeShop.email || '',
+      } as any);
+    } else {
+      setSettings(null);
+    }
+  }, [activeShop, user]);
 
 
   const recentInvoices = useMemo(() => {

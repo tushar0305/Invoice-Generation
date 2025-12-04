@@ -1,6 +1,8 @@
 import { createClient } from '@/supabase/server';
 import { InsightsClient } from './client';
+import { MobileSalesInsights } from '@/components/mobile/mobile-sales-insights';
 import type { Invoice } from '@/lib/definitions';
+import { Suspense } from 'react';
 
 export default async function InsightsPage({ params }: { params: Promise<{ shopId: string }> }) {
     const { shopId } = await params;
@@ -47,5 +49,12 @@ export default async function InsightsPage({ params }: { params: Promise<{ shopI
         return <div className="p-8 text-center text-destructive">Error loading insights data. Please try refreshing.</div>;
     }
 
-    return <InsightsClient invoices={mappedInvoices} invoiceItems={itemsData || []} />;
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <MobileSalesInsights invoices={mappedInvoices} invoiceItems={itemsData || []} />
+            <div className="hidden md:block">
+                <InsightsClient invoices={mappedInvoices} invoiceItems={itemsData || []} />
+            </div>
+        </Suspense>
+    );
 }

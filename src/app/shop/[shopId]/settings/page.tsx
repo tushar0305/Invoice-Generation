@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { PaletteSwitcher } from '@/components/palette-switcher';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoyaltySettingsForm } from '@/components/loyalty-settings-form';
+import { MobileSettings } from '@/components/mobile/mobile-settings';
 
 const settingsFormSchema = z.object({
   cgstRate: z.coerce.number().min(0, 'CGST rate must be positive'),
@@ -330,7 +331,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <MotionWrapper className="max-w-5xl mx-auto space-y-8 pb-24">
+    <>
+      <MobileSettings shopId={activeShop?.id || ''} initialSettings={settings} user={user} />
+      <MotionWrapper className="hidden md:block max-w-5xl mx-auto space-y-8 p-6 pb-24">
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-8">
           <TabsTrigger value="general">General Settings</TabsTrigger>
@@ -348,315 +351,315 @@ export default function SettingsPage() {
             </div>
           ) : (
             <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <fieldset disabled={!permissions.canEditSettings} className="space-y-8">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <fieldset disabled={!permissions.canEditSettings} className="space-y-8">
 
-              {/* Hero / Profile Section */}
-              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-background/60 to-background/30 backdrop-blur-xl shadow-2xl">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-50"></div>
-                <div className="relative z-10 p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-8">
-                  {/* Logo Upload */}
-                  <div className="relative group shrink-0">
-                    <div className={cn(
-                      "w-32 h-32 rounded-full border-4 border-white/10 shadow-2xl overflow-hidden flex items-center justify-center bg-background/50 backdrop-blur-md transition-all duration-500 group-hover:scale-105",
-                      !logoUrl && "border-dashed"
-                    )}>
-                      {logoUrl ? (
-                        <img src={logoUrl} alt="Shop Logo" className="w-full h-full object-cover" />
-                      ) : (
-                        <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingLogo || !permissions.canEditSettings}
-                      className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2.5 shadow-lg hover:scale-110 transition-transform disabled:opacity-50 hover:shadow-primary/25"
-                    >
-                      {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </div>
-
-                  {/* Shop Info Header */}
-                  <div className="flex-1 text-center md:text-left space-y-4">
-                    <div>
-                      <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                        {form.watch('shopName') || 'Your Shop'}
-                      </h1>
-                      <p className="text-muted-foreground mt-2 max-w-lg mx-auto md:mx-0">
-                        Manage your shop's identity, tax settings, and invoice preferences in one place.
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                      {!progress.isComplete && (
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs font-medium">
-                          <AlertTriangle className="h-3 w-3" />
-                          Profile {progress.completionPercentage}% Complete
+                  {/* Hero / Profile Section */}
+                  <div className="relative overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+                    <div className="absolute inset-0 bg-primary/5 opacity-30"></div>
+                    <div className="relative z-10 p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-8">
+                      {/* Logo Upload */}
+                      <div className="relative group shrink-0">
+                        <div className={cn(
+                          "w-32 h-32 rounded-full border-4 border-background shadow-lg overflow-hidden flex items-center justify-center bg-muted transition-all duration-500 group-hover:scale-105",
+                          !logoUrl && "border-dashed border-border"
+                        )}>
+                          {logoUrl ? (
+                            <img src={logoUrl} alt="Shop Logo" className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+                          )}
                         </div>
-                      )}
-                      {logoUrl && permissions.canEditSettings && (
-                        <Button type="button" variant="ghost" size="sm" onClick={handleRemoveLogo} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 text-xs">
-                          <Trash2 className="mr-2 h-3 w-3" /> Remove Logo
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingLogo || !permissions.canEditSettings}
+                          className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2.5 shadow-lg hover:scale-110 transition-transform disabled:opacity-50 hover:shadow-primary/25"
+                        >
+                          {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </div>
+
+                      {/* Shop Info Header */}
+                      <div className="flex-1 text-center md:text-left space-y-4">
+                        <div>
+                          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+                            {form.watch('shopName') || 'Your Shop'}
+                          </h1>
+                          <p className="text-muted-foreground mt-2 max-w-lg mx-auto md:mx-0">
+                            Manage your shop's identity, tax settings, and invoice preferences in one place.
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                          {!progress.isComplete && (
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-500 text-xs font-medium">
+                              <AlertTriangle className="h-3 w-3" />
+                              Profile {progress.completionPercentage}% Complete
+                            </div>
+                          )}
+                          {logoUrl && permissions.canEditSettings && (
+                            <Button type="button" variant="ghost" size="sm" onClick={handleRemoveLogo} className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 text-xs">
+                              <Trash2 className="mr-2 h-3 w-3" /> Remove Logo
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Save Button (Floating on Desktop) */}
+                      <div className="hidden md:block">
+                        <Button type="submit" disabled={isPending} size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+                          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Save Button (Floating on Desktop) */}
-                  <div className="hidden md:block">
-                    <Button type="submit" disabled={isPending} size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+                  {/* Settings Grid */}
+                  <div className="grid md:grid-cols-2 gap-6">
+
+                    {/* Shop Details Card */}
+                    <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-300 group">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
+                            <Store className="h-5 w-5" />
+                          </div>
+                          <CardTitle className="text-lg">Shop Details</CardTitle>
+                        </div>
+                        <CardDescription>Business information and contact details</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <FormField control={form.control} name="shopName" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Shop Name</FormLabel>
+                            <FormControl><Input className="bg-background border-input focus:border-primary transition-colors" placeholder="e.g., Jewellers Store" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="address" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Address</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input className="pl-9 bg-background border-input focus:border-primary transition-colors" placeholder="Full address" {...field} />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField control={form.control} name="state" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>State</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="bg-background border-input focus:border-primary transition-colors">
+                                    <SelectValue placeholder="Select State" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {INDIAN_STATES.map((state) => (
+                                    <SelectItem key={state} value={state}>{state}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={form.control} name="pincode" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Pincode</FormLabel>
+                              <FormControl><Input className="bg-background border-input focus:border-primary transition-colors" placeholder="e.g., 302001" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                  <Input className="pl-9 bg-background border-input focus:border-primary transition-colors" placeholder="Phone number" {...field} />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <div className="space-y-2">
+                            <FormLabel>Email</FormLabel>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input value={user?.email || ''} disabled readOnly className="pl-9 bg-muted text-muted-foreground border-input" />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Branding & Theme Card */}
+                    <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-300 group">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
+                            <Receipt className="h-5 w-5" />
+                          </div>
+                          <CardTitle className="text-lg">Branding & Theme</CardTitle>
+                        </div>
+                        <CardDescription>Choose your brand color palette</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {activeShop?.id && (
+                          <PaletteSwitcher shopId={activeShop.id} />
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Tax & Finance Card */}
+                    <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-300 group">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform duration-300">
+                            <Building2 className="h-5 w-5" />
+                          </div>
+                          <CardTitle className="text-lg">Tax & Finance</CardTitle>
+                        </div>
+                        <CardDescription>GST, PAN, and tax rate configuration</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField control={form.control} name="gstNumber" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>GST Number</FormLabel>
+                              <FormControl><Input className="bg-background border-input focus:border-primary transition-colors" placeholder="e.g., 08AAAAA..." {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={form.control} name="panNumber" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>PAN Number</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <CreditCard className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                  <Input className="pl-9 bg-background border-input focus:border-primary transition-colors" placeholder="e.g., AAAAA..." {...field} />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField control={form.control} name="cgstRate" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CGST Rate (%)</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Percent className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                  <Input type="number" step="0.01" className="pl-9 bg-background border-input focus:border-primary transition-colors" placeholder="1.5" {...field} />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={form.control} name="sgstRate" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>SGST Rate (%)</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Percent className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                  <Input type="number" step="0.01" className="pl-9 bg-background border-input focus:border-primary transition-colors" placeholder="1.5" {...field} />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Mobile Save Button */}
+                  <div className="md:hidden">
+                    <Button type="submit" disabled={isPending} size="lg" className="w-full shadow-lg shadow-primary/20">
                       {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Save className="mr-2 h-4 w-4" />
                       Save Changes
                     </Button>
                   </div>
-                </div>
-              </div>
 
-              {/* Settings Grid */}
-              <div className="grid md:grid-cols-2 gap-6">
-
-                {/* Shop Details Card */}
-                <Card className="border-white/10 bg-background/40 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 group">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
-                        <Store className="h-5 w-5" />
-                      </div>
-                      <CardTitle className="text-lg">Shop Details</CardTitle>
-                    </div>
-                    <CardDescription>Business information and contact details</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField control={form.control} name="shopName" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Shop Name</FormLabel>
-                        <FormControl><Input className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors" placeholder="e.g., Jewellers Store" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="address" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input className="pl-9 bg-white/5 border-white/10 focus:bg-white/10 transition-colors" placeholder="Full address" {...field} />
+                  {/* Danger Zone */}
+                  {permissions.canEditSettings && (
+                    <div className="pt-8">
+                      <Card className="border-destructive/20 bg-destructive/5 backdrop-blur-sm overflow-hidden">
+                        <CardHeader>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-full bg-destructive/10 text-destructive">
+                              <AlertTriangle className="h-5 w-5" />
+                            </div>
+                            <CardTitle className="text-destructive">Danger Zone</CardTitle>
                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField control={form.control} name="state" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors">
-                                <SelectValue placeholder="Select State" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {INDIAN_STATES.map((state) => (
-                                <SelectItem key={state} value={state}>{state}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={form.control} name="pincode" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pincode</FormLabel>
-                          <FormControl><Input className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors" placeholder="e.g., 302001" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField control={form.control} name="phoneNumber" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                              <Input className="pl-9 bg-white/5 border-white/10 focus:bg-white/10 transition-colors" placeholder="Phone number" {...field} />
+                          <CardDescription className="text-destructive/70">
+                            Irreversible actions that will permanently delete your data
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/10 bg-background/50">
+                            <div>
+                              <h4 className="font-medium text-foreground">Delete Account</h4>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Permanently remove your account and all associated data
+                              </p>
                             </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <div className="space-y-2">
-                        <FormLabel>Email</FormLabel>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input value={user?.email || ''} disabled readOnly className="pl-9 bg-muted/50 border-white/5 text-muted-foreground" />
-                        </div>
-                      </div>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              onClick={async () => {
+                                const confirmDelete = confirm('Are you absolutely sure? This cannot be undone.');
+                                if (!confirmDelete) return;
+
+                                const doubleConfirm = confirm('FINAL WARNING: Type your email to confirm deletion.');
+                                if (!doubleConfirm) return;
+
+                                try {
+                                  if (!user) throw new Error('No user found');
+                                  await supabase.from('invoices').delete().eq('user_id', user.uid);
+                                  await supabase.from('customers').delete().eq('user_id', user.uid);
+                                  await supabase.from('stock_items').delete().eq('user_id', user.uid);
+                                  // Shops will be handled by cascade or manual deletion if needed, but for now we just delete user data related
+                                  // If owner, maybe delete shop? For now let's keep it simple.
+                                  // await supabase.from('user_settings').delete().eq('user_id', user.uid); // Removed
+                                  const { error } = await supabase.auth.admin.deleteUser(user.uid);
+                                  if (error) throw error;
+                                  toast({ title: 'Account Deleted' });
+                                  await supabase.auth.signOut();
+                                  router.push('/');
+                                } catch (e: any) {
+                                  console.error('Delete error:', e);
+                                  toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
+                                }
+                              }}
+                            >
+                              Delete Account
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
 
-                {/* Branding & Theme Card */}
-                <Card className="border-white/10 bg-background/40 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 group">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
-                        <Receipt className="h-5 w-5" />
-                      </div>
-                      <CardTitle className="text-lg">Branding & Theme</CardTitle>
-                    </div>
-                    <CardDescription>Choose your brand color palette</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {activeShop?.id && (
-                      <PaletteSwitcher shopId={activeShop.id} />
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Tax & Finance Card */}
-                <Card className="border-white/10 bg-background/40 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 group">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform duration-300">
-                        <Building2 className="h-5 w-5" />
-                      </div>
-                      <CardTitle className="text-lg">Tax & Finance</CardTitle>
-                    </div>
-                    <CardDescription>GST, PAN, and tax rate configuration</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField control={form.control} name="gstNumber" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>GST Number</FormLabel>
-                          <FormControl><Input className="bg-white/5 border-white/10 focus:bg-white/10 transition-colors" placeholder="e.g., 08AAAAA..." {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={form.control} name="panNumber" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>PAN Number</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <CreditCard className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                              <Input className="pl-9 bg-white/5 border-white/10 focus:bg-white/10 transition-colors" placeholder="e.g., AAAAA..." {...field} />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField control={form.control} name="cgstRate" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CGST Rate (%)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Percent className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                              <Input type="number" step="0.01" className="pl-9 bg-white/5 border-white/10 focus:bg-white/10 transition-colors" placeholder="1.5" {...field} />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={form.control} name="sgstRate" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>SGST Rate (%)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Percent className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                              <Input type="number" step="0.01" className="pl-9 bg-white/5 border-white/10 focus:bg-white/10 transition-colors" placeholder="1.5" {...field} />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Mobile Save Button */}
-              <div className="md:hidden">
-                <Button type="submit" disabled={isPending} size="lg" className="w-full shadow-lg shadow-primary/20">
-                  {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
-              </div>
-
-              {/* Danger Zone */}
-              {permissions.canEditSettings && (
-                <div className="pt-8">
-                  <Card className="border-destructive/20 bg-destructive/5 backdrop-blur-sm overflow-hidden">
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-destructive/10 text-destructive">
-                          <AlertTriangle className="h-5 w-5" />
-                        </div>
-                        <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                      </div>
-                      <CardDescription className="text-destructive/70">
-                        Irreversible actions that will permanently delete your data
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/10 bg-background/50">
-                        <div>
-                          <h4 className="font-medium text-foreground">Delete Account</h4>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Permanently remove your account and all associated data
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          onClick={async () => {
-                            const confirmDelete = confirm('Are you absolutely sure? This cannot be undone.');
-                            if (!confirmDelete) return;
-
-                            const doubleConfirm = confirm('FINAL WARNING: Type your email to confirm deletion.');
-                            if (!doubleConfirm) return;
-
-                            try {
-                              if (!user) throw new Error('No user found');
-                              await supabase.from('invoices').delete().eq('user_id', user.uid);
-                              await supabase.from('customers').delete().eq('user_id', user.uid);
-                              await supabase.from('stock_items').delete().eq('user_id', user.uid);
-                              // Shops will be handled by cascade or manual deletion if needed, but for now we just delete user data related
-                              // If owner, maybe delete shop? For now let's keep it simple.
-                              // await supabase.from('user_settings').delete().eq('user_id', user.uid); // Removed
-                              const { error } = await supabase.auth.admin.deleteUser(user.uid);
-                              if (error) throw error;
-                              toast({ title: 'Account Deleted' });
-                              await supabase.auth.signOut();
-                              router.push('/');
-                            } catch (e: any) {
-                              console.error('Delete error:', e);
-                              toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
-                            }
-                          }}
-                        >
-                          Delete Account
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-            </fieldset>
-          </form>
+                </fieldset>
+              </form>
             </Form>
           )}
         </TabsContent>
@@ -671,5 +674,6 @@ export default function SettingsPage() {
         onClose={() => setShowCelebration(false)}
       />
     </MotionWrapper>
+    </>
   );
 }

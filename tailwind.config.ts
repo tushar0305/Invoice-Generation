@@ -116,6 +116,18 @@ export default {
           900: '#064e3b', // Deep Emerald
           950: '#022c22',
         },
+        glow: {
+          primary: 'hsl(var(--glow-primary))',
+          secondary: 'hsl(var(--glow-secondary))',
+          tertiary: 'hsl(var(--glow-tertiary))',
+        },
+      },
+      boxShadow: {
+        'glow-sm': '0 0 10px -2px hsl(var(--glow-primary) / 0.3)',
+        'glow-md': '0 0 20px -5px hsl(var(--glow-primary) / 0.4)',
+        'glow-lg': '0 0 30px -10px hsl(var(--glow-primary) / 0.5)',
+        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+        'inner-light': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
       },
       borderRadius: {
         lg: 'var(--radius)',

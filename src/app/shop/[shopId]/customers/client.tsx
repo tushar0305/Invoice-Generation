@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Table,
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, Trophy, Calendar, Download, Users } from 'lucide-react';
+import { Search, Trophy, Calendar, Download, Users, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
@@ -25,6 +25,17 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { haptics } from '@/lib/haptics';
 import { EmptyState } from '@/components/ui/empty-state';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 type CustomerStats = {
     totalPurchase: number;
@@ -39,7 +50,63 @@ type CustomersClientProps = {
 
 export function CustomersClient({ customerData, shopId }: CustomersClientProps) {
     const router = useRouter();
+    const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState('');
+    const [isPending, startTransition] = useTransition();
+    const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
+    const [newCustomer, setNewCustomer] = useState({
+        name: '',
+        phone: '',
+        email: '',
+        address: '',
+        gstNumber: '',
+    });
+
+    const handleAddCustomer = async () => {
+        if (!newCustomer.name.trim()) {
+            toast({
+                variant: 'destructive',
+                title: 'Validation Error',
+                description: 'Customer name is required',
+            });
+            return;
+        }
+
+        startTransition(async () => {
+            try {
+                const response = await fetch('/api/v1/customers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shopId,
+                        ...newCustomer,
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to create customer');
+                }
+
+                toast({
+                    title: 'Success',
+                    description: 'Customer created successfully',
+                });
+
+                setIsAddCustomerOpen(false);
+                setNewCustomer({ name: '', phone: '', email: '', address: '', gstNumber: '' });
+                router.refresh();
+            } catch (error: any) {
+                console.error('Create customer error:', error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Error',
+                    description: error.message || 'Failed to create customer',
+                });
+            }
+        });
+    };
 
     const filteredCustomers = useMemo(() => {
         return Object.entries(customerData).filter(([name]) =>
@@ -79,14 +146,14 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
     };
 
     return (
-        <MotionWrapper className="space-y-6">
+        <MotionWrapper className="space-y-6 p-6 pb-24 md:pb-6 max-w-[1800px] mx-auto">
             {/* Top Customer Card */}
             {topCustomer && (
                 <FadeIn>
-                    <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                    <Card className="border border-border shadow-sm">
                         <CardContent className="p-6 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-primary/20 rounded-full">
+                                <div className="p-3 bg-primary/10 rounded-full">
                                     <Trophy className="h-8 w-8 text-primary" />
                                 </div>
                                 <div>
@@ -106,7 +173,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                 </FadeIn>
             )}
 
-            <Card className="glass-card border-t-4 border-t-primary">
+            <Card className="border border-border shadow-sm">
                 <CardHeader className="pb-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="hidden md:block">
@@ -125,6 +192,78 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
+                            <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
+                                <DialogTrigger asChild>
+                                    <Button className="gap-2 shadow-lg shadow-primary/25">
+                                        <Plus className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Add Customer</span>
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Customer</DialogTitle>
+                                        <DialogDescription>
+                                            Create a new customer profile.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="name">Name *</Label>
+                                            <Input
+                                                id="name"
+                                                value={newCustomer.name}
+                                                onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                                                placeholder="Customer Name"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="phone">Phone</Label>
+                                            <Input
+                                                id="phone"
+                                                value={newCustomer.phone}
+                                                onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                                                placeholder="Phone Number"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="email">Email</Label>
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                value={newCustomer.email}
+                                                onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                                                placeholder="Email Address"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="address">Address</Label>
+                                            <Input
+                                                id="address"
+                                                value={newCustomer.address}
+                                                onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                                                placeholder="Address"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="gst">GST Number</Label>
+                                            <Input
+                                                id="gst"
+                                                value={newCustomer.gstNumber}
+                                                onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value })}
+                                                placeholder="GSTIN"
+                                            />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button onClick={handleAddCustomer} disabled={isPending}>
+                                            {isPending ? 'Creating...' : 'Create Customer'}
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                             <Button
                                 size="sm"
                                 variant="outline"
@@ -138,7 +277,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="hidden md:block rounded-md border border-border overflow-hidden">
+                    <div className="hidden md:block rounded-xl border border-border overflow-hidden">
                         <Table className="table-modern">
                             <TableHeader className="bg-muted/50">
                                 <TableRow className="hover:bg-transparent">
@@ -224,7 +363,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                             haptics.selection();
                                             router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(name)}`);
                                         }}
-                                        className="flex items-center gap-4 p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors active:scale-[0.98]"
+                                        className="flex items-center gap-4 p-4 border border-border rounded-xl bg-card hover:bg-accent/50 transition-colors active:scale-[0.98]"
                                     >
                                         <Avatar className="h-12 w-12 border border-border">
                                             <AvatarFallback className="bg-primary/10 text-primary font-bold">
