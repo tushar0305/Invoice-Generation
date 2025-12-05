@@ -35,13 +35,13 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
-import type { KhataCustomerBalance, KhataTransaction } from '@/lib/khata-types';
+import type { CustomerBalance, LedgerTransaction } from '@/lib/ledger-types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 
 type CustomerLedgerClientProps = {
-    customer: KhataCustomerBalance;
-    transactions: KhataTransaction[];
+    customer: CustomerBalance;
+    transactions: LedgerTransaction[];
     shopId: string;
     userId: string;
 };
@@ -75,9 +75,9 @@ export function CustomerLedgerClient({
     });
 
     // Calculate running balance for each transaction
-    let runningBalance = customer.opening_balance;
+    let runningBalance = 0; // Assuming 0 opening balance for now
     const transactionsWithBalance = initialTransactions.map(trans => {
-        if (trans.type === 'given') {
+        if (trans.entry_type === 'DEBIT') {
             runningBalance += trans.amount;
         } else {
             runningBalance -= trans.amount;
@@ -102,27 +102,20 @@ export function CustomerLedgerClient({
 
         startTransition(async () => {
             try {
-                // ✅ NEW: Call API endpoint instead of direct DB access
-                const response = await fetch('/api/v1/khata/transactions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        shopId,
-                        customerId: customer.id,
-                        type: newTransaction.type,
-                        amount: amount,
-                        description: newTransaction.description.trim() || undefined,
-                        dueDate: newTransaction.transaction_date, // Using transaction_date as due_date for now, or add separate field
-                    }),
+                // Use RPC
+                const { error } = await supabase.rpc('add_ledger_transaction', {
+                    p_shop_id: shopId,
+                    p_customer_id: customer.id,
+                    p_amount: amount,
+                    p_transaction_type: newTransaction.type === 'given' ? 'INVOICE' : 'PAYMENT', // Simplified mapping
+                    p_entry_type: newTransaction.type === 'given' ? 'DEBIT' : 'CREDIT',
+                    p_description: newTransaction.description.trim() || null,
+                    p_date: newTransaction.transaction_date
                 });
 
-                const result = await response.json();
+                if (error) throw error;
 
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to add transaction');
-                }
+
 
                 toast({
                     title: 'Transaction Added',
@@ -160,22 +153,22 @@ export function CustomerLedgerClient({
 
         startTransition(async () => {
             try {
-                // ✅ NEW: Call API endpoint
-                const response = await fetch(`/api/v1/khata/customers/${customer.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: editCustomer.name.trim(),
-                        phone: editCustomer.phone.trim() || undefined,
-                        address: editCustomer.address.trim() || undefined,
-                    }),
+                // Use RPC
+                const { error } = await supabase.rpc('update_customer', {
+                    p_customer_id: customer.id,
+                    p_shop_id: shopId,
+                    p_name: editCustomer.name.trim(),
+                    p_phone: editCustomer.phone.trim() || null,
+                    p_email: null,
+                    p_address: editCustomer.address.trim() || null,
+                    p_state: null,
+                    p_pincode: null,
+                    p_gst_number: null
                 });
 
-                const result = await response.json();
+                if (error) throw error;
 
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to update customer');
-                }
+
 
                 toast({
                     title: 'Customer Updated',
@@ -202,16 +195,15 @@ export function CustomerLedgerClient({
 
         startTransition(async () => {
             try {
-                // ✅ NEW: Call API endpoint
-                const response = await fetch(`/api/v1/khata/transactions/${transactionId}`, {
-                    method: 'DELETE',
+                // Use RPC
+                const { error } = await supabase.rpc('delete_ledger_transaction', {
+                    p_transaction_id: transactionId,
+                    p_shop_id: shopId
                 });
 
-                const result = await response.json();
+                if (error) throw error;
 
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to delete transaction');
-                }
+
 
                 toast({
                     title: 'Transaction Deleted',
@@ -396,15 +388,15 @@ export function CustomerLedgerClient({
                     <div className="grid gap-4 md:grid-cols-4">
                         <div className="p-4 rounded-lg bg-secondary/20 border border-border">
                             <div className="text-sm font-medium text-muted-foreground mb-1">Opening Balance</div>
-                            <div className="text-2xl font-bold">₹{formatCurrency(customer.opening_balance)}</div>
+                            <div className="text-2xl font-bold">₹0.00</div>
                         </div>
                         <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                             <div className="text-sm font-medium text-muted-foreground mb-1">Total Given</div>
-                            <div className="text-2xl font-bold text-green-600">₹{formatCurrency(customer.total_given)}</div>
+                            <div className="text-2xl font-bold text-green-600">₹{formatCurrency(customer.total_spent)}</div>
                         </div>
                         <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
                             <div className="text-sm font-medium text-muted-foreground mb-1">Total Received</div>
-                            <div className="text-2xl font-bold text-blue-600">₹{formatCurrency(customer.total_received)}</div>
+                            <div className="text-2xl font-bold text-blue-600">₹{formatCurrency(customer.total_paid)}</div>
                         </div>
                         <div className={cn(
                             "p-4 rounded-lg border",
@@ -447,20 +439,7 @@ export function CustomerLedgerClient({
                         </TableHeader>
                         <TableBody>
                             {/* Opening Balance Row */}
-                            {customer.opening_balance !== 0 && (
-                                <TableRow className="bg-secondary/20">
-                                    <TableCell className="font-medium">-</TableCell>
-                                    <TableCell className="text-muted-foreground italic">Opening Balance</TableCell>
-                                    <TableCell className="text-right">-</TableCell>
-                                    <TableCell className="text-right">-</TableCell>
-                                    <TableCell className="text-right font-bold">
-                                        ₹{formatCurrency(Math.abs(customer.opening_balance))}
-                                        {customer.opening_balance > 0 && ' Dr'}
-                                        {customer.opening_balance < 0 && ' Cr'}
-                                    </TableCell>
-                                    <TableCell></TableCell>
-                                </TableRow>
-                            )}
+
 
                             {transactionsWithBalance.length === 0 ? (
                                 <TableRow>
@@ -476,7 +455,7 @@ export function CustomerLedgerClient({
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                {trans.type === 'given' ? (
+                                                {trans.entry_type === 'DEBIT' ? (
                                                     <TrendingUp className="h-4 w-4 text-green-600" />
                                                 ) : (
                                                     <TrendingDown className="h-4 w-4 text-blue-600" />
@@ -485,10 +464,10 @@ export function CustomerLedgerClient({
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right text-green-600 font-medium">
-                                            {trans.type === 'given' ? `₹${formatCurrency(trans.amount)}` : '-'}
+                                            {trans.entry_type === 'DEBIT' ? `₹${formatCurrency(trans.amount)}` : '-'}
                                         </TableCell>
                                         <TableCell className="text-right text-blue-600 font-medium">
-                                            {trans.type === 'received' ? `₹${formatCurrency(trans.amount)}` : '-'}
+                                            {trans.entry_type === 'CREDIT' ? `₹${formatCurrency(trans.amount)}` : '-'}
                                         </TableCell>
                                         <TableCell className="text-right font-bold">
                                             ₹{formatCurrency(Math.abs(trans.balance_after))}
@@ -501,7 +480,7 @@ export function CustomerLedgerClient({
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-destructive hover:text-destructive"
-                                                    onClick={() => handleDeleteTransaction(trans.id, trans.amount, trans.type)}
+                                                    onClick={() => handleDeleteTransaction(trans.id, trans.amount, trans.entry_type)}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>

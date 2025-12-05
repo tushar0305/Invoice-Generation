@@ -59,14 +59,10 @@ export const POST = withAuth(async (
     const { data, error } = await supabase.rpc('create_invoice_with_items', {
         p_shop_id: input.shopId,
         p_customer_id: customerId || null,
-        p_customer_name: input.customerName,
-        p_customer_phone: input.customerPhone || null,
-        p_customer_address: input.customerAddress || null,
         p_customer_snapshot: customerSnapshot,
         p_items: input.items,
         p_discount: input.discount,
         p_notes: input.notes || null,
-        p_user_id: user.id,
         p_status: input.status || 'due',
     });
 
@@ -124,16 +120,20 @@ export const POST = withAuth(async (
 async function upsertCustomer(supabase: any, userId: string, input: any) {
     try {
         // Check existing
-        const { data: existing } = await supabase
+        const { data: existing, error: selectError } = await supabase
             .from('customers')
             .select('id')
             .eq('shop_id', input.shopId)
             .eq('phone', input.customerPhone)
             .maybeSingle();
 
+        if (selectError) {
+            console.error('[Customer Search Error]', selectError);
+        }
+
         if (existing) {
             // Update details
-            await supabase
+            const { error: updateError } = await supabase
                 .from('customers')
                 .update({
                     name: input.customerName,
@@ -143,13 +143,16 @@ async function upsertCustomer(supabase: any, userId: string, input: any) {
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', existing.id);
+
+            if (updateError) {
+                console.error('[Customer Update Error]', updateError);
+            }
             return existing.id;
         } else {
-            // Create new
-            const { data: newCustomer } = await supabase
+            // Create new - NOTE: customers table does NOT have user_id column
+            const { data: newCustomer, error: insertError } = await supabase
                 .from('customers')
                 .insert({
-                    user_id: userId,
                     shop_id: input.shopId,
                     name: input.customerName,
                     phone: input.customerPhone,
@@ -160,6 +163,13 @@ async function upsertCustomer(supabase: any, userId: string, input: any) {
                 })
                 .select('id')
                 .single();
+
+            if (insertError) {
+                console.error('[Customer Insert Error]', insertError);
+                return null;
+            }
+
+            console.log('[Customer Created]', newCustomer?.id);
             return newCustomer?.id;
         }
     } catch (err) {

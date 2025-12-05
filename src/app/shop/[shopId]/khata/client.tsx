@@ -27,13 +27,13 @@ import {
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
-import type { KhataCustomerBalance, KhataStats, KhataTransaction } from '@/lib/khata-types';
+import type { CustomerBalance, LedgerStats, LedgerTransaction } from '@/lib/ledger-types';
 import { cn, formatCurrency } from '@/lib/utils';
 
 type KhataClientProps = {
-    customers: KhataCustomerBalance[];
-    stats: KhataStats;
-    recentTransactions: any[];
+    customers: CustomerBalance[];
+    stats: LedgerStats;
+    recentTransactions: LedgerTransaction[];
     shopId: string;
     userId: string;
     initialSearch?: string;
@@ -90,16 +90,17 @@ export function KhataClient({
 
         startTransition(async () => {
             try {
-                const { error } = await supabase
-                    .from('khata_customers')
-                    .insert({
-                        shop_id: shopId,
-                        user_id: userId,
-                        name: newCustomer.name.trim(),
-                        phone: newCustomer.phone.trim() || null,
-                        address: newCustomer.address.trim() || null,
-                        opening_balance: newCustomer.opening_balance || 0,
-                    });
+                // Use the create_customer function or insert directly
+                const { error } = await supabase.rpc('create_customer', {
+                    p_shop_id: shopId,
+                    p_name: newCustomer.name.trim(),
+                    p_phone: newCustomer.phone.trim() || null,
+                    p_email: null,
+                    p_address: newCustomer.address.trim() || null,
+                    p_state: null,
+                    p_pincode: null,
+                    p_gst_number: null
+                });
 
                 if (error) throw error;
 
@@ -129,9 +130,10 @@ export function KhataClient({
 
         startTransition(async () => {
             try {
+                // Soft delete customer
                 const { error } = await supabase
-                    .from('khata_customers')
-                    .delete()
+                    .from('customers')
+                    .update({ deleted_at: new Date().toISOString() })
                     .eq('id', customerId);
 
                 if (error) throw error;
@@ -154,7 +156,7 @@ export function KhataClient({
     };
 
     return (
-        <div className="space-y-6 pb-24">
+        <div className="space-y-4 pb-24 px-4 md:px-0">
             {/* Stats Cards */}
             <div className="grid gap-4 md:grid-cols-4">
                 <Card className="border-gray-200 dark:border-white/10 bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
@@ -385,10 +387,10 @@ export function KhataClient({
                                             {customer.phone || '-'}
                                         </TableCell>
                                         <TableCell className="text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                                            ₹{formatCurrency(customer.total_given)}
+                                            ₹{formatCurrency(customer.total_spent)}
                                         </TableCell>
                                         <TableCell className="text-right text-blue-600 dark:text-blue-400 font-medium">
-                                            ₹{formatCurrency(customer.total_received)}
+                                            ₹{formatCurrency(customer.total_paid)}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <Badge

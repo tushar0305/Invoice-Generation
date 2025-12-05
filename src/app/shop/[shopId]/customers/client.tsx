@@ -146,20 +146,20 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
     };
 
     return (
-        <MotionWrapper className="space-y-6 p-6 pb-24 md:pb-6 max-w-[1800px] mx-auto">
+        <MotionWrapper className="space-y-4 px-4 md:px-6 pb-24 md:pb-6 max-w-[1800px] mx-auto">
             {/* Top Customer Card */}
             {topCustomer && (
                 <FadeIn>
                     <Card className="border border-border shadow-sm">
-                        <CardContent className="p-6 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-primary/10 rounded-full">
-                                    <Trophy className="h-8 w-8 text-primary" />
+                        <CardContent className="p-4 md:p-6 flex items-center justify-between">
+                            <div className="flex items-center gap-3 md:gap-4">
+                                <div className="p-2 md:p-3 bg-primary/10 rounded-full">
+                                    <Trophy className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Top Customer</p>
-                                    <h3 className="text-2xl font-bold text-foreground">{topCustomer[0]}</h3>
-                                    <p className="text-sm text-primary font-medium">
+                                    <p className="text-xs md:text-sm font-medium text-muted-foreground">Top Customer</p>
+                                    <h3 className="text-lg md:text-2xl font-bold text-foreground">{topCustomer[0]}</h3>
+                                    <p className="text-xs md:text-sm text-primary font-medium">
                                         {formatCurrency(topCustomer[1].totalPurchase)} Lifetime Spend
                                     </p>
                                 </div>
@@ -174,105 +174,108 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
             )}
 
             <Card className="border border-border shadow-sm">
-                <CardHeader className="pb-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="hidden md:block">
-                            <CardTitle className="text-xl sm:text-2xl font-heading text-primary">All Customers</CardTitle>
-                            <CardDescription className="text-xs sm:text-sm mt-1">
-                                Manage and view your customer base
-                            </CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="relative w-full sm:w-64">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search customers..."
-                                    className="pl-10 bg-background/50"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                {/* Sticky Header for Mobile */}
+                <CardHeader className="pb-3 sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b md:border-b-0 md:static md:bg-transparent">
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                            <div className="md:block hidden">
+                                <CardTitle className="text-xl sm:text-2xl font-heading text-primary">Customers</CardTitle>
+                                <CardDescription className="text-xs sm:text-sm mt-1">
+                                    Manage and view your customer base
+                                </CardDescription>
                             </div>
-                            <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="gap-2 shadow-lg shadow-primary/25">
-                                        <Plus className="h-4 w-4" />
-                                        <span className="hidden sm:inline">Add Customer</span>
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Customer</DialogTitle>
-                                        <DialogDescription>
-                                            Create a new customer profile.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="name">Name *</Label>
-                                            <Input
-                                                id="name"
-                                                value={newCustomer.name}
-                                                onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                                                placeholder="Customer Name"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="phone">Phone</Label>
-                                            <Input
-                                                id="phone"
-                                                value={newCustomer.phone}
-                                                onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                                                placeholder="Phone Number"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="email">Email</Label>
-                                            <Input
-                                                id="email"
-                                                type="email"
-                                                value={newCustomer.email}
-                                                onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                                                placeholder="Email Address"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="address">Address</Label>
-                                            <Input
-                                                id="address"
-                                                value={newCustomer.address}
-                                                onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                                                placeholder="Address"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="gst">GST Number</Label>
-                                            <Input
-                                                id="gst"
-                                                value={newCustomer.gstNumber}
-                                                onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value })}
-                                                placeholder="GSTIN"
-                                            />
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
-                                            Cancel
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <div className="relative flex-1 md:w-64 md:flex-none">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search customers..."
+                                        className="pl-10 bg-background/50"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button className="gap-2 shadow-lg shadow-primary/25 shrink-0">
+                                            <Plus className="h-4 w-4" />
+                                            <span className="hidden sm:inline">New Customer</span>
                                         </Button>
-                                        <Button onClick={handleAddCustomer} disabled={isPending}>
-                                            {isPending ? 'Creating...' : 'Create Customer'}
-                                        </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-9 gap-2 shrink-0"
-                                onClick={handleExport}
-                            >
-                                <Download className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Export</span>
-                            </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Add New Customer</DialogTitle>
+                                            <DialogDescription>
+                                                Create a new customer profile.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="space-y-4 py-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="name">Name *</Label>
+                                                <Input
+                                                    id="name"
+                                                    value={newCustomer.name}
+                                                    onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                                                    placeholder="Customer Name"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="phone">Phone</Label>
+                                                <Input
+                                                    id="phone"
+                                                    value={newCustomer.phone}
+                                                    onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                                                    placeholder="Phone Number"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email">Email</Label>
+                                                <Input
+                                                    id="email"
+                                                    type="email"
+                                                    value={newCustomer.email}
+                                                    onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                                                    placeholder="Email Address"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="address">Address</Label>
+                                                <Input
+                                                    id="address"
+                                                    value={newCustomer.address}
+                                                    onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                                                    placeholder="Address"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="gst">GST Number</Label>
+                                                <Input
+                                                    id="gst"
+                                                    value={newCustomer.gstNumber}
+                                                    onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value })}
+                                                    placeholder="GSTIN"
+                                                />
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
+                                                Cancel
+                                            </Button>
+                                            <Button onClick={handleAddCustomer} disabled={isPending}>
+                                                {isPending ? 'Creating...' : 'Create Customer'}
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-9 gap-2 shrink-0 hidden sm:flex"
+                                    onClick={handleExport}
+                                >
+                                    <Download className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">Export</span>
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </CardHeader>

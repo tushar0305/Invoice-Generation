@@ -49,7 +49,7 @@ export default async function InvoicesPage({
     }
 
     if (q) {
-        query = query.or(`customer_name.ilike.%${q}%,invoice_number.ilike.%${q}%`);
+        query = query.or(`customer_snapshot->>name.ilike.%${q}%,invoice_number.ilike.%${q}%`);
     }
 
     const { data } = await query;
@@ -57,21 +57,20 @@ export default async function InvoicesPage({
     // Transform data to match Invoice type
     const invoices: Invoice[] = (data || []).map((r: any) => ({
         id: r.id,
-        userId: r.user_id,
         shopId: r.shop_id,
-        createdBy: r.created_by,
         invoiceNumber: r.invoice_number,
-        customerName: r.customer_name,
-        customerAddress: r.customer_address || '',
-        customerState: r.customer_state || '',
-        customerPincode: r.customer_pincode || '',
-        customerPhone: r.customer_phone || '',
+        customerId: r.customer_id,
+        customerSnapshot: r.customer_snapshot,
         invoiceDate: r.invoice_date,
-        discount: Number(r.discount) || 0,
-        sgst: Number(r.sgst) || 0,
-        cgst: Number(r.cgst) || 0,
         status: r.status,
+        subtotal: Number(r.subtotal) || 0,
+        discount: Number(r.discount) || 0,
+        cgstAmount: Number(r.cgst_amount) || 0,
+        sgstAmount: Number(r.sgst_amount) || 0,
         grandTotal: Number(r.grand_total) || 0,
+        notes: r.notes,
+        createdByName: r.created_by_name,
+        createdBy: r.created_by,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
     }));

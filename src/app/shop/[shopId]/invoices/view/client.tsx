@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
-import { Loader2, Printer, Edit, ArrowLeft, CheckCircle, Clock, Send } from 'lucide-react';
+import { Loader2, Printer, Edit, ArrowLeft, CheckCircle, Clock, Send, Share2, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -93,7 +93,7 @@ export function ViewInvoiceClient() {
             if (!shopErr && shopDetails) {
                 setSettings({
                     id: shopDetails.id, // Use shop ID
-                    userId: inv.user_id,
+                    shopId: inv.shop_id,
                     cgstRate: Number(shopDetails.cgst_rate) || 0,
                     sgstRate: Number(shopDetails.sgst_rate) || 0,
                     shopName: shopDetails.shop_name || 'Jewellers Store',
@@ -113,21 +113,23 @@ export function ViewInvoiceClient() {
 
             const mappedInv: Invoice = {
                 id: inv.id,
-                userId: inv.user_id,
+                shopId: inv.shop_id,
                 invoiceNumber: inv.invoice_number,
-                customerName: inv.customer_name,
-                customerAddress: inv.customer_address || '',
-                customerState: inv.customer_state || '',
-                customerPincode: inv.customer_pincode || '',
-                customerPhone: inv.customer_phone || '',
+                customerId: inv.customer_id,
+                customerSnapshot: inv.customer_snapshot,
                 invoiceDate: inv.invoice_date,
-                discount: Number(inv.discount) || 0,
-                sgst: Number(inv.sgst) || 0,
-                cgst: Number(inv.cgst) || 0,
                 status: inv.status,
+                subtotal: Number(inv.subtotal) || 0,
+                discount: Number(inv.discount) || 0,
+                cgstAmount: Number(inv.cgst_amount) || 0,
+                sgstAmount: Number(inv.sgst_amount) || 0,
                 grandTotal: Number(inv.grand_total) || 0,
+                notes: inv.notes,
                 createdByName: inv.created_by_name,
-            } as Invoice;
+                createdBy: inv.created_by,
+                createdAt: inv.created_at,
+                updatedAt: inv.updated_at,
+            };
             const { data: its, error: itErr } = await supabase
                 .from('invoice_items')
                 .select('*')
@@ -162,7 +164,7 @@ export function ViewInvoiceClient() {
                     .from('invoices')
                     .update({ status })
                     .eq('id', invoice.id)
-                    .eq('user_id', invoice.userId);
+
                 if (error) throw error;
 
                 // Update local state to reflect the change immediately
@@ -268,8 +270,8 @@ export function ViewInvoiceClient() {
     const { subtotal, sgstAmount, cgstAmount, taxAmount, grandTotal } = (() => {
         const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
         const totalBeforeTax = subtotal - invoice.discount;
-        const sgstRate = invoice.sgst ?? ((invoice.tax || 0) / 2);
-        const cgstRate = invoice.cgst ?? ((invoice.tax || 0) / 2);
+        const sgstRate = settings?.sgstRate || 0; // Use settings for rates
+        const cgstRate = settings?.cgstRate || 0; // Use settings for rates
         const sgstAmount = totalBeforeTax * (sgstRate / 100);
         const cgstAmount = totalBeforeTax * (cgstRate / 100);
         const taxAmount = sgstAmount + cgstAmount;
@@ -346,15 +348,18 @@ export function ViewInvoiceClient() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
                             <div>
                                 <h3 className="font-semibold text-gray-600 mb-1">Bill To:</h3>
-                                <p className="font-bold text-lg">{invoice.customerName}</p>
-                                <p className="text-muted-foreground">{invoice.customerAddress}</p>
-                                {(invoice as any).customerState && (
-                                    <p className="text-muted-foreground">{(invoice as any).customerState}</p>
+                                <p className="font-bold text-lg">{invoice.customerSnapshot?.name || 'Unknown'}</p>
+                                <p className="text-muted-foreground whitespace-pre-wrap">{invoice.customerSnapshot?.address || ''}</p>
+                                <p className="text-muted-foreground">
+                                    {[invoice.customerSnapshot?.state, invoice.customerSnapshot?.pincode].filter(Boolean).join(', ')}
+                                </p>
+                                {/* Phone number with icon */}
+                                {invoice.customerSnapshot?.phone && (
+                                    <div className="flex items-center gap-2 mt-2 text-muted-foreground">
+                                        <Phone className="h-3 w-3" />
+                                        <span>{invoice.customerSnapshot.phone}</span>
+                                    </div>
                                 )}
-                                {(invoice as any).customerPincode && (
-                                    <p className="text-muted-foreground">{(invoice as any).customerPincode}</p>
-                                )}
-                                <p className="text-muted-foreground">{invoice.customerPhone}</p>
                             </div>
                             <div className="flex sm:justify-end items-start">
                                 <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'} className={`text-lg px-4 py-1 rounded-full ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
@@ -404,12 +409,12 @@ export function ViewInvoiceClient() {
                                     <span>{formatCurrency(subtotal - invoice.discount)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="font-semibold text-muted-foreground">SGST ({invoice.sgst ?? ((invoice.tax || 0) / 2)}%):</span>
-                                    <span>+ {formatCurrency(sgstAmount)}</span>
+                                    <span className="font-semibold text-muted-foreground">SGST ({settings?.sgstRate || 0}%):</span>
+                                    <span>{formatCurrency(sgstAmount)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="font-semibold text-muted-foreground">CGST ({invoice.cgst ?? ((invoice.tax || 0) / 2)}%):</span>
-                                    <span>+ {formatCurrency(cgstAmount)}</span>
+                                    <span className="font-semibold text-muted-foreground">CGST ({settings?.cgstRate || 0}%):</span>
+                                    <span>{formatCurrency(cgstAmount)}</span>
                                 </div>
                                 <Separator />
                                 <div className="flex justify-between text-xl font-bold text-primary">

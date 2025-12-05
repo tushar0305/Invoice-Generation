@@ -7,25 +7,27 @@ import { Invoice, InvoiceItem } from '@/lib/definitions';
 const dummyInvoice: Invoice = {
     id: 'preview',
     invoiceNumber: 'INV-001',
-    customerName: 'John Doe',
-    customerPhone: '9876543210',
+    customerSnapshot: {
+        name: 'John Doe',
+        phone: '9876543210',
+        address: '123 Main St, City',
+        state: 'State',
+        pincode: '123456'
+    },
     // totalAmount removed as it's not in Invoice type
     grandTotal: 55000,
+    subtotal: 50000,
     createdBy: 'preview',
     status: 'paid',
     // items removed
     createdAt: new Date().toISOString(),
-    userId: 'preview',
+    // userId removed
     invoiceDate: new Date().toISOString(),
     discount: 0,
-    tax: 3,
-    cgst: 1.5,
-    sgst: 1.5,
+    cgstAmount: 1.5,
+    sgstAmount: 1.5,
     // paymentMode removed
     shopId: 'preview',
-    customerAddress: '123 Main St, City',
-    customerState: 'State',
-    customerPincode: '123456',
 };
 
 const dummyItems: InvoiceItem[] = [

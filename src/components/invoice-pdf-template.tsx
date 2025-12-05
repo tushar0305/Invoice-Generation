@@ -1,14 +1,29 @@
 "use client";
 
 import React from 'react';
-import type { Invoice, InvoiceItem, UserSettings } from '@/lib/definitions';
+import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+
+type UserSettings = {
+  shopName?: string;
+  address?: string;
+  state?: string;
+  pincode?: string;
+  phoneNumber?: string;
+  email?: string;
+  gstNumber?: string;
+  panNumber?: string;
+  logoUrl?: string;
+  cgstRate?: number;
+  sgstRate?: number;
+  templateId?: string;
+};
 
 type Props = {
   invoice: Invoice;
   items: InvoiceItem[];
-  settings?: Partial<UserSettings> | null;
+  settings?: UserSettings | null;
 };
 
 type TemplateProps = Props & {
@@ -98,11 +113,10 @@ const ClassicTemplate = ({ invoice, items, settings, calculations, shopDetails }
       <div className="mb-3">
         <div className="text-[12px] font-bold uppercase text-[#800000]">Bill To</div>
         <div className="mt-1 space-y-[2px]">
-          <p className="font-semibold">{invoice.customerName}</p>
-          {invoice.customerAddress && <p>{invoice.customerAddress}</p>}
-          {invoice.customerState && <p>{invoice.customerState}</p>}
-          {invoice.customerPincode && <p>{invoice.customerPincode}</p>}
-          {invoice.customerPhone && <p><span className="font-semibold">Phone:</span> {invoice.customerPhone}</p>}
+          <p className="font-semibold">{invoice.customerSnapshot?.name || 'Unknown'}</p>
+          <p className="whitespace-pre-wrap">{invoice.customerSnapshot?.address || ''}</p>
+          <p>{[invoice.customerSnapshot?.state, invoice.customerSnapshot?.pincode].filter(Boolean).join(', ')}</p>
+          {invoice.customerSnapshot?.phone && <p><span className="font-semibold">Phone:</span> {invoice.customerSnapshot.phone}</p>}
         </div>
       </div>
 
@@ -227,12 +241,12 @@ const ModernTemplate = ({ invoice, items, settings, calculations, shopDetails }:
         <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Bill To</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="font-bold text-lg text-slate-900">{invoice.customerName}</p>
-            <p className="text-slate-600">{invoice.customerAddress}</p>
-            <p className="text-slate-600">{invoice.customerState} {invoice.customerPincode}</p>
+            <p className="font-bold text-lg text-slate-900">{invoice.customerSnapshot?.name || 'Unknown'}</p>
+            <p className="text-slate-600 whitespace-pre-wrap">{invoice.customerSnapshot?.address || ''}</p>
+            <p className="text-slate-600">{[invoice.customerSnapshot?.state, invoice.customerSnapshot?.pincode].filter(Boolean).join(', ')}</p>
           </div>
           <div className="text-right">
-            {invoice.customerPhone && <p className="text-slate-600">Phone: {invoice.customerPhone}</p>}
+            {invoice.customerSnapshot?.phone && <p className="text-slate-600">Phone: {invoice.customerSnapshot.phone}</p>}
           </div>
         </div>
       </div>
@@ -324,9 +338,9 @@ const MinimalTemplate = ({ invoice, items, settings, calculations, shopDetails }
       <div className="flex justify-between mb-8">
         <div>
           <p className="font-bold uppercase mb-1">Billed To:</p>
-          <p>{invoice.customerName}</p>
-          <p>{invoice.customerAddress}</p>
-          <p>{invoice.customerPhone}</p>
+          <p>{invoice.customerSnapshot?.name || 'Unknown'}</p>
+          <p className="whitespace-pre-wrap">{invoice.customerSnapshot?.address || ''}</p>
+          <p>{invoice.customerSnapshot?.phone}</p>
         </div>
         <div className="text-right">
           <p><span className="font-bold">INVOICE NO:</span> {invoice.invoiceNumber}</p>
@@ -419,9 +433,9 @@ const ElegantTemplate = ({ invoice, items, settings, calculations, shopDetails }
       <div className="flex justify-between px-8 mb-8">
         <div>
           <h3 className="font-bold text-[#1A1A1A] mb-1">Billed To:</h3>
-          <p className="font-bold text-lg">{invoice.customerName}</p>
-          <p className="text-[#555]">{invoice.customerAddress}</p>
-          <p className="text-[#555]">{invoice.customerPhone}</p>
+          <p className="font-bold text-lg">{invoice.customerSnapshot?.name || 'Unknown'}</p>
+          <p className="text-[#555] whitespace-pre-wrap">{invoice.customerSnapshot?.address || ''}</p>
+          <p className="text-[#555]">{invoice.customerSnapshot?.phone}</p>
         </div>
         <div className="text-right">
           <p><span className="font-bold">Invoice No:</span> {invoice.invoiceNumber}</p>
@@ -516,8 +530,8 @@ const BoldTemplate = ({ invoice, items, settings, calculations, shopDetails }: T
         <div className="bg-[#FFD700] p-6 rounded-none mb-8 flex justify-between items-start">
           <div>
             <p className="text-xs font-bold mb-2">BILL TO:</p>
-            <p className="text-xl font-bold">{invoice.customerName}</p>
-            <p className="text-sm">{invoice.customerAddress}</p>
+            <p className="text-xl font-bold">{invoice.customerSnapshot?.name || 'Unknown'}</p>
+            <p className="text-sm whitespace-pre-wrap">{invoice.customerSnapshot?.address || ''}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-bold mb-1">DETAILS:</p>
@@ -584,8 +598,8 @@ export default function InvoicePdfTemplate({ invoice, items, settings }: Props) 
     0,
   );
   const totalBeforeTax = subtotal - (invoice.discount || 0);
-  const cgstRate = invoice.cgst ?? ((invoice.tax || 0) / 2);
-  const sgstRate = invoice.sgst ?? ((invoice.tax || 0) / 2);
+  const cgstRate = settings?.cgstRate || 0;
+  const sgstRate = settings?.sgstRate || 0;
   const cgst = totalBeforeTax * (cgstRate / 100);
   const sgst = totalBeforeTax * (sgstRate / 100);
   const totalAmount = totalBeforeTax + cgst + sgst;

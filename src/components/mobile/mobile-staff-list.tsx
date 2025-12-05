@@ -46,7 +46,7 @@ export function MobileStaffList({ shopId, staff, invitations, currentUserId }: M
   return (
     <div className="md:hidden min-h-screen bg-gray-50/50 dark:bg-black/50 pb-24">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 px-4 py-3 space-y-3 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 px-4 py-3 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
             Team Members

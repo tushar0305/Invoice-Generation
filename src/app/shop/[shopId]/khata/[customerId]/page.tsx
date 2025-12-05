@@ -40,21 +40,21 @@ export default async function CustomerLedgerPage({ params }: PageProps) {
         redirect('/dashboard');
     }
 
-    // Fetch customer with balance
-    const { data: customer, error: customerError } = await supabase
-        .from('khata_customer_balances')
+    // Fetch customer details
+    const { data: customerRaw, error: customerError } = await supabase
+        .from('customers')
         .select('*')
         .eq('id', customerId)
         .eq('shop_id', shopId)
         .single();
 
-    if (customerError || !customer) {
+    if (customerError || !customerRaw) {
         notFound();
     }
 
     // Fetch all transactions for this customer
-    const { data: transactions, error: transError } = await supabase
-        .from('khata_transactions')
+    const { data: transactionsRaw, error: transError } = await supabase
+        .from('ledger_transactions')
         .select('*')
         .eq('customer_id', customerId)
         .order('transaction_date', { ascending: false })
@@ -63,6 +63,37 @@ export default async function CustomerLedgerPage({ params }: PageProps) {
     if (transError) {
         console.error('Error fetching transactions:', transError);
     }
+
+    // Calculate balance
+    let totalPaid = 0;
+    let currentBalance = 0;
+
+    const transactions = (transactionsRaw || []).map(t => {
+        if (t.entry_type === 'CREDIT') {
+            totalPaid += Number(t.amount);
+            currentBalance -= Number(t.amount);
+        } else {
+            currentBalance += Number(t.amount);
+        }
+        return {
+            ...t,
+            transaction_type: t.transaction_type as any,
+            entry_type: t.entry_type as any
+        };
+    });
+
+    const customer = {
+        id: customerRaw.id,
+        shop_id: customerRaw.shop_id,
+        name: customerRaw.name,
+        phone: customerRaw.phone,
+        email: customerRaw.email,
+        address: customerRaw.address,
+        total_spent: customerRaw.total_spent || 0,
+        total_paid: totalPaid,
+        current_balance: currentBalance,
+        last_transaction_date: transactions.length > 0 ? transactions[0].transaction_date : null
+    };
 
     return (
         <Suspense fallback={<LedgerLoading />}>

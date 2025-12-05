@@ -6,22 +6,17 @@ export type InvoiceItem = {
   netWeight: number;
   rate: number;
   making: number;
+  amount?: number; // Calculated field
 };
 
 export type Invoice = {
-  id: string; // db id
-  userId: string; // DEPRECATED: kept for backward compatibility, use createdBy
-  shopId: string; // Shop this invoice belongs to
-  createdBy: string; // User who created this invoice
-  createdByName?: string; // Name of the user who created this invoice
-  updatedBy?: string; // User who last updated this invoice
-  invoiceNumber: string; // user-facing id
-
-  // Normalized Link
+  id: string;
+  shopId: string;
+  invoiceNumber: string;
   customerId?: string;
 
   // Snapshot Data (Preserves history)
-  customerSnapshot?: {
+  customerSnapshot: {
     name: string;
     address?: string;
     state?: string;
@@ -31,135 +26,77 @@ export type Invoice = {
     email?: string;
   };
 
-  // Legacy Columns (Deprecated but kept for now)
-  customerName: string;
-  customerAddress: string;
-  customerState?: string;
-  customerPincode?: string;
-  customerPhone: string;
-  customerEmail?: string;
-
   invoiceDate: string; // YYYY-MM-DD
-  discount: number; // as a currency value
-  sgst: number; // as a percentage
-  cgst: number; // as a percentage
-  tax?: number; // DEPRECATED: kept for backward compatibility, use sgst and cgst instead
-  status: 'paid' | 'due';
-  grandTotal: number; // Denormalized for performance
-  createdAt?: any;
-  updatedAt?: any;
-};
+  status: 'paid' | 'due' | 'cancelled';
 
+  // Financials
+  subtotal: number;
+  discount: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  grandTotal: number;
+
+  notes?: string;
+  createdByName?: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 export type StockItem = {
-  id: string; // Document ID
-  userId: string; // DEPRECATED: kept for backward compatibility
-  shopId: string; // Shop this stock belongs to
-  createdBy: string; // User who created this stock item
-  updatedBy?: string; // User who last updated this stock item
-  name: string; // Item name (e.g., "Gold Ring", "Silver Bracelet")
-  description?: string; // Additional description
-  purity: string; // Purity (e.g., "22K", "92.5", "999")
-  basePrice: number; // Base price per unit
-  baseWeight?: number; // Base weight if applicable (e.g., 1 gram, 1 piece)
-  makingChargePerGram: number; // Making charge per gram
-  quantity: number; // Current stock quantity
-  unit: string; // Unit of measurement (e.g., "gram", "piece", "ml")
-  category?: string; // Category for organization (e.g., "Gold", "Silver", "Bronze")
-  isActive: boolean; // Whether this item is available for invoices
-  createdAt?: any;
-  updatedAt?: any;
+  id: string;
+  shopId: string;
+  name: string;
+  description?: string;
+  purity: string;
+  basePrice: number;
+  makingChargePerGram: number;
+  quantity: number;
+  unit: string;
+  category?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-
 // ============================================
-// Enhanced Customer Types
+// Unified Customer & Ledger Types
 // ============================================
 
 export type Customer = {
   id: string;
-  userId: string;
   shopId: string;
-  createdBy?: string;
-  updatedBy?: string;
   name: string;
   email?: string;
   phone?: string;
   address?: string;
+  state?: string;
+  pincode?: string;
   gstNumber?: string;
+
   loyaltyPoints: number;
   totalSpent: number;
-  lastVisitAt?: string;
+
   notes?: string;
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
 };
 
-export type CustomerLoyaltyLog = {
+export type LedgerTransaction = {
   id: string;
-  customerId: string;
   shopId: string;
+  customerId: string;
   invoiceId?: string;
-  pointsChange: number;
-  reason?: string;
-  createdAt: string;
-};
 
-export type CustomerLedgerEntry = {
-  id: string;
-  customerId: string;
-  shopId: string;
-  invoiceId?: string;
-  type: 'credit' | 'debit';
+  transactionType: 'INVOICE' | 'PAYMENT' | 'ADJUSTMENT';
   amount: number;
+  entryType: 'DEBIT' | 'CREDIT'; // DEBIT: Customer owes more, CREDIT: Customer pays
+
   description?: string;
-  dueDate?: string;
-  isCleared: boolean;
+  transactionDate: string; // YYYY-MM-DD
   createdAt: string;
   createdBy?: string;
-};
-
-// ============================================
-// Staff Management Types
-// ============================================
-
-export type StaffProfile = {
-  id: string;
-  userId?: string; // Link to auth user if they have login
-  shopId: string;
-  fullName: string;
-  designation?: string;
-  phoneNumber?: string;
-  joiningDate?: string;
-  salaryType?: 'monthly' | 'daily' | 'commission';
-  baseSalary?: number;
-  isActive: boolean;
-  createdAt: string;
-};
-
-export type StaffAttendance = {
-  id: string;
-  staffId: string;
-  shopId: string;
-  date: string; // YYYY-MM-DD
-  status: 'present' | 'absent' | 'half_day' | 'leave';
-  checkInTime?: string;
-  checkOutTime?: string;
-  notes?: string;
-  createdAt: string;
-};
-
-export type StaffPayment = {
-  id: string;
-  staffId: string;
-  shopId: string;
-  amount: number;
-  paymentDate: string; // YYYY-MM-DD
-  paymentType: 'salary' | 'advance' | 'bonus' | 'commission';
-  description?: string;
-  createdBy?: string;
-  createdAt: string;
 };
 
 // ============================================
@@ -193,10 +130,9 @@ export type UserShopRole = {
   userId: string;
   shopId: string;
   role: UserRole;
-  inviteCode?: string; // 6-digit code for invitation
   invitedBy?: string;
   invitedAt?: string;
-  acceptedAt?: string; // NULL if invitation pending
+  acceptedAt?: string;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -211,7 +147,6 @@ export type UserPreferences = {
   currency: string;
   onboardingCompleted?: boolean;
   onboardingStep?: number;
-  onboardingCompletedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -244,13 +179,6 @@ export type ShopSetupData = {
   templateId: string;
 };
 
-// Backward Compatibility: UserSettings type alias
-// Many components still reference UserSettings - this maps to Shop type
-export type UserSettings = Shop & {
-  userId: string; // Maps to createdBy
-  migratedToShopId?: string; // Legacy field
-};
-
 // Permission helper type
 export type Permission = {
   canCreateInvoices: boolean;
@@ -265,3 +193,19 @@ export type Permission = {
   canCreateShop: boolean; // owner only
 };
 
+export type UserSettings = {
+  id?: string;
+  userId?: string;
+  shopName?: string;
+  address?: string;
+  state?: string;
+  pincode?: string;
+  phoneNumber?: string;
+  email?: string;
+  gstNumber?: string;
+  panNumber?: string;
+  logoUrl?: string;
+  cgstRate?: number;
+  sgstRate?: number;
+  templateId?: string;
+};

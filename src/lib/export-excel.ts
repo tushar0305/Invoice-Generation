@@ -7,13 +7,13 @@ export function exportInvoicesToExcel(invoices: Invoice[], filename: string = 'i
     const data = invoices.map(inv => ({
         'Invoice #': inv.invoiceNumber,
         'Date': format(new Date(inv.invoiceDate), 'dd/MM/yyyy'),
-        'Customer': inv.customerName,
-        'Phone': inv.customerPhone || '-',
+        'Customer': inv.customerSnapshot?.name || 'Unknown',
+        'Phone': inv.customerSnapshot?.phone || '-',
         'Status': inv.status,
         'Subtotal': inv.grandTotal ? `₹${inv.grandTotal.toLocaleString('en-IN')}` : '-',
         'Discount': inv.discount ? `${inv.discount}%` : '0%',
-        'CGST': inv.cgst ? `₹${inv.cgst.toLocaleString('en-IN')}` : '-',
-        'SGST': inv.sgst ? `₹${inv.sgst.toLocaleString('en-IN')}` : '-',
+        'CGST': inv.cgstAmount ? `₹${inv.cgstAmount.toLocaleString('en-IN')}` : '-',
+        'SGST': inv.sgstAmount ? `₹${inv.sgstAmount.toLocaleString('en-IN')}` : '-',
         'Grand Total': inv.grandTotal ? `₹${inv.grandTotal.toLocaleString('en-IN')}` : '-',
     }));
 

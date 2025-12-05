@@ -131,7 +131,7 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
                     <div className="flex justify-between items-start mb-3">
                         <div>
                             <div className="text-xs text-primary font-medium mb-0.5">#{invoice.invoiceNumber}</div>
-                            <h3 className="font-serif text-lg font-bold text-foreground">{invoice.customerName}</h3>
+                            <h3 className="font-serif text-lg font-bold text-foreground">{invoice.customerSnapshot?.name || 'Unknown'}</h3>
                             <div className="text-xs text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</div>
                         </div>
                         <Badge variant={invoice.status === 'paid' ? 'default' : 'destructive'} className="shadow-none capitalize">

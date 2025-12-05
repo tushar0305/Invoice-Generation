@@ -192,21 +192,20 @@ export function InvoicesClient({
             if (data) {
                 const refreshedInvoices: Invoice[] = data.map((r: any) => ({
                     id: r.id,
-                    userId: r.user_id,
                     shopId: r.shop_id,
-                    createdBy: r.created_by,
                     invoiceNumber: r.invoice_number,
-                    customerName: r.customer_name,
-                    customerAddress: r.customer_address || '',
-                    customerState: r.customer_state || '',
-                    customerPincode: r.customer_pincode || '',
-                    customerPhone: r.customer_phone || '',
+                    customerId: r.customer_id,
+                    customerSnapshot: r.customer_snapshot,
                     invoiceDate: r.invoice_date,
-                    discount: Number(r.discount) || 0,
-                    sgst: Number(r.sgst) || 0,
-                    cgst: Number(r.cgst) || 0,
                     status: r.status,
+                    subtotal: Number(r.subtotal) || 0,
+                    discount: Number(r.discount) || 0,
+                    cgstAmount: Number(r.cgst_amount) || 0,
+                    sgstAmount: Number(r.sgst_amount) || 0,
                     grandTotal: Number(r.grand_total) || 0,
+                    notes: r.notes,
+                    createdByName: r.created_by_name,
+                    createdBy: r.created_by,
                     createdAt: r.created_at,
                     updatedAt: r.updated_at,
                 }));
@@ -256,7 +255,7 @@ export function InvoicesClient({
         const lower = debouncedSearchTerm.toLowerCase();
         if (lower) {
             result = result.filter(inv =>
-                inv.customerName.toLowerCase().includes(lower) ||
+                (inv.customerSnapshot?.name || '').toLowerCase().includes(lower) ||
                 inv.invoiceNumber.toLowerCase().includes(lower)
             );
         }
@@ -364,11 +363,11 @@ export function InvoicesClient({
             const dataRows = dataToExport.map(r => ({
                 Invoice: r.invoiceNumber,
                 Date: r.invoiceDate,
-                Customer: r.customerName,
+                Customer: r.customerSnapshot?.name || 'Unknown',
                 Status: r.status,
                 Discount: r.discount || 0,
-                SGST: r.sgst || 0,
-                CGST: r.cgst || 0,
+                SGST: r.sgstAmount || 0,
+                CGST: r.cgstAmount || 0,
                 GrandTotal: r.grandTotal,
             }));
 
@@ -404,21 +403,20 @@ export function InvoicesClient({
 
             const invoice: Invoice = {
                 id: inv.id,
-                userId: inv.user_id,
                 shopId: inv.shop_id,
-                createdBy: inv.created_by,
                 invoiceNumber: inv.invoice_number,
-                customerName: inv.customer_name,
-                customerAddress: inv.customer_address || '',
-                customerState: inv.customer_state || '',
-                customerPincode: inv.customer_pincode || '',
-                customerPhone: inv.customer_phone || '',
+                customerId: inv.customer_id,
+                customerSnapshot: inv.customer_snapshot,
                 invoiceDate: inv.invoice_date,
-                discount: Number(inv.discount) || 0,
-                sgst: Number(inv.sgst) || 0,
-                cgst: Number(inv.cgst) || 0,
                 status: inv.status,
+                subtotal: Number(inv.subtotal) || 0,
+                discount: Number(inv.discount) || 0,
+                cgstAmount: Number(inv.cgst_amount) || 0,
+                sgstAmount: Number(inv.sgst_amount) || 0,
                 grandTotal: Number(inv.grand_total) || 0,
+                notes: inv.notes,
+                createdByName: inv.created_by_name,
+                createdBy: inv.created_by,
                 createdAt: inv.created_at,
                 updatedAt: inv.updated_at,
             };
@@ -481,28 +479,31 @@ export function InvoicesClient({
     };
 
     return (
-        <MotionWrapper className="space-y-4 pb-24 pt-1 px-2 sm:px-4">
-            {/* Quick Filters - Enhanced */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
-                {['all', 'paid', 'due', 'overdue'].map((status) => (
-                    <Button
-                        key={status}
-                        variant={statusFilter === status ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => {
-                            haptics.impact(ImpactStyle.Light);
-                            router.push(`/shop/${shopId}/invoices?status=${status}`);
-                        }}
-                        className={cn(
-                            "capitalize rounded-full h-9 px-5 text-xs font-semibold border transition-all",
-                            statusFilter === status
-                                ? "bg-primary text-primary-foreground border-primary shadow-glow-sm"
-                                : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50 text-muted-foreground"
-                        )}
-                    >
-                        {status}
-                    </Button>
-                ))}
+        <MotionWrapper className="space-y-4 pb-24 pt-2 px-4 md:px-0">
+            {/* Sticky Header Section for Mobile */}
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 px-4 md:mx-0 md:px-0 pb-3 md:static md:bg-transparent md:backdrop-blur-none">
+                {/* Quick Filters - Enhanced */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {['all', 'paid', 'due', 'overdue'].map((status) => (
+                        <Button
+                            key={status}
+                            variant={statusFilter === status ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => {
+                                haptics.impact(ImpactStyle.Light);
+                                router.push(`/shop/${shopId}/invoices?status=${status}`);
+                            }}
+                            className={cn(
+                                "capitalize rounded-full h-9 px-5 text-xs font-semibold border transition-all",
+                                statusFilter === status
+                                    ? "bg-primary text-primary-foreground border-primary shadow-glow-sm"
+                                    : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50 text-muted-foreground"
+                            )}
+                        >
+                            {status}
+                        </Button>
+                    ))}
+                </div>
             </div>
 
             {/* Search and Actions */}
@@ -635,7 +636,7 @@ export function InvoicesClient({
             {/* Content */}
             <div className="space-y-4">
                 {/* Desktop/Tablet Table View */}
-                <div className="rounded-xl border border-gray-200 dark:border-white/10 overflow-x-auto hidden md:block bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
+                <div className="rounded-xl border border-gray-300 dark:border-gray-700 overflow-x-auto hidden md:block bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
                     <Table className="table-modern min-w-[600px]">
                         <TableHeader className="bg-gray-100/90 dark:bg-white/10 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 sticky top-0 z-10">
                             <TableRow className="hover:bg-transparent border-none">
@@ -695,12 +696,12 @@ export function InvoicesClient({
                                         </TableCell>
                                         <TableCell className="font-medium text-xs lg:text-sm text-gray-900 dark:text-foreground group-hover:text-primary transition-colors">{invoice.invoiceNumber}</TableCell>
                                         <TableCell className="text-xs lg:text-sm text-gray-500 dark:text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
-                                        <TableCell className="text-xs lg:text-sm truncate max-w-[150px] lg:max-w-none text-gray-900 dark:text-foreground">{invoice.customerName}</TableCell>
+                                        <TableCell className="text-xs lg:text-sm truncate max-w-[150px] lg:max-w-none text-gray-900 dark:text-foreground">{invoice.customerSnapshot?.name || 'Unknown'}</TableCell>
                                         <TableCell>
                                             <div className={cn(
                                                 "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border",
-                                                invoice.status === 'paid' 
-                                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20" 
+                                                invoice.status === 'paid'
+                                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20"
                                                     : "bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20"
                                             )}>
                                                 {invoice.status}
@@ -708,7 +709,7 @@ export function InvoicesClient({
                                         </TableCell>
                                         <TableCell className="text-right font-bold text-gray-900 dark:text-foreground text-xs lg:text-sm">₹{invoice.grandTotal.toFixed(2)}</TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex justify-end gap-2 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"

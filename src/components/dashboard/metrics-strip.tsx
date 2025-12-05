@@ -131,7 +131,7 @@ export function MetricsStrip({
     }).length || 0;
 
     // Calculate unique customers from invoices
-    const uniqueCustomers = new Set(invoices?.map(inv => inv.customerId || inv.customerPhone) || []);
+    const uniqueCustomers = new Set(invoices?.map(inv => inv.customerId || inv.customerSnapshot?.phone) || []);
     const customerCount = totalCustomers || uniqueCustomers.size;
 
     // Estimate stock value (placeholder - would come from actual stock data)
@@ -248,8 +248,8 @@ export function MetricsStrip({
                     <div
                         key={i}
                         className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === activeIndex
-                                ? 'bg-[#A5833A] w-3'
-                                : 'bg-[#CBB27A]/40 dark:bg-[#A5833A]/40'
+                            ? 'bg-[#A5833A] w-3'
+                            : 'bg-[#CBB27A]/40 dark:bg-[#A5833A]/40'
                             }`}
                     />
                 ))}

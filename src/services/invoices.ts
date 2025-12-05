@@ -17,17 +17,22 @@ export async function getInvoicesByShop(shopId: string): Promise<Invoice[]> {
 
     return (data || []).map((r: any) => ({
         id: r.id,
-        userId: r.user_id,
         shopId: r.shop_id,
-        createdBy: r.user_id,
         invoiceNumber: r.invoice_number,
-        customerName: r.customer_name,
-        customerAddress: r.customer_address || '',
-        customerPhone: r.customer_phone || '',
+        customerId: r.customer_id,
+        customerSnapshot: r.customer_snapshot,
         invoiceDate: r.invoice_date,
         status: r.status,
+        subtotal: Number(r.subtotal) || 0,
+        discount: Number(r.discount) || 0,
+        cgstAmount: Number(r.cgst_amount) || 0,
+        sgstAmount: Number(r.sgst_amount) || 0,
         grandTotal: Number(r.grand_total) || 0,
+        notes: r.notes,
+        createdByName: r.created_by_name,
+        createdBy: r.created_by,
         createdAt: r.created_at,
+        updatedAt: r.updated_at,
     } as Invoice));
 }
 
@@ -45,17 +50,22 @@ export async function getInvoiceById(id: string): Promise<Invoice | null> {
 
     return {
         id: data.id,
-        userId: data.user_id,
         shopId: data.shop_id,
-        createdBy: data.user_id,
         invoiceNumber: data.invoice_number,
-        customerName: data.customer_name,
-        customerAddress: data.customer_address || '',
-        customerPhone: data.customer_phone || '',
+        customerId: data.customer_id,
+        customerSnapshot: data.customer_snapshot,
         invoiceDate: data.invoice_date,
         status: data.status,
+        subtotal: Number(data.subtotal) || 0,
+        discount: Number(data.discount) || 0,
+        cgstAmount: Number(data.cgst_amount) || 0,
+        sgstAmount: Number(data.sgst_amount) || 0,
         grandTotal: Number(data.grand_total) || 0,
+        notes: data.notes,
+        createdByName: data.created_by_name,
+        createdBy: data.created_by,
         createdAt: data.created_at,
+        updatedAt: data.updated_at,
     } as Invoice;
 }
 

@@ -166,6 +166,15 @@ export function PremiumCustomerAutocomplete({
                             }, 200);
                         }}
                         disabled={disabled}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (onSearch && search.trim()) {
+                                    onSearch(search.trim());
+                                    setIsOpen(true);
+                                }
+                            }
+                        }}
                         className="pl-10 h-12 text-base bg-background border-2 focus:border-primary transition-colors"
                         autoComplete="off"
                     />

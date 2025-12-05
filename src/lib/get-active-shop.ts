@@ -66,7 +66,7 @@ export async function getActiveShopData(
 
         // Handle errors
         if (rolesResult.error) {
-            console.error('Error fetching shop roles:', rolesResult.error);
+            console.error('Error fetching shop roles:', JSON.stringify(rolesResult.error, null, 2));
             return {
                 activeShop: null,
                 userShops: [],

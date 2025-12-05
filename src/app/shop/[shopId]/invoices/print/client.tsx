@@ -107,21 +107,20 @@ export function PrintInvoiceClient() {
                 // Map invoice data
                 const mappedInv: Invoice = {
                     id: inv.id,
-                    userId: inv.user_id,
                     shopId: inv.shop_id,
-                    createdBy: inv.created_by,
                     invoiceNumber: inv.invoice_number,
-                    customerName: inv.customer_name,
-                    customerAddress: inv.customer_address || '',
-                    customerState: inv.customer_state || '',
-                    customerPincode: inv.customer_pincode || '',
-                    customerPhone: inv.customer_phone || '',
+                    customerId: inv.customer_id,
+                    customerSnapshot: inv.customer_snapshot,
                     invoiceDate: inv.invoice_date,
-                    discount: Number(inv.discount) || 0,
-                    sgst: Number(inv.sgst) || 0,
-                    cgst: Number(inv.cgst) || 0,
                     status: inv.status,
+                    subtotal: Number(inv.subtotal) || 0,
+                    discount: Number(inv.discount) || 0,
+                    cgstAmount: Number(inv.cgst_amount) || 0,
+                    sgstAmount: Number(inv.sgst_amount) || 0,
                     grandTotal: Number(inv.grand_total) || 0,
+                    notes: inv.notes,
+                    createdByName: inv.created_by_name,
+                    createdBy: inv.created_by,
                     createdAt: inv.created_at,
                     updatedAt: inv.updated_at,
                 };
@@ -191,8 +190,9 @@ export function PrintInvoiceClient() {
     const subtotal = safeItems.reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
     const totalBeforeTax = subtotal - invoice.discount;
     // Use new sgst/cgst fields, fallback to tax/2 for backward compatibility
-    const cgstRate = invoice.cgst ?? ((invoice.tax || 0) / 2);
-    const sgstRate = invoice.sgst ?? ((invoice.tax || 0) / 2);
+    // Use settings for tax rates
+    const cgstRate = settings?.cgstRate || 0;
+    const sgstRate = settings?.sgstRate || 0;
     const cgst = totalBeforeTax * (cgstRate / 100);
     const sgst = totalBeforeTax * (sgstRate / 100);
     const totalAmount = totalBeforeTax + cgst + sgst;

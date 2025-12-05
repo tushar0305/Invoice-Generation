@@ -29,14 +29,18 @@ export const POST = withAuth(async (
     }
 
     // Execute DB function
+    // Note: base_weight column is missing in stock_items table, so we append it to description
+    const descriptionWithWeight = input.baseWeight
+        ? `${input.description || ''}\nWeight: ${input.baseWeight}g`.trim()
+        : input.description;
+
     const { data, error } = await supabase.rpc('create_stock_item', {
         p_shop_id: input.shopId,
-        p_user_id: user.id,
         p_name: input.name,
-        p_description: input.description || null,
+        p_description: descriptionWithWeight,
         p_purity: input.purity,
         p_base_price: input.basePrice,
-        p_base_weight: input.baseWeight || null,
+        // p_base_weight: input.baseWeight || null, // Column missing
         p_making_charge: input.makingChargePerGram,
         p_quantity: input.quantity,
         p_unit: input.unit,

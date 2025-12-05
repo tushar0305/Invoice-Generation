@@ -20,25 +20,14 @@ interface MobileLoanListProps {
 export function MobileLoanList({ shopId, loans, stats }: MobileLoanListProps) {
   const [search, setSearch] = useState('');
 
-  const filteredLoans = loans.filter(loan => 
+  const filteredLoans = loans.filter(loan =>
     loan.loan_customers?.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="md:hidden min-h-screen bg-gray-50/50 dark:bg-black/50 pb-24">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 px-4 py-3 space-y-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
-            Loans
-          </h1>
-          <Link href={`/shop/${shopId}/loans/new`}>
-            <Button size="sm" className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
-              <Plus className="w-4 h-4 mr-1" /> New Loan
-            </Button>
-          </Link>
-        </div>
-
+      {/* Sticky Stats & Search */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 px-4 py-3 space-y-3">
         {/* Stats Overview */}
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
@@ -53,8 +42,8 @@ export function MobileLoanList({ shopId, loans, stats }: MobileLoanListProps) {
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search loans..." 
+          <Input
+            placeholder="Search loans..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-10 rounded-xl bg-gray-100/50 dark:bg-gray-800/50 border-none focus-visible:ring-1 focus-visible:ring-emerald-500"
@@ -84,16 +73,15 @@ export function MobileLoanList({ shopId, loans, stats }: MobileLoanListProps) {
                           {format(new Date(loan.start_date), 'dd MMM yyyy')}
                         </p>
                       </div>
-                      <div className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${
-                        loan.status === 'active'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                      }`}>
+                      <div className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${loan.status === 'active'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                        }`}>
                         {loan.status === 'active' ? <Clock className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
                         {loan.status}
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-gray-800">
                       <div>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Principal</p>
@@ -120,6 +108,16 @@ export function MobileLoanList({ shopId, loans, stats }: MobileLoanListProps) {
           </div>
         )}
       </div>
+
+      {/* Floating Action Button */}
+      <Link href={`/shop/${shopId}/loans/new`}>
+        <Button
+          size="lg"
+          className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg shadow-emerald-500/30 bg-emerald-600 hover:bg-emerald-700 z-40"
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
+      </Link>
     </div>
   );
 }

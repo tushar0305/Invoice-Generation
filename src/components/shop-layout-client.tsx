@@ -332,9 +332,9 @@ function ShopLayoutInner({
             <SidebarInset className="flex-1 flex flex-col overflow-hidden bg-gray-50/50 dark:bg-[hsl(220,10%,4%)] !mt-0 !pt-0">
                 {/* Desktop Header with Sidebar Toggle */}
                 {!isMobile && (
-                    <div className="flex items-center gap-3 px-6 py-3 border-b border-border/40 bg-background/95 backdrop-blur-xl">
-                        <SidebarTrigger className="h-9 w-9 hover:bg-accent rounded-lg transition-colors" />
-                        <div className="flex-1">
+                    <div className="flex items-center gap-4 px-6 py-3 border-b border-border/30 bg-background/80 backdrop-blur-xl">
+                        <SidebarTrigger className="h-9 w-9 hover:bg-muted rounded-lg transition-colors shrink-0" />
+                        <div className="flex-1 min-w-0">
                             <PremiumHeader
                                 shopName={shopData.activeShop?.shopName || 'Jewellery Shop'}
                                 shopId={shopId}
@@ -346,10 +346,10 @@ function ShopLayoutInner({
                     </div>
                 )}
 
-                {/* Mobile Header */}
+                {/* Mobile Header - Show on all pages */}
                 {isMobile && (
-                    <header className="sticky top-0 z-20 flex h-12 items-center border-b border-border/40 bg-background/95 backdrop-blur-xl px-5 shadow-sm w-full mt-0 pt-0">
-                        <SidebarTrigger className="-ml-2" />
+                    <header className="sticky top-0 z-50 flex h-12 items-center border-b border-border/40 bg-background/95 backdrop-blur-xl px-4 shadow-sm w-full">
+                        <SidebarTrigger className="-ml-1" />
                         <div className="flex-1 text-center">
                             <h1 className="font-semibold text-base tracking-tight text-gray-900 dark:text-gray-100">
                                 {pathname === `/shop/${shopId}/dashboard` && 'Dashboard'}
@@ -360,23 +360,23 @@ function ShopLayoutInner({
                                 {pathname === `/shop/${shopId}/customers/view` && 'Customer Details'}
                                 {pathname === `/shop/${shopId}/stock` && 'Stock'}
                                 {pathname === `/shop/${shopId}/stock/new` && 'Add Stock Item'}
-                                {pathname === `/shop/${shopId}/staff` && 'Staff Management'}
+                                {pathname === `/shop/${shopId}/staff` && 'Staff'}
                                 {pathname === `/shop/${shopId}/loans` && 'Loans'}
                                 {pathname === `/shop/${shopId}/loans/new` && 'New Loan'}
                                 {pathname.includes(`/shop/${shopId}/loans/`) && !pathname.includes('/new') && 'Loan Details'}
                                 {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
-                                {pathname === `/shop/${shopId}/loyalty` && 'Loyalty Program'}
-                                {/* Analytics pages removed */}
+                                {pathname.includes(`/shop/${shopId}/khata/`) && !pathname.includes('/new') && 'Transaction'}
+                                {pathname === `/shop/${shopId}/loyalty` && 'Loyalty'}
+                                {pathname === `/shop/${shopId}/insights` && 'Insights'}
                                 {pathname === `/shop/${shopId}/templates` && 'Templates'}
                                 {pathname === `/shop/${shopId}/settings` && 'Settings'}
-                                {!pathname.includes(shopId) && 'Swarnavyapar'}
                             </h1>
                         </div>
-                        <div className="w-6" /> {/* Spacer for centering */}
+                        <div className="w-8" />
                     </header>
                 )}
 
-                <main id="shop-main-content" className="flex-1 overflow-y-auto px-4 py-2 md:px-6 md:py-3 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-6">
+                <main id="shop-main-content" className="flex-1 overflow-y-auto overflow-x-hidden px-0 py-0 md:px-6 md:py-3 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6">
                     {children}
                 </main>
 

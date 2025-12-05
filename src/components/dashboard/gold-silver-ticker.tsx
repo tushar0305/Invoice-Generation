@@ -65,7 +65,7 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
                 setLastUpdated(new Date(data.updated_at));
             }
         } catch (error) {
-            console.error('Error fetching prices:', error);
+            console.error('Error fetching prices:', JSON.stringify(error, null, 2));
         }
     };
 
@@ -183,26 +183,26 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
 
         // Gold vs Silver styling
         const isGold = label.toLowerCase().includes('gold');
-        const gradientBg = isGold 
+        const gradientBg = isGold
             ? 'bg-amber-500/5 dark:bg-amber-500/10 hover:bg-amber-500/10 dark:hover:bg-amber-500/20'
             : 'bg-slate-500/5 dark:bg-slate-500/10 hover:bg-slate-500/10 dark:hover:bg-slate-500/20';
-        
+
         const borderColor = isGold
             ? 'border-amber-500/20 dark:border-amber-500/20'
             : 'border-slate-500/20 dark:border-slate-500/20';
-        
+
         const labelColor = isGold
             ? 'text-amber-600 dark:text-amber-400'
             : 'text-slate-600 dark:text-slate-400';
 
         const priceGlow = isAnimating
-            ? isGold 
+            ? isGold
                 ? 'shadow-[0_0_15px_rgba(245,158,11,0.3)] border-amber-500/40'
                 : 'shadow-[0_0_15px_rgba(148,163,184,0.3)] border-slate-500/40'
             : '';
 
         return (
-            <motion.div 
+            <motion.div
                 className={cn(
                     "flex items-center px-3.5 md:px-4 py-2 md:py-2.5 rounded-xl border backdrop-blur-md flex-shrink-0 transition-all duration-300",
                     gradientBg,
@@ -243,11 +243,11 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
                             <motion.span
                                 key={price}
                                 initial={{ y: 8, opacity: 0 }}
-                                animate={{ 
-                                    y: 0, 
-                                    opacity: 1, 
-                                    color: isAnimating 
-                                        ? (price > prevPrice ? '#10b981' : '#ef4444') 
+                                animate={{
+                                    y: 0,
+                                    opacity: 1,
+                                    color: isAnimating
+                                        ? (price > prevPrice ? '#10b981' : '#ef4444')
                                         : 'inherit'
                                 }}
                                 exit={{ y: -8, opacity: 0 }}

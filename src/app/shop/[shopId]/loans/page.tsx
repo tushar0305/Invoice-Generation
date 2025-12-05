@@ -46,7 +46,7 @@ export default async function LoansPage({ params }: PageProps) {
         redirect('/dashboard');
     }
 
-    // Fetch active loans
+    // Fetch active loans (handle case where table doesn't exist)
     const { data: activeLoans, error: loansError } = await supabase
         .from('loans')
         .select(`
@@ -60,8 +60,9 @@ export default async function LoansPage({ params }: PageProps) {
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
-    if (loansError) {
-        console.error('Error fetching loans:', loansError);
+    // Only log in development, not production (table may not exist yet)
+    if (loansError && process.env.NODE_ENV === 'development') {
+        console.log('Loans table not available:', loansError.code);
     }
 
     // Calculate stats

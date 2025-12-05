@@ -9,59 +9,45 @@ import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import type { KhataCustomerBalance } from '@/lib/khata-types';
+import type { CustomerBalance, LedgerTransaction } from '@/lib/ledger-types';
 
 interface MobileKhataBookProps {
   shopId: string;
-  customers: KhataCustomerBalance[];
+  customers: CustomerBalance[];
   stats: {
     total_customers: number;
     total_receivable: number;
     total_payable: number;
     net_balance: number;
   };
-  recentTransactions: any[];
+  recentTransactions: LedgerTransaction[];
 }
 
 export function MobileKhataBook({ shopId, customers, stats, recentTransactions }: MobileKhataBookProps) {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'customers' | 'transactions'>('customers');
 
-  const filteredCustomers = customers.filter(c => 
+  const filteredCustomers = customers.filter(c =>
     (c.name || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="md:hidden min-h-screen bg-gray-50/50 dark:bg-black/50 pb-24">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 px-4 py-3 space-y-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
-            Khata Book
-          </h1>
-          <Link href={`/shop/${shopId}/khata/new`}>
-            <Button size="sm" className="rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20">
-              <ArrowUpRight className="w-4 h-4 mr-1" /> Record
-            </Button>
-          </Link>
-        </div>
-
+      {/* Sticky Balance & Controls */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 px-4 py-3 space-y-3">
         {/* Net Balance Card */}
-        <div className={`p-4 rounded-2xl border shadow-sm ${
-          stats.net_balance >= 0 
-            ? 'bg-green-50 border-green-100 dark:bg-green-900/20 dark:border-green-800/30' 
-            : 'bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-800/30'
-        }`}>
+        <div className={`p-4 rounded-2xl border shadow-sm ${stats.net_balance >= 0
+          ? 'bg-green-50 border-green-100 dark:bg-green-900/20 dark:border-green-800/30'
+          : 'bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-800/30'
+          }`}>
           <p className="text-xs font-medium uppercase tracking-wider opacity-70 mb-1">Net Balance</p>
           <div className="flex items-baseline justify-between">
-            <h2 className={`text-2xl font-bold ${
-              stats.net_balance >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
-            }`}>
+            <h2 className={`text-2xl font-bold ${stats.net_balance >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
+              }`}>
               {formatCurrency(Math.abs(stats.net_balance))}
             </h2>
-            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-              stats.net_balance >= 0 ? 'bg-green-200/50 text-green-800' : 'bg-red-200/50 text-red-800'
-            }`}>
+            <span className={`text-xs font-bold px-2 py-1 rounded-full ${stats.net_balance >= 0 ? 'bg-green-200/50 text-green-800' : 'bg-red-200/50 text-red-800'
+              }`}>
               {stats.net_balance >= 0 ? 'To Receive' : 'To Pay'}
             </span>
           </div>
@@ -71,21 +57,19 @@ export function MobileKhataBook({ shopId, customers, stats, recentTransactions }
         <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
           <button
             onClick={() => setActiveTab('customers')}
-            className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${
-              activeTab === 'customers'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400'
-            }`}
+            className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${activeTab === 'customers'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-500 dark:text-gray-400'
+              }`}
           >
             Customers
           </button>
           <button
             onClick={() => setActiveTab('transactions')}
-            className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${
-              activeTab === 'transactions'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400'
-            }`}
+            className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${activeTab === 'transactions'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-500 dark:text-gray-400'
+              }`}
           >
             Recent Activity
           </button>
@@ -94,8 +78,8 @@ export function MobileKhataBook({ shopId, customers, stats, recentTransactions }
         {activeTab === 'customers' && (
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search customers..." 
+            <Input
+              placeholder="Search customers..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-10 rounded-xl bg-gray-100/50 dark:bg-gray-800/50 border-none focus-visible:ring-1 focus-visible:ring-purple-500"
@@ -126,18 +110,17 @@ export function MobileKhataBook({ shopId, customers, stats, recentTransactions }
                         <div>
                           <h3 className="font-semibold text-gray-900 dark:text-gray-100">{customer.name}</h3>
                           <p className="text-xs text-muted-foreground">
-                            Last: {format(new Date(customer.updated_at), 'dd MMM')}
+                            Last: {customer.last_transaction_date ? format(new Date(customer.last_transaction_date), 'dd MMM') : '-'}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold ${
-                          customer.current_balance > 0 
-                            ? 'text-green-600 dark:text-green-400' 
-                            : customer.current_balance < 0 
-                              ? 'text-red-600 dark:text-red-400'
-                              : 'text-gray-500'
-                        }`}>
+                        <p className={`font-bold ${customer.current_balance > 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : customer.current_balance < 0
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-gray-500'
+                          }`}>
                           {formatCurrency(Math.abs(customer.current_balance))}
                         </p>
                         <p className="text-[10px] text-muted-foreground font-medium">
@@ -161,30 +144,28 @@ export function MobileKhataBook({ shopId, customers, stats, recentTransactions }
                 <Card className="border-none shadow-sm bg-white dark:bg-gray-900/50">
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                        tx.type === 'credit'
-                          ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400'
-                          : 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                      }`}>
-                        {tx.type === 'credit' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${tx.entry_type === 'CREDIT'
+                        ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                        : 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                        }`}>
+                        {tx.entry_type === 'CREDIT' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{tx.khata_customers?.name}</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{tx.customer?.name}</h3>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(tx.created_at), 'dd MMM, hh:mm a')}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-bold ${
-                        tx.type === 'credit' 
-                          ? 'text-green-600 dark:text-green-400' 
-                          : 'text-red-600 dark:text-red-400'
-                      }`}>
-                        {tx.type === 'credit' ? '+' : '-'}{formatCurrency(tx.amount)}
+                      <p className={`font-bold ${tx.entry_type === 'CREDIT'
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-600 dark:text-red-400'
+                        }`}>
+                        {tx.entry_type === 'CREDIT' ? '+' : '-'}{formatCurrency(tx.amount)}
                       </p>
                       <p className="text-[10px] text-muted-foreground capitalize">
-                        {tx.type}
+                        {tx.transaction_type}
                       </p>
                     </div>
                   </CardContent>
@@ -201,6 +182,16 @@ export function MobileKhataBook({ shopId, customers, stats, recentTransactions }
           </div>
         )}
       </div>
+
+      {/* Floating Action Button */}
+      <Link href={`/shop/${shopId}/khata/new`}>
+        <Button
+          size="lg"
+          className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg shadow-purple-500/30 bg-purple-600 hover:bg-purple-700 z-40"
+        >
+          <ArrowUpRight className="w-6 h-6" />
+        </Button>
+      </Link>
     </div>
   );
 }

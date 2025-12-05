@@ -37,14 +37,14 @@ export default async function CustomersPage({
     // ✅ Server-side data fetching
     const { data } = await supabase
         .from('invoices')
-        .select('id, invoice_number, invoice_date, customer_name, grand_total, status')
+        .select('id, invoice_number, invoice_date, customer_snapshot, grand_total, status')
         .eq('shop_id', shopId);
 
     // ✅ Server-side aggregation of customer stats
     const customerData: Record<string, CustomerStats> = {};
 
     for (const invoice of data || []) {
-        const customerName = invoice.customer_name;
+        const customerName = invoice.customer_snapshot?.name || 'Unknown';
         const grandTotal = Number(invoice.grand_total) || 0;
         const invoiceDate = invoice.invoice_date;
 

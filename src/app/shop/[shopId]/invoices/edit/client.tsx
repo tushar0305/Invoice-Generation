@@ -23,20 +23,23 @@ export function EditInvoiceClient() {
             if (invErr) { setInvoice(null); setItems(null); setIsLoading(false); return; }
             const mappedInv: Invoice = {
                 id: inv.id,
-                userId: inv.user_id,
+                shopId: inv.shop_id,
                 invoiceNumber: inv.invoice_number,
-                customerName: inv.customer_name,
-                customerAddress: inv.customer_address || '',
-                customerState: inv.customer_state || '',
-                customerPincode: inv.customer_pincode || '',
-                customerPhone: inv.customer_phone || '',
+                customerId: inv.customer_id,
+                customerSnapshot: inv.customer_snapshot,
                 invoiceDate: inv.invoice_date,
-                discount: Number(inv.discount) || 0,
-                sgst: Number(inv.sgst) || 0,
-                cgst: Number(inv.cgst) || 0,
                 status: inv.status,
+                subtotal: Number(inv.subtotal) || 0,
+                discount: Number(inv.discount) || 0,
+                cgstAmount: Number(inv.cgst_amount) || 0,
+                sgstAmount: Number(inv.sgst_amount) || 0,
                 grandTotal: Number(inv.grand_total) || 0,
-            } as Invoice;
+                notes: inv.notes,
+                createdByName: inv.created_by_name,
+                createdBy: inv.created_by,
+                createdAt: inv.created_at,
+                updatedAt: inv.updated_at,
+            };
             const { data: its, error: itErr } = await supabase.from('invoice_items').select('*').eq('invoice_id', id).order('id');
             if (itErr) { setInvoice(mappedInv); setItems([]); setIsLoading(false); return; }
             const mappedItems: InvoiceItem[] = (its ?? []).map((r: any) => ({

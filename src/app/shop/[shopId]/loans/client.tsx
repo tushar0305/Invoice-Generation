@@ -49,7 +49,7 @@ export function LoansDashboardClient({
     );
 
     return (
-        <div className="space-y-6 pb-24">
+        <div className="space-y-4 pb-24 px-4 md:px-0">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>

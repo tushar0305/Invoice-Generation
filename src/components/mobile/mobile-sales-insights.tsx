@@ -22,7 +22,7 @@ export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsig
   const filteredData = useMemo(() => {
     const now = new Date();
     return invoices.filter(inv => {
-      const date = new Date(inv.createdAt);
+      const date = new Date(inv.invoiceDate);
       switch (timeRange) {
         case 'today': return isSameDay(date, now);
         case 'week': return isSameWeek(date, now);
@@ -44,7 +44,7 @@ export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsig
   // Top Products (Simplified logic)
   const topProducts = useMemo(() => {
     const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
-    
+
     // Filter items that belong to the filtered invoices
     const filteredInvoiceIds = new Set(filteredData.map(inv => inv.id));
     const relevantItems = invoiceItems.filter(item => filteredInvoiceIds.has(item.invoice_id));
@@ -64,20 +64,20 @@ export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsig
   // Simple Chart Data (Last 7 days for 'week', or appropriate grouping)
   const chartData = useMemo(() => {
     if (timeRange === 'today') {
-        // Hourly breakdown could be complex, skipping for simplicity or doing 4-hour blocks
-        return []; 
+      // Hourly breakdown could be complex, skipping for simplicity or doing 4-hour blocks
+      return [];
     }
-    
+
     // For week/month, show daily bars
     const days = timeRange === 'week' ? 7 : timeRange === 'month' ? 30 : 12;
     const data = [];
-    
+
     for (let i = days - 1; i >= 0; i--) {
-        const d = subDays(new Date(), i);
-        const dayTotal = invoices
-            .filter(inv => isSameDay(new Date(inv.createdAt), d))
-            .reduce((sum, inv) => sum + inv.grandTotal, 0);
-        data.push({ label: format(d, 'dd'), value: dayTotal, fullDate: d });
+      const d = subDays(new Date(), i);
+      const dayTotal = invoices
+        .filter(inv => isSameDay(new Date(inv.invoiceDate), d))
+        .reduce((sum, inv) => sum + inv.grandTotal, 0);
+      data.push({ label: format(d, 'dd'), value: dayTotal, fullDate: d });
     }
     return data;
   }, [invoices, timeRange]);
@@ -103,11 +103,10 @@ export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsig
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize ${
-                timeRange === range
+              className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize ${timeRange === range
                   ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                   : 'text-gray-500 dark:text-gray-400'
-              }`}
+                }`}
             >
               {range}
             </button>
@@ -157,11 +156,11 @@ export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsig
               <div className="h-32 flex items-end justify-between gap-1">
                 {chartData.map((d, i) => (
                   <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
-                    <div 
+                    <div
                       className="w-full bg-indigo-100 dark:bg-indigo-900/30 rounded-t-sm relative overflow-hidden transition-all group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800/50"
                       style={{ height: `${(d.value / maxChartValue) * 100}%` }}
                     >
-                        <div className="absolute bottom-0 left-0 right-0 h-full bg-indigo-500/20" />
+                      <div className="absolute bottom-0 left-0 right-0 h-full bg-indigo-500/20" />
                     </div>
                     <span className="text-[10px] text-muted-foreground">{d.label}</span>
                   </div>
@@ -185,12 +184,11 @@ export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsig
                 <Card className="border-none shadow-sm bg-white dark:bg-gray-900/50">
                   <CardContent className="p-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                        index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                        index === 1 ? 'bg-gray-100 text-gray-700' :
-                        index === 2 ? 'bg-orange-100 text-orange-700' :
-                        'bg-slate-50 text-slate-500'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                          index === 1 ? 'bg-gray-100 text-gray-700' :
+                            index === 2 ? 'bg-orange-100 text-orange-700' :
+                              'bg-slate-50 text-slate-500'
+                        }`}>
                         #{index + 1}
                       </div>
                       <div>

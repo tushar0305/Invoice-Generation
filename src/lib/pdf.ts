@@ -56,8 +56,8 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
   // Calculations
   const subtotal = items.reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
   const totalBeforeTax = subtotal - (invoice.discount || 0);
-  const cgstAmount = invoice.cgst || 0;
-  const sgstAmount = invoice.sgst || 0;
+  const cgstAmount = invoice.cgstAmount || 0;
+  const sgstAmount = invoice.sgstAmount || 0;
   const cgstRate = settings?.cgstRate || (totalBeforeTax > 0 ? (cgstAmount / totalBeforeTax) * 100 : 0);
   const sgstRate = settings?.sgstRate || (totalBeforeTax > 0 ? (sgstAmount / totalBeforeTax) * 100 : 0);
 
@@ -123,12 +123,12 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
     doc.text('BILL TO', 20, 62);
 
     doc.setFontSize(10);
-    doc.text(invoice.customerName, 20, 68);
+    doc.text(invoice.customerSnapshot?.name || 'Unknown', 20, 68);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor('#475569');
-    if (invoice.customerAddress) doc.text(invoice.customerAddress, 20, 73);
-    if (invoice.customerPhone) doc.text(`Phone: ${invoice.customerPhone}`, 150, 68);
+    if (invoice.customerSnapshot?.address) doc.text(invoice.customerSnapshot.address, 20, 73);
+    if (invoice.customerSnapshot?.phone) doc.text(`Phone: ${invoice.customerSnapshot.phone}`, 150, 68);
 
     // Table
     autoTable(doc, {
@@ -165,11 +165,11 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
     // Info Grid
     yPos += 15;
     doc.setFontSize(10);
-    doc.text(`BILLED TO: ${invoice.customerName.toUpperCase()}`, 15, yPos);
+    doc.text(`BILLED TO: ${(invoice.customerSnapshot?.name || 'Unknown').toUpperCase()}`, 15, yPos);
     doc.text(`INVOICE NO: ${invoice.invoiceNumber}`, 195, yPos, { align: 'right' });
 
     yPos += 5;
-    if (invoice.customerAddress) doc.text(invoice.customerAddress, 15, yPos);
+    if (invoice.customerSnapshot?.address) doc.text(invoice.customerSnapshot.address, 15, yPos);
     doc.text(`DATE: ${invoiceDate}`, 195, yPos, { align: 'right' });
 
     // Table
@@ -237,10 +237,10 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
     // Left Side
     doc.text(`Billed To:`, 20, yPos);
     doc.setFont('times', 'bold');
-    doc.text(invoice.customerName, 20, yPos + 5);
+    doc.text(invoice.customerSnapshot?.name || 'Unknown', 20, yPos + 5);
     doc.setFont('times', 'normal');
-    if (invoice.customerAddress) doc.text(invoice.customerAddress, 20, yPos + 10);
-    if (invoice.customerPhone) doc.text(`Ph: ${invoice.customerPhone}`, 20, yPos + 15);
+    if (invoice.customerSnapshot?.address) doc.text(invoice.customerSnapshot.address, 20, yPos + 10);
+    if (invoice.customerSnapshot?.phone) doc.text(`Ph: ${invoice.customerSnapshot.phone}`, 20, yPos + 15);
 
     // Right Side
     doc.text(`Invoice No: ${invoice.invoiceNumber}`, 140, yPos);
@@ -299,7 +299,7 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
     doc.setFontSize(10);
     doc.text('BILL TO:', 20, yPos + 18);
     doc.setFontSize(12);
-    doc.text(invoice.customerName, 20, yPos + 26);
+    doc.text(invoice.customerSnapshot?.name || 'Unknown', 20, yPos + 26);
 
     doc.setFontSize(10);
     doc.text('DETAILS:', 120, yPos + 18);
@@ -379,12 +379,12 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
     doc.text('Bill To:', 15, yPos);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text(invoice.customerName, 15, yPos + 6);
+    doc.text(invoice.customerSnapshot?.name || 'Unknown', 15, yPos + 6);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(TEXT_GRAY);
-    if (invoice.customerAddress) doc.text(invoice.customerAddress, 15, yPos + 11);
-    if (invoice.customerPhone) doc.text(`Phone: ${invoice.customerPhone}`, 15, yPos + 16);
+    if (invoice.customerSnapshot?.address) doc.text(invoice.customerSnapshot.address, 15, yPos + 11);
+    if (invoice.customerSnapshot?.phone) doc.text(`Phone: ${invoice.customerSnapshot.phone}`, 15, yPos + 16);
 
     autoTable(doc, {
       startY: 90,

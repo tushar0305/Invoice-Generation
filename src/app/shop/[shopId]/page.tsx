@@ -253,7 +253,7 @@ export default function DashboardPage() {
                         <FileText className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="font-semibold text-sm text-foreground group-hover:text-gold-600 transition-colors">{invoice.customerName}</p>
+                        <p className="font-semibold text-sm text-foreground group-hover:text-gold-600 transition-colors">{invoice.customerSnapshot?.name || 'Unknown'}</p>
                         <p className="text-xs text-muted-foreground">{invoice.invoiceNumber} • {new Date(invoice.invoiceDate).toLocaleDateString()}</p>
                       </div>
                     </div>
@@ -313,7 +313,7 @@ export default function DashboardPage() {
                         <Eye className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="font-semibold text-sm text-foreground group-hover:text-amber-600 transition-colors">{invoice.customerName}</p>
+                        <p className="font-semibold text-sm text-foreground group-hover:text-amber-600 transition-colors">{invoice.customerSnapshot?.name || 'Unknown'}</p>
                         <p className="text-xs text-muted-foreground">{invoice.invoiceNumber}</p>
                       </div>
                     </div>

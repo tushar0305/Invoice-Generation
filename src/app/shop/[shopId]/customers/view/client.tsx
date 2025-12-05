@@ -34,44 +34,49 @@ export function CustomerDetailsClient() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) return;
+        const shopId = params.shopId as string;
+        if (!shopId || !customerName) return;
 
         const load = async () => {
             setIsLoading(true);
-            // Case-insensitive query for customer_name to catch all variations
+            // Query invoices by shop_id and customer name (case-insensitive)
             const { data, error } = await supabase
                 .from('invoices')
                 .select('*')
-                .eq('user_id', user.uid)
-                .ilike('customer_name', customerName)  // Case-insensitive match
+                .eq('shop_id', shopId)
+                .filter('customer_snapshot->>name', 'ilike', customerName)
+                .is('deleted_at', null)
                 .order('invoice_date', { ascending: false });
 
             if (error) {
-                console.error(error);
+                console.error('[Customer Invoices Error]', JSON.stringify(error, null, 2));
                 setInvoices([]);
             } else {
                 const mapped = (data ?? []).map((r: any) => ({
                     id: r.id,
-                    userId: r.user_id,
+                    shopId: r.shop_id,
                     invoiceNumber: r.invoice_number,
-                    customerName: r.customer_name,
-                    customerAddress: r.customer_address || '',
-                    customerState: r.customer_state || '',
-                    customerPincode: r.customer_pincode || '',
-                    customerPhone: r.customer_phone || '',
+                    customerId: r.customer_id,
+                    customerSnapshot: r.customer_snapshot,
                     invoiceDate: r.invoice_date,
-                    discount: Number(r.discount) || 0,
-                    sgst: Number(r.sgst) || 0,
-                    cgst: Number(r.cgst) || 0,
                     status: r.status,
+                    subtotal: Number(r.subtotal) || 0,
+                    discount: Number(r.discount) || 0,
+                    cgstAmount: Number(r.cgst_amount) || 0,
+                    sgstAmount: Number(r.sgst_amount) || 0,
                     grandTotal: Number(r.grand_total) || 0,
+                    notes: r.notes,
+                    createdByName: r.created_by_name,
+                    createdBy: r.created_by,
+                    createdAt: r.created_at,
+                    updatedAt: r.updated_at,
                 } as Invoice));
                 setInvoices(mapped);
             }
             setIsLoading(false);
         };
         load();
-    }, [user, customerName]);
+    }, [params.shopId, customerName]);
 
     const stats = useMemo(() => {
         if (!invoices) return { totalSpent: 0, invoiceCount: 0, lastPurchase: null };
@@ -86,10 +91,10 @@ export function CustomerDetailsClient() {
         if (!invoices || invoices.length === 0) return null;
         const latest = invoices[0];
         return {
-            address: latest.customerAddress,
-            phone: latest.customerPhone,
-            state: (latest as any).customerState,
-            pincode: (latest as any).customerPincode,
+            address: latest.customerSnapshot?.address,
+            phone: latest.customerSnapshot?.phone,
+            state: latest.customerSnapshot?.state,
+            pincode: latest.customerSnapshot?.pincode,
         };
     }, [invoices]);
 

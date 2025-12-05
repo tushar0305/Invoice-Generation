@@ -88,13 +88,13 @@ export function InsightsClient({ invoices, invoiceItems }: InsightsClientProps) 
         const currentPeriodPaid = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), currentPeriodStart, currentPeriodEnd));
         const revenueCurrent = currentPeriodPaid.reduce((sum, inv) => sum + inv.grandTotal, 0);
         const salesCountCurrent = currentPeriodPaid.length;
-        const newCustomersCurrent = new Set(currentPeriodPaid.map(inv => inv.customerName)).size;
+        const newCustomersCurrent = new Set(currentPeriodPaid.map(inv => inv.customerSnapshot?.name)).size;
 
         // Previous Period
         const previousPeriodPaid = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), previousPeriodStart, previousPeriodEnd));
         const revenuePrevious = previousPeriodPaid.reduce((sum, inv) => sum + inv.grandTotal, 0);
         const salesCountPrevious = previousPeriodPaid.length;
-        const newCustomersPrevious = new Set(previousPeriodPaid.map(inv => inv.customerName)).size;
+        const newCustomersPrevious = new Set(previousPeriodPaid.map(inv => inv.customerSnapshot?.name)).size;
 
         // Growth Calcs
         const calcGrowth = (current: number, previous: number) => {
@@ -242,7 +242,7 @@ export function InsightsClient({ invoices, invoiceItems }: InsightsClientProps) 
         if (!invoices.length) return [];
         return invoices.slice(0, 5).map(inv => ({
             id: inv.invoiceNumber,
-            customer: inv.customerName,
+            customer: inv.customerSnapshot?.name || 'Unknown',
             amount: formatCurrency(inv.grandTotal),
             status: inv.status === 'paid' ? 'Paid' : 'Pending', // Mapping 'due' to 'Pending' for UI
             date: format(new Date(inv.invoiceDate), 'MMM dd, HH:mm')
@@ -253,7 +253,7 @@ export function InsightsClient({ invoices, invoiceItems }: InsightsClientProps) 
         <LazyMotion features={domAnimation}>
             <div className="p-4 md:p-6 space-y-6 min-h-screen pb-24 md:pb-6">
                 {/* Smart AI Insights - Premium glassmorphism component */}
-                <SmartAIInsights 
+                <SmartAIInsights
                     className="mb-2"
                     onAskQuestion={(question) => {
                         console.log('[AI Insights] User asked:', question);

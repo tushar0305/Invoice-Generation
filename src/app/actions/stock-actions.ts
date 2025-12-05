@@ -9,7 +9,7 @@ const stockItemSchema = z.object({
     description: z.string().trim().optional().nullable(),
     purity: z.string().trim().min(1, 'Purity is required'),
     basePrice: z.coerce.number().min(0).default(0),
-    baseWeight: z.coerce.number().min(0).optional().nullable(),
+    // baseWeight removed
     makingChargePerGram: z.coerce.number().min(0).default(0),
     quantity: z.coerce.number().min(0).default(0),
     unit: z.string().trim().min(1, 'Unit is required'),
@@ -27,13 +27,14 @@ export async function createStockItemAction(data: z.infer<typeof stockItemSchema
 
         const { error } = await supabase.from('stock_items').insert({
             shop_id: validated.shopId,
-            created_by: validated.userId,
-            updated_by: validated.userId,
+            // created_by: validated.userId, // Not in schema, or handled by default? Schema has no created_by column in stock_items? Wait, let me check schema again.
+            // Schema has deleted_by but not created_by? Let me check.
+            // Schema: created_at, updated_at, deleted_at, deleted_by. No created_by.
             name: validated.name,
             description: validated.description,
             purity: validated.purity,
             base_price: validated.basePrice,
-            base_weight: validated.baseWeight,
+            // base_weight: validated.baseWeight, // Removed
             making_charge_per_gram: validated.makingChargePerGram,
             quantity: validated.quantity,
             unit: validated.unit,
@@ -60,12 +61,12 @@ export async function updateStockItemAction(id: string, data: z.infer<typeof sto
         const { error } = await supabase
             .from('stock_items')
             .update({
-                updated_by: validated.userId,
+                // updated_by: validated.userId, // Removed
                 name: validated.name,
                 description: validated.description,
                 purity: validated.purity,
                 base_price: validated.basePrice,
-                base_weight: validated.baseWeight,
+                // base_weight: validated.baseWeight, // Removed
                 making_charge_per_gram: validated.makingChargePerGram,
                 quantity: validated.quantity,
                 unit: validated.unit,

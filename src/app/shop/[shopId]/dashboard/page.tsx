@@ -52,7 +52,7 @@ async function getDashboardData(shopId: string) {
   });
 
   if (error) {
-    console.error('Error fetching dashboard stats:', error);
+    console.error('Error fetching dashboard stats:', JSON.stringify(error, null, 2));
     return null;
   }
 
@@ -204,7 +204,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
 
   return (
     <>
-      <MobileDashboardClient 
+      <MobileDashboardClient
         shopId={shopId}
         stats={stats}
         marketRates={marketRates}
@@ -215,225 +215,225 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
       />
       <div className="hidden md:flex flex-col gap-3 p-3 md:p-4 lg:p-6 pb-24 max-w-[1800px] mx-auto">
 
-      {/* Floating Action Button */}
-      <FloatingActions shopId={shopId} />
+        {/* Floating Action Button */}
+        <FloatingActions shopId={shopId} />
 
-      {/* Gold & Silver Ticker - NOW AT TOP */}
-      <GoldSilverTicker initialData={marketRates} />
+        {/* Gold & Silver Ticker - NOW AT TOP */}
+        <GoldSilverTicker initialData={marketRates} />
 
-      {/* Compact Hero Banner */}
-      <Suspense fallback={<HeroSkeleton />}>
-        <FinelessHero
-          title="Balance"
-          value={stats.totalPaidThisMonth}
-          change={stats.revenueMoM}
-          changeAmount={changeAmount}
-          sparklineData={monthSparkline}
-          viewMoreHref={`/shop/${shopId}/invoices`}
-        />
-      </Suspense>
-
-      {/* KPI Cards Grid - 4 columns */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Suspense fallback={<KPICardSkeleton index={0} />}>
-          <KPICard
-            title="This Month"
-            value={formatCurrency(stats.totalPaidThisMonth)}
+        {/* Compact Hero Banner */}
+        <Suspense fallback={<HeroSkeleton />}>
+          <FinelessHero
+            title="Balance"
+            value={stats.totalPaidThisMonth}
             change={stats.revenueMoM}
-            changeLabel="vs last month"
-            sparklineData={monthSparkline.slice(-7)}
-            href={`/shop/${shopId}/invoices`}
-            index={0}
+            changeAmount={changeAmount}
+            sparklineData={monthSparkline}
+            viewMoreHref={`/shop/${shopId}/invoices`}
           />
         </Suspense>
 
-        <Suspense fallback={<KPICardSkeleton index={1} />}>
-          <KPICard
-            title="This Week"
-            value={formatCurrency(stats.totalPaidThisWeek)}
-            change={stats.totalPaidThisWeek > 0 ?
-              ((stats.totalPaidThisWeek - (stats.totalPaidThisMonth / 4)) / (stats.totalPaidThisMonth / 4)) * 100 : 0}
-            changeLabel="vs weekly avg"
-            sparklineData={weekSparkline}
-            href={`/shop/${shopId}/invoices`}
-            index={1}
-          />
-        </Suspense>
+        {/* KPI Cards Grid - 4 columns */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Suspense fallback={<KPICardSkeleton index={0} />}>
+            <KPICard
+              title="This Month"
+              value={formatCurrency(stats.totalPaidThisMonth)}
+              change={stats.revenueMoM}
+              changeLabel="vs last month"
+              sparklineData={monthSparkline.slice(-7)}
+              href={`/shop/${shopId}/invoices`}
+              index={0}
+            />
+          </Suspense>
 
-        <Suspense fallback={<KPICardSkeleton index={2} />}>
-          <KPICard
-            title="Today"
-            value={formatCurrency(stats.totalPaidToday)}
-            change={stats.totalPaidToday > 0 && stats.totalPaidThisWeek > 0 ?
-              ((stats.totalPaidToday - (stats.totalPaidThisWeek / 7)) / (stats.totalPaidThisWeek / 7)) * 100 : 0}
-            changeLabel="vs daily avg"
-            sparklineData={weekSparkline.slice(-3)}
-            index={2}
-          />
-        </Suspense>
+          <Suspense fallback={<KPICardSkeleton index={1} />}>
+            <KPICard
+              title="This Week"
+              value={formatCurrency(stats.totalPaidThisWeek)}
+              change={stats.totalPaidThisWeek > 0 ?
+                ((stats.totalPaidThisWeek - (stats.totalPaidThisMonth / 4)) / (stats.totalPaidThisMonth / 4)) * 100 : 0}
+              changeLabel="vs weekly avg"
+              sparklineData={weekSparkline}
+              href={`/shop/${shopId}/invoices`}
+              index={1}
+            />
+          </Suspense>
 
-        <Suspense fallback={<KPICardSkeleton index={3} />}>
-          <KPICard
-            title="Customers"
-            value={totalUniqueCustomers.toString()}
-            change={15}
-            changeLabel="new this month"
-            sparklineData={[40, 55, 45, 65, 70, 85, 90]}
-            href={`/shop/${shopId}/customers`}
-            index={3}
-          />
-        </Suspense>
-      </div>
+          <Suspense fallback={<KPICardSkeleton index={2} />}>
+            <KPICard
+              title="Today"
+              value={formatCurrency(stats.totalPaidToday)}
+              change={stats.totalPaidToday > 0 && stats.totalPaidThisWeek > 0 ?
+                ((stats.totalPaidToday - (stats.totalPaidThisWeek / 7)) / (stats.totalPaidThisWeek / 7)) * 100 : 0}
+              changeLabel="vs daily avg"
+              sparklineData={weekSparkline.slice(-3)}
+              index={2}
+            />
+          </Suspense>
 
-      {/* Compact Stats Row - Quick Chips */}
-      <CompactStatsRow
-        shopId={shopId}
-        totalInvoices={additionalStats.totalInvoices}
-        activeLoans={additionalStats.activeLoans}
-        khataBalance={additionalStats.khataBalance}
-        loyaltyPoints={additionalStats.totalLoyaltyPoints}
-      />
+          <Suspense fallback={<KPICardSkeleton index={3} />}>
+            <KPICard
+              title="Customers"
+              value={totalUniqueCustomers.toString()}
+              change={15}
+              changeLabel="new this month"
+              sparklineData={[40, 55, 45, 65, 70, 85, 90]}
+              href={`/shop/${shopId}/customers`}
+              index={3}
+            />
+          </Suspense>
+        </div>
 
-      {/* Quick Insights - 3 Compact Widgets */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <LowStockWidget
+        {/* Compact Stats Row - Quick Chips */}
+        <CompactStatsRow
           shopId={shopId}
-          items={additionalStats.lowStockItems.map((item: any) => ({
-            id: item.id,
-            name: item.item_name,
-            currentQty: item.current_quantity,
-            minQty: item.min_quantity || 5,
-            unit: item.unit || 'pcs'
-          }))}
+          totalInvoices={additionalStats.totalInvoices}
+          activeLoans={additionalStats.activeLoans}
+          khataBalance={additionalStats.khataBalance}
+          loyaltyPoints={additionalStats.totalLoyaltyPoints}
         />
 
-        <PendingPaymentsWidget
-          shopId={shopId}
-          pendingCount={stats.dueInvoices.length}
-          totalDue={totalDue}
-          overdueCount={overdueInvoices.length}
-        />
+        {/* Quick Insights - 3 Compact Widgets */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <LowStockWidget
+            shopId={shopId}
+            items={additionalStats.lowStockItems.map((item: any) => ({
+              id: item.id,
+              name: item.item_name,
+              currentQty: item.current_quantity,
+              minQty: item.min_quantity || 5,
+              unit: item.unit || 'pcs'
+            }))}
+          />
 
-        <LoyaltyWidget
-          shopId={shopId}
-          totalPointsDistributed={additionalStats.totalLoyaltyPoints}
-          activeMembers={additionalStats.loyaltyMembers}
-          topRewarder={topCustomer ? { name: topCustomer.name, points: Math.floor(topCustomer.totalSpent / 100) } : undefined}
-        />
+          <PendingPaymentsWidget
+            shopId={shopId}
+            pendingCount={stats.dueInvoices.length}
+            totalDue={totalDue}
+            overdueCount={overdueInvoices.length}
+          />
+
+          <LoyaltyWidget
+            shopId={shopId}
+            totalPointsDistributed={additionalStats.totalLoyaltyPoints}
+            activeMembers={additionalStats.loyaltyMembers}
+            topRewarder={topCustomer ? { name: topCustomer.name, points: Math.floor(topCustomer.totalSpent / 100) } : undefined}
+          />
+        </div>
+
+        {/* Business Analytics - 2 columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <BusinessHealthWidget
+            totalRevenue={stats.totalPaidThisMonth}
+            totalOrders={recentCount > 0 ? Math.round(stats.totalPaidThisMonth / (recentTotal / recentCount)) : 0}
+            previousRevenue={lastMonthRevenue}
+          />
+          <CustomerInsightsWidget
+            newCustomers={newCustomers}
+            returningCustomers={returningCustomers}
+            topCustomer={topCustomer}
+          />
+        </div>
+
+        {/* Activity Cards - 2 columns */}
+        <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
+          {/* Recent Invoices */}
+          <Card className="bg-white/50 dark:bg-card/40 backdrop-blur-md border-gray-200 dark:border-white/10 shadow-lg hover:shadow-glow-sm transition-all duration-300">
+            <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-gray-100 dark:border-white/5">
+              <CardTitle className="text-sm font-semibold text-foreground">Recent Activity</CardTitle>
+              <Button variant="ghost" size="sm" className="text-xs h-7 px-2 text-muted-foreground hover:text-primary hover:bg-primary/10" asChild>
+                <Link href={`/shop/${shopId}/invoices`}>
+                  View All <ArrowRight className="ml-1 h-3 w-3" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="p-3">
+              {stats.recentInvoices.length > 0 ? (
+                <div className="space-y-1.5">
+                  {stats.recentInvoices.slice(0, 4).map((invoice: any) => (
+                    <Link
+                      key={invoice.id}
+                      href={`/shop/${shopId}/invoices/view?id=${invoice.id}`}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-gray-100 dark:hover:border-white/10 group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "h-8 w-8 rounded-full flex items-center justify-center text-xs shadow-sm",
+                          invoice.status === 'paid'
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20"
+                            : "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20"
+                        )}>
+                          <FileText className="h-3.5 w-3.5" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-xs text-foreground group-hover:text-primary transition-colors">{invoice.customer_name}</p>
+                          <p className="text-[10px] text-muted-foreground">{invoice.invoice_number}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-xs text-foreground glow-text-sm">{formatCurrency(invoice.grand_total)}</p>
+                        <span className={cn(
+                          "text-[9px] capitalize font-medium px-1.5 py-0.5 rounded-full inline-block mt-0.5",
+                          invoice.status === 'paid'
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"
+                            : "bg-amber-500/10 text-amber-600 dark:text-amber-500"
+                        )}>
+                          {invoice.status}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <FileText className="h-6 w-6 mx-auto mb-2 opacity-30" />
+                  <p className="text-xs font-medium">No invoices yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pending Actions */}
+          <Card className="bg-white/50 dark:bg-card/40 backdrop-blur-md border-gray-200 dark:border-white/10 shadow-lg hover:shadow-glow-sm transition-all duration-300">
+            <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-gray-100 dark:border-white/5">
+              <CardTitle className="text-sm font-semibold text-foreground">Pending Actions</CardTitle>
+              <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20">
+                {stats.dueInvoices.length}
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-3">
+              {stats.dueInvoices.length > 0 ? (
+                <div className="space-y-1.5">
+                  {stats.dueInvoices.slice(0, 4).map((invoice: any) => (
+                    <Link
+                      key={invoice.id}
+                      href={`/shop/${shopId}/invoices/view?id=${invoice.id}`}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-gray-100 dark:hover:border-white/10 group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 shadow-sm">
+                          <Eye className="h-3.5 w-3.5" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-xs text-foreground group-hover:text-primary transition-colors">{invoice.customer_name}</p>
+                          <p className="text-[10px] text-muted-foreground">{invoice.invoice_number}</p>
+                        </div>
+                      </div>
+                      <span className="font-semibold text-xs text-foreground glow-text-sm">{formatCurrency(invoice.grand_total)}</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Eye className="h-6 w-6 mx-auto mb-2 opacity-30" />
+                  <p className="text-xs font-medium">All caught up!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      {/* Business Analytics - 2 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <BusinessHealthWidget
-          totalRevenue={stats.totalPaidThisMonth}
-          totalOrders={recentCount > 0 ? Math.round(stats.totalPaidThisMonth / (recentTotal / recentCount)) : 0}
-          previousRevenue={lastMonthRevenue}
-        />
-        <CustomerInsightsWidget
-          newCustomers={newCustomers}
-          returningCustomers={returningCustomers}
-          topCustomer={topCustomer}
-        />
-      </div>
-
-      {/* Activity Cards - 2 columns */}
-      <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
-        {/* Recent Invoices */}
-        <Card className="bg-white/50 dark:bg-card/40 backdrop-blur-md border-gray-200 dark:border-white/10 shadow-lg hover:shadow-glow-sm transition-all duration-300">
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-gray-100 dark:border-white/5">
-            <CardTitle className="text-sm font-semibold text-foreground">Recent Activity</CardTitle>
-            <Button variant="ghost" size="sm" className="text-xs h-7 px-2 text-muted-foreground hover:text-primary hover:bg-primary/10" asChild>
-              <Link href={`/shop/${shopId}/invoices`}>
-                View All <ArrowRight className="ml-1 h-3 w-3" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="p-3">
-            {stats.recentInvoices.length > 0 ? (
-              <div className="space-y-1.5">
-                {stats.recentInvoices.slice(0, 4).map((invoice: any) => (
-                  <Link
-                    key={invoice.id}
-                    href={`/shop/${shopId}/invoices/view?id=${invoice.id}`}
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-gray-100 dark:hover:border-white/10 group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "h-8 w-8 rounded-full flex items-center justify-center text-xs shadow-sm",
-                        invoice.status === 'paid'
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20"
-                          : "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20"
-                      )}>
-                        <FileText className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-xs text-foreground group-hover:text-primary transition-colors">{invoice.customer_name}</p>
-                        <p className="text-[10px] text-muted-foreground">{invoice.invoice_number}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-xs text-foreground glow-text-sm">{formatCurrency(invoice.grand_total)}</p>
-                      <span className={cn(
-                        "text-[9px] capitalize font-medium px-1.5 py-0.5 rounded-full inline-block mt-0.5",
-                        invoice.status === 'paid'
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"
-                          : "bg-amber-500/10 text-amber-600 dark:text-amber-500"
-                      )}>
-                        {invoice.status}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-muted-foreground">
-                <FileText className="h-6 w-6 mx-auto mb-2 opacity-30" />
-                <p className="text-xs font-medium">No invoices yet</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Pending Actions */}
-        <Card className="bg-white/50 dark:bg-card/40 backdrop-blur-md border-gray-200 dark:border-white/10 shadow-lg hover:shadow-glow-sm transition-all duration-300">
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-gray-100 dark:border-white/5">
-            <CardTitle className="text-sm font-semibold text-foreground">Pending Actions</CardTitle>
-            <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20">
-              {stats.dueInvoices.length}
-            </Badge>
-          </CardHeader>
-          <CardContent className="p-3">
-            {stats.dueInvoices.length > 0 ? (
-              <div className="space-y-1.5">
-                {stats.dueInvoices.slice(0, 4).map((invoice: any) => (
-                  <Link
-                    key={invoice.id}
-                    href={`/shop/${shopId}/invoices/view?id=${invoice.id}`}
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-gray-100 dark:hover:border-white/10 group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 shadow-sm">
-                        <Eye className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-xs text-foreground group-hover:text-primary transition-colors">{invoice.customer_name}</p>
-                        <p className="text-[10px] text-muted-foreground">{invoice.invoice_number}</p>
-                      </div>
-                    </div>
-                    <span className="font-semibold text-xs text-foreground glow-text-sm">{formatCurrency(invoice.grand_total)}</span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-muted-foreground">
-                <Eye className="h-6 w-6 mx-auto mb-2 opacity-30" />
-                <p className="text-xs font-medium">All caught up!</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
     </>
   );
 }

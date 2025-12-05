@@ -131,8 +131,9 @@ export function StockClient({
     };
 
     return (
-        <MotionWrapper className="space-y-4 sm:space-y-5 pb-24 pt-1 px-2 sm:px-4">
-            <div className="space-y-3">
+        <MotionWrapper className="space-y-4 pb-24 pt-2 px-4 md:px-0">
+            {/* Sticky Header Section for Mobile */}
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 px-4 md:mx-0 md:px-0 pb-3 md:static md:bg-transparent md:backdrop-blur-none">
                 <div className="relative w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -142,146 +143,146 @@ export function StockClient({
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+            </div>
 
-                {initialItems.length === 0 && !searchTerm && filter === 'all' ? (
-                    <EmptyState
-                        icon={Package}
-                        title="No stock items yet"
-                        description="Add your first item to get started with inventory management."
-                        action={{
-                            label: 'Add Item',
-                            onClick: () => router.push(`/shop/${shopId}/stock/new`)
-                        }}
-                    />
-                ) : (
-                    <>
-                        {/* Filter Pills - Enhanced */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                            <button
-                                onClick={() => handleFilterChange('all')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap border ${filter === 'all' ? 'bg-primary/20 text-primary border-primary/50 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]' : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'}`}
-                            >
-                                All Items <span className="opacity-70">({counts.all})</span>
-                            </button>
-                            <button
-                                onClick={() => handleFilterChange('low')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap border ${filter === 'low' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'}`}
-                            >
-                                Low Stock <span className="opacity-70">({counts.low})</span>
-                            </button>
-                            <button
-                                onClick={() => handleFilterChange('out')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap border ${filter === 'out' ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'}`}
-                            >
-                                Out of Stock <span className="opacity-70">({counts.out})</span>
-                            </button>
+            {initialItems.length === 0 && !searchTerm && filter === 'all' ? (
+                <EmptyState
+                    icon={Package}
+                    title="No stock items yet"
+                    description="Add your first item to get started with inventory management."
+                    action={{
+                        label: 'Add Item',
+                        onClick: () => router.push(`/shop/${shopId}/stock/new`)
+                    }}
+                />
+            ) : (
+                <>
+                    {/* Filter Pills - Enhanced */}
+                    <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                        <button
+                            onClick={() => handleFilterChange('all')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap border ${filter === 'all' ? 'bg-primary/20 text-primary border-primary/50 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]' : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'}`}
+                        >
+                            All Items <span className="opacity-70">({counts.all})</span>
+                        </button>
+                        <button
+                            onClick={() => handleFilterChange('low')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap border ${filter === 'low' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'}`}
+                        >
+                            Low Stock <span className="opacity-70">({counts.low})</span>
+                        </button>
+                        <button
+                            onClick={() => handleFilterChange('out')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap border ${filter === 'out' ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'}`}
+                        >
+                            Out of Stock <span className="opacity-70">({counts.out})</span>
+                        </button>
+                    </div>
+
+                    {initialItems.length === 0 ? (
+                        <div className="py-12">
+                            <EmptyState
+                                icon={Package}
+                                title="No items found"
+                                description="Try adjusting your filters or search terms."
+                                action={{
+                                    label: 'Clear filters',
+                                    onClick: () => { handleFilterChange('all'); setSearchTerm(''); }
+                                }}
+                            />
                         </div>
-
-                        {initialItems.length === 0 ? (
-                            <div className="py-12">
-                                <EmptyState
-                                    icon={Package}
-                                    title="No items found"
-                                    description="Try adjusting your filters or search terms."
-                                    action={{
-                                        label: 'Clear filters',
-                                        onClick: () => { handleFilterChange('all'); setSearchTerm(''); }
-                                    }}
-                                />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden hidden md:block bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
-                                                <TableRow className="hover:bg-transparent border-gray-200 dark:border-white/10">
-                                                    <TableHead className="font-semibold min-w-[140px] pl-6 sm:pl-4 text-primary glow-text-sm">Name</TableHead>
-                                                    <TableHead className="font-semibold min-w-[70px] hidden sm:table-cell text-primary glow-text-sm">Purity</TableHead>
-                                                    <TableHead className="font-semibold min-w-[80px] text-primary glow-text-sm">Qty</TableHead>
-                                                    <TableHead className="font-semibold hidden sm:table-cell min-w-[60px] text-primary glow-text-sm">Unit</TableHead>
-                                                    <TableHead className="font-semibold text-right min-w-[90px] text-primary glow-text-sm">Price</TableHead>
-                                                    <TableHead className="font-semibold text-right hidden md:table-cell min-w-[90px] text-primary glow-text-sm">Making</TableHead>
-                                                    <TableHead className="font-semibold hidden lg:table-cell min-w-[100px] text-primary glow-text-sm">Category</TableHead>
+                    ) : (
+                        <>
+                            <div className="rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden hidden md:block bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
+                                            <TableRow className="hover:bg-transparent border-gray-200 dark:border-white/10">
+                                                <TableHead className="font-semibold min-w-[140px] pl-6 sm:pl-4 text-primary glow-text-sm">Name</TableHead>
+                                                <TableHead className="font-semibold min-w-[70px] hidden sm:table-cell text-primary glow-text-sm">Purity</TableHead>
+                                                <TableHead className="font-semibold min-w-[80px] text-primary glow-text-sm">Qty</TableHead>
+                                                <TableHead className="font-semibold hidden sm:table-cell min-w-[60px] text-primary glow-text-sm">Unit</TableHead>
+                                                <TableHead className="font-semibold text-right min-w-[90px] text-primary glow-text-sm">Price</TableHead>
+                                                <TableHead className="font-semibold text-right hidden md:table-cell min-w-[90px] text-primary glow-text-sm">Making</TableHead>
+                                                <TableHead className="font-semibold hidden lg:table-cell min-w-[100px] text-primary glow-text-sm">Category</TableHead>
+                                                {permissions?.canManageStock && (
+                                                    <TableHead className="text-right font-semibold min-w-[90px] pr-6 sm:pr-4 text-primary glow-text-sm">Actions</TableHead>
+                                                )}
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {initialItems.map((item) => (
+                                                <TableRow key={item.id} className={`${!item.isActive ? 'opacity-50' : 'hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-white/5'}`}>
+                                                    <TableCell className="font-medium pl-6 sm:pl-4 text-gray-900 dark:text-gray-200">
+                                                        <div className="flex flex-col">
+                                                            <span className="truncate max-w-[120px] sm:max-w-none">{item.name}</span>
+                                                            <span className="text-xs text-muted-foreground dark:text-gray-500 sm:hidden">{item.purity}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="hidden sm:table-cell text-muted-foreground dark:text-gray-400">{item.purity}</TableCell>
+                                                    <TableCell className="whitespace-nowrap">
+                                                        <div className="flex flex-col sm:flex-row sm:items-center">
+                                                            <span className={`font-medium ${item.quantity === 0 ? 'text-red-600 dark:text-red-400' : item.quantity < 3 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                                {item.quantity}
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground dark:text-gray-500 sm:hidden">{item.unit}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="hidden sm:table-cell text-muted-foreground dark:text-gray-500">{item.unit}</TableCell>
+                                                    <TableCell className="text-right font-medium text-sm sm:text-base text-gray-900 dark:text-gray-300">₹{item.basePrice.toFixed(0)}</TableCell>
+                                                    <TableCell className="text-right hidden md:table-cell text-sm sm:text-base text-muted-foreground dark:text-gray-400">₹{item.makingChargePerGram.toFixed(0)}</TableCell>
+                                                    <TableCell className="hidden lg:table-cell">
+                                                        <span className="text-xs bg-gray-100 dark:bg-white/5 text-muted-foreground dark:text-gray-400 px-2 py-1 rounded border border-gray-200 dark:border-white/5">{item.category || '-'}</span>
+                                                    </TableCell>
                                                     {permissions?.canManageStock && (
-                                                        <TableHead className="text-right font-semibold min-w-[90px] pr-6 sm:pr-4 text-primary glow-text-sm">Actions</TableHead>
+                                                        <TableCell className="text-right pr-6 sm:pr-4">
+                                                            <div className="flex justify-end gap-1">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleEdit(item)}
+                                                                    disabled={isPending}
+                                                                    className="h-8 w-8 p-0 hover:text-primary hover:bg-primary/10 text-muted-foreground dark:text-gray-400"
+                                                                >
+                                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleDelete(item.id)}
+                                                                    disabled={isPending}
+                                                                    className="text-red-600 dark:text-red-400 h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-300"
+                                                                >
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
                                                     )}
                                                 </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {initialItems.map((item) => (
-                                                    <TableRow key={item.id} className={`${!item.isActive ? 'opacity-50' : 'hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-white/5'}`}>
-                                                        <TableCell className="font-medium pl-6 sm:pl-4 text-gray-900 dark:text-gray-200">
-                                                            <div className="flex flex-col">
-                                                                <span className="truncate max-w-[120px] sm:max-w-none">{item.name}</span>
-                                                                <span className="text-xs text-muted-foreground dark:text-gray-500 sm:hidden">{item.purity}</span>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="hidden sm:table-cell text-muted-foreground dark:text-gray-400">{item.purity}</TableCell>
-                                                        <TableCell className="whitespace-nowrap">
-                                                            <div className="flex flex-col sm:flex-row sm:items-center">
-                                                                <span className={`font-medium ${item.quantity === 0 ? 'text-red-600 dark:text-red-400' : item.quantity < 3 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                                                                    {item.quantity}
-                                                                </span>
-                                                                <span className="text-xs text-muted-foreground dark:text-gray-500 sm:hidden">{item.unit}</span>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="hidden sm:table-cell text-muted-foreground dark:text-gray-500">{item.unit}</TableCell>
-                                                        <TableCell className="text-right font-medium text-sm sm:text-base text-gray-900 dark:text-gray-300">₹{item.basePrice.toFixed(0)}</TableCell>
-                                                        <TableCell className="text-right hidden md:table-cell text-sm sm:text-base text-muted-foreground dark:text-gray-400">₹{item.makingChargePerGram.toFixed(0)}</TableCell>
-                                                        <TableCell className="hidden lg:table-cell">
-                                                            <span className="text-xs bg-gray-100 dark:bg-white/5 text-muted-foreground dark:text-gray-400 px-2 py-1 rounded border border-gray-200 dark:border-white/5">{item.category || '-'}</span>
-                                                        </TableCell>
-                                                        {permissions?.canManageStock && (
-                                                            <TableCell className="text-right pr-6 sm:pr-4">
-                                                                <div className="flex justify-end gap-1">
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={() => handleEdit(item)}
-                                                                        disabled={isPending}
-                                                                        className="h-8 w-8 p-0 hover:text-primary hover:bg-primary/10 text-muted-foreground dark:text-gray-400"
-                                                                    >
-                                                                        <Edit2 className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={() => handleDelete(item.id)}
-                                                                        disabled={isPending}
-                                                                        className="text-red-600 dark:text-red-400 h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-300"
-                                                                    >
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                </div>
-                                                            </TableCell>
-                                                        )}
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
                                 </div>
+                            </div>
 
-                                {/* Mobile Card View */}
-                                <div className="md:hidden space-y-3">
-                                    <AnimatePresence initial={false}>
-                                        {initialItems.map((item) => (
-                                            <StockCard
-                                                key={item.id}
-                                                item={item}
-                                                onEdit={() => handleEdit(item)}
-                                                onDelete={() => handleDelete(item.id)}
-                                                canManage={permissions?.canManageStock || false}
-                                            />
-                                        ))}
-                                    </AnimatePresence>
-                                </div>
-                            </>
-                        )}
-                    </>
-                )}
-            </div>
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-3">
+                                <AnimatePresence initial={false}>
+                                    {initialItems.map((item) => (
+                                        <StockCard
+                                            key={item.id}
+                                            item={item}
+                                            onEdit={() => handleEdit(item)}
+                                            onDelete={() => handleDelete(item.id)}
+                                            canManage={permissions?.canManageStock || false}
+                                        />
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        </>
+                    )}
+                </>
+            )}
         </MotionWrapper>
     );
 }
@@ -358,13 +359,10 @@ function StockCard({ item, onEdit, onDelete, canManage }: { item: StockItem; onE
                                         <span className="text-xs text-muted-foreground dark:text-gray-500 block">Making Charge</span>
                                         <span className="font-medium text-gray-700 dark:text-gray-300">₹{item.makingChargePerGram}</span>
                                     </div>
-                                    <div>
-                                        <span className="text-xs text-muted-foreground dark:text-gray-500 block">Base Weight</span>
-                                        <span className="font-medium text-gray-700 dark:text-gray-300">{item.baseWeight || '-'}</span>
-                                    </div>
+
                                     <div>
                                         <span className="text-xs text-muted-foreground dark:text-gray-500 block">Added On</span>
-                                        <span className="font-medium text-gray-700 dark:text-gray-300">{new Date(item.createdAt).toLocaleDateString()}</span>
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}</span>
                                     </div>
                                     <div className="col-span-2 flex justify-end gap-2 mt-2">
                                         {canManage && (

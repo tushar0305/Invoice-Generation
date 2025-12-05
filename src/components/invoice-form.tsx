@@ -89,12 +89,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
-      customerName: invoice?.customerName || '',
-      customerAddress: invoice?.customerAddress || '',
-      customerState: invoice?.customerState || '',
-      customerPincode: invoice?.customerPincode || '',
-      customerPhone: invoice?.customerPhone || '',
-      customerEmail: invoice?.customerEmail || '',
+      customerName: invoice?.customerSnapshot?.name || '',
+      customerAddress: invoice?.customerSnapshot?.address || '',
+      customerState: invoice?.customerSnapshot?.state || '',
+      customerPincode: invoice?.customerSnapshot?.pincode || '',
+      customerPhone: invoice?.customerSnapshot?.phone || '',
+      customerEmail: invoice?.customerSnapshot?.email || '',
       invoiceDate: invoice?.invoiceDate ? new Date(invoice.invoiceDate) : new Date(),
       items: invoice?.items?.map((item: any) => ({
         id: item.id || crypto.randomUUID(),
