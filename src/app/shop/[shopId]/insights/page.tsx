@@ -3,12 +3,27 @@ import { InsightsClient } from './client';
 import { MobileSalesInsights } from '@/components/mobile/mobile-sales-insights';
 import type { Invoice } from '@/lib/definitions';
 import { Suspense } from 'react';
+import { getDeviceType } from '@/lib/device';
 
 export default async function InsightsPage({ params }: { params: Promise<{ shopId: string }> }) {
     const { shopId } = await params;
     const supabase = await createClient();
+    const deviceType = await getDeviceType();
+    const isMobile = deviceType === 'mobile';
 
-    // Fetch invoices
+    // 1. Mobile Optimized Path
+    if (isMobile) {
+        const { data: insights, error } = await supabase.rpc('get_sales_insights', { p_shop_id: shopId });
+
+        if (error) {
+            console.error('Error fetching insights RPC:', error);
+            return <div className="p-8 text-center text-destructive">Error loading data.</div>;
+        }
+
+        return <MobileSalesInsights data={insights} />;
+    }
+
+    // 2. Desktop Legacy Path (Fetch All)
     const { data: invData, error: invError } = await supabase
         .from('invoices')
         .select('*')
@@ -42,24 +57,22 @@ export default async function InsightsPage({ params }: { params: Promise<{ shopI
     } as Invoice));
 
     // Fetch invoice items
-    // Limit to recent 500 items to avoid payload issues
     const { data: itemsData, error: itemsError } = await supabase
         .from('invoice_items')
         .select('*, invoices!inner(shop_id)')
         .eq('invoices.shop_id', shopId)
         .limit(500);
 
-    if (itemsError) {
-        console.error('Error fetching items:', itemsError);
-        return <div className="p-8 text-center text-destructive">Error loading insights data. Please try refreshing.</div>;
-    }
-
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <MobileSalesInsights invoices={mappedInvoices} invoiceItems={itemsData || []} />
             <div className="hidden md:block">
                 <InsightsClient invoices={mappedInvoices} invoiceItems={itemsData || []} shopId={shopId} />
             </div>
+            {/* Fallback for potential resize on desktop - Show message or nothing */}
+            <div className="md:hidden p-8 text-center text-muted-foreground">
+                <p>Resize window or refresh to view mobile layout.</p>
+            </div>
         </Suspense>
     );
+
 }

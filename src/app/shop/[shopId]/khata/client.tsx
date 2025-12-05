@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Search, TrendingUp, TrendingDown, Users, Wallet, Eye, Trash2, Edit, IndianRupee } from 'lucide-react';
+import { useState, useTransition, useEffect } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { Plus, Search, TrendingUp, TrendingDown, Users, Wallet, Eye, Trash2, Edit, IndianRupee, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,11 +24,23 @@ import {
     DialogTrigger,
     DialogFooter,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
 import type { CustomerBalance, LedgerStats, LedgerTransaction } from '@/lib/ledger-types';
 import { cn, formatCurrency } from '@/lib/utils';
+import { useDebounce } from '@/hooks/use-debounce';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 type KhataClientProps = {
     customers: CustomerBalance[];
@@ -38,45 +50,91 @@ type KhataClientProps = {
     userId: string;
     initialSearch?: string;
     initialBalanceType?: 'positive' | 'negative' | 'zero';
+    pagination?: {
+        currentPage: number;
+        totalPages: number;
+        totalItems: number;
+    }
 };
 
 export function KhataClient({
-    customers: initialCustomers,
+    customers,
     stats,
     recentTransactions,
     shopId,
     userId,
     initialSearch = '',
     initialBalanceType,
+    pagination
 }: KhataClientProps) {
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
 
+    // URL State Sync
     const [searchTerm, setSearchTerm] = useState(initialSearch);
-    const [balanceFilter, setBalanceFilter] = useState<'all' | 'positive' | 'negative' | 'zero'>(initialBalanceType || 'all');
+    const debouncedSearch = useDebounce(searchTerm, 500);
+
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
-    // Add customer form state
+    // Sync Search with URL (Debounce Push)
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+        const currentSearch = params.get('search') || '';
+
+        // Only push if debounced value is different from URL and we have a value (or cleared it)
+        // AND if local search term matches debounced (user stopped typing)
+        if (debouncedSearch !== currentSearch) {
+            if (debouncedSearch) {
+                params.set('search', debouncedSearch);
+            } else {
+                params.delete('search');
+            }
+            params.set('page', '1');
+            router.push(`${pathname}?${params.toString()}`);
+        }
+    }, [debouncedSearch, pathname, router, searchParams]);
+
+    // Sync Input with URL (Popstate/Navigation)
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+        const urlSearch = params.get('search') || '';
+        if (urlSearch !== searchTerm && urlSearch !== debouncedSearch) {
+            setSearchTerm(urlSearch);
+        }
+    }, [searchParams]); // updates when URL changes externally
+
+    // Handle Filter Change
+    const handleFilterChange = (filter: string) => {
+        const params = new URLSearchParams(searchParams);
+        if (filter !== 'all') {
+            params.set('balance_type', filter);
+        } else {
+            params.delete('balance_type');
+        }
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const currentFilter = searchParams.get('balance_type') || 'all';
+
+    // Handle Pagination
+    const handlePageChange = (newPage: number) => {
+        // Ensure newPage is a string because URLSearchParams expects strings
+        const params = new URLSearchParams(searchParams);
+        params.set('page', newPage.toString());
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
     const [newCustomer, setNewCustomer] = useState({
         name: '',
         phone: '',
         address: '',
         opening_balance: 0,
     });
-
-    // Filter customers
-    const filteredCustomers = initialCustomers.filter(customer => {
-        const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (customer.phone && customer.phone.includes(searchTerm));
-
-        const matchesBalance = balanceFilter === 'all' ||
-            (balanceFilter === 'positive' && customer.current_balance > 0) ||
-            (balanceFilter === 'negative' && customer.current_balance < 0) ||
-            (balanceFilter === 'zero' && customer.current_balance === 0);
-
-        return matchesSearch && matchesBalance;
-    });
+    const [customerToDelete, setCustomerToDelete] = useState<{ id: string, name: string } | null>(null);
 
     const handleAddCustomer = async () => {
         if (!newCustomer.name.trim()) {
@@ -99,10 +157,22 @@ export function KhataClient({
                     p_address: newCustomer.address.trim() || null,
                     p_state: null,
                     p_pincode: null,
-                    p_gst_number: null
+                    p_gst_number: null,
+                    p_opening_balance: newCustomer.opening_balance
                 });
 
-                if (error) throw error;
+                if (error) {
+                    // Check for custom conflict error or postgres unique violation
+                    if (error.code === 'P0001' || error.message?.includes('already exists') || error.code === '23505') {
+                        toast({
+                            variant: 'destructive',
+                            title: 'Customer Exists',
+                            description: 'A customer with this phone number already exists in your records.',
+                        });
+                        return;
+                    }
+                    throw error;
+                }
 
                 toast({
                     title: 'Customer Added',
@@ -117,16 +187,16 @@ export function KhataClient({
                 toast({
                     variant: 'destructive',
                     title: 'Error',
-                    description: error.message || 'Failed to add customer',
+                    description: error.message || 'Failed to add customer. Please try again.',
                 });
             }
         });
     };
 
-    const handleDeleteCustomer = async (customerId: string, customerName: string) => {
-        if (!confirm(`Are you sure you want to delete ${customerName}? This will also delete all their transactions.`)) {
-            return;
-        }
+    const handleDeleteCustomer = async () => {
+        if (!customerToDelete) return;
+
+        const { id: customerId, name: customerName } = customerToDelete;
 
         startTransition(async () => {
             try {
@@ -143,6 +213,7 @@ export function KhataClient({
                     description: `${customerName} has been removed from your khata book`,
                 });
 
+                setCustomerToDelete(null);
                 router.refresh();
             } catch (error: any) {
                 console.error('Delete customer error:', error);
@@ -157,57 +228,56 @@ export function KhataClient({
 
     return (
         <div className="space-y-4 pb-24 px-4 md:px-0">
-            {/* Stats Cards */}
             <div className="grid gap-4 md:grid-cols-4">
-                <Card className="border-gray-200 dark:border-white/10 bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
+                <Card className="shadow-sm hover:shadow-md transition-shadow border border-slate-300 dark:border-slate-700">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground dark:text-gray-300">Total Customers</CardTitle>
-                        <Users className="h-4 w-4 text-primary glow-text-sm" />
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Total Customers</CardTitle>
+                        <Users className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-foreground dark:text-white">{stats.total_customers}</div>
-                        <p className="text-xs text-muted-foreground dark:text-gray-500 mt-1">
+                        <div className="text-2xl font-bold">{stats.total_customers}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
                             Active accounts
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card className="border-emerald-500/20 bg-emerald-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                <Card className="shadow-sm hover:shadow-md transition-shadow border border-slate-300 dark:border-slate-700">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Receivable</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+                        <CardTitle className="text-sm font-medium text-emerald-600">Receivable</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-emerald-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-500 glow-text-sm">₹{formatCurrency(stats.total_receivable)}</div>
-                        <p className="text-xs text-emerald-600/60 dark:text-emerald-500/60 mt-1">
+                        <div className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.total_receivable)}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
                             To be collected
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card className="border-red-500/20 bg-red-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+                <Card className="shadow-sm hover:shadow-md transition-shadow border border-slate-300 dark:border-slate-700">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400">Payable</CardTitle>
-                        <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-500" />
+                        <CardTitle className="text-sm font-medium text-red-600">Payable</CardTitle>
+                        <TrendingDown className="h-4 w-4 text-red-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-red-600 dark:text-red-500 glow-text-sm">₹{formatCurrency(stats.total_payable)}</div>
-                        <p className="text-xs text-red-600/60 dark:text-red-500/60 mt-1">
+                        <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.total_payable)}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
                             To be paid
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card className="border-primary/20 bg-primary/5 backdrop-blur-md shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]">
+                <Card className="shadow-sm hover:shadow-md transition-shadow border border-slate-300 dark:border-slate-700">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-primary">Net Balance</CardTitle>
                         <Wallet className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className={cn("text-2xl font-bold glow-text-sm", stats.net_balance >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500')}>
-                            ₹{formatCurrency(Math.abs(stats.net_balance))}
+                        <div className={cn("text-2xl font-bold", stats.net_balance >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                            {formatCurrency(Math.abs(stats.net_balance))}
                         </div>
-                        <p className="text-xs text-muted-foreground dark:text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             {stats.net_balance >= 0 ? 'Net receivable' : 'Net payable'}
                         </p>
                     </CardContent>
@@ -215,13 +285,13 @@ export function KhataClient({
             </div>
 
             {/* Main Content Card */}
-            <Card className="border-gray-200 dark:border-white/10 bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg overflow-hidden">
+            <Card className="shadow-sm border border-slate-300 dark:border-slate-700">
                 {/* Header */}
-                <CardHeader className="border-b border-gray-200 dark:border-white/10">
+                <CardHeader className="border-b">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <CardTitle className="text-2xl font-heading text-foreground dark:text-white glow-text-sm">Customer Ledger</CardTitle>
-                            <p className="text-sm text-muted-foreground dark:text-gray-400 mt-1">Manage customer credit and debit accounts</p>
+                            <CardTitle className="text-2xl font-bold text-foreground">Customer Ledger</CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">Manage customer credit and debit accounts</p>
                         </div>
                         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                             <DialogTrigger asChild>
@@ -299,61 +369,78 @@ export function KhataClient({
 
                 {/* Filters */}
                 <div className="p-6 space-y-4 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
-                        <button
-                            onClick={() => setBalanceFilter('all')}
-                            className={cn(
-                                "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                balanceFilter === 'all'
-                                    ? 'bg-primary/20 text-primary border border-primary/50 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
-                                    : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
-                            )}
-                        >
-                            All
-                        </button>
-                        <button
-                            onClick={() => setBalanceFilter('positive')}
-                            className={cn(
-                                "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                balanceFilter === 'positive'
-                                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                                    : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
-                            )}
-                        >
-                            Receivable
-                        </button>
-                        <button
-                            onClick={() => setBalanceFilter('negative')}
-                            className={cn(
-                                "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                balanceFilter === 'negative'
-                                    ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-                                    : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
-                            )}
-                        >
-                            Payable
-                        </button>
-                        <button
-                            onClick={() => setBalanceFilter('zero')}
-                            className={cn(
-                                "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                balanceFilter === 'zero'
-                                    ? 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border border-gray-500/50 shadow-[0_0_15px_rgba(107,114,128,0.3)]'
-                                    : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
-                            )}
-                        >
-                            Settled
-                        </button>
-                    </div>
+                    <div className="flex flex-col md:flex-row gap-4 justify-between">
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
+                            <button
+                                onClick={() => handleFilterChange('all')}
+                                className={cn(
+                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
+                                    currentFilter === 'all'
+                                        ? 'bg-primary/20 text-primary border border-primary/50 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
+                                        : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
+                                )}
+                            >
+                                All
+                            </button>
+                            <button
+                                onClick={() => handleFilterChange('positive')}
+                                className={cn(
+                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
+                                    currentFilter === 'positive'
+                                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                                        : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
+                                )}
+                            >
+                                Receivable
+                            </button>
+                            <button
+                                onClick={() => handleFilterChange('negative')}
+                                className={cn(
+                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
+                                    currentFilter === 'negative'
+                                        ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                                        : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
+                                )}
+                            >
+                                Payable
+                            </button>
+                            <button
+                                onClick={() => handleFilterChange('zero')}
+                                className={cn(
+                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
+                                    currentFilter === 'zero'
+                                        ? 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border border-gray-500/50 shadow-[0_0_15px_rgba(107,114,128,0.3)]'
+                                        : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
+                                )}
+                            >
+                                Settled
+                            </button>
+                        </div>
 
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search customers..."
-                            className="pl-9 h-11 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-gray-500 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all duration-300"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <div className="relative flex-1 md:flex-none md:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search customers..."
+                                    className="pl-9 h-10 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-gray-500 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all duration-300"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                    startTransition(() => {
+                                        router.refresh();
+                                    });
+                                }}
+                                className="h-10 w-10 border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10"
+                                title="Refresh Data"
+                            >
+                                <RefreshCw className={cn("h-4 w-4", isPending ? "animate-spin" : "")} />
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -371,40 +458,36 @@ export function KhataClient({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredCustomers.length === 0 ? (
+                            {customers.length === 0 ? (
                                 <TableRow className="border-gray-100 dark:border-white/5 hover:bg-transparent">
                                     <TableCell colSpan={6} className="text-center py-12 text-muted-foreground dark:text-gray-500">
-                                        {searchTerm || balanceFilter !== 'all'
+                                        {searchTerm || currentFilter !== 'all'
                                             ? 'No customers found matching your filters'
                                             : 'No customers yet. Add your first customer to get started!'}
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filteredCustomers.map((customer) => (
+                                customers.map((customer) => (
                                     <TableRow key={customer.id} className="hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5 transition-colors">
                                         <TableCell className="font-medium text-foreground dark:text-white">{customer.name}</TableCell>
                                         <TableCell className="text-sm text-muted-foreground dark:text-gray-400">
                                             {customer.phone || '-'}
                                         </TableCell>
                                         <TableCell className="text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                                            ₹{formatCurrency(customer.total_spent)}
+                                            {formatCurrency(customer.total_spent)}
                                         </TableCell>
                                         <TableCell className="text-right text-blue-600 dark:text-blue-400 font-medium">
-                                            ₹{formatCurrency(customer.total_paid)}
+                                            {formatCurrency(customer.total_paid)}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Badge
-                                                variant={customer.current_balance >= 0 ? 'default' : 'destructive'}
-                                                className={cn(
-                                                    "font-mono",
-                                                    customer.current_balance > 0 && 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-                                                    customer.current_balance < 0 && 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/20',
-                                                    customer.current_balance === 0 && 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/20'
-                                                )}
-                                            >
-                                                ₹{formatCurrency(Math.abs(customer.current_balance))}
+                                            <StatusBadge
+                                                status={customer.current_balance > 0 ? 'receivable' : customer.current_balance < 0 ? 'payable' : 'settled'}
+                                                className="font-mono"
+                                            />
+                                            <span className="ml-2 text-xs text-muted-foreground font-mono">
+                                                {formatCurrency(Math.abs(customer.current_balance))}
                                                 {customer.current_balance > 0 ? ' Dr' : customer.current_balance < 0 ? ' Cr' : ''}
-                                            </Badge>
+                                            </span>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center justify-center gap-2">
@@ -420,7 +503,7 @@ export function KhataClient({
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-500/10"
-                                                    onClick={() => handleDeleteCustomer(customer.id, customer.name)}
+                                                    onClick={() => setCustomerToDelete({ id: customer.id, name: customer.name })}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -432,7 +515,56 @@ export function KhataClient({
                         </TableBody>
                     </Table>
                 </div>
-            </Card>
-        </div>
+
+                {/* Pagination Controls */}
+                {
+                    pagination && pagination.totalPages > 1 && (
+                        <div className="p-4 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
+                            <div className="text-sm text-muted-foreground">
+                                Page {pagination.currentPage} of {pagination.totalPages}
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                                    disabled={pagination.currentPage <= 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                                    disabled={pagination.currentPage >= pagination.totalPages}
+                                >
+                                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                                </Button>
+                            </div>
+                        </div>
+                    )
+                }
+            </Card >
+
+            <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will remove {customerToDelete?.name} from your Khata Book. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteCustomer}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {isPending ? 'Deleting...' : 'Delete'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div >
     );
 }

@@ -102,13 +102,14 @@ export default function RootLayout({
         <SupabaseProvider>
           <QueryProvider>
             <AuthWrapper>
-              <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+              <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
                 {/* Global listeners: analytics + heatmap */}
                 <AppListeners />
                 {children}
                 <InstallPrompt />
                 {/* Service worker registration */}
-                <script dangerouslySetInnerHTML={{ __html: `
+                <script dangerouslySetInnerHTML={{
+                  __html: `
                   if ('serviceWorker' in navigator) {
                     window.addEventListener('load', function() {
                       navigator.serviceWorker.register('/sw.js').catch(function(e){console.debug('SW reg failed', e)});

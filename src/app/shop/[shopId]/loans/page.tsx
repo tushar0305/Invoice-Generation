@@ -5,6 +5,7 @@ import { LoansDashboardClient } from './client';
 import { MobileLoanList } from '@/components/mobile/mobile-loan-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Loan, LoanDashboardStats } from '@/lib/loan-types';
+import { getDeviceType } from '@/lib/device';
 
 type PageProps = {
     params: Promise<{ shopId: string }>;
@@ -100,15 +101,29 @@ export default async function LoansPage({ params }: PageProps) {
         stats.total_interest_earned = interestPayments.reduce((sum, p) => sum + Number(p.amount), 0);
     }
 
+    const deviceType = await getDeviceType();
+    const isMobile = deviceType === 'mobile';
+
+    if (isMobile) {
+        return (
+            <Suspense fallback={<DashboardLoading />}>
+                <MobileLoanList shopId={shopId} loans={activeLoans || []} stats={stats} />
+            </Suspense>
+        );
+    }
+
     return (
         <Suspense fallback={<DashboardLoading />}>
-            <MobileLoanList shopId={shopId} loans={activeLoans || []} stats={stats} />
             <div className="hidden md:block">
                 <LoansDashboardClient
                     loans={activeLoans || []}
                     stats={stats}
                     shopId={shopId}
                 />
+            </div>
+            {/* Fallback for resizing on desktop */}
+            <div className="md:hidden p-8 text-center text-muted-foreground">
+                <p>Resize window or refresh to view mobile layout.</p>
             </div>
         </Suspense>
     );

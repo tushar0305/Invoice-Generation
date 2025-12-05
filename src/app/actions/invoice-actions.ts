@@ -5,6 +5,8 @@ import { createClient } from '@/supabase/server';
 import {
     deleteInvoice as deleteInvoiceService,
 } from '@/services/invoices';
+import { upsertCustomer } from '@/services/customers';
+import { Customer } from '@/lib/definitions';
 
 /**
  * Server Actions for invoice mutations
@@ -45,55 +47,67 @@ export async function createInvoiceAction(formData: {
     try {
         // ===== STEP 1: Get or Create Customer FIRST =====
         let customerId: string | null = null;
+        let customerCurrentPoints = 0;
 
         if (formData.customerPhone) {
-            const { data: existingCustomer } = await supabase
-                .from('customers')
-                .select('id, loyalty_points')
-                .eq('shop_id', formData.shopId)
-                .eq('phone', formData.customerPhone)
-                .maybeSingle();
+            // Atomic Upsert using Service Layer
+            const upsertId = await upsertCustomer(formData.shopId, {
+                name: formData.customerName,
+                phone: formData.customerPhone,
+                address: formData.customerAddress,
+                state: formData.customerState,
+                pincode: formData.customerPincode,
+            });
 
-            if (existingCustomer) {
-                customerId = existingCustomer.id;
+            customerId = upsertId;
 
-                // Update existing customer details
-                await supabase
+            if (customerId) {
+                // Fetch current points for validation if redeeming
+                const { data: custData } = await supabase
                     .from('customers')
-                    .update({
-                        name: formData.customerName,
-                        address: formData.customerAddress,
-                        state: formData.customerState,
-                        pincode: formData.customerPincode,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', customerId);
-            } else {
-                // Create new customer
-                const { data: newCustomer, error: createError } = await supabase
-                    .from('customers')
-                    .insert({
-                        shop_id: formData.shopId,
-                        name: formData.customerName,
-                        phone: formData.customerPhone,
-                        address: formData.customerAddress,
-                        state: formData.customerState,
-                        pincode: formData.customerPincode,
-                        loyalty_points: 0
-                    })
-                    .select('id')
+                    .select('loyalty_points')
+                    .eq('id', customerId)
                     .single();
-
-                if (createError) {
-                    console.error('Error creating customer:', createError);
-                    throw new Error('Failed to create customer: ' + (createError.message || 'Unknown error'));
-                } else if (newCustomer) {
-                    customerId = newCustomer.id;
-                }
+                if (custData) customerCurrentPoints = custData.loyalty_points || 0;
+            } else {
+                console.warn('Customer upsert returned null, invoice will be created without linking to customer ID');
             }
         }
 
-        // ===== STEP 2: Call RPC to Create Invoice =====
+        // ===== STEP 2: Logic for Loyalty Points (Server-Side Security) =====
+        let pointsToEarn = 0;
+        let pointsToRedeem = formData.loyaltyPointsRedeemed || 0;
+
+        // Fetch Settings
+        const { data: loyaltySettings } = await supabase
+            .from('shop_loyalty_settings')
+            .select('*')
+            .eq('shop_id', formData.shopId)
+            .single();
+
+        if (loyaltySettings && loyaltySettings.is_enabled && customerId) {
+            // 1. Validate Redemption
+            if (pointsToRedeem > 0) {
+                if (pointsToRedeem > customerCurrentPoints) {
+                    throw new Error(`Insufficient loyalty points. Available: ${customerCurrentPoints}, Requested: ${pointsToRedeem}`);
+                }
+                // Additional checks (min points, max percentage) could go here
+            }
+
+            // 2. Calculate Earned Points
+            // Logic mirrors client side for consistency
+            if (loyaltySettings.earning_type === 'flat' && loyaltySettings.flat_points_ratio) {
+                pointsToEarn = Math.floor(formData.grandTotal * loyaltySettings.flat_points_ratio);
+            } else if (loyaltySettings.earning_type === 'percentage' && loyaltySettings.percentage_back) {
+                pointsToEarn = Math.floor(formData.grandTotal * (loyaltySettings.percentage_back / 100));
+            }
+        } else {
+            // Loyalty disabled or no customer -> Reset to 0 to be safe
+            pointsToEarn = 0;
+            pointsToRedeem = 0;
+        }
+
+        // ===== STEP 3: Call RPC to Create Invoice =====
         const { data: invoiceId, error: rpcError } = await supabase.rpc('create_invoice_with_items', {
             p_shop_id: formData.shopId,
             p_customer_id: customerId,
@@ -106,8 +120,10 @@ export async function createInvoiceAction(formData: {
             },
             p_items: formData.items,
             p_discount: formData.discount,
-            p_notes: '', // Add notes field to form if needed
-            p_status: formData.status
+            p_notes: '',
+            p_status: formData.status,
+            p_loyalty_points_earned: pointsToEarn,
+            p_loyalty_points_redeemed: pointsToRedeem
         });
 
         if (rpcError) throw rpcError;
@@ -122,6 +138,7 @@ export async function createInvoiceAction(formData: {
         console.error('createInvoiceAction error:', error);
         return { success: false, error: error.message || 'Failed to create invoice' };
     }
+
 }
 
 export async function updateInvoiceAction(

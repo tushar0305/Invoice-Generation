@@ -5,10 +5,11 @@ import { KhataClient } from './client';
 import { MobileKhataBook } from '@/components/mobile/mobile-khata-book';
 import type { CustomerBalance, LedgerTransaction } from '@/lib/ledger-types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getDeviceType } from '@/lib/device';
 
 type PageProps = {
     params: Promise<{ shopId: string }>;
-    searchParams: Promise<{ search?: string; balance_type?: string }>;
+    searchParams: Promise<{ search?: string; balance_type?: string; page?: string }>;
 };
 
 async function KhataLoading() {
@@ -27,7 +28,9 @@ async function KhataLoading() {
 
 export default async function KhataPage({ params, searchParams }: PageProps) {
     const { shopId } = await params;
-    const { search, balance_type } = await searchParams;
+    const { search, balance_type, page } = await searchParams;
+    const currentPage = Number(page) || 1;
+    const itemsPerPage = 20;
 
     const supabase = await createClient();
 
@@ -49,94 +52,84 @@ export default async function KhataPage({ params, searchParams }: PageProps) {
         redirect('/dashboard');
     }
 
-    // Fetch customers and calculate balances from ledger transactions
-    // Note: In a real app with many transactions, this aggregation should be done via a View or RPC
-    // For now, we'll fetch customers and their transactions to calculate
+    // --- 1. Fetch Aggregated Stats (Optimized) ---
+    // Instead of fetching all transactions, we use the View to get sums directly if possible, or count.
+    // Ideally we'd have a separate `shop_stats_view`, but we can query the `customer_balances_view` efficiently.
 
-    // 1. Fetch Customers
-    let customerQuery = supabase
-        .from('customers')
-        .select('id, name, phone, email, address, total_spent')
+    // Check if view exists first (Development fallback safety) or just query it.
+    // We assume the view implementation applies here.
+
+    // Calculate total Stats
+    const { data: statsData, error: statsError } = await supabase
+        .from('customer_balances_view')
+        .select('current_balance')
         .eq('shop_id', shopId);
 
-    if (search) {
-        customerQuery = customerQuery.ilike('name', `%${search}%`);
-    }
+    if (statsError) console.error('[Khata] Stats View Error:', statsError);
 
-    const { data: customers, error: customerError } = await customerQuery;
+    const stats = {
+        total_customers: statsData?.length || 0,
+        total_receivable: 0,
+        total_payable: 0,
+        net_balance: 0
+    };
 
-    if (customerError) {
-        console.error('Error fetching customers:', customerError);
-    }
-
-    // 2. Fetch Ledger Transactions for these customers to calculate 'total_paid' and 'balance'
-    // Actually, 'total_spent' in customers table tracks invoices (DEBITs).
-    // We need to track PAYMENTS (CREDITs).
-    // Let's fetch all transactions for simplicity in this refactor, or use a view.
-    // Better approach: Create a helper function or view.
-    // For now, let's assume we can get balance from a new RPC or just fetch transactions.
-
-    // Let's fetch all ledger transactions for the shop to aggregate
-    const { data: transactions } = await supabase
-        .from('ledger_transactions')
-        .select('customer_id, amount, entry_type')
-        .eq('shop_id', shopId);
-
-    const balanceMap = new Map<string, { paid: number, balance: number }>();
-
-    if (transactions) {
-        transactions.forEach(t => {
-            const current = balanceMap.get(t.customer_id) || { paid: 0, balance: 0 };
-            if (t.entry_type === 'CREDIT') {
-                current.paid += Number(t.amount);
-                current.balance -= Number(t.amount);
-            } else {
-                // DEBIT (Invoice)
-                current.balance += Number(t.amount);
-            }
-            balanceMap.set(t.customer_id, current);
+    if (statsData) {
+        statsData.forEach(c => {
+            const bal = Number(c.current_balance);
+            if (bal > 0) stats.total_receivable += bal;
+            if (bal < 0) stats.total_payable += Math.abs(bal);
         });
+        stats.net_balance = stats.total_receivable - stats.total_payable;
     }
 
-    const customersData: CustomerBalance[] = (customers || []).map(c => {
-        const stats = balanceMap.get(c.id) || { paid: 0, balance: 0 };
-        return {
-            id: c.id,
-            shop_id: shopId,
-            name: c.name,
-            phone: c.phone,
-            email: c.email,
-            address: c.address,
-            total_spent: c.total_spent || 0, // This might be redundant if we calculate from transactions
-            total_paid: stats.paid,
-            current_balance: stats.balance
-        };
-    });
+    // --- 2. Fetch Paginated Customers ---
+    let query = supabase
+        .from('customer_balances_view')
+        .select('*', { count: 'exact' })
+        .eq('shop_id', shopId);
 
-    // Filter by balance type if needed
-    let filteredCustomers = customersData;
+    // Apply Search
+    if (search) {
+        query = query.ilike('name', `%${search}%`);
+    }
+
+    // Apply Filters
     if (balance_type === 'receivable') {
-        filteredCustomers = customersData.filter(c => c.current_balance > 0);
+        query = query.gt('current_balance', 0);
     } else if (balance_type === 'payable') {
-        filteredCustomers = customersData.filter(c => c.current_balance < 0);
+        query = query.lt('current_balance', 0);
     } else if (balance_type === 'settled') {
-        filteredCustomers = customersData.filter(c => c.current_balance === 0);
+        query = query.eq('current_balance', 0);
     }
 
-    // Sort by balance descending (highest debt first)
-    filteredCustomers.sort((a, b) => b.current_balance - a.current_balance);
+    // Apply Pagination
+    const from = (currentPage - 1) * itemsPerPage;
+    const to = from + itemsPerPage - 1;
 
-    // Calculate stats
-    const totalCustomers = customersData.length;
-    const totalReceivable = customersData
-        .filter(c => c.current_balance > 0)
-        .reduce((sum, c) => sum + c.current_balance, 0);
-    const totalPayable = Math.abs(customersData
-        .filter(c => c.current_balance < 0)
-        .reduce((sum, c) => sum + c.current_balance, 0));
-    const netBalance = totalReceivable - totalPayable;
+    const { data: customersRaw, count, error: queryError } = await query
+        .order('current_balance', { ascending: false }) // Show highest debt first usually
+        .range(from, to);
 
-    // Fetch recent transactions for display
+    if (queryError) console.error('[Khata] Query Error:', queryError);
+    console.log('[Khata] Customers Found:', count, 'Search:', search, 'Filter:', balance_type);
+
+    const totalPages = count ? Math.ceil(count / itemsPerPage) : 0;
+
+    const customers: CustomerBalance[] = (customersRaw || []).map(c => ({
+        id: c.id,
+        shop_id: c.shop_id,
+        name: c.name,
+        phone: c.phone,
+        email: c.email,
+        address: c.address,
+        total_spent: Number(c.total_debit || 0),
+        total_paid: Number(c.total_credit || 0),
+        current_balance: Number(c.current_balance || 0)
+    }));
+
+
+    // --- 3. Fetch Recent Activity (Optimized limit) ---
     const { data: recentTransactionsRaw } = await supabase
         .from('ledger_transactions')
         .select(`
@@ -150,7 +143,6 @@ export default async function KhataPage({ params, searchParams }: PageProps) {
         .order('created_at', { ascending: false })
         .limit(10);
 
-    // Map to LedgerTransaction type
     const recentTransactions: LedgerTransaction[] = (recentTransactionsRaw || []).map(t => ({
         ...t,
         transaction_type: t.transaction_type as any,
@@ -158,33 +150,53 @@ export default async function KhataPage({ params, searchParams }: PageProps) {
         customer: Array.isArray(t.customer) ? t.customer[0] : t.customer
     }));
 
+    const deviceType = await getDeviceType();
+    const isMobile = deviceType === 'mobile';
+
+    if (isMobile) {
+        return (
+            <Suspense fallback={<KhataLoading />}>
+                <MobileKhataBook
+                    shopId={shopId}
+                    customers={customers}
+                    stats={{
+                        total_customers: stats.total_customers,
+                        total_receivable: stats.total_receivable,
+                        total_payable: stats.total_payable,
+                        net_balance: stats.net_balance,
+                    }}
+                    recentTransactions={recentTransactions}
+                />
+            </Suspense>
+        );
+    }
+
     return (
         <Suspense fallback={<KhataLoading />}>
-            <MobileKhataBook
-                shopId={shopId}
-                customers={filteredCustomers}
-                stats={{
-                    total_customers: totalCustomers,
-                    total_receivable: totalReceivable,
-                    total_payable: totalPayable,
-                    net_balance: netBalance,
-                }}
-                recentTransactions={recentTransactions}
-            />
             <div className="hidden md:block">
                 <KhataClient
-                    customers={filteredCustomers}
+                    customers={customers}
                     stats={{
-                        total_customers: totalCustomers,
-                        total_receivable: totalReceivable,
-                        total_payable: totalPayable,
-                        net_balance: netBalance,
+                        total_customers: stats.total_customers,
+                        total_receivable: stats.total_receivable,
+                        total_payable: stats.total_payable,
+                        net_balance: stats.net_balance,
                     }}
                     recentTransactions={recentTransactions}
                     shopId={shopId}
                     userId={user.id}
                     initialSearch={search || ''}
+                    initialBalanceType={balance_type as any}
+                    pagination={{
+                        currentPage,
+                        totalPages,
+                        totalItems: count || 0
+                    }}
                 />
+            </div>
+            {/* Fallback for resizing on desktop */}
+            <div className="md:hidden p-8 text-center text-muted-foreground">
+                <p>Resize window or refresh to view mobile layout.</p>
             </div>
         </Suspense>
     );

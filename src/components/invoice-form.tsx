@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -13,27 +13,26 @@ import {
   Loader2,
   Save,
   ArrowLeft,
-  Plus,
-  Trash2,
   Users,
   Eye,
-  RefreshCw,
   FileText,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser } from '@/supabase/provider';
 import { useActiveShop } from '@/hooks/use-active-shop';
-import { updateInvoiceAction } from '@/app/actions/invoice-actions';
-import { PremiumCustomerAutocomplete } from '@/components/invoice/PremiumCustomerAutocomplete';
+import { updateInvoiceAction, createInvoiceAction } from '@/app/actions/invoice-actions';
 import { CompactTotalsSummary } from '@/components/invoice/CompactTotalsSummary';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/supabase/client';
 import type { Invoice } from '@/lib/definitions';
 import type { LoyaltySettings } from '@/lib/loyalty-types';
 import { cn, formatCurrency } from '@/lib/utils';
-import { getCustomers } from '@/services/customers';
 import { LiveInvoicePreview } from '@/components/invoice-preview';
-import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
+import { MotionWrapper } from '@/components/ui/motion-wrapper';
+
+// Sub-components
+import { CustomerDetailsCard } from '@/components/invoice/customer-details-card';
+import { InvoiceItemsTable } from '@/components/invoice/invoice-items-table';
 
 // --- 1. Robust Schema Definition ---
 const invoiceItemSchema = z.object({
@@ -104,18 +103,13 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         netWeight: Number(item.netWeight),
         rate: Number(item.rate),
         making: Number(item.making),
-      })) || [], // Start with EMPTY array, user must add item
+      })) || [],
       discount: invoice?.discount || 0,
       status: (invoice?.status as 'paid' | 'due') || 'paid',
       redeemPoints: false,
       pointsToRedeem: 0,
     },
     mode: 'onChange',
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'items',
   });
 
   // Watch values for calculations
@@ -245,34 +239,33 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           grandTotal: totals.grandTotal,
           sgst: settings?.sgstRate || 1.5,
           cgst: settings?.cgstRate || 1.5,
-          loyaltyPointsEarned: totals.pointsToEarn,
+          // SECURITY: We do NOT send loyaltyPointsEarned from client anymore.
+          // It is calculated server-side in route.ts to prevent tampering.
+          // loyaltyPointsEarned: totals.pointsToEarn, 
+
           loyaltyPointsRedeemed: data.pointsToRedeem,
           loyaltyDiscountAmount: totals.loyaltyDiscount,
+          // Map items to match server action expectation just in case
+          items: data.items.map(item => ({
+            ...item,
+            id: item.id || crypto.randomUUID()
+          }))
         };
 
         let result;
         if (invoice) {
           result = await updateInvoiceAction(invoice.id, activeShop.id, payload);
+          if (!result.success) throw new Error(result.error);
+          toast({ title: 'Success', description: 'Invoice updated' });
         } else {
-          const response = await fetch('/api/v1/invoices', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          const apiRes = await response.json();
-          if (!response.ok) {
-            console.error('Invoice creation failed:', apiRes);
-            (window as any).apiError = apiRes;
-            throw new Error(apiRes.error || 'Failed to create');
-          }
-          result = { success: true, invoiceId: apiRes.data.invoiceId };
+          // Use Server Action directly
+          result = await createInvoiceAction(payload);
+          if (!result.success) throw new Error(result.error);
+          toast({ title: 'Success', description: 'Invoice created' });
         }
 
         if (result.success) {
-          toast({ title: 'Success', description: invoice ? 'Invoice updated' : 'Invoice created' });
           router.push(`/shop/${activeShop.id}/invoices`);
-        } else {
-          throw new Error(result.error);
         }
       } catch (error: any) {
         console.error('Submit Error:', error);
@@ -307,41 +300,17 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
                 {/* 1. Customer Details */}
-                <Card className="border-2 shadow-sm relative z-30 overflow-visible">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Users className="h-5 w-5 text-primary" /> Customer Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <PremiumCustomerAutocomplete
-                      customers={customers}
-                      value={{
-                        name: form.watch('customerName'),
-                        phone: form.watch('customerPhone'),
-                        address: form.watch('customerAddress'),
-                        state: form.watch('customerState'),
-                        pincode: form.watch('customerPincode'),
-                        email: form.watch('customerEmail'),
-                      }}
-                      onChange={(c) => {
-                        if (c.name !== undefined) form.setValue('customerName', c.name, { shouldValidate: true });
-                        if (c.phone !== undefined) form.setValue('customerPhone', c.phone, { shouldValidate: true });
-                        if (c.address !== undefined) form.setValue('customerAddress', c.address || '');
-                        if (c.state !== undefined) form.setValue('customerState', c.state || '');
-                        if (c.pincode !== undefined) form.setValue('customerPincode', c.pincode || '');
-                        if (c.email !== undefined) form.setValue('customerEmail', c.email || '');
-                      }}
-                      onSearch={async (q) => {
-                        if (!activeShop?.id) return;
-                        const { searchCustomers } = await import('@/services/customers');
-                        const res = await searchCustomers(activeShop.id, q);
-                        setCustomers(res);
-                      }}
-                      disabled={isPending}
-                    />
-                  </CardContent>
-                </Card>
+                <CustomerDetailsCard
+                  form={form}
+                  customers={customers}
+                  onSearch={async (q) => {
+                    if (!activeShop?.id) return;
+                    const { searchCustomers } = await import('@/services/customers');
+                    const res = await searchCustomers(activeShop.id, q);
+                    setCustomers(res);
+                  }}
+                  disabled={isPending}
+                />
 
                 {/* 2. Invoice Details */}
                 <Card className="border-2 shadow-sm relative z-10">
@@ -394,89 +363,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   </CardContent>
                 </Card>
 
-                {/* 3. Items Table (Inline Implementation for Robustness) */}
-                <Card className="border-2 shadow-sm">
-                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <FileText className="h-5 w-5 text-primary" /> Items
-                    </CardTitle>
-                    <Button type="button" size="sm" onClick={() => append({
-                      id: crypto.randomUUID(), description: '', purity: '22K', grossWeight: 0, netWeight: 0, rate: 0, making: 0
-                    })}>
-                      <Plus className="h-4 w-4 mr-1" /> Add Item
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {fields.length === 0 && (
-                      <div className="text-center py-8 border-2 border-dashed rounded-lg text-muted-foreground">
-                        No items added. Click "Add Item" to start.
-                      </div>
-                    )}
-                    {fields.map((field, index) => (
-                      <div key={field.id} className="p-4 border rounded-lg bg-card relative group">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-2 top-2 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => remove(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.description`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs uppercase text-muted-foreground">Description</FormLabel>
-                                <FormControl><Input {...field} placeholder="Item Name" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.purity`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs uppercase text-muted-foreground">Purity</FormLabel>
-                                <FormControl><Input {...field} placeholder="22K" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {['grossWeight', 'netWeight', 'rate', 'making'].map((col) => (
-                            <FormField
-                              key={col}
-                              control={form.control}
-                              name={`items.${index}.${col}` as any}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs uppercase text-muted-foreground capitalize">{col.replace(/([A-Z])/g, ' $1')}</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      {...field}
-                                      onChange={e => field.onChange(e.target.value)} // Handle number input as string initially to avoid NaN issues
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                    {form.formState.errors.items && (
-                      <p className="text-sm font-medium text-destructive">{form.formState.errors.items.message}</p>
-                    )}
-                  </CardContent>
-                </Card>
+                {/* 3. Items Table */}
+                <InvoiceItemsTable form={form} />
 
                 {/* 4. Loyalty Section */}
                 {loyaltySettings && watchedCustomerPhone && watchedCustomerPhone.length >= 10 && (
@@ -494,7 +382,9 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground">Points to Earn</p>
-                          <p className="text-xl font-bold text-emerald-600">+{totals.pointsToEarn}</p>
+                          <p className="text-xl font-bold text-emerald-600 flex items-center justify-end gap-1">
+                            +{totals.pointsToEarn} <span className="text-xs font-normal text-muted-foreground">pts</span>
+                          </p>
                         </div>
                       </div>
 
@@ -602,7 +492,6 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
       {showPreview && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          {/* Preview Modal Implementation would go here - simplified for brevity */}
           <div className="bg-background w-full max-w-4xl h-[90vh] rounded-xl border shadow-2xl overflow-hidden flex flex-col">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="font-bold">Invoice Preview</h2>

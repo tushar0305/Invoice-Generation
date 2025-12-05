@@ -4,11 +4,11 @@
  */
 
 import { Suspense } from 'react';
+import { getDeviceType } from '@/lib/device';
 import { createClient } from '@/supabase/server';
 import { StockClient } from './client';
 import { Loader2 } from 'lucide-react';
 import type { StockItem } from '@/lib/definitions';
-
 import { MobileStockList } from '@/components/mobile/mobile-stock-list';
 
 // Loading component for Suspense boundary
@@ -39,6 +39,7 @@ export default async function StockPage({
         .eq('shop_id', shopId)
         .order('created_at', { ascending: false });
 
+    // Map to simplified object for components, explicit casting for safety
     const items = (allItems || []).map((r: any) => ({
         id: r.id,
         userId: r.user_id,
@@ -83,17 +84,34 @@ export default async function StockPage({
         );
     }
 
+    const deviceType = await getDeviceType();
+    const isMobile = deviceType === 'mobile';
+
+    if (isMobile) {
+        return (
+            <Suspense fallback={<StockLoading />}>
+                <MobileStockList
+                    items={items}
+                    shopId={shopId}
+                />
+            </Suspense>
+        );
+    }
+
     return (
         <Suspense fallback={<StockLoading />}>
-            <MobileStockList shopId={shopId} items={items} />
             <div className="hidden md:block">
                 <StockClient
                     initialItems={filteredItems}
-                    shopId={shopId}
                     counts={counts}
                     initialFilter={filter || 'all'}
                     initialSearch={q || ''}
+                    shopId={shopId}
                 />
+            </div>
+            {/* Fallback for resizing on desktop */}
+            <div className="md:hidden p-8 text-center text-muted-foreground">
+                <p>Resize window or refresh to view mobile layout.</p>
             </div>
         </Suspense>
     );

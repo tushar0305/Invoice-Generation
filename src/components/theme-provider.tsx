@@ -37,15 +37,11 @@ export function ThemeProvider({
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        const savedTheme = localStorage.getItem(storageKey) as Theme | null;
-        if (savedTheme) {
-            setTheme(savedTheme);
-        } else {
-            // First time open: default to light mode per product decision.
-            // We still allow the provider to accept defaultTheme prop to override.
-            setTheme(defaultTheme ?? "light");
-        }
+        // Force light mode as per new requirements
+        setTheme("light");
         setMounted(true);
+        // Clear storage to prevent sticking to dark mode if we re-enable later
+        localStorage.removeItem(storageKey);
     }, [storageKey]);
 
     useEffect(() => {

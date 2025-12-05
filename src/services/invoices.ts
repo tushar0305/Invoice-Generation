@@ -12,15 +12,14 @@ export async function getInvoicesByShop(shopId: string): Promise<Invoice[]> {
         .select('*')
         .eq('shop_id', shopId)
         .order('created_at', { ascending: false });
-
     if (error) throw error;
 
-    return (data || []).map((r: any) => ({
+    return (data || []).map((r) => ({
         id: r.id,
         shopId: r.shop_id,
         invoiceNumber: r.invoice_number,
         customerId: r.customer_id,
-        customerSnapshot: r.customer_snapshot,
+        customerSnapshot: r.customer_snapshot as any, // Cast JSON to any or specific type if available
         invoiceDate: r.invoice_date,
         status: r.status,
         subtotal: Number(r.subtotal) || 0,
@@ -109,6 +108,10 @@ export async function getNextInvoiceNumber(shopId: string): Promise<string> {
     const invoiceNumber = `INV-${currentYear}-${nextNumber.toString().padStart(4, '0')}`;
     return invoiceNumber;
 }
+
+/**
+ * @deprecated Use create_invoice_with_items RPC for safe numbering
+ */
 
 export async function createInvoice(invoiceData: {
     user_id: string;

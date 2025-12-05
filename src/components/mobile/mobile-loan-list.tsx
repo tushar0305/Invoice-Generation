@@ -9,11 +9,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import type { LoanDashboardStats } from '@/lib/loan-types';
+import type { Loan, LoanDashboardStats } from '@/lib/loan-types';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 interface MobileLoanListProps {
   shopId: string;
-  loans: any[];
+  loans: (Loan & { loan_customers: { name: string; phone: string } })[]; // Updated to match page.tsx query
   stats: LoanDashboardStats;
 }
 
@@ -73,14 +74,8 @@ export function MobileLoanList({ shopId, loans, stats }: MobileLoanListProps) {
                           {format(new Date(loan.start_date), 'dd MMM yyyy')}
                         </p>
                       </div>
-                      <div className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${loan.status === 'active'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
-                        : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                        }`}>
-                        {loan.status === 'active' ? <Clock className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                        {loan.status}
-                      </div>
                     </div>
+                    <StatusBadge status={loan.status} showIcon />
 
                     <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-gray-800">
                       <div>
@@ -101,23 +96,26 @@ export function MobileLoanList({ shopId, loans, stats }: MobileLoanListProps) {
           ))}
         </AnimatePresence>
 
-        {filteredLoans.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <Banknote className="w-12 h-12 mx-auto mb-3 opacity-20" />
-            <p>No active loans found</p>
-          </div>
-        )}
-      </div>
+        {
+          filteredLoans.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              <Banknote className="w-12 h-12 mx-auto mb-3 opacity-20" />
+              <p>No active loans found</p>
+            </div>
+          )
+        }
+      </div >
 
       {/* Floating Action Button */}
-      <Link href={`/shop/${shopId}/loans/new`}>
+      < Link href={`/shop/${shopId}/loans/new`
+      }>
         <Button
           size="lg"
           className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg shadow-emerald-500/30 bg-emerald-600 hover:bg-emerald-700 z-40"
         >
           <Plus className="w-6 h-6" />
         </Button>
-      </Link>
-    </div>
+      </Link >
+    </div >
   );
 }

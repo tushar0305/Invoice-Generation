@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import type { CustomerBalance, LedgerTransaction } from '@/lib/ledger-types';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 interface MobileKhataBookProps {
   shopId: string;
@@ -115,14 +116,10 @@ export function MobileKhataBook({ shopId, customers, stats, recentTransactions }
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold ${customer.current_balance > 0
-                          ? 'text-green-600 dark:text-green-400'
-                          : customer.current_balance < 0
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-gray-500'
-                          }`}>
-                          {formatCurrency(Math.abs(customer.current_balance))}
-                        </p>
+                        <StatusBadge
+                          status={customer.current_balance > 0 ? 'receivable' : customer.current_balance < 0 ? 'payable' : 'settled'}
+                          className="mb-1"
+                        />
                         <p className="text-[10px] text-muted-foreground font-medium">
                           {customer.current_balance > 0 ? 'You get' : customer.current_balance < 0 ? 'You pay' : 'Settled'}
                         </p>

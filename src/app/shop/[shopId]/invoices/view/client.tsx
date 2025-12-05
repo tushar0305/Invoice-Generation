@@ -282,9 +282,9 @@ export function ViewInvoiceClient() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/invoices')}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Invoices
+                <Button variant="ghost" size="sm" onClick={() => router.back()} className="-ml-2 text-muted-foreground">
+                    <ArrowLeft className="mr-1 h-5 w-5" />
+                    Back
                 </Button>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <Button
@@ -368,7 +368,7 @@ export function ViewInvoiceClient() {
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto hidden md:block">
                             <Table className="table-modern">
                                 <TableHeader>
                                     <TableRow>
@@ -391,6 +391,34 @@ export function ViewInvoiceClient() {
                                     ))}
                                 </TableBody>
                             </Table>
+                        </div>
+
+                        {/* Mobile Items View */}
+                        <div className="md:hidden space-y-4">
+                            {items && items.map((item, i) => (
+                                <div key={item.id} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2">{item.description}</span>
+                                        <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
+                                            {formatCurrency((item.netWeight * item.rate) + (item.netWeight * item.making))}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mt-2">
+                                        <div className="flex flex-col">
+                                            <span className="opacity-70">Weight</span>
+                                            <span className="font-medium text-gray-700 dark:text-gray-300">{item.netWeight}g</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="opacity-70">Rate</span>
+                                            <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(item.rate)}</span>
+                                        </div>
+                                        <div className="flex flex-col text-right">
+                                            <span className="opacity-70">Making</span>
+                                            <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(item.netWeight * item.making)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
 
                         <div className="mt-6 flex justify-end">

@@ -1,16 +1,17 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  AlertCircle, 
-  Users, 
-  Package, 
-  CreditCard, 
+import {
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  Users,
+  Package,
+  CreditCard,
   ArrowRight,
   Wallet,
-  Crown
+  Crown,
+  BarChart3
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,7 @@ export function MobileDashboardClient({
   khataBalance,
   loyaltyPoints
 }: MobileDashboardProps) {
-  
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -53,7 +54,7 @@ export function MobileDashboardClient({
   };
 
   return (
-    <motion.div 
+    <motion.div
       variants={container}
       initial="hidden"
       animate="show"
@@ -70,15 +71,14 @@ export function MobileDashboardClient({
               </h1>
             </div>
             {stats?.revenueMoM !== 0 && (
-                <div className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full mt-1 ${
-                  stats?.revenueMoM > 0 
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              <div className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full mt-1 ${stats?.revenueMoM > 0
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                 }`}>
-                  {stats?.revenueMoM > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  {Math.abs(stats?.revenueMoM).toFixed(1)}% vs last month
-                </div>
-              )}
+                {stats?.revenueMoM > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {Math.abs(stats?.revenueMoM).toFixed(1)}% vs last month
+              </div>
+            )}
           </div>
           <div className="h-12 w-12 rounded-2xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center shadow-lg shadow-amber-500/10">
             <Wallet className="h-6 w-6 text-amber-600 dark:text-amber-400" />
@@ -138,8 +138,9 @@ export function MobileDashboardClient({
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
               <h3 className="font-semibold text-gray-900 dark:text-white">Recent Sales</h3>
-              <Link href={`/shop/${shopId}/invoices`} className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center">
-                View All <ArrowRight className="w-3 h-3 ml-1" />
+              <Link href={`/shop/${shopId}/insights`} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium flex items-center bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg">
+                <BarChart3 className="w-3 h-3 mr-1" />
+                Insights
               </Link>
             </div>
             <div className="space-y-2">
@@ -163,9 +164,8 @@ export function MobileDashboardClient({
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(invoice.grand_total)}</p>
-                        <p className={`text-[10px] font-medium ${
-                          invoice.status === 'paid' ? 'text-emerald-600' : 'text-orange-600'
-                        }`}>
+                        <p className={`text-[10px] font-medium ${invoice.status === 'paid' ? 'text-emerald-600' : 'text-orange-600'
+                          }`}>
                           {invoice.status}
                         </p>
                       </div>
@@ -250,7 +250,7 @@ export function MobileDashboardClient({
             </CardContent>
           </Card>
         </Link>
-        
+
         <Link href={`/shop/${shopId}/stock/new`}>
           <Card className="h-full border-none shadow-sm active:scale-95 transition-transform">
             <CardContent className="p-4 flex flex-col items-center justify-center gap-2 text-center">
@@ -266,7 +266,7 @@ export function MobileDashboardClient({
       {/* Business Health & Insights */}
       <motion.div variants={item} className="space-y-3">
         <h3 className="text-sm font-semibold text-muted-foreground px-1">Overview</h3>
-        
+
         <div className="grid grid-cols-2 gap-3">
           <Link href={`/shop/${shopId}/khata`}>
             <Card className="border-none shadow-sm active:scale-95 transition-transform">

@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import type { LoyaltySettings } from '@/lib/loyalty-types';
+import { updateLoyaltySettingsAction } from '@/app/actions/loyalty-actions';
 
 const loyaltySettingsSchema = z.object({
   isEnabled: z.boolean(),
@@ -103,8 +104,7 @@ export function LoyaltySettingsForm() {
 
     setIsSaving(true);
     try {
-      const payload = {
-        shop_id: activeShop.id,
+      const payload: Partial<LoyaltySettings> = {
         is_enabled: data.isEnabled,
         earning_type: data.earningType,
         flat_points_ratio: data.flatPointsRatio,
@@ -116,14 +116,13 @@ export function LoyaltySettingsForm() {
         points_validity_days: data.pointsValidityDays || null,
         earn_on_discounted_items: data.earnOnDiscountedItems,
         earn_on_full_payment_only: data.earnOnFullPaymentOnly,
-        updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
-        .from('shop_loyalty_settings')
-        .upsert(payload);
+      const result = await updateLoyaltySettingsAction(activeShop.id, payload);
 
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.error);
+      }
 
       toast({ title: 'Success', description: 'Loyalty settings updated successfully.' });
     } catch (error: any) {

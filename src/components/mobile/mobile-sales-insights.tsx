@@ -8,79 +8,51 @@ import { formatCurrency } from '@/lib/utils';
 import { format, isSameDay, isSameWeek, isSameMonth, isSameYear, subDays, startOfDay, endOfDay } from 'date-fns';
 import type { Invoice } from '@/lib/definitions';
 
+interface SalesInsightsData {
+  ranges: {
+    today: { revenue: number; orders: number };
+    week: { revenue: number; orders: number };
+    month: { revenue: number; orders: number };
+    year: { revenue: number; orders: number };
+  };
+  chart_data: { date: string; value: number }[];
+  top_products: { name: string; revenue: number; quantity: number }[];
+}
+
 interface MobileSalesInsightsProps {
-  invoices: Invoice[];
-  invoiceItems: any[];
+  data: SalesInsightsData;
 }
 
 type TimeRange = 'today' | 'week' | 'month' | 'year';
 
-export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsightsProps) {
-  const [timeRange, setTimeRange] = useState<TimeRange>('week');
+export function MobileSalesInsights({ data }: MobileSalesInsightsProps) {
+  const [timeRange, setTimeRange] = useState<TimeRange>('month');
 
-  // Filter data based on time range
-  const filteredData = useMemo(() => {
-    const now = new Date();
-    return invoices.filter(inv => {
-      const date = new Date(inv.invoiceDate);
-      switch (timeRange) {
-        case 'today': return isSameDay(date, now);
-        case 'week': return isSameWeek(date, now);
-        case 'month': return isSameMonth(date, now);
-        case 'year': return isSameYear(date, now);
-        default: return true;
-      }
-    });
-  }, [invoices, timeRange]);
-
-  // Calculate Stats
+  // Use pre-calculated stats from the DB
   const stats = useMemo(() => {
-    const totalRevenue = filteredData.reduce((sum, inv) => sum + inv.grandTotal, 0);
-    const totalOrders = filteredData.length;
+    const rangeData = data.ranges[timeRange];
+    const totalRevenue = rangeData.revenue;
+    const totalOrders = rangeData.orders;
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     return { totalRevenue, totalOrders, avgOrderValue };
-  }, [filteredData]);
+  }, [data, timeRange]);
 
-  // Top Products (Simplified logic)
-  const topProducts = useMemo(() => {
-    const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
+  // Top Products (already filtered by 30 days in SQL, so static for now or we could enhance SQL)
+  // For V1, we just show the top products returned (which are 30-day based)
+  const topProducts = data.top_products || [];
 
-    // Filter items that belong to the filtered invoices
-    const filteredInvoiceIds = new Set(filteredData.map(inv => inv.id));
-    const relevantItems = invoiceItems.filter(item => filteredInvoiceIds.has(item.invoice_id));
-
-    relevantItems.forEach(item => {
-      const existing = productMap.get(item.product_name) || { name: item.product_name, quantity: 0, revenue: 0 };
-      existing.quantity += item.quantity;
-      existing.revenue += item.total;
-      productMap.set(item.product_name, existing);
-    });
-
-    return Array.from(productMap.values())
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-  }, [filteredData, invoiceItems]);
-
-  // Simple Chart Data (Last 7 days for 'week', or appropriate grouping)
+  // Chart Data (The SQL returns 30 days daily data)
   const chartData = useMemo(() => {
-    if (timeRange === 'today') {
-      // Hourly breakdown could be complex, skipping for simplicity or doing 4-hour blocks
-      return [];
-    }
+    if (!data.chart_data) return [];
 
-    // For week/month, show daily bars
-    const days = timeRange === 'week' ? 7 : timeRange === 'month' ? 30 : 12;
-    const data = [];
+    // For "week", slice last 7
+    if (timeRange === 'week') return data.chart_data.slice(-7).map(d => ({ label: format(new Date(d.date), 'dd'), value: d.value }));
+    // For "month", return all 30
+    if (timeRange === 'month') return data.chart_data.map(d => ({ label: format(new Date(d.date), 'dd'), value: d.value }));
 
-    for (let i = days - 1; i >= 0; i--) {
-      const d = subDays(new Date(), i);
-      const dayTotal = invoices
-        .filter(inv => isSameDay(new Date(inv.invoiceDate), d))
-        .reduce((sum, inv) => sum + inv.grandTotal, 0);
-      data.push({ label: format(d, 'dd'), value: dayTotal, fullDate: d });
-    }
-    return data;
-  }, [invoices, timeRange]);
+    return [];
+  }, [data, timeRange]);
+
 
   const maxChartValue = Math.max(...chartData.map(d => d.value), 1);
 

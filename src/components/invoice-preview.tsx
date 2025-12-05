@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { UserSettings } from "@/lib/definitions";
 import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface LiveInvoicePreviewProps {
     data: any;
@@ -79,12 +80,10 @@ export function LiveInvoicePreview({ data, settings, invoiceNumber = "INV-PREVIE
                         </div>
                         <div className="w-1/3 bg-slate-50/50 p-5 rounded-xl border border-slate-100">
                             <h3 className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest mb-3">Payment Status</h3>
-                            <div className={cn(
-                                "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
-                                data.status === 'paid' ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
-                            )}>
-                                {data.status === 'paid' ? 'Paid' : 'Due'}
-                            </div>
+                            <StatusBadge
+                                status={data.status}
+                                className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border-0"
+                            />
                         </div>
                     </div>
 

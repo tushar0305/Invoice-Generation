@@ -3,7 +3,6 @@ import { HeroSection } from '@/components/landing/hero-section';
 import { ValueProp } from '@/components/landing/value-prop';
 import { AIShowcase } from '@/components/landing/ai-showcase';
 import { FeaturesJourney } from '@/components/landing/features-journey';
-import { StorySection } from '@/components/landing/story-section';
 import { Features } from '@/components/landing/features';
 import { Showcase } from '@/components/landing/showcase';
 import { WhyUs } from '@/components/landing/why-us';
@@ -101,13 +100,13 @@ export default function LandingPage() {
 
   return (
     <>
-      <main 
+      <main
         id="main-content"
         className="flex min-h-screen flex-col bg-white overflow-x-hidden"
         role="main"
       >
         <PlatformRedirect />
-        
+
         {/* Structured Data for SEO */}
         <script
           type="application/ld+json"
@@ -117,13 +116,12 @@ export default function LandingPage() {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
-        
+
         <Navbar />
         <HeroSection />
         <ValueProp />
         <AIShowcase />
         <FeaturesJourney />
-        <StorySection />
         <Features />
         <Showcase />
         <WhyUs />

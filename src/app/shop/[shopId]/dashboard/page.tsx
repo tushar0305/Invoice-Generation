@@ -19,6 +19,7 @@ import { BusinessHealthWidget } from '@/components/dashboard/business-health';
 import { CustomerInsightsWidget } from '@/components/dashboard/customer-insights';
 import { MobileDashboardClient } from '@/components/mobile/mobile-dashboard-client';
 import { startOfMonth, endOfMonth, startOfWeek, startOfDay, subMonths } from 'date-fns';
+import { getDeviceType } from '@/lib/device';
 
 // Types for the RPC response
 type DashboardStats = {
@@ -145,6 +146,10 @@ function generateSparkline(invoices: any[], days: number = 7): number[] {
 
 export default async function DashboardPage({ params }: { params: Promise<{ shopId: string }> }) {
   const { shopId } = await params;
+  const supabase = await createClient();
+  const deviceType = await getDeviceType();
+  const isMobile = deviceType === 'mobile';
+
   const [stats, marketRates, additionalStats] = await Promise.all([
     getDashboardData(shopId),
     getMarketRates(),
@@ -160,7 +165,23 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
     );
   }
 
-  // Calculate metrics
+  // Mobile View - Optimized Render
+  if (isMobile) {
+    return (
+      <MobileDashboardClient
+        shopId={shopId}
+        stats={stats}
+        marketRates={marketRates}
+        lowStockItems={additionalStats.lowStockItems}
+        activeLoans={additionalStats.activeLoans}
+        khataBalance={additionalStats.khataBalance}
+        loyaltyPoints={additionalStats.totalLoyaltyPoints}
+      />
+    );
+  }
+
+  // Desktop View - Full Calculation & Render
+  // Calculate metrics only needed for desktop
   const uniqueCustomers = new Set(stats.recentInvoices.map((inv: any) => inv.customer_phone));
   const totalUniqueCustomers = uniqueCustomers.size;
 
@@ -203,18 +224,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   const recentCount = stats.recentInvoices.length;
 
   return (
-    <>
-      <MobileDashboardClient 
-        shopId={shopId}
-        stats={stats}
-        marketRates={marketRates}
-        lowStockItems={additionalStats.lowStockItems}
-        activeLoans={additionalStats.activeLoans}
-        khataBalance={additionalStats.khataBalance}
-        loyaltyPoints={additionalStats.totalLoyaltyPoints}
-      />
-      <div className="hidden md:flex flex-col gap-3 p-3 md:p-4 lg:p-6 pb-24 max-w-[1800px] mx-auto">
-
+    <div className="flex flex-col gap-3 p-3 md:p-4 lg:p-6 pb-24 max-w-[1800px] mx-auto">
       {/* Floating Action Button */}
       <FloatingActions shopId={shopId} />
 
@@ -434,6 +444,5 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
         </Card>
       </div>
     </div>
-    </>
   );
 }

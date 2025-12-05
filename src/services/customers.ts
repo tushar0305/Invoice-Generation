@@ -93,3 +93,82 @@ function mapCustomer(c: any): Customer {
         updatedAt: c.updated_at,
     };
 }
+
+export async function upsertCustomer(
+    shopId: string,
+    data: {
+        name: string;
+        phone: string;
+        address?: string;
+        state?: string;
+        pincode?: string;
+        email?: string;
+        gstNumber?: string;
+    }
+): Promise<string | null> {
+    try {
+        // Atomic Upsert based on (shop_id, phone) constraint
+        // Note: You must have a unique constraint on (shop_id, phone) for this to work atomically
+        const { data: result, error } = await supabase
+            .from('customers')
+            .upsert(
+                {
+                    shop_id: shopId,
+                    phone: data.phone,
+                    name: data.name,
+                    address: data.address,
+                    state: data.state,
+                    pincode: data.pincode,
+                    email: data.email,
+                    gst_number: data.gstNumber,
+                    updated_at: new Date().toISOString(),
+                },
+                {
+                    onConflict: 'shop_id, phone',
+                    ignoreDuplicates: false,
+                }
+            )
+            .select('id')
+            .single();
+
+        if (error) {
+            console.error('Error upserting customer:', error);
+            throw error;
+        }
+
+        return result?.id || null;
+    } catch (err) {
+        // Fallback for cases where constraint might not match exactly or other DB errors
+        console.error('Upsert failed, trying sequential logic:', err);
+
+        // Fallback manual check (less safe but better than crashing if upsert fails due to missing constraint)
+        const { data: existing } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('shop_id', shopId)
+            .eq('phone', data.phone)
+            .maybeSingle();
+
+        if (existing) {
+            await supabase.from('customers').update({
+                name: data.name,
+                address: data.address,
+                state: data.state,
+                pincode: data.pincode,
+                email: data.email,
+            }).eq('id', existing.id);
+            return existing.id;
+        } else {
+            const { data: newC } = await supabase.from('customers').insert({
+                shop_id: shopId,
+                phone: data.phone,
+                name: data.name,
+                address: data.address,
+                state: data.state,
+                pincode: data.pincode,
+                email: data.email,
+            }).select('id').single();
+            return newC?.id || null;
+        }
+    }
+}

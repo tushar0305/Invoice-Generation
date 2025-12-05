@@ -24,6 +24,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { formatCurrency } from '@/lib/utils';
 import type { Loan, LoanDashboardStats } from '@/lib/loan-types';
 import { format } from 'date-fns';
@@ -183,9 +184,7 @@ export function LoansDashboardClient({
                                             {loan.interest_rate}%
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={loan.status === 'overdue' ? 'destructive' : 'default'} className={`capitalize ${loan.status === 'overdue' ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/20' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'}`}>
-                                                {loan.status}
-                                            </Badge>
+                                            <StatusBadge status={loan.status} />
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex justify-center">
