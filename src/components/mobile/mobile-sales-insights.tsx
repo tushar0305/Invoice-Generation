@@ -104,8 +104,8 @@ export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsig
               key={range}
               onClick={() => setTimeRange(range)}
               className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize ${timeRange === range
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400'
                 }`}
             >
               {range}
@@ -176,7 +176,7 @@ export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsig
           <div className="space-y-2">
             {topProducts.map((product, index) => (
               <motion.div
-                key={product.name}
+                key={`${product.name}-${index}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -185,9 +185,9 @@ export function MobileSalesInsights({ invoices, invoiceItems }: MobileSalesInsig
                   <CardContent className="p-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                          index === 1 ? 'bg-gray-100 text-gray-700' :
-                            index === 2 ? 'bg-orange-100 text-orange-700' :
-                              'bg-slate-50 text-slate-500'
+                        index === 1 ? 'bg-gray-100 text-gray-700' :
+                          index === 2 ? 'bg-orange-100 text-orange-700' :
+                            'bg-slate-50 text-slate-500'
                         }`}>
                         #{index + 1}
                       </div>

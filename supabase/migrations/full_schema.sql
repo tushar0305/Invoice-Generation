@@ -641,16 +641,16 @@ DECLARE
     v_due_invoices JSONB;
 BEGIN
     SELECT COALESCE(SUM(grand_total), 0) INTO v_total_paid_this_month
-    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND created_at BETWEEN p_month_start AND p_month_end;
+    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND invoice_date BETWEEN p_month_start::DATE AND p_month_end::DATE;
 
     SELECT COALESCE(SUM(grand_total), 0) INTO v_total_paid_this_week
-    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND created_at >= p_week_start;
+    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND invoice_date >= p_week_start::DATE;
 
     SELECT COALESCE(SUM(grand_total), 0) INTO v_total_paid_today
-    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND created_at >= p_today_start;
+    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND invoice_date >= p_today_start::DATE;
 
     SELECT COALESCE(SUM(grand_total), 0) INTO v_total_paid_last_month
-    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND created_at BETWEEN p_last_month_start AND p_last_month_end;
+    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND invoice_date BETWEEN p_last_month_start::DATE AND p_last_month_end::DATE;
 
     IF v_total_paid_last_month = 0 THEN
         v_revenue_mom := CASE WHEN v_total_paid_this_month > 0 THEN 100 ELSE 0 END;

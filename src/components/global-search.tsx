@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Loader2, FileText, Users, Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabase/client';
@@ -163,13 +164,13 @@ export function GlobalSearch({ shopId, isOpen, onClose }: GlobalSearchProps) {
 
     if (!isOpen) return null;
 
-    return (
+    return createPortal(
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-[15vh] px-4"
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-start justify-center pt-[15vh] px-4"
                 onClick={onClose}
             >
                 <motion.div
@@ -284,6 +285,7 @@ export function GlobalSearch({ shopId, isOpen, onClose }: GlobalSearchProps) {
                     </div>
                 </motion.div>
             </motion.div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

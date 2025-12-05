@@ -1,151 +1,147 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
-import { 
-    Sparkles, 
-    Mic, 
-    MicOff, 
-    Send, 
-    ChevronRight,
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    Sparkles,
+    Send,
+    Mic,
+    MicOff,
     TrendingUp,
+    TrendingDown,
+    Minus,
+    AlertCircle,
+    Lightbulb,
+    CheckCircle,
+    Copy,
+    Check,
+    Bot,
+    Loader2,
     Package,
     Users,
-    CalendarDays,
-    Loader2,
-    Bot,
-    MessageSquare,
-    Copy,
-    Check
+    BookOpen,
+    Banknote,
+    Star,
+    BarChart3,
+    RefreshCw,
+    ChevronRight,
+    Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/supabase/client';
+import { Badge } from '@/components/ui/badge';
 
-// Suggested prompt chips data
+// ============================================================================
+// TYPES
+// ============================================================================
+interface AIInsight {
+    type: 'insight' | 'summary' | 'alert' | 'recommendation';
+    title: string;
+    summary: string;
+    metrics?: { label: string; value: string; trend: 'up' | 'down' | 'neutral'; change: string }[];
+    bullets?: string[];
+    recommendations?: string[];
+    confidence?: 'high' | 'medium' | 'low';
+}
+
+interface RateLimitInfo {
+    remaining: number;
+    limit: number;
+    resetAt: number;
+}
+
+interface SmartAIInsightsProps {
+    className?: string;
+    shopId: string;
+    onAskQuestion?: (question: string) => void;
+}
+
+// ============================================================================
+// SUGGESTED PROMPTS
+// ============================================================================
 const SUGGESTED_PROMPTS = [
-    { id: 1, text: "Today's revenue?", icon: TrendingUp },
-    { id: 2, text: "Top selling product?", icon: Package },
-    { id: 3, text: "This month vs last month?", icon: CalendarDays },
-    { id: 4, text: "Best customer this year?", icon: Users },
-    { id: 5, text: "Low stock items?", icon: Package },
-    { id: 6, text: "Revenue trend this week?", icon: TrendingUp },
+    { id: 1, text: "Today's revenue summary", icon: TrendingUp, category: 'sales' },
+    { id: 2, text: "Which products are running low?", icon: Package, category: 'stock' },
+    { id: 3, text: "Who are my top customers?", icon: Users, category: 'customers' },
+    { id: 4, text: "What's my khata balance?", icon: BookOpen, category: 'khata' },
+    { id: 5, text: "Active loans overview", icon: Banknote, category: 'loans' },
+    { id: 6, text: "Loyalty points summary", icon: Star, category: 'loyalty' },
+    { id: 7, text: "Compare this week vs last", icon: BarChart3, category: 'sales' },
+    { id: 8, text: "Business health check", icon: Zap, category: 'summary' },
 ];
 
-// Animation variants
+// ============================================================================
+// ANIMATIONS
+// ============================================================================
 const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0 },
     visible: {
         opacity: 1,
-        y: 0,
-        transition: {
-            duration: 0.5,
-            ease: "easeOut" as const,
-            staggerChildren: 0.08
-        }
+        transition: { staggerChildren: 0.1, delayChildren: 0.1 }
     }
 };
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { 
-        opacity: 1, 
-        y: 0,
-        transition: { duration: 0.4, ease: "easeOut" as const }
-    }
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
 };
 
-const chipVariants = {
-    hidden: { opacity: 0, scale: 0.9 },
-    visible: { 
-        opacity: 1, 
-        scale: 1,
-        transition: { duration: 0.3 }
-    },
-    hover: { 
-        scale: 1.03,
-        y: -3,
-        transition: { duration: 0.2 }
-    },
-    tap: { scale: 0.97 }
+const pulseKeyframes = {
+    scale: [1, 1.02, 1],
+    opacity: [0.7, 1, 0.7],
 };
 
-// Enhanced mic wave animation
-const micWaveVariants = {
-    initial: { scale: 1, opacity: 0 },
-    animate: {
-        scale: [1, 2.5],
-        opacity: [0.6, 0],
-        transition: {
-            duration: 1.2,
-            repeat: Infinity,
-            ease: "easeOut" as const
-        }
-    }
-};
-
-const micWaveVariants2 = {
-    initial: { scale: 1, opacity: 0 },
-    animate: {
-        scale: [1, 2],
-        opacity: [0.4, 0],
-        transition: {
-            duration: 1.2,
-            repeat: Infinity,
-            ease: "easeOut" as const,
-            delay: 0.3
-        }
-    }
-};
-
-const micGlowVariants = {
-    initial: { opacity: 0.5 },
-    animate: {
-        opacity: [0.5, 1, 0.5],
-        transition: {
-            duration: 1,
-            repeat: Infinity,
-            ease: "easeInOut" as const
-        }
-    }
-};
-
-// Shimmer animation for placeholder
-const shimmerVariants = {
-    initial: { x: '-100%' },
-    animate: {
-        x: '100%',
-        transition: {
-            duration: 2,
-            repeat: Infinity,
-            ease: "linear" as const
-        }
-    }
-};
-
-interface SmartAIInsightsProps {
-    className?: string;
-    onAskQuestion?: (question: string) => void;
-}
-
-export function SmartAIInsights({ className, onAskQuestion }: SmartAIInsightsProps) {
+// ============================================================================
+// COMPONENT
+// ============================================================================
+export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIInsightsProps) {
     const [query, setQuery] = useState('');
     const [isListening, setIsListening] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
-    const [aiResponse, setAiResponse] = useState<string | null>(null);
+    const [aiResponse, setAiResponse] = useState<AIInsight | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [rateLimit, setRateLimit] = useState<RateLimitInfo | null>(null);
+    const [tokensUsed, setTokensUsed] = useState<number>(0);
     const inputRef = useRef<HTMLInputElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Handle voice input (Web Speech API)
-    const handleVoiceInput = () => {
+    // Load rate limit from local storage on mount
+    useEffect(() => {
+        const savedLimit = localStorage.getItem(`ai_rate_limit_${shopId}`);
+        if (savedLimit) {
+            try {
+                const parsed = JSON.parse(savedLimit);
+                // Check if resetAt has passed
+                if (parsed.resetAt && Date.now() > parsed.resetAt) {
+                    // Reset locally if time passed (backend will confirm later)
+                    setRateLimit({ ...parsed, remaining: parsed.limit });
+                } else {
+                    setRateLimit(parsed);
+                }
+            } catch (e) {
+                console.error('Failed to parse saved rate limit', e);
+            }
+        }
+    }, [shopId]);
+
+    // Save rate limit to local storage when it changes
+    useEffect(() => {
+        if (rateLimit) {
+            localStorage.setItem(`ai_rate_limit_${shopId}`, JSON.stringify(rateLimit));
+        }
+    }, [rateLimit, shopId]);
+
+    // Voice input handler
+    const handleVoiceInput = useCallback(() => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert('Voice input is not supported in your browser. Try Chrome or Edge.');
+            setError('Voice input not supported in your browser. Try Chrome or Edge.');
             return;
         }
 
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
-        
+
         recognition.lang = 'en-IN';
         recognition.continuous = false;
         recognition.interimResults = false;
@@ -153,7 +149,7 @@ export function SmartAIInsights({ className, onAskQuestion }: SmartAIInsightsPro
         recognition.onstart = () => setIsListening(true);
         recognition.onend = () => setIsListening(false);
         recognition.onerror = () => setIsListening(false);
-        
+
         recognition.onresult = (event: any) => {
             const transcript = event.results[0][0].transcript;
             setQuery(transcript);
@@ -165,126 +161,197 @@ export function SmartAIInsights({ className, onAskQuestion }: SmartAIInsightsPro
         } else {
             recognition.start();
         }
-    };
+    }, [isListening]);
 
-    // Handle submit
-    const handleSubmit = () => {
-        if (!query.trim()) return;
-        
+    // Submit handler
+    const handleSubmit = useCallback(async () => {
+        if (!query.trim() || isLoading) return;
+
         setIsLoading(true);
-        // Simulate AI response (replace with actual API call)
-        setTimeout(() => {
-            setAiResponse(`Based on your query "${query}", here's a simulated insight. Connect this to your actual AI backend for real responses.`);
-            setIsLoading(false);
-            onAskQuestion?.(query);
-        }, 1500);
-    };
+        setError(null);
+        setAiResponse(null);
 
-    // Handle chip click
-    const handleChipClick = (prompt: string) => {
+        // Optimistic update for rate limit
+        if (rateLimit && rateLimit.remaining > 0) {
+            setRateLimit(prev => prev ? { ...prev, remaining: prev.remaining - 1 } : null);
+        }
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session) {
+                throw new Error('Please login to use AI Insights');
+            }
+
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ai-insights`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: query, shopId }),
+                }
+            );
+
+            // Handle rate limiting
+            if (response.status === 429) {
+                const data = await response.json();
+                setError(data.message || 'Rate limit exceeded. Please wait before trying again.');
+                return;
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to get AI response');
+            }
+
+            const data = await response.json();
+            setAiResponse(data.insight);
+            setTokensUsed(data.tokensUsed || 0);
+
+            if (data.rateLimit) {
+                setRateLimit(data.rateLimit);
+            }
+
+            onAskQuestion?.(query);
+
+        } catch (err: any) {
+            console.error('AI Error:', err);
+            setError(err.message || 'Something went wrong. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [query, isLoading, shopId, onAskQuestion]);
+
+    // Chip click handler
+    const handleChipClick = useCallback((prompt: string) => {
         setQuery(prompt);
         inputRef.current?.focus();
-    };
+    }, []);
 
-    // Handle key press
-    const handleKeyPress = (e: React.KeyboardEvent) => {
+    // Key press handler
+    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSubmit();
         }
-    };
+    }, [handleSubmit]);
 
-    // Handle copy
-    const handleCopy = () => {
-        if (aiResponse) {
-            navigator.clipboard.writeText(aiResponse);
+    // Copy handler
+    const handleCopy = useCallback(() => {
+        if (aiResponse?.summary) {
+            const textToCopy = `${aiResponse.title}\n\n${aiResponse.summary}${aiResponse.bullets?.length ? '\n\n• ' + aiResponse.bullets.join('\n• ') : ''}${aiResponse.recommendations?.length ? '\n\nRecommendations:\n• ' + aiResponse.recommendations.join('\n• ') : ''}`;
+            navigator.clipboard.writeText(textToCopy);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
+        }
+    }, [aiResponse]);
+
+    // Reset handler
+    const handleReset = useCallback(() => {
+        setQuery('');
+        setAiResponse(null);
+        setError(null);
+        inputRef.current?.focus();
+    }, []);
+
+    // Trend icon component
+    const TrendIcon = ({ trend }: { trend: string }) => {
+        if (trend === 'up') return <TrendingUp className="w-3.5 h-3.5" />;
+        if (trend === 'down') return <TrendingDown className="w-3.5 h-3.5" />;
+        return <Minus className="w-3.5 h-3.5" />;
+    };
+
+    // Type icon component
+    const TypeIcon = ({ type }: { type: string }) => {
+        switch (type) {
+            case 'alert': return <AlertCircle className="w-5 h-5" />;
+            case 'recommendation': return <Lightbulb className="w-5 h-5" />;
+            case 'summary': return <BarChart3 className="w-5 h-5" />;
+            default: return <Sparkles className="w-5 h-5" />;
         }
     };
 
     return (
-        <LazyMotion features={domAnimation}>
-            <m.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className={cn(
-                    // Base glassmorphism styles
-                    "relative overflow-hidden",
-                    // Enhanced glass effect with subtle gold tint
-                    "bg-gradient-to-b from-white/90 via-white/70 to-amber-50/50",
-                    "dark:from-black/40 dark:via-gray-900/50 dark:to-amber-950/30",
-                    // Backdrop blur
-                    "backdrop-blur-2xl",
-                    // Border with gold accent
-                    "border border-amber-200/60 dark:border-amber-500/25",
-                    // Enhanced shadow with depth
-                    "shadow-[0_8px_40px_rgba(139,97,38,0.12),0_2px_12px_rgba(139,97,38,0.08),inset_0_1px_0_rgba(255,255,255,0.5)]",
-                    "dark:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_2px_12px_rgba(212,175,55,0.08),inset_0_1px_0_rgba(255,255,255,0.05)]",
-                    // Rounded corners - responsive
-                    "rounded-[18px] md:rounded-[22px] lg:rounded-[24px]",
-                    // Enhanced padding - more breathing room on desktop
-                    "p-5 sm:p-6 md:p-7 lg:px-12 lg:py-10",
-                    className
-                )}
-            >
-                {/* Background gold gradient tint (3%) */}
-                <div 
-                    className="absolute inset-0 pointer-events-none"
-                    style={{ 
-                        background: 'linear-gradient(180deg, transparent 0%, rgba(255,241,220,0.06) 50%, rgba(255,215,140,0.04) 100%)'
-                    }} 
-                />
-                
-                {/* Decorative gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-400/[0.03] via-transparent to-amber-600/[0.04] pointer-events-none" />
-                
-                {/* Subtle gold shimmer orbs */}
-                <div className="absolute -top-32 -right-32 w-64 h-64 bg-gradient-radial from-amber-400/15 to-transparent rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-gradient-radial from-amber-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+        <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className={cn(
+                "relative overflow-hidden",
+                // Premium gradient background
+                "bg-gradient-to-br from-slate-50 via-white to-amber-50/30",
+                "dark:from-background dark:via-card dark:to-amber-950/20",
+                // Border
+                "border border-slate-200/80 dark:border-border",
+                // Shadow
+                "shadow-xl shadow-slate-200/50 dark:shadow-black/20",
+                // Rounded
+                "rounded-2xl lg:rounded-3xl",
+                // Padding
+                "p-6 lg:p-8",
+                className
+            )}
+        >
+            {/* Background decorations */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl lg:rounded-3xl">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-gradient-to-br from-amber-400/20 to-orange-400/10 rounded-full blur-3xl" />
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-gradient-to-tr from-blue-400/10 to-purple-400/10 rounded-full blur-3xl" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-radial from-amber-200/10 to-transparent rounded-full" />
+            </div>
 
-                {/* Content */}
-                <div className="relative z-10 space-y-5 md:space-y-6 lg:space-y-7">
-                    {/* Header - enhanced spacing */}
-                    <m.div variants={itemVariants} className="flex items-start gap-3 md:gap-4">
-                        <div className="flex-shrink-0 p-2.5 md:p-3 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400/25 to-amber-600/15 border border-amber-400/40 dark:border-amber-500/25 shadow-sm">
-                            <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-500 dark:text-amber-400" />
+            <div className="relative z-10 space-y-6">
+                {/* Header */}
+                <motion.div variants={itemVariants} className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                        <div className="relative">
+                            <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/25">
+                                <Sparkles className="w-6 h-6 text-white" />
+                            </div>
+                            {/* Animated glow */}
+                            <motion.div
+                                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 blur-xl opacity-40"
+                                animate={pulseKeyframes}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            />
                         </div>
-                        <div className="flex-1 min-w-0 pt-0.5">
-                            <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
-                                Smart AI Insights
-                                {/* Refined BETA badge - smaller, pill-shaped, thin border */}
-                                <span className="inline-flex items-center px-1.5 py-px text-[9px] font-semibold tracking-wide rounded-full bg-amber-50/80 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-300/50 dark:border-amber-500/30 uppercase">
-                                    Beta
-                                </span>
+                        <div>
+                            <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                Swarna AI
+                                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 text-amber-700 dark:text-amber-300 border-0">
+                                    BETA
+                                </Badge>
                             </h2>
-                            {/* More spacing under subtitle */}
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 md:mt-2">
-                                Ask anything about your sales in your own language.
+                            <p className="text-sm text-slate-500 dark:text-muted-foreground mt-1">
+                                Your intelligent business analyst. Ask anything about your shop.
                             </p>
                         </div>
-                    </m.div>
+                    </div>
 
-                    {/* Input Bar - enhanced with inner shadow and glass gradient */}
-                    <m.div 
-                        variants={itemVariants}
+                    {/* Rate limit indicator */}
+                    {rateLimit && (
+                        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-muted text-xs text-slate-600 dark:text-muted-foreground">
+                            <Zap className="w-3 h-3" />
+                            {rateLimit.remaining}/{rateLimit.limit} queries left
+                        </div>
+                    )}
+                </motion.div>
+
+                {/* Input Section */}
+                <motion.div variants={itemVariants} className="space-y-4">
+                    {/* Input bar */}
+                    <div
                         className={cn(
-                            "relative flex items-center",
-                            // Enhanced glass input container with inner shadow
-                            "bg-gradient-to-b from-white/80 to-gray-50/60",
-                            "dark:from-white/[0.08] dark:to-white/[0.03]",
-                            // Inner shadow for depth
-                            "shadow-[inset_0_2px_4px_rgba(0,0,0,0.04),0_1px_3px_rgba(139,97,38,0.08)]",
-                            "dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2),0_1px_3px_rgba(212,175,55,0.05)]",
-                            "border transition-all duration-300",
-                            isFocused 
-                                ? "border-amber-400/70 dark:border-amber-500/50 shadow-[inset_0_2px_4px_rgba(0,0,0,0.04),0_0_0_3px_rgba(212,175,55,0.1),0_4px_16px_rgba(212,175,55,0.12)]" 
-                                : "border-gray-200/90 dark:border-white/15",
-                            "rounded-xl md:rounded-2xl",
-                            "p-1 md:p-1.5",
-                            // Focus scale effect
-                            isFocused && "scale-[1.01]"
+                            "relative flex items-center gap-2",
+                            "bg-white dark:bg-card",
+                            "border-2 transition-all duration-300",
+                            isFocused
+                                ? "border-amber-400 dark:border-amber-500 shadow-lg shadow-amber-500/10"
+                                : "border-slate-200 dark:border-border",
+                            "rounded-2xl",
+                            "p-2"
                         )}
                     >
                         <input
@@ -295,270 +362,379 @@ export function SmartAIInsights({ className, onAskQuestion }: SmartAIInsightsPro
                             onFocus={() => setIsFocused(true)}
                             onBlur={() => setIsFocused(false)}
                             onKeyDown={handleKeyPress}
-                            placeholder="Ask your question…"
+                            placeholder="Ask about your sales, stock, customers..."
                             className={cn(
                                 "flex-1 min-w-0",
                                 "bg-transparent",
-                                "text-gray-900 dark:text-white",
-                                "placeholder:text-gray-400 dark:placeholder:text-gray-500",
-                                "text-sm md:text-base",
-                                "px-3.5 py-3 md:py-3.5",
-                                "focus:outline-none",
-                                "rounded-lg"
+                                "text-slate-900 dark:text-foreground",
+                                "placeholder:text-slate-400 dark:placeholder:text-muted-foreground",
+                                "text-base",
+                                "px-4 py-3",
+                                "focus:outline-none"
                             )}
                             disabled={isLoading}
                         />
-                        
-                        {/* Action buttons - tighter spacing */}
-                        <div className="flex items-center gap-1 md:gap-1.5 pr-0.5 md:pr-1">
-                            {/* Voice input button with enhanced wave animation */}
-                            <button
-                                onClick={handleVoiceInput}
-                                disabled={isLoading}
-                                className={cn(
-                                    "relative flex items-center justify-center",
-                                    "w-10 h-10 md:w-11 md:h-11",
-                                    "rounded-xl",
-                                    "transition-all duration-300",
-                                    isListening
-                                        ? "bg-red-500/15 text-red-500 dark:text-red-400"
-                                        : "bg-gray-100/90 dark:bg-white/10 text-gray-500 dark:text-gray-400 hover:bg-amber-100/90 dark:hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400",
-                                    "disabled:opacity-50 disabled:cursor-not-allowed"
-                                )}
-                                aria-label={isListening ? "Stop listening" : "Start voice input"}
-                            >
-                                {/* Multi-layer wave animation when listening */}
-                                {isListening && (
-                                    <>
-                                        <m.div
-                                            variants={micWaveVariants}
-                                            initial="initial"
-                                            animate="animate"
-                                            className="absolute inset-0 rounded-xl bg-red-500/40"
-                                        />
-                                        <m.div
-                                            variants={micWaveVariants2}
-                                            initial="initial"
-                                            animate="animate"
-                                            className="absolute inset-0 rounded-xl bg-red-500/30"
-                                        />
-                                        <m.div
-                                            variants={micGlowVariants}
-                                            initial="initial"
-                                            animate="animate"
-                                            className="absolute inset-0 rounded-xl bg-red-500/20"
-                                        />
-                                    </>
-                                )}
-                                {isListening ? (
-                                    <MicOff className="h-5 w-5 relative z-10" />
-                                ) : (
-                                    <Mic className="h-5 w-5" />
-                                )}
-                            </button>
-                            
-                            {/* Send button */}
-                            <button
-                                onClick={handleSubmit}
-                                disabled={!query.trim() || isLoading}
-                                className={cn(
-                                    "flex items-center justify-center",
-                                    "w-10 h-10 md:w-11 md:h-11",
-                                    "rounded-xl",
-                                    "transition-all duration-300",
-                                    query.trim()
-                                        ? "bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105"
-                                        : "bg-gray-100/90 dark:bg-white/10 text-gray-400 dark:text-gray-500",
-                                    "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                                )}
-                                aria-label="Send question"
-                            >
-                                {isLoading ? (
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                ) : (
-                                    <Send className="h-5 w-5" />
-                                )}
-                            </button>
-                        </div>
-                    </m.div>
 
-                    {/* Suggested Prompt Chips */}
-                    <m.div variants={itemVariants} className="space-y-2.5 md:space-y-3">
-                        <p className="text-[11px] md:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Try asking
-                        </p>
-                        
-                        {/* Mobile: Horizontal scroll */}
-                        <div 
-                            ref={scrollContainerRef}
-                            className="flex md:hidden gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide snap-x snap-mandatory"
-                            style={{ WebkitOverflowScrolling: 'touch' }}
+                        {/* Voice button */}
+                        <button
+                            onClick={handleVoiceInput}
+                            disabled={isLoading}
+                            className={cn(
+                                "relative flex items-center justify-center",
+                                "w-12 h-12 rounded-xl",
+                                "transition-all duration-200",
+                                isListening
+                                    ? "bg-red-100 dark:bg-red-900/30 text-red-500"
+                                    : "bg-slate-100 dark:bg-muted text-slate-500 hover:bg-slate-200 dark:hover:bg-muted/80 hover:text-slate-700 dark:hover:text-foreground",
+                                "disabled:opacity-50"
+                            )}
                         >
-                            {SUGGESTED_PROMPTS.map((prompt) => (
-                                <m.button
-                                    key={prompt.id}
-                                    variants={chipVariants}
-                                    whileHover="hover"
-                                    whileTap="tap"
-                                    onClick={() => handleChipClick(prompt.text)}
-                                    className={cn(
-                                        "flex-shrink-0 snap-start",
-                                        "flex items-center gap-2",
-                                        "px-3.5 py-2.5",
-                                        "text-sm font-medium",
-                                        "bg-white/80 dark:bg-white/[0.06]",
-                                        "text-gray-700 dark:text-gray-300",
-                                        "border border-amber-200/70 dark:border-amber-500/25",
-                                        "rounded-full",
-                                        "whitespace-nowrap",
-                                        "shadow-sm",
-                                        "transition-all duration-200",
-                                        "hover:bg-amber-50/90 dark:hover:bg-amber-500/15",
-                                        "hover:border-amber-400/70 dark:hover:border-amber-500/40",
-                                        "hover:text-amber-700 dark:hover:text-amber-300",
-                                        "active:scale-95"
-                                    )}
-                                >
-                                    <prompt.icon className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
-                                    {prompt.text}
-                                </m.button>
-                            ))}
-                        </div>
-                        
-                        {/* Desktop: Multi-row grid layout */}
-                        <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-2.5 lg:gap-3">
-                            {SUGGESTED_PROMPTS.map((prompt) => (
-                                <m.button
-                                    key={prompt.id}
-                                    variants={chipVariants}
-                                    whileHover="hover"
-                                    whileTap="tap"
-                                    onClick={() => handleChipClick(prompt.text)}
-                                    className={cn(
-                                        "flex items-center gap-2.5",
-                                        "px-4 py-3",
-                                        "text-sm font-medium",
-                                        "bg-white/80 dark:bg-white/[0.06]",
-                                        "text-gray-700 dark:text-gray-300",
-                                        "border border-amber-200/70 dark:border-amber-500/25",
-                                        "rounded-xl",
-                                        "shadow-sm",
-                                        "transition-all duration-200",
-                                        "hover:bg-amber-50/90 dark:hover:bg-amber-500/15",
-                                        "hover:border-amber-400/70 dark:hover:border-amber-500/40",
-                                        "hover:text-amber-700 dark:hover:text-amber-300",
-                                        "hover:shadow-md hover:shadow-amber-500/10",
-                                        "group"
-                                    )}
-                                >
-                                    <prompt.icon className="h-4 w-4 text-amber-500 dark:text-amber-400 group-hover:scale-110 transition-transform" />
-                                    <span className="flex-1 text-left">{prompt.text}</span>
-                                    <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-                                </m.button>
-                            ))}
-                        </div>
-                    </m.div>
+                            {isListening ? (
+                                <>
+                                    <motion.div
+                                        className="absolute inset-0 rounded-xl bg-red-400/30"
+                                        animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+                                        transition={{ duration: 1, repeat: Infinity }}
+                                    />
+                                    <MicOff className="w-5 h-5 relative z-10" />
+                                </>
+                            ) : (
+                                <Mic className="w-5 h-5" />
+                            )}
+                        </button>
 
-                    {/* AI Response Preview Box */}
-                    <AnimatePresence mode="wait">
-                        {(aiResponse || isLoading) ? (
-                            <m.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.3, ease: "easeOut" as const }}
+                        {/* Send button */}
+                        <button
+                            onClick={handleSubmit}
+                            disabled={!query.trim() || isLoading}
+                            className={cn(
+                                "flex items-center justify-center",
+                                "w-12 h-12 rounded-xl",
+                                "transition-all duration-200",
+                                query.trim()
+                                    ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105"
+                                    : "bg-slate-100 dark:bg-muted text-slate-400",
+                                "disabled:opacity-50 disabled:hover:scale-100"
+                            )}
+                        >
+                            {isLoading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Send className="w-5 h-5" />
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Suggested prompts */}
+                    <div className="flex flex-wrap gap-2">
+                        {SUGGESTED_PROMPTS.slice(0, 6).map((prompt) => (
+                            <motion.button
+                                key={prompt.id}
+                                onClick={() => handleChipClick(prompt.text)}
                                 className={cn(
-                                    "relative overflow-hidden",
-                                    "bg-gradient-to-br from-amber-50/90 to-white/70",
-                                    "dark:from-amber-950/40 dark:to-gray-900/50",
-                                    "border border-amber-200/60 dark:border-amber-500/25",
-                                    "rounded-xl md:rounded-2xl",
-                                    "p-4 md:p-5"
+                                    "inline-flex items-center gap-2",
+                                    "px-4 py-2",
+                                    "text-sm font-medium",
+                                    "bg-white dark:bg-card",
+                                    "text-slate-600 dark:text-foreground",
+                                    "border border-slate-200 dark:border-border",
+                                    "rounded-full",
+                                    "transition-all duration-200",
+                                    "hover:border-amber-300 dark:hover:border-amber-600",
+                                    "hover:bg-amber-50 dark:hover:bg-amber-900/20",
+                                    "hover:text-amber-700 dark:hover:text-amber-300",
+                                    "hover:shadow-md"
                                 )}
+                                whileHover={{ scale: 1.02, y: -2 }}
+                                whileTap={{ scale: 0.98 }}
                             >
-                                <div className="flex items-start gap-3">
-                                    <div className="flex-shrink-0 p-2 rounded-lg bg-gradient-to-br from-amber-400/25 to-amber-600/15 border border-amber-400/30 dark:border-amber-500/20">
-                                        <Bot className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                                <prompt.icon className="w-4 h-4 text-amber-500" />
+                                {prompt.text}
+                            </motion.button>
+                        ))}
+                    </div>
+                </motion.div>
+
+                {/* Response Section */}
+                <AnimatePresence mode="wait">
+                    {isLoading && (
+                        <motion.div
+                            key="loading"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="space-y-4"
+                        >
+                            {/* Loading card */}
+                            <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/50 dark:border-amber-800/30">
+                                <div className="flex items-center gap-4">
+                                    <motion.div
+                                        className="p-3 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500"
+                                        animate={{ scale: [1, 1.1, 1] }}
+                                        transition={{ duration: 1.5, repeat: Infinity }}
+                                    >
+                                        <Bot className="w-5 h-5 text-white" />
+                                    </motion.div>
+                                    <div className="flex-1 space-y-2">
+                                        <motion.div
+                                            className="flex items-center gap-2"
+                                            animate={{ opacity: [0.5, 1, 0.5] }}
+                                            transition={{ duration: 1.5, repeat: Infinity }}
+                                        >
+                                            <div className="w-2 h-2 rounded-full bg-amber-500" />
+                                            <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                                                Analyzing your business data...
+                                            </span>
+                                        </motion.div>
+                                        <div className="space-y-2">
+                                            {[1, 2, 3].map((i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    className="h-3 rounded-full bg-gradient-to-r from-amber-200 via-amber-100 to-amber-200 dark:from-amber-900/50 dark:via-amber-800/30 dark:to-amber-900/50"
+                                                    style={{ width: `${100 - i * 20}%` }}
+                                                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                                                    transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        {isLoading ? (
-                                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                <span>Analyzing your data...</span>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-3">
-                                                <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
-                                                    {aiResponse}
-                                                </p>
-                                                {/* Copy button */}
-                                                <button
-                                                    onClick={handleCopy}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {error && !isLoading && (
+                        <motion.div
+                            key="error"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="p-5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50"
+                        >
+                            <div className="flex items-start gap-4">
+                                <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/50">
+                                    <AlertCircle className="w-5 h-5 text-red-500" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-medium text-red-700 dark:text-red-300">Something went wrong</p>
+                                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
+                                </div>
+                                <button
+                                    onClick={handleReset}
+                                    className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 text-red-500 transition-colors"
+                                >
+                                    <RefreshCw className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {aiResponse && !isLoading && (
+                        <motion.div
+                            key="response"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="space-y-4"
+                        >
+                            {/* Main response card */}
+                            <div className={cn(
+                                "p-6 rounded-2xl border",
+                                "bg-white dark:bg-card",
+                                "border-slate-200 dark:border-border",
+                                "shadow-lg shadow-slate-200/50 dark:shadow-black/20"
+                            )}>
+                                {/* Header */}
+                                <div className="flex items-start justify-between gap-4 mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn(
+                                            "p-2.5 rounded-xl",
+                                            aiResponse.type === 'alert' ? "bg-red-100 dark:bg-red-900/30 text-red-500" :
+                                                aiResponse.type === 'recommendation' ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500" :
+                                                    "bg-gradient-to-br from-amber-400 to-orange-500 text-white"
+                                        )}>
+                                            <TypeIcon type={aiResponse.type} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                                                {aiResponse.title}
+                                            </h3>
+                                            {aiResponse.confidence && (
+                                                <Badge
+                                                    variant="outline"
                                                     className={cn(
-                                                        "inline-flex items-center gap-1.5 px-2.5 py-1.5",
-                                                        "text-xs font-medium",
-                                                        "text-gray-500 dark:text-gray-400",
-                                                        "hover:text-amber-600 dark:hover:text-amber-400",
-                                                        "bg-white/60 dark:bg-white/5",
-                                                        "border border-gray-200/60 dark:border-white/10",
-                                                        "rounded-lg",
-                                                        "transition-all duration-200",
-                                                        "hover:bg-amber-50/60 dark:hover:bg-amber-500/10",
-                                                        "hover:border-amber-300/60 dark:hover:border-amber-500/30"
+                                                        "text-[10px] px-2 mt-1 capitalize",
+                                                        aiResponse.confidence === 'high' && "border-emerald-400 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50",
+                                                        aiResponse.confidence === 'medium' && "border-amber-400 text-amber-600 bg-amber-50 dark:bg-amber-950/50",
+                                                        aiResponse.confidence === 'low' && "border-red-400 text-red-600 bg-red-50 dark:bg-red-950/50"
                                                     )}
                                                 >
-                                                    {copied ? (
-                                                        <>
-                                                            <Check className="h-3.5 w-3.5 text-emerald-500" />
-                                                            Copied!
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Copy className="h-3.5 w-3.5" />
-                                                            Copy
-                                                        </>
-                                                    )}
-                                                </button>
-                                            </div>
-                                        )}
+                                                    {aiResponse.confidence} confidence
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleCopy}
+                                            className={cn(
+                                                "p-2 rounded-lg transition-colors",
+                                                "text-slate-400 hover:text-slate-600 dark:hover:text-foreground",
+                                                "hover:bg-slate-100 dark:hover:bg-muted"
+                                            )}
+                                        >
+                                            {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                                        </button>
+                                        <button
+                                            onClick={handleReset}
+                                            className={cn(
+                                                "p-2 rounded-lg transition-colors",
+                                                "text-slate-400 hover:text-slate-600 dark:hover:text-foreground",
+                                                "hover:bg-slate-100 dark:hover:bg-muted"
+                                            )}
+                                        >
+                                            <RefreshCw className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </div>
-                            </m.div>
-                        ) : (
-                            // Enhanced placeholder with shimmer effect and centered icon
-                            <m.div
-                                variants={itemVariants}
-                                className={cn(
-                                    "relative overflow-hidden",
-                                    "flex flex-col items-center justify-center gap-2.5",
-                                    "py-6 md:py-8",
-                                    "text-xs md:text-sm text-gray-400 dark:text-gray-500",
-                                    // Dotted border
-                                    "border-2 border-dashed border-gray-200/70 dark:border-white/10",
-                                    "rounded-xl md:rounded-2xl",
-                                    "bg-gray-50/40 dark:bg-white/[0.02]"
+
+                                {/* Summary */}
+                                <p className="text-slate-600 dark:text-muted-foreground leading-relaxed mb-5">
+                                    {aiResponse.summary}
+                                </p>
+
+                                {/* Metrics */}
+                                {aiResponse.metrics && aiResponse.metrics.length > 0 && (
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+                                        {aiResponse.metrics.map((metric, i) => (
+                                            <motion.div
+                                                key={i}
+                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ delay: i * 0.1 }}
+                                                className={cn(
+                                                    "p-4 rounded-xl",
+                                                    "bg-slate-50 dark:bg-muted/50",
+                                                    "border border-slate-100 dark:border-border/50"
+                                                )}
+                                            >
+                                                <p className="text-xs text-slate-500 dark:text-muted-foreground uppercase tracking-wider font-medium mb-1">
+                                                    {metric.label}
+                                                </p>
+                                                <div className="flex items-end justify-between gap-2">
+                                                    <p className="text-xl font-bold text-slate-900 dark:text-foreground">
+                                                        {metric.value}
+                                                    </p>
+                                                    <div className={cn(
+                                                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold",
+                                                        metric.trend === 'up' && "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400",
+                                                        metric.trend === 'down' && "bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400",
+                                                        metric.trend === 'neutral' && "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400"
+                                                    )}>
+                                                        <TrendIcon trend={metric.trend} />
+                                                        {metric.change}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
                                 )}
-                            >
-                                {/* Shimmer effect */}
-                                <m.div
-                                    variants={shimmerVariants}
-                                    initial="initial"
-                                    animate="animate"
-                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-100/30 dark:via-amber-500/5 to-transparent"
-                                    style={{ width: '50%' }}
-                                />
-                                
-                                {/* Centered icon */}
-                                <div className="relative p-3 rounded-full bg-gray-100/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5">
-                                    <MessageSquare className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+
+                                {/* Bullets */}
+                                {aiResponse.bullets && aiResponse.bullets.length > 0 && (
+                                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-muted/50 mb-5">
+                                        <p className="text-xs text-slate-500 dark:text-muted-foreground uppercase tracking-wider font-semibold mb-3">
+                                            Key Insights
+                                        </p>
+                                        <ul className="space-y-2">
+                                            {aiResponse.bullets.map((bullet, i) => (
+                                                <motion.li
+                                                    key={i}
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: i * 0.1 }}
+                                                    className="flex items-start gap-3"
+                                                >
+                                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 text-xs font-bold">
+                                                        {i + 1}
+                                                    </span>
+                                                    <span className="text-slate-700 dark:text-muted-foreground text-sm leading-relaxed pt-0.5">
+                                                        {bullet}
+                                                    </span>
+                                                </motion.li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* Recommendations */}
+                                {aiResponse.recommendations && aiResponse.recommendations.length > 0 && (
+                                    <div className="border-t border-slate-200 dark:border-border pt-5">
+                                        <p className="text-xs text-slate-500 dark:text-muted-foreground uppercase tracking-wider font-semibold mb-3 flex items-center gap-2">
+                                            <Lightbulb className="w-4 h-4 text-emerald-500" />
+                                            Recommendations
+                                        </p>
+                                        <div className="space-y-2">
+                                            {aiResponse.recommendations.map((rec, i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    initial={{ opacity: 0, y: 5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: i * 0.15 }}
+                                                    className={cn(
+                                                        "flex items-start gap-3 p-3 rounded-xl",
+                                                        "bg-emerald-50 dark:bg-emerald-950/30",
+                                                        "border border-emerald-200/50 dark:border-emerald-800/30"
+                                                    )}
+                                                >
+                                                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                                    <span className="text-sm text-slate-700 dark:text-foreground">{rec}</span>
+                                                </motion.div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer with token info */}
+                            {tokensUsed > 0 && (
+                                <div className="flex items-center justify-between text-xs text-slate-400">
+                                    <span>Tokens used: {tokensUsed}</span>
+                                    {rateLimit && (
+                                        <span>{rateLimit.remaining} queries remaining</span>
+                                    )}
                                 </div>
-                                <span className="relative font-medium">Your AI answers will appear here</span>
-                            </m.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </m.div>
-        </LazyMotion>
+                            )}
+                        </motion.div>
+                    )}
+
+                    {/* Empty state */}
+                    {!isLoading && !error && !aiResponse && (
+                        <motion.div
+                            key="empty"
+                            variants={itemVariants}
+                            className={cn(
+                                "flex flex-col items-center justify-center py-12",
+                                "border-2 border-dashed border-slate-200 dark:border-border",
+                                "rounded-2xl",
+                                "bg-slate-50/50 dark:bg-muted/20"
+                            )}
+                        >
+                            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-muted mb-4">
+                                <Bot className="w-8 h-8 text-slate-400" />
+                            </div>
+                            <p className="text-slate-500 dark:text-muted-foreground font-medium mb-1">
+                                Ask me anything about your business
+                            </p>
+                            <p className="text-sm text-slate-400 dark:text-muted-foreground/70">
+                                I can analyze sales, inventory, customers, and more
+                            </p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </motion.div>
     );
 }
 

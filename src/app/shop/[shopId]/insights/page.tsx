@@ -58,7 +58,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ shopI
         <Suspense fallback={<div>Loading...</div>}>
             <MobileSalesInsights invoices={mappedInvoices} invoiceItems={itemsData || []} />
             <div className="hidden md:block">
-                <InsightsClient invoices={mappedInvoices} invoiceItems={itemsData || []} />
+                <InsightsClient invoices={mappedInvoices} invoiceItems={itemsData || []} shopId={shopId} />
             </div>
         </Suspense>
     );

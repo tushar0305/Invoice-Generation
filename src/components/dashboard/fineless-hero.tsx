@@ -1,8 +1,10 @@
 'use client';
 
 import { motion, useSpring, useTransform } from 'framer-motion';
-import { TrendingUp, ArrowRight } from 'lucide-react';
+import { TrendingUp, ArrowRight, Plus, Users, Package } from 'lucide-react';
 import { useEffect } from 'react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 interface FinelessHeroProps {
     title: string;
@@ -38,80 +40,71 @@ export function FinelessHero({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="relative overflow-hidden rounded-xl border border-white/10 bg-card/40 backdrop-blur-md shadow-lg hover:shadow-glow-sm transition-all duration-300 group p-4 md:p-5"
+            className="relative overflow-hidden rounded-xl border border-white/10 bg-card/40 backdrop-blur-md shadow-lg hover:shadow-glow-sm transition-all duration-300 group p-5 md:p-6"
         >
             {/* Ambient Glow Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
-            
-            {/* Header: Title + View More */}
-            <div className="relative z-10 flex items-start justify-between mb-3">
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {title}
-                </h2>
-                {viewMoreHref && (
-                    <a
-                        href={viewMoreHref}
-                        className="text-xs text-muted-foreground hover:text-primary 
-              transition-colors flex items-center gap-1 group"
-                    >
-                        View more
-                        <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-                    </a>
-                )}
-            </div>
 
-            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 {/* Left: Value and Change */}
-                <div className="flex flex-col justify-center">
+                <div className="flex flex-col justify-center space-y-2">
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                            {title}
+                        </h2>
+                        {viewMoreHref && (
+                            <Link
+                                href={viewMoreHref}
+                                className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-0.5 group/link"
+                            >
+                                View Details
+                                <ArrowRight className="h-3 w-3 group-hover/link:translate-x-0.5 transition-transform" />
+                            </Link>
+                        )}
+                    </div>
+
                     {/* Main Value - Animated */}
                     <motion.div
-                        className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-2 glow-text-primary"
+                        className="text-4xl md:text-5xl font-bold text-foreground tracking-tight glow-text-primary"
                     >
                         {displayValue}
                     </motion.div>
 
                     {/* Change Indicator */}
                     <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground text-xs">
-                            {isPositive ? 'Up' : 'Down'} by
-                        </span>
-                        <span className={`font-semibold flex items-center gap-1 text-sm ${isPositive ? 'text-emerald-500' : 'text-red-500'
+                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${isPositive
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
                             }`}>
-                            {isPositive && <TrendingUp className="h-4 w-4" />}
-                            ₹{changeAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </span>
+                            {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingUp className="h-3 w-3 rotate-180" />}
+                            {Math.abs(change).toFixed(1)}%
+                        </div>
                         <span className="text-muted-foreground text-xs">
-                            this month
+                            {isPositive ? '+' : ''}₹{Math.abs(changeAmount).toLocaleString('en-IN', { minimumFractionDigits: 0 })} this month
                         </span>
                     </div>
                 </div>
 
-                {/* Right: Compact Sparkline */}
-                <div className="flex items-center justify-end relative">
-                    {/* Bottom Shader for Graph */}
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-primary/10 to-transparent pointer-events-none" />
-                    <svg
-                        viewBox="0 0 200 60"
-                        className="w-full h-16 md:h-20 drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]"
-                        preserveAspectRatio="none"
-                    >
-                        <path
-                            d={generateLargeSparklinePath(sparklineData)}
-                            fill="none"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="drop-shadow-[0_0_4px_hsl(var(--primary))]"
-
-                        />
-                        <circle
-                            cx={((sparklineData.length - 1) / (sparklineData.length - 1)) * 200}
-                            cy={60 - (sparklineData[sparklineData.length - 1] / 100) * 60}
-                            r="3"
-                            fill={isPositive ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)'}
-                        />
-                    </svg>
+                {/* Right: Quick Actions */}
+                <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                    <Button asChild size="sm" className="flex-1 md:flex-none h-10 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
+                        <Link href={`${viewMoreHref}/new`}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            New Invoice
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="flex-1 md:flex-none h-10 border-primary/20 hover:bg-primary/5 hover:text-primary">
+                        <Link href={`${viewMoreHref?.replace('invoices', 'customers')}/new`}>
+                            <Users className="w-4 h-4 mr-2" />
+                            Add Customer
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="flex-1 md:flex-none h-10 border-primary/20 hover:bg-primary/5 hover:text-primary">
+                        <Link href={`${viewMoreHref?.replace('invoices', 'stock')}/new`}>
+                            <Package className="w-4 h-4 mr-2" />
+                            Add Item
+                        </Link>
+                    </Button>
                 </div>
             </div>
         </motion.div>

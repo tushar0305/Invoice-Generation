@@ -52,9 +52,10 @@ const item = {
 interface InsightsClientProps {
     invoices: Invoice[];
     invoiceItems: any[];
+    shopId: string;
 }
 
-export function InsightsClient({ invoices, invoiceItems }: InsightsClientProps) {
+export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClientProps) {
     const [timeRange, setTimeRange] = useState('30d');
     const [visibleMetrics, setVisibleMetrics] = useState<Record<string, boolean>>({
         'Total Revenue': false,
@@ -255,9 +256,9 @@ export function InsightsClient({ invoices, invoiceItems }: InsightsClientProps) 
                 {/* Smart AI Insights - Premium glassmorphism component */}
                 <SmartAIInsights
                     className="mb-2"
+                    shopId={shopId}
                     onAskQuestion={(question) => {
                         console.log('[AI Insights] User asked:', question);
-                        // TODO: Connect to actual AI backend
                     }}
                 />
 
