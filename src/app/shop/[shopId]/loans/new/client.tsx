@@ -84,8 +84,8 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: NewLoanWizard
 
     // Helper to filter customers
     const filteredCustomers = existingCustomers.filter(c =>
-        c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        c.phone.includes(customerSearch)
+        (c.name || '').toLowerCase().includes(customerSearch.toLowerCase()) ||
+        (c.phone || '').includes(customerSearch)
     );
 
     const handleAddItem = () => {
@@ -304,8 +304,8 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: NewLoanWizard
                                                     key={customer.id}
                                                     onClick={() => setSelectedCustomerId(customer.id)}
                                                     className={`p-4 rounded-xl border transition-all cursor-pointer ${selectedCustomerId === customer.id
-                                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500'
-                                                            : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900'
+                                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500'
+                                                        : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900'
                                                         }`}
                                                 >
                                                     <div className="flex justify-between items-center">
@@ -463,8 +463,8 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: NewLoanWizard
                                                     key={rate}
                                                     onClick={() => setLoanTerms({ ...loanTerms, interest_rate: rate })}
                                                     className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${loanTerms.interest_rate === rate
-                                                            ? 'bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
-                                                            : 'border-gray-200 dark:border-gray-800'
+                                                        ? 'bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                                                        : 'border-gray-200 dark:border-gray-800'
                                                         }`}
                                                 >
                                                     {rate}%

@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -35,9 +36,10 @@ interface Command {
 
 interface CommandPaletteProps {
   shopId?: string;
+  trigger?: React.ReactNode;
 }
 
-export function CommandPalette({ shopId }: CommandPaletteProps) {
+export function CommandPalette({ shopId, trigger }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const router = useRouter();
@@ -56,92 +58,92 @@ export function CommandPalette({ shopId }: CommandPaletteProps) {
 
   const commands: Command[] = shopId
     ? [
-        {
-          id: 'new-invoice',
-          label: 'Create New Invoice',
-          description: 'Start creating a new invoice',
-          icon: FileText,
-          action: () => {
-            router.push(`/shop/${shopId}/invoices/new`);
-            setOpen(false);
-          },
-          keywords: ['create', 'new', 'invoice', 'bill'],
-          category: 'Actions',
+      {
+        id: 'new-invoice',
+        label: 'Create New Invoice',
+        description: 'Start creating a new invoice',
+        icon: FileText,
+        action: () => {
+          router.push(`/shop/${shopId}/invoices/new`);
+          setOpen(false);
         },
-        {
-          id: 'invoices',
-          label: 'View Invoices',
-          description: 'Browse all invoices',
-          icon: FileText,
-          action: () => {
-            router.push(`/shop/${shopId}/invoices`);
-            setOpen(false);
-          },
-          keywords: ['invoices', 'list', 'bills'],
-          category: 'Navigation',
+        keywords: ['create', 'new', 'invoice', 'bill'],
+        category: 'Actions',
+      },
+      {
+        id: 'invoices',
+        label: 'View Invoices',
+        description: 'Browse all invoices',
+        icon: FileText,
+        action: () => {
+          router.push(`/shop/${shopId}/invoices`);
+          setOpen(false);
         },
-        {
-          id: 'customers',
-          label: 'View Customers',
-          description: 'Browse all customers',
-          icon: Users,
-          action: () => {
-            router.push(`/shop/${shopId}/customers`);
-            setOpen(false);
-          },
-          keywords: ['customers', 'clients', 'contacts'],
-          category: 'Navigation',
+        keywords: ['invoices', 'list', 'bills'],
+        category: 'Navigation',
+      },
+      {
+        id: 'customers',
+        label: 'View Customers',
+        description: 'Browse all customers',
+        icon: Users,
+        action: () => {
+          router.push(`/shop/${shopId}/customers`);
+          setOpen(false);
         },
-        {
-          id: 'stock',
-          label: 'Manage Stock',
-          description: 'View and manage inventory',
-          icon: Package,
-          action: () => {
-            router.push(`/shop/${shopId}/stock`);
-            setOpen(false);
-          },
-          keywords: ['stock', 'inventory', 'products'],
-          category: 'Navigation',
+        keywords: ['customers', 'clients', 'contacts'],
+        category: 'Navigation',
+      },
+      {
+        id: 'stock',
+        label: 'Manage Stock',
+        description: 'View and manage inventory',
+        icon: Package,
+        action: () => {
+          router.push(`/shop/${shopId}/stock`);
+          setOpen(false);
         },
-        {
-          id: 'dashboard',
-          label: 'Go to Dashboard',
-          description: 'Return to dashboard',
-          icon: Home,
-          action: () => {
-            router.push(`/shop/${shopId}/dashboard`);
-            setOpen(false);
-          },
-          keywords: ['dashboard', 'home', 'overview'],
-          category: 'Navigation',
+        keywords: ['stock', 'inventory', 'products'],
+        category: 'Navigation',
+      },
+      {
+        id: 'dashboard',
+        label: 'Go to Dashboard',
+        description: 'Return to dashboard',
+        icon: Home,
+        action: () => {
+          router.push(`/shop/${shopId}/dashboard`);
+          setOpen(false);
         },
-        {
-          id: 'settings',
-          label: 'Shop Settings',
-          description: 'Configure shop settings',
-          icon: Settings,
-          action: () => {
-            router.push(`/shop/${shopId}/settings`);
-            setOpen(false);
-          },
-          keywords: ['settings', 'preferences', 'config'],
-          category: 'Navigation',
+        keywords: ['dashboard', 'home', 'overview'],
+        category: 'Navigation',
+      },
+      {
+        id: 'settings',
+        label: 'Shop Settings',
+        description: 'Configure shop settings',
+        icon: Settings,
+        action: () => {
+          router.push(`/shop/${shopId}/settings`);
+          setOpen(false);
         },
-      ]
+        keywords: ['settings', 'preferences', 'config'],
+        category: 'Navigation',
+      },
+    ]
     : [
-        {
-          id: 'dashboard',
-          label: 'Go to Dashboard',
-          icon: Home,
-          action: () => {
-            router.push('/dashboard');
-            setOpen(false);
-          },
-          keywords: ['dashboard', 'home'],
-          category: 'Navigation',
+      {
+        id: 'dashboard',
+        label: 'Go to Dashboard',
+        icon: Home,
+        action: () => {
+          router.push('/dashboard');
+          setOpen(false);
         },
-      ];
+        keywords: ['dashboard', 'home'],
+        category: 'Navigation',
+      },
+    ];
 
   const filteredCommands = commands.filter((command) => {
     const searchLower = search.toLowerCase();
@@ -162,6 +164,7 @@ export function CommandPalette({ shopId }: CommandPaletteProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="max-w-2xl p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 space-y-2">
           <DialogTitle className="text-xl">Quick Actions</DialogTitle>

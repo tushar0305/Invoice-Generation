@@ -4,15 +4,22 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePathname } from 'next/navigation';
 
 export function InstallPrompt() {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isVisible, setIsVisible] = useState(false);
     const [support, setSupport] = useState<{ platform: 'ios' | 'android' | 'desktop' } | null>(null);
+    const pathname = usePathname();
 
     useEffect(() => {
+        // Only show on clean landing page or login, not inside the app
+        if (pathname !== '/' && pathname !== '/login') {
+            return;
+        }
+
         console.log('[InstallPrompt] Component mounted, listening for beforeinstallprompt');
-        
+
         const handler = (e: any) => {
             console.log('[InstallPrompt] beforeinstallprompt event fired!');
             e.preventDefault();
@@ -63,7 +70,7 @@ export function InstallPrompt() {
                         <div>
                             <h3 className="font-bold text-sm">Install SwarnaVyapar</h3>
                             <p className="text-xs text-slate-400">
-                              {support?.platform === 'ios' ? 'Share > Add to Home Screen' : 'Add to Home Screen'}
+                                {support?.platform === 'ios' ? 'Share > Add to Home Screen' : 'Add to Home Screen'}
                             </p>
                         </div>
                     </div>

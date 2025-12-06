@@ -24,7 +24,7 @@ export function LowStockWidget({ shopId, items }: LowStockWidgetProps) {
     const warningItems = items.filter(item => item.currentQty > item.minQty * 0.5 && item.currentQty <= item.minQty);
 
     return (
-        <Card className="h-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+        <Card className="h-full overflow-hidden bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <div className={`p-1.5 rounded-lg ${items.length > 0 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>

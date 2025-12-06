@@ -133,7 +133,7 @@ export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, sett
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                 {/* Chart Section (2/3 width) */}
-                <Card className="lg:col-span-2 shadow-sm border border-slate-300 dark:border-slate-700">
+                <Card className="lg:col-span-2 shadow-sm border border-border bg-card">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base font-semibold">
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -196,7 +196,7 @@ export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, sett
 
                 {/* Leaderboard Section (1/3 width) */}
                 <div className="space-y-6">
-                    <Card className="shadow-sm border border-slate-300 dark:border-slate-700">
+                    <Card className="shadow-sm border border-border bg-card">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base font-semibold">
                                 <Crown className="h-4 w-4 text-amber-500" />
@@ -235,7 +235,7 @@ export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, sett
                     </Card>
 
                     {/* Recent Activity Mini List */}
-                    <Card className="shadow-sm border border-slate-300 dark:border-slate-700">
+                    <Card className="shadow-sm border border-border bg-card">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-base font-semibold flex items-center gap-2">
                                 <History className="h-4 w-4 text-muted-foreground" /> Recent Activity
@@ -266,7 +266,7 @@ export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, sett
 
 function StatsCard({ title, value, label, icon }: any) {
     return (
-        <Card className="shadow-sm hover:shadow-md transition-shadow border border-slate-300 dark:border-slate-700">
+        <Card className="shadow-sm hover:shadow-md transition-shadow border border-border bg-card">
             <CardContent className="p-6 flex items-center justify-between">
                 <div>
                     <p className="text-sm font-medium text-muted-foreground">{title}</p>

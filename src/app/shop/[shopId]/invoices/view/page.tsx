@@ -2,9 +2,7 @@ import { ViewInvoiceClient } from './client';
 import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 
-export async function generateStaticParams() {
-    return [];
-}
+
 
 function ViewInvoiceLoading() {
     return (

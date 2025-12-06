@@ -25,16 +25,16 @@ export function PendingPaymentsWidget({
     const hasUrgent = overdueCount > 0;
 
     return (
-        <Card className="h-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+        <Card className="h-full overflow-hidden bg-gradient-to-br from-white via-stone-50 to-[#D4AF37]/5 dark:from-[#2e2410] dark:via-[#1c1917] dark:to-[#D4AF37]/20 border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 shadow-lg hover:shadow-[#D4AF37]/10 transition-all duration-300">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <div className={`p-1.5 rounded-lg ${hasUrgent ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
-                        <Clock className={`h-4 w-4 ${hasUrgent ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`} />
+                    <div className={`p-1.5 rounded-lg ${hasUrgent ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+                        <Clock className={`h-4 w-4 ${hasUrgent ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`} />
                     </div>
                     Pending
                 </CardTitle>
                 {pendingCount > 0 && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
                         {pendingCount} invoices
                     </span>
                 )}
@@ -51,16 +51,16 @@ export function PendingPaymentsWidget({
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800"
+                            className="p-3 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800"
                         >
-                            <p className="text-[10px] uppercase tracking-wide text-blue-600 dark:text-blue-400 font-medium mb-1">
+                            <p className="text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 font-medium mb-1">
                                 Total Outstanding
                             </p>
                             <motion.p
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.2 }}
-                                className="text-xl font-bold text-blue-700 dark:text-blue-300"
+                                className="text-xl font-bold text-amber-700 dark:text-amber-300"
                             >
                                 {formatCurrency(totalDue)}
                             </motion.p>
@@ -93,7 +93,7 @@ export function PendingPaymentsWidget({
                         )}
 
                         {/* View All Button */}
-                        <Button variant="ghost" size="sm" className="w-full text-xs h-7" asChild>
+                        <Button variant="ghost" size="sm" className="w-full text-xs h-7 text-muted-foreground hover:text-amber-600 hover:bg-amber-50" asChild>
                             <Link href={`/shop/${shopId}/invoices?status=due`}>
                                 View All <ArrowRight className="h-3 w-3 ml-1" />
                             </Link>

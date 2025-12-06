@@ -1,14 +1,8 @@
-/**
- * Customers Page - Server Component
- * Fetches and aggregates customer data server-side
- */
-
+// ... imports
 import { Suspense } from 'react';
-import { getDeviceType } from '@/lib/device';
 import { createClient } from '@/supabase/server';
 import { CustomersClient } from './client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MobileCustomerList } from '@/components/mobile/mobile-customer-list';
 
 type CustomerStats = {
     totalPurchase: number;
@@ -64,26 +58,9 @@ export default async function CustomersPage({
         }
     }
 
-    const deviceType = await getDeviceType();
-    const isMobile = deviceType === 'mobile';
-
-    if (isMobile) {
-        return (
-            <Suspense fallback={<CustomersLoading />}>
-                <MobileCustomerList shopId={shopId} customerData={customerData} />
-            </Suspense>
-        );
-    }
-
     return (
         <Suspense fallback={<CustomersLoading />}>
-            <div className="hidden md:block">
-                <CustomersClient customerData={customerData} shopId={shopId} />
-            </div>
-            {/* Fallback for resizing on desktop */}
-            <div className="md:hidden p-8 text-center text-muted-foreground">
-                <p>Resize window or refresh to view mobile layout.</p>
-            </div>
+            <CustomersClient customerData={customerData} shopId={shopId} />
         </Suspense>
     );
 }

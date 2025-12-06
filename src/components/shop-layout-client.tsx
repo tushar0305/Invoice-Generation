@@ -45,6 +45,10 @@ import {
     TrendingUp,
     FilePlus2,
     Coins,
+    Megaphone,
+    Store,
+    Search,
+    Bell,
 } from 'lucide-react';
 import { ShopSwitcher } from '@/components/shop-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -184,6 +188,8 @@ function ShopLayoutInner({
         {
             title: 'Management',
             items: [
+                { icon: Store, label: 'Catalogue', href: `/shop/${shopId}/catalogue` },
+                { icon: Megaphone, label: 'Marketing', href: `/shop/${shopId}/marketing` },
                 { icon: Users, label: 'Staff', href: `/shop/${shopId}/staff`, permission: 'canInviteStaff' },
                 { icon: Coins, label: 'Loans', href: `/shop/${shopId}/loans` },
                 { icon: BookOpen, label: 'Khata Book', href: `/shop/${shopId}/khata` },
@@ -348,31 +354,51 @@ function ShopLayoutInner({
 
                 {/* Mobile Header - Show on all pages */}
                 {isMobile && (
-                    <header className="sticky top-0 z-50 flex h-12 items-center border-b border-border/40 bg-background/95 backdrop-blur-xl px-4 shadow-sm w-full">
-                        <SidebarTrigger className="-ml-1" />
-                        <div className="flex-1 text-center">
-                            <h1 className="font-semibold text-base tracking-tight text-gray-900 dark:text-gray-100">
-                                {pathname === `/shop/${shopId}/dashboard` && 'Dashboard'}
-                                {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
-                                {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
-                                {pathname === `/shop/${shopId}/invoices/edit` && 'Edit Invoice'}
-                                {pathname === `/shop/${shopId}/customers` && 'Customers'}
-                                {pathname === `/shop/${shopId}/customers/view` && 'Customer Details'}
-                                {pathname === `/shop/${shopId}/stock` && 'Stock'}
-                                {pathname === `/shop/${shopId}/stock/new` && 'Add Stock Item'}
-                                {pathname === `/shop/${shopId}/staff` && 'Staff'}
-                                {pathname === `/shop/${shopId}/loans` && 'Loans'}
-                                {pathname === `/shop/${shopId}/loans/new` && 'New Loan'}
-                                {pathname.includes(`/shop/${shopId}/loans/`) && !pathname.includes('/new') && 'Loan Details'}
-                                {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
-                                {pathname.includes(`/shop/${shopId}/khata/`) && !pathname.includes('/new') && 'Transaction'}
-                                {pathname === `/shop/${shopId}/loyalty` && 'Loyalty'}
-                                {pathname === `/shop/${shopId}/insights` && 'Insights'}
-                                {pathname === `/shop/${shopId}/templates` && 'Templates'}
-                                {pathname === `/shop/${shopId}/settings` && 'Settings'}
-                            </h1>
+                    <header className="sticky top-0 z-50 flex flex-col w-full">
+                        {/* Gold Gradient Line */}
+                        <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-80" />
+
+                        <div className="flex h-14 items-center justify-between border-b border-gray-100/50 dark:border-white/5 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl px-4 shadow-sm">
+                            <div className="flex items-center gap-3 flex-1">
+                                <SidebarTrigger className="h-9 w-9 border border-gray-200 dark:border-white/10 shadow-sm rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/20 active:scale-95 transition-all text-gray-700 dark:text-gray-200" />
+
+                                {/* Centered Page Title */}
+                                <div className="flex-1 flex justify-center mr-9">
+                                    <h1 className="font-bold text-lg tracking-tight text-gray-900 dark:text-white leading-none font-display">
+                                        {pathname === `/shop/${shopId}/dashboard` && 'Dashboard'}
+                                        {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
+                                        {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
+                                        {pathname === `/shop/${shopId}/invoices/edit` && 'Edit Invoice'}
+                                        {pathname === `/shop/${shopId}/customers` && 'Customers'}
+                                        {pathname === `/shop/${shopId}/customers/view` && 'Customer Details'}
+                                        {pathname === `/shop/${shopId}/stock` && 'Inventory'}
+                                        {pathname === `/shop/${shopId}/stock/new` && 'Add Stock'}
+                                        {pathname === `/shop/${shopId}/staff` && 'Staff Management'}
+                                        {pathname === `/shop/${shopId}/loans` && 'Loans & Girvi'}
+                                        {pathname === `/shop/${shopId}/loans/new` && 'New Loan'}
+                                        {pathname.includes(`/shop/${shopId}/loans/`) && !pathname.includes('/new') && 'Loan Details'}
+                                        {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
+                                        {pathname.includes(`/shop/${shopId}/khata/`) && !pathname.includes('/new') && 'Transaction'}
+                                        {pathname === `/shop/${shopId}/loyalty` && 'Loyalty Program'}
+                                        {pathname === `/shop/${shopId}/marketing` && 'Marketing'}
+                                        {pathname.startsWith(`/shop/${shopId}/marketing/`) && 'Marketing'}
+                                        {pathname === `/shop/${shopId}/catalogue` && 'Digital Catalogue'}
+                                        {pathname === `/shop/${shopId}/insights` && 'Business Insights'}
+                                        {pathname === `/shop/${shopId}/templates` && 'Bill Templates'}
+                                        {pathname === `/shop/${shopId}/settings` && 'Settings'}
+                                    </h1>
+                                </div>
+                            </div>
+
+
+                            {/* Right Side Actions - Notifications */}
+                            <div className="flex items-center gap-2">
+                                <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full hover:bg-amber-50 dark:hover:bg-amber-900/20 text-muted-foreground relative">
+                                    <Bell className="h-5 w-5" />
+                                    <span className="absolute top-2 right-2.5 h-2 w-2 bg-red-500 rounded-full border border-white dark:border-black" />
+                                </Button>
+                            </div>
                         </div>
-                        <div className="w-8" />
                     </header>
                 )}
 

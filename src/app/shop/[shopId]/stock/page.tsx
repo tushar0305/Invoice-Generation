@@ -1,15 +1,8 @@
-/**
- * Stock Page - Server Component
- * Fetches inventory data server-side with filtering
- */
-
+// ... imports
 import { Suspense } from 'react';
-import { getDeviceType } from '@/lib/device';
 import { createClient } from '@/supabase/server';
 import { StockClient } from './client';
 import { Loader2 } from 'lucide-react';
-import type { StockItem } from '@/lib/definitions';
-import { MobileStockList } from '@/components/mobile/mobile-stock-list';
 
 // Loading component for Suspense boundary
 function StockLoading() {
@@ -31,8 +24,7 @@ export default async function StockPage({
     const { filter, q } = await searchParams;
     const supabase = await createClient();
 
-    // Fetch all items for mobile view (client-side filtering)
-    // and filtered items for desktop view (server-side filtering)
+    // Fetch all items
     const { data: allItems } = await supabase
         .from('stock_items')
         .select('*')
@@ -67,7 +59,7 @@ export default async function StockPage({
         out: items.filter(i => i.quantity === 0).length
     };
 
-    // Apply filters server-side (in memory since we fetched all for counts)
+    // Apply filters server-side
     let filteredItems = items;
 
     if (filter) {
@@ -84,35 +76,15 @@ export default async function StockPage({
         );
     }
 
-    const deviceType = await getDeviceType();
-    const isMobile = deviceType === 'mobile';
-
-    if (isMobile) {
-        return (
-            <Suspense fallback={<StockLoading />}>
-                <MobileStockList
-                    items={items}
-                    shopId={shopId}
-                />
-            </Suspense>
-        );
-    }
-
     return (
         <Suspense fallback={<StockLoading />}>
-            <div className="hidden md:block">
-                <StockClient
-                    initialItems={filteredItems}
-                    counts={counts}
-                    initialFilter={filter || 'all'}
-                    initialSearch={q || ''}
-                    shopId={shopId}
-                />
-            </div>
-            {/* Fallback for resizing on desktop */}
-            <div className="md:hidden p-8 text-center text-muted-foreground">
-                <p>Resize window or refresh to view mobile layout.</p>
-            </div>
+            <StockClient
+                initialItems={filteredItems}
+                counts={counts}
+                initialFilter={filter || 'all'}
+                initialSearch={q || ''}
+                shopId={shopId}
+            />
         </Suspense>
     );
 }

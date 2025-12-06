@@ -270,7 +270,7 @@ export function StaffClient({
                     <h3 className="text-lg font-semibold text-muted-foreground">Pending Invitations</h3>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {initialInvitations.map((invite) => (
-                            <Card key={invite.id} className="border border-border shadow-sm">
+                            <Card key={invite.id} className="border border-border shadow-sm bg-card">
                                 <CardContent className="p-4 flex justify-between items-center">
                                     <div>
                                         <div className="font-medium">{invite.email}</div>
@@ -284,7 +284,7 @@ export function StaffClient({
                 </div>
             )}
 
-            <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-muted/50 hover:bg-muted/50">

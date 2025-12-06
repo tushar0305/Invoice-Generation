@@ -267,47 +267,56 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
     };
 
     return (
-        <div className="w-full py-2.5 px-3 md:px-4 rounded-2xl bg-card/30 backdrop-blur-xl border border-white/5 shadow-sm">
-            <div className="flex items-center justify-between gap-2 md:gap-3 w-full">
-                <div className="flex items-center gap-2.5">
-                    <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-amber-500 whitespace-nowrap tracking-widest flex-shrink-0">
-                        <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-60"></span>
-                            <span className="relative inline-flex rounded-full h-full w-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
-                        </span>
-                        LIVE
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 rounded-full bg-white/5 hover:bg-white/10 border border-white/10"
-                        onClick={handleRefresh}
-                        disabled={isRefreshing}
-                    >
-                        <RefreshCw className={cn("h-3 w-3 text-muted-foreground", isRefreshing && "animate-spin")} />
-                    </Button>
-                    {lastUpdated && (
-                        <span className="text-[9px] text-muted-foreground/60 hidden sm:inline-block font-medium" suppressHydrationWarning>
-                            {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                        </span>
-                    )}
-                </div>
+        <div className="w-full py-2.5 px-3 md:px-4 rounded-2xl bg-card/30 backdrop-blur-xl border border-white/5 shadow-sm overflow-hidden flex items-center gap-4">
 
-                <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto scrollbar-hide md:overflow-visible md:ml-auto">
-                    {prices.gold24k.value > 0 ? (
-                        <>
-                            <PriceItem label="24K" price={prices.gold24k.value} unit="10g" trend={prices.gold24k.trend} offset={0} />
-                            <PriceItem label="22K" price={prices.gold22k.value} unit="10g" trend={prices.gold22k.trend} offset={1} />
-                            <PriceItem label="Silver" price={prices.silver.value} unit="kg" trend={prices.silver.trend} offset={2} />
-                        </>
-                    ) : (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                            <div className="h-1.5 w-1.5 rounded-full bg-amber-500/50 animate-pulse" />
-                            <span className="text-[10px] text-muted-foreground font-medium">Fetching...</span>
-                        </div>
-                    )}
-                </div>
+            {/* Live Badge (Static) */}
+            <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-amber-500 whitespace-nowrap tracking-widest flex-shrink-0 z-10 bg-background/5 p-1 rounded">
+                <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-60"></span>
+                    <span className="relative inline-flex rounded-full h-full w-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
+                </span>
+                LIVE
             </div>
+
+            {/* Scrolling Marquee */}
+            <div className="flex-1 overflow-hidden relative mask-fade-sides">
+                <motion.div
+                    className="flex gap-8 items-center w-max"
+                    animate={{ x: [0, -500] }}
+                    transition={{
+                        repeat: Infinity,
+                        duration: 15,
+                        ease: "linear"
+                    }}
+                >
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="flex gap-8">
+                            <div className="flex items-center gap-2">
+                                <span className="text-amber-500 font-bold text-xs">GOLD 24K</span>
+                                <span className="font-mono font-bold text-sm">₹{prices.gold24k.value.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-amber-600/80 font-bold text-xs">GOLD 22K</span>
+                                <span className="font-mono font-bold text-sm">₹{prices.gold22k.value.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-slate-400 font-bold text-xs">SILVER</span>
+                                <span className="font-mono font-bold text-sm">₹{prices.silver.value.toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
+                    ))}
+                </motion.div>
+            </div>
+
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex-shrink-0 z-10"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+            >
+                <RefreshCw className={cn("h-3 w-3 text-muted-foreground", isRefreshing && "animate-spin")} />
+            </Button>
         </div>
     );
 }

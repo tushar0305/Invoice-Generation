@@ -6,7 +6,7 @@
 import { Suspense } from 'react';
 import { createClient } from '@/supabase/server';
 import { StaffClient } from './client';
-import { MobileStaffList } from '@/components/mobile/mobile-staff-list';
+
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Loading component for Suspense boundary
@@ -71,20 +71,12 @@ export default async function StaffPage({
 
     return (
         <Suspense fallback={<StaffLoading />}>
-            <MobileStaffList 
-                shopId={shopId} 
-                staff={mappedStaff} 
-                invitations={inviteData} 
-                currentUserId={user?.id || ''} 
+            <StaffClient
+                initialStaff={mappedStaff}
+                initialInvitations={inviteData}
+                shopId={shopId}
+                currentUserId={user?.id || ''}
             />
-            <div className="hidden md:block">
-                <StaffClient
-                    initialStaff={mappedStaff}
-                    initialInvitations={inviteData}
-                    shopId={shopId}
-                    currentUserId={user?.id || ''}
-                />
-            </div>
         </Suspense>
     );
 }

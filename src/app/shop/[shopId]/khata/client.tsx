@@ -229,7 +229,7 @@ export function KhataClient({
     return (
         <div className="space-y-4 pb-24 px-4 md:px-0">
             <div className="grid gap-4 md:grid-cols-4">
-                <Card className="shadow-sm hover:shadow-md transition-shadow border border-slate-300 dark:border-slate-700">
+                <Card className="shadow-sm hover:shadow-md transition-shadow border border-border bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Total Customers</CardTitle>
                         <Users className="h-4 w-4 text-primary" />
@@ -285,7 +285,7 @@ export function KhataClient({
             </div>
 
             {/* Main Content Card */}
-            <Card className="shadow-sm border border-slate-300 dark:border-slate-700">
+            <Card className="shadow-sm border border-border bg-card">
                 {/* Header */}
                 <CardHeader className="border-b">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -368,7 +368,7 @@ export function KhataClient({
                 </CardHeader>
 
                 {/* Filters */}
-                <div className="p-6 space-y-4 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
+                <div className="p-6 space-y-4 border-b border-border bg-muted/30">
                     <div className="flex flex-col md:flex-row gap-4 justify-between">
                         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
                             <button
@@ -447,7 +447,7 @@ export function KhataClient({
                 {/* Customer Table */}
                 <div className="overflow-x-auto">
                     <Table>
-                        <TableHeader className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
+                        <TableHeader className="bg-muted/50 border-b border-border">
                             <TableRow className="hover:bg-transparent border-gray-200 dark:border-white/10">
                                 <TableHead className="text-primary glow-text-sm">Customer</TableHead>
                                 <TableHead className="text-primary glow-text-sm">Contact</TableHead>
@@ -468,7 +468,7 @@ export function KhataClient({
                                 </TableRow>
                             ) : (
                                 customers.map((customer) => (
-                                    <TableRow key={customer.id} className="hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5 transition-colors">
+                                    <TableRow key={customer.id} className="hover:bg-muted/50 border-b border-border transition-colors">
                                         <TableCell className="font-medium text-foreground dark:text-white">{customer.name}</TableCell>
                                         <TableCell className="text-sm text-muted-foreground dark:text-gray-400">
                                             {customer.phone || '-'}

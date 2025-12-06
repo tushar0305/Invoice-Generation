@@ -10,9 +10,11 @@ import {
     AlertCircle,
     FileText,
     Calendar,
-    ArrowRight
+    ArrowRight,
+    TrendingUp,
+    Wallet
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -25,9 +27,10 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import type { Loan, LoanDashboardStats } from '@/lib/loan-types';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 
 type LoansDashboardClientProps = {
     loans: (Loan & { loan_customers: { name: string; phone: string } })[];
@@ -50,156 +53,229 @@ export function LoansDashboardClient({
     );
 
     return (
-        <div className="space-y-4 pb-24 px-4 md:px-0">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground dark:text-white glow-text-sm">Jewellery Loans</h1>
-                    <p className="text-muted-foreground dark:text-gray-400 mt-1">
-                        Manage gold loans, collateral, and repayments
-                    </p>
-                </div>
-                <Button
-                    onClick={() => router.push(`/shop/${shopId}/loans/new`)}
-                    className="gap-2 shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] transition-all duration-300 bg-primary text-primary-foreground border-none"
-                >
-                    <Plus className="h-4 w-4" />
-                    New Loan
-                </Button>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card className="border-gray-200 dark:border-white/10 bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground dark:text-gray-300">Active Loans</CardTitle>
-                        <FileText className="h-4 w-4 text-primary glow-text-sm" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-foreground dark:text-white">{stats.total_active_loans}</div>
-                        <p className="text-xs text-muted-foreground dark:text-gray-500 mt-1">
-                            Currently running
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-amber-500/20 bg-amber-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-amber-600 dark:text-amber-400">Principal Disbursed</CardTitle>
-                        <Banknote className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-amber-600 dark:text-amber-500 glow-text-sm">
-                            ₹{formatCurrency(stats.total_principal_disbursed)}
-                        </div>
-                        <p className="text-xs text-amber-600/60 dark:text-amber-500/60 mt-1">
-                            Total active principal
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-emerald-500/20 bg-emerald-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Interest Earned</CardTitle>
-                        <Coins className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-500 glow-text-sm">
-                            ₹{formatCurrency(stats.total_interest_earned)}
-                        </div>
-                        <p className="text-xs text-emerald-600/60 dark:text-emerald-500/60 mt-1">
-                            Total revenue
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-red-500/20 bg-red-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(239,68,68,0.1)]">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400">Overdue Loans</CardTitle>
-                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-red-600 dark:text-red-500 glow-text-sm">{stats.total_overdue_loans}</div>
-                        <p className="text-xs text-red-600/60 dark:text-red-500/60 mt-1">
-                            Need attention
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Active Loans Table */}
-            <Card className="border-gray-200 dark:border-white/10 bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg overflow-hidden">
-                <CardHeader className="border-b border-gray-200 dark:border-white/10">
+        <div className="min-h-screen bg-muted/10 pb-20">
+            {/* Gold Header Gradient */}
+            <div className="bg-gradient-to-b from-amber-50 to-background dark:from-background dark:to-background border-b border-border pt-8 pb-12 px-4 md:px-8">
+                <div className="max-w-7xl mx-auto space-y-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <CardTitle className="text-foreground dark:text-white">Active Loans</CardTitle>
-                        <div className="relative w-full md:w-64">
+                        <div>
+                            <div className="flex items-center gap-2 text-[#D4AF37] font-semibold text-sm mb-1">
+                                <Coins className="h-4 w-4" />
+                                <span>Gold Loan Management</span>
+                            </div>
+                            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Loans & Mortgages</h1>
+                            <p className="text-muted-foreground dark:text-gray-400 mt-1 max-w-xl">
+                                Track active gold loans, manage interest collections, and monitor overdue accounts.
+                            </p>
+                        </div>
+                        <Button
+                            onClick={() => router.push(`/shop/${shopId}/loans/new`)}
+                            className="bg-[#D4AF37] hover:bg-[#b5952f] text-white shadow-lg shadow-amber-500/20 h-11 px-6 gap-2 transition-all hover:scale-105"
+                        >
+                            <Plus className="h-4 w-4" />
+                            New Loan / Girvi
+                        </Button>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                        {/* Active Loans */}
+                        <Card className="border border-border shadow-sm bg-card relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <FileText className="h-16 w-16 text-[#D4AF37]" />
+                            </div>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">Active Loans</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total_active_loans}</div>
+                                <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    <span>Currently running properties</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Principal Disbursed */}
+                        <Card className="border border-border shadow-sm bg-card relative overflow-hidden">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-[#b5952f] dark:text-[#D4AF37]">Active Principal</CardTitle>
+                                <Banknote className="h-4 w-4 text-[#D4AF37]" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-[#b5952f] dark:text-[#D4AF37]">
+                                    {formatCurrency(stats.total_principal_disbursed)}
+                                </div>
+                                <p className="text-xs text-[#b5952f]/70 dark:text-[#D4AF37]/70 mt-1">
+                                    Total amount in market
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        {/* Interest Earned */}
+                        <Card className="border border-border shadow-sm bg-card relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <TrendingUp className="h-16 w-16 text-emerald-500" />
+                            </div>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">Interest Earned</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                    {formatCurrency(stats.total_interest_earned)}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Total interest resolved
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        {/* Overdue */}
+                        <Card className={cn(
+                            "border-none shadow-xl shadow-red-900/5 relative overflow-hidden group transition-all",
+                            stats.total_overdue_loans > 0 ? "bg-red-50 dark:bg-red-900/20" : "bg-white dark:bg-gray-900"
+                        )}>
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <AlertCircle className="h-16 w-16 text-red-500" />
+                            </div>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">Overdue Accounts</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className={cn("text-2xl font-bold", stats.total_overdue_loans > 0 ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white")}>
+                                    {stats.total_overdue_loans}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Loans passed due date
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
+                <Card className="border border-border shadow-sm bg-card">
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                        <div className="relative w-full sm:w-72">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search loans..."
-                                className="pl-9 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all duration-300"
+                                placeholder="Search by name, phone or loan #"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9 border-gray-200 dark:border-gray-700 focus:ring-[#D4AF37] focus:border-[#D4AF37]"
                             />
                         </div>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="hidden md:flex">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Filter Date
+                            </Button>
+                        </div>
                     </div>
-                </CardHeader>
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
-                            <TableRow className="hover:bg-transparent border-gray-200 dark:border-white/10">
-                                <TableHead className="text-primary glow-text-sm">Loan #</TableHead>
-                                <TableHead className="text-primary glow-text-sm">Customer</TableHead>
-                                <TableHead className="text-primary glow-text-sm">Start Date</TableHead>
-                                <TableHead className="text-right text-primary glow-text-sm">Principal</TableHead>
-                                <TableHead className="text-right text-primary glow-text-sm">Interest Rate</TableHead>
-                                <TableHead className="text-primary glow-text-sm">Status</TableHead>
-                                <TableHead className="text-center text-primary glow-text-sm">Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredLoans.length === 0 ? (
-                                <TableRow className="border-gray-100 dark:border-white/5 hover:bg-transparent">
-                                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground dark:text-gray-500">
-                                        {searchTerm ? 'No loans found matching your search' : 'No active loans. Create a new loan to get started.'}
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredLoans.map((loan) => (
-                                    <TableRow key={loan.id} className="group cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5 transition-colors" onClick={() => router.push(`/shop/${shopId}/loans/${loan.id}`)}>
-                                        <TableCell className="font-medium font-mono text-gray-900 dark:text-gray-300">{loan.loan_number}</TableCell>
-                                        <TableCell>
-                                            <div className="font-medium text-foreground dark:text-white">{loan.loan_customers?.name}</div>
-                                            <div className="text-xs text-muted-foreground dark:text-gray-500">{loan.loan_customers?.phone}</div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground dark:text-gray-400">
-                                                <Calendar className="h-3 w-3 text-muted-foreground dark:text-gray-500" />
-                                                {format(new Date(loan.start_date), 'dd MMM yyyy')}
+
+                    <div className="p-0">
+                        {/* Mobile View - Cards */}
+                        <div className="grid grid-cols-1 md:hidden divide-y divide-gray-100 dark:divide-gray-800">
+                            {filteredLoans.map((loan) => (
+                                <div
+                                    key={loan.id}
+                                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+                                    onClick={() => router.push(`/shop/${shopId}/loans/${loan.id}`)}
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <div className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                {loan.loan_customers?.name}
+                                                <StatusBadge status={loan.status} />
                                             </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium text-gray-900 dark:text-gray-300">
-                                            ₹{formatCurrency(loan.principal_amount)}
-                                        </TableCell>
-                                        <TableCell className="text-right text-muted-foreground dark:text-gray-400">
-                                            {loan.interest_rate}%
-                                        </TableCell>
-                                        <TableCell>
-                                            <StatusBadge status={loan.status} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex justify-center">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary hover:bg-primary/10">
-                                                    <ArrowRight className="h-4 w-4" />
-                                                </Button>
+                                            <div className="text-sm text-muted-foreground">#{loan.loan_number} • {format(new Date(loan.created_at), "dd MMM yyyy")}</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="font-bold text-[#b5952f] dark:text-[#D4AF37]">
+                                                {formatCurrency(loan.principal_amount)}
                                             </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                            <div className="text-xs text-muted-foreground">Principal</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-3 text-sm">
+                                        <div className="flex items-center gap-1 text-muted-foreground">
+                                            <Wallet className="h-3 w-3" />
+                                            <span>Interest: {loan.interest_rate}%</span>
+                                        </div>
+                                        <Badge variant="outline" className="border-gray-200 dark:border-gray-700 font-normal">
+                                            View Details <ArrowRight className="h-3 w-3 ml-1" />
+                                        </Badge>
+                                    </div>
+                                </div>
+                            ))}
+                            {filteredLoans.length === 0 && (
+                                <div className="p-8 text-center text-muted-foreground">
+                                    No loans found matching your search.
+                                </div>
                             )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </Card>
+                        </div>
+
+                        {/* Desktop View - Table */}
+                        <div className="hidden md:block overflow-hidden rounded-b-xl">
+                            <Table>
+                                <TableHeader className="bg-gray-50/50 dark:bg-gray-900/50">
+                                    <TableRow>
+                                        <TableHead>Loan Details</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Principal</TableHead>
+                                        <TableHead>Interest</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredLoans.map((loan) => (
+                                        <TableRow
+                                            key={loan.id}
+                                            className="cursor-pointer hover:bg-amber-50/30 dark:hover:bg-amber-900/10"
+                                            onClick={() => router.push(`/shop/${shopId}/loans/${loan.id}`)}
+                                        >
+                                            <TableCell>
+                                                <div className="font-medium text-gray-900 dark:text-white">#{loan.loan_number}</div>
+                                                <div className="text-xs text-muted-foreground">{format(new Date(loan.created_at), "dd MMM yyyy")}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{loan.loan_customers?.name}</div>
+                                                <div className="text-xs text-muted-foreground">{loan.loan_customers?.phone}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-bold text-[#b5952f] dark:text-[#D4AF37]">
+                                                    {formatCurrency(loan.principal_amount)}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm">{loan.interest_rate}% / mo</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <StatusBadge status={loan.status} />
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="sm" className="hover:text-[#D4AF37]">
+                                                    View <ArrowRight className="h-4 w-4 ml-1" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {filteredLoans.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                                No loans found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 }

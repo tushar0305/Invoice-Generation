@@ -26,7 +26,7 @@ export function BusinessHealthWidget({ totalRevenue, totalOrders, previousRevenu
         : 100;
 
     return (
-        <Card className="h-full min-h-[400px] overflow-hidden relative flex flex-col bg-card/40 backdrop-blur-md border-white/10 shadow-lg hover:shadow-glow-sm transition-all duration-300">
+        <Card className="h-full min-h-[400px] overflow-hidden relative flex flex-col bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
             {/* Subtle gradient overlay - muted tones */}
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-amber-500/5 pointer-events-none" />
 

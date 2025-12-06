@@ -636,9 +636,10 @@ export function InvoicesClient({
             {/* Content */}
             <div className="space-y-4">
                 {/* Desktop/Tablet Table View */}
-                <div className="rounded-xl border border-gray-300 dark:border-gray-700 overflow-x-auto hidden md:block bg-white/50 dark:bg-card/30 backdrop-blur-md shadow-lg">
+                {/* Desktop/Tablet Table View */}
+                <div className="rounded-xl border border-border overflow-x-auto hidden md:block bg-card shadow-sm">
                     <Table className="table-modern min-w-[600px]">
-                        <TableHeader className="bg-gray-100/90 dark:bg-white/10 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 sticky top-0 z-10">
+                        <TableHeader className="bg-muted/50 border-b border-border sticky top-0 z-10">
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="w-[40px] px-4 h-12">
                                     <Checkbox
@@ -681,7 +682,7 @@ export function InvoicesClient({
                                     <TableRow
                                         key={invoice.id}
                                         className={cn(
-                                            "hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5 transition-colors cursor-pointer group",
+                                            "hover:bg-muted/50 border-b border-border transition-colors cursor-pointer group",
                                             selectedInvoices.has(invoice.id) && "bg-primary/5"
                                         )}
                                         onClick={() => router.push(`/shop/${shopId}/invoices/view?id=${invoice.id}`)}

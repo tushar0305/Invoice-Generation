@@ -108,11 +108,22 @@ export default function RootLayout({
                 {children}
                 <InstallPrompt />
                 {/* Service worker registration */}
+                {/* Service worker registration */}
                 <script dangerouslySetInnerHTML={{
                   __html: `
                   if ('serviceWorker' in navigator) {
                     window.addEventListener('load', function() {
-                      navigator.serviceWorker.register('/sw.js').catch(function(e){console.debug('SW reg failed', e)});
+                      if ('${process.env.NODE_ENV}' === 'production') {
+                        navigator.serviceWorker.register('/sw.js').catch(function(e){console.debug('SW reg failed', e)});
+                      } else {
+                        // Unregister in dev to prevent caching issues
+                        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                          for(let registration of registrations) {
+                            registration.unregister();
+                            console.debug('SW unregistered in dev');
+                          }
+                        });
+                      }
                     });
                   }
                 `}} />

@@ -21,14 +21,14 @@ export function CustomerInsightsWidget({ newCustomers, returningCustomers, topCu
     const returningPercentage = total > 0 ? (returningCustomers / total) * 100 : 0;
 
     return (
-        <Card className="h-full min-h-[400px] overflow-hidden relative flex flex-col bg-card/40 backdrop-blur-md border-white/10 shadow-lg hover:shadow-glow-sm transition-all duration-300">
+        <Card className="h-full min-h-[400px] overflow-hidden relative flex flex-col bg-gradient-to-br from-white via-stone-50 to-[#D4AF37]/5 dark:from-[#2e2410] dark:via-[#1c1917] dark:to-[#D4AF37]/20 border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 shadow-lg hover:shadow-[#D4AF37]/10 transition-all duration-300">
             {/* Subtle gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 pointer-events-none" />
 
             <CardHeader className="pb-3 border-b border-white/5 relative">
                 <CardTitle className="text-lg font-heading font-bold text-foreground flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                        <Users className="w-4 h-4 text-blue-500" />
+                    <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                        <Users className="w-4 h-4 text-amber-500" />
                     </div>
                     Customer Insights
                 </CardTitle>
@@ -38,37 +38,37 @@ export function CustomerInsightsWidget({ newCustomers, returningCustomers, topCu
                 <div className="space-y-3 p-4 rounded-2xl bg-white/5 border border-white/10">
                     <div className="flex justify-between text-sm font-medium">
                         <motion.span
-                            className="flex items-center gap-1.5 text-blue-500"
+                            className="flex items-center gap-1.5 text-amber-500"
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.4, delay: 0.2 }}
                         >
-                            <div className="p-1 rounded-md bg-blue-500/10">
+                            <div className="p-1 rounded-md bg-amber-500/10">
                                 <UserPlus className="w-3 h-3" />
                             </div>
                             <span className="text-xs">New <span className="font-bold">({newCustomers})</span></span>
                         </motion.span>
                         <motion.span
-                            className="flex items-center gap-1.5 text-purple-500"
+                            className="flex items-center gap-1.5 text-stone-400"
                             initial={{ opacity: 0, x: 10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.4, delay: 0.3 }}
                         >
                             <span className="text-xs">Returning <span className="font-bold">({returningCustomers})</span></span>
-                            <div className="p-1 rounded-md bg-purple-500/10">
+                            <div className="p-1 rounded-md bg-stone-500/10">
                                 <UserCheck className="w-3 h-3" />
                             </div>
                         </motion.span>
                     </div>
                     <div className="flex h-3.5 w-full rounded-full overflow-hidden bg-white/5 shadow-inner">
                         <motion.div
-                            className="bg-gradient-to-r from-blue-500 to-blue-400 h-full rounded-l-full"
+                            className="bg-gradient-to-r from-amber-500 to-yellow-400 h-full rounded-l-full"
                             initial={{ width: 0 }}
                             animate={{ width: `${newPercentage}%` }}
                             transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
                         />
                         <motion.div
-                            className="bg-gradient-to-r from-purple-500 to-purple-400 h-full rounded-r-full"
+                            className="bg-gradient-to-r from-stone-500 to-stone-400 h-full rounded-r-full"
                             initial={{ width: 0 }}
                             animate={{ width: `${returningPercentage}%` }}
                             transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}

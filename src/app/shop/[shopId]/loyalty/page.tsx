@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { MobileLoyalty } from '@/components/mobile/mobile-loyalty';
+
 import { LoyaltyDashboard } from '@/components/loyalty/loyalty-dashboard';
 
 export default function LoyaltyProgramPage() {
@@ -138,19 +138,9 @@ export default function LoyaltyProgramPage() {
     }
 
     return (
-        <MotionWrapper className="p-6 max-w-7xl mx-auto pb-24 min-h-screen bg-slate-50/50 dark:bg-slate-950/50">
-            {/* Mobile View */}
-            <div className="md:hidden">
-                <MobileLoyalty
-                    shopId={activeShop?.id || ''}
-                    stats={stats}
-                    recentLogs={recentLogs}
-                    topCustomers={topCustomers}
-                />
-            </div>
-
-            {/* Desktop View */}
-            <div className="hidden md:block">
+        <MotionWrapper className="p-6 max-w-7xl mx-auto pb-24 min-h-screen bg-muted/10">
+            {/* Dashboard View */}
+            <div>
                 <LoyaltyDashboard
                     shopId={activeShop?.id || ''}
                     stats={stats}

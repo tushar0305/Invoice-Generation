@@ -9,7 +9,7 @@ import { InvoicesClient } from './client';
 import { Loader2 } from 'lucide-react';
 import type { Invoice } from '@/lib/definitions';
 
-import { MobileInvoiceList } from '@/components/mobile/mobile-invoice-list';
+
 
 // Loading component for Suspense boundary
 function InvoicesLoading() {
@@ -77,15 +77,12 @@ export default async function InvoicesPage({
 
     return (
         <Suspense fallback={<InvoicesLoading />}>
-            <MobileInvoiceList shopId={shopId} invoices={invoices} />
-            <div className="hidden md:block">
-                <InvoicesClient
-                    initialInvoices={invoices}
-                    shopId={shopId}
-                    initialStatus={status || 'all'}
-                    initialSearch={q || ''}
-                />
-            </div>
+            <InvoicesClient
+                initialInvoices={invoices}
+                shopId={shopId}
+                initialStatus={status || 'all'}
+                initialSearch={q || ''}
+            />
         </Suspense>
     );
 }

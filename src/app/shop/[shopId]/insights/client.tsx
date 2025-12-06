@@ -274,12 +274,12 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                             variant="outline"
                             size="sm"
                             onClick={() => window.location.reload()}
-                            className="border-border hover:bg-white/5 gap-2"
+                            className="border-border hover:bg-muted gap-2"
                         >
                             <RefreshCw className="h-4 w-4" />
                             Refresh
                         </Button>
-                        <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10 w-full md:w-fit overflow-x-auto">
+                        <div className="flex items-center gap-2 bg-muted p-1 rounded-lg border border-border w-full md:w-fit overflow-x-auto">
                             {['7d', '30d', '90d'].map((range) => (
                                 <button
                                     key={range}
@@ -308,10 +308,10 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {metrics && metrics.map((metric, i) => (
                             <m.div key={i} variants={item}>
-                                <Card className="glass-card border-white/10 hover:border-primary/30 transition-all duration-300 group">
+                                <Card className="bg-card border-border shadow-sm hover:border-primary/30 transition-all duration-300 group">
                                     <CardContent className="p-4 md:p-6">
                                         <div className="flex justify-between items-start">
-                                            <div className={cn("p-2 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors", metric.color)}>
+                                            <div className={cn("p-2 rounded-lg bg-muted group-hover:bg-muted/80 transition-colors", metric.color)}>
                                                 <metric.icon className="h-5 w-5" />
                                             </div>
                                             {/* Only show eye toggle for Total Revenue (amount) card */}
@@ -321,7 +321,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                                                         ...prev,
                                                         [metric.title]: !prev[metric.title as keyof typeof prev]
                                                     }))}
-                                                    className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-white/5 hover:border-white/20 hover:bg-white/5 transition-all"
+                                                    className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-border hover:bg-muted transition-all"
                                                     aria-label={visibleMetrics[metric.title as keyof typeof visibleMetrics] ? 'Hide amount' : 'Show amount'}
                                                 >
                                                     <m.span
@@ -356,7 +356,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                                             <p className="text-sm text-muted-foreground mt-1">{metric.title}</p>
                                         </div>
                                         <div className={cn(
-                                            "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-white/5 mt-3 w-fit",
+                                            "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-border mt-3 w-fit",
                                             metric.trend === 'up' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
                                         )}>
                                             {metric.trend === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -371,7 +371,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                     {/* Main Chart Section */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                         <m.div variants={item} className="lg:col-span-2">
-                            <Card className="glass-card border-white/10 h-full">
+                            <Card className="bg-card border-border shadow-sm h-full">
                                 <CardHeader>
                                     <CardTitle>Revenue Trend</CardTitle>
                                     <CardDescription>Daily revenue performance ({timeRange === '7d' ? 'Last 7 Days' : timeRange === '30d' ? 'Last 30 Days' : 'Last 90 Days'})</CardDescription>
@@ -434,7 +434,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                         </m.div>
 
                         <m.div variants={item} className="lg:col-span-1">
-                            <Card className="glass-card border-white/10 h-full">
+                            <Card className="bg-card border-border shadow-sm h-full">
                                 <CardHeader>
                                     <CardTitle>Sales by Category</CardTitle>
                                     <CardDescription>Distribution across product types</CardDescription>
@@ -501,7 +501,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                         {/* Top Products */}
                         <m.div variants={item}>
-                            <Card className="glass-card border-white/10 h-full">
+                            <Card className="bg-card border-border shadow-sm h-full">
                                 <CardHeader className="flex flex-row items-center justify-between">
                                     <div>
                                         <CardTitle>Top Products</CardTitle>
@@ -513,7 +513,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     {topProductsList.length > 0 ? topProductsList.map((product, i) => (
-                                        <div key={i} className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors group">
+                                        <div key={i} className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted transition-colors group">
                                             <div className="h-10 w-10 min-w-[2.5rem] rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
                                                 {i + 1}
                                             </div>
@@ -525,7 +525,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                                                 <div className="flex justify-between text-xs text-muted-foreground">
                                                     <span>{product.sales} sales</span>
                                                 </div>
-                                                <div className="h-1.5 w-full bg-white/5 rounded-full mt-2 overflow-hidden">
+                                                <div className="h-1.5 w-full bg-muted rounded-full mt-2 overflow-hidden">
                                                     <div
                                                         className="h-full bg-primary/50 rounded-full group-hover:bg-primary transition-colors duration-500"
                                                         style={{ width: `${100 - (i * 15)}%` }}
@@ -542,22 +542,22 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
 
                         {/* Recent Transactions */}
                         <m.div variants={item}>
-                            <Card className="glass-card border-white/10 h-full">
+                            <Card className="bg-card border-border shadow-sm h-full">
                                 <CardHeader className="flex flex-row items-center justify-between">
                                     <div>
                                         <CardTitle>Recent Transactions</CardTitle>
                                         <CardDescription>Latest invoices generated</CardDescription>
                                     </div>
-                                    <Button variant="outline" size="sm" className="h-8 text-xs border-white/10 hover:bg-white/5">
+                                    <Button variant="outline" size="sm" className="h-8 text-xs border-border hover:bg-muted">
                                         View All
                                     </Button>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
                                         {recentTxList.length > 0 ? recentTxList.map((tx, i) => (
-                                            <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-white/5 hover:bg-white/5 transition-all">
+                                            <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted transition-all">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center border border-border">
                                                         <Package className="h-5 w-5 text-muted-foreground" />
                                                     </div>
                                                     <div>

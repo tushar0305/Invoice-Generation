@@ -23,7 +23,7 @@ export function LoyaltyWidget({
     topRewarder
 }: LoyaltyWidgetProps) {
     return (
-        <Card className="h-full overflow-hidden bg-card/40 backdrop-blur-md border-white/10 shadow-lg hover:shadow-glow-sm transition-all duration-300">
+        <Card className="h-full overflow-hidden bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
             <CardHeader className="pb-2 flex flex-row items-center justify-between border-b border-white/5">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
                     <div className="p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">

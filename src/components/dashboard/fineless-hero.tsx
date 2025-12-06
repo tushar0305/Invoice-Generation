@@ -1,10 +1,11 @@
 'use client';
 
 import { motion, useSpring, useTransform } from 'framer-motion';
-import { TrendingUp, ArrowRight, Plus, Users, Package } from 'lucide-react';
+import { TrendingUp, ArrowRight, Eye, MessageCircle, Gem } from 'lucide-react';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface FinelessHeroProps {
     title: string;
@@ -13,6 +14,11 @@ interface FinelessHeroProps {
     changeAmount: number;
     sparklineData: number[];
     viewMoreHref?: string;
+    catalogueStats?: {
+        page_views: number;
+        leads: number;
+        product_views: number;
+    };
 }
 
 export function FinelessHero({
@@ -21,7 +27,8 @@ export function FinelessHero({
     change,
     changeAmount,
     sparklineData,
-    viewMoreHref
+    viewMoreHref,
+    catalogueStats
 }: FinelessHeroProps) {
     const isPositive = change >= 0;
 
@@ -40,98 +47,76 @@ export function FinelessHero({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="relative overflow-hidden rounded-xl border border-white/10 bg-card/40 backdrop-blur-md shadow-lg hover:shadow-glow-sm transition-all duration-300 group p-5 md:p-6"
+            className="relative overflow-hidden rounded-xl border border-[#D4AF37]/20 bg-gradient-to-br from-white via-stone-50 to-[#D4AF37]/5 dark:from-[#2e2410] dark:via-[#1c1917] dark:to-[#D4AF37]/20 shadow-xl hover:shadow-[#D4AF37]/20 transition-all duration-500 group p-6"
         >
             {/* Ambient Glow Background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/5 via-transparent to-transparent opacity-50 pointer-events-none" />
 
-            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                {/* Left: Value and Change */}
-                <div className="flex flex-col justify-center space-y-2">
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                            {title}
-                        </h2>
-                        {viewMoreHref && (
-                            <Link
-                                href={viewMoreHref}
-                                className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-0.5 group/link"
-                            >
-                                View Details
-                                <ArrowRight className="h-3 w-3 group-hover/link:translate-x-0.5 transition-transform" />
-                            </Link>
-                        )}
-                    </div>
-
-                    {/* Main Value - Animated */}
-                    <motion.div
-                        className="text-4xl md:text-5xl font-bold text-foreground tracking-tight glow-text-primary"
-                    >
-                        {displayValue}
-                    </motion.div>
-
-                    {/* Change Indicator */}
-                    <div className="flex items-center gap-2 text-sm">
-                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${isPositive
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
-                            }`}>
-                            {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingUp className="h-3 w-3 rotate-180" />}
-                            {Math.abs(change).toFixed(1)}%
-                        </div>
-                        <span className="text-muted-foreground text-xs">
-                            {isPositive ? '+' : ''}₹{Math.abs(changeAmount).toLocaleString('en-IN', { minimumFractionDigits: 0 })} this month
-                        </span>
-                    </div>
-                </div>
-
-                {/* Right: Quick Actions */}
-                <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                    <Button asChild size="sm" className="flex-1 md:flex-none h-10 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
-                        <Link href={`${viewMoreHref}/new`}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            New Invoice
-                        </Link>
-                    </Button>
-                    <Button asChild variant="outline" size="sm" className="flex-1 md:flex-none h-10 border-primary/20 hover:bg-primary/5 hover:text-primary">
-                        <Link href={`${viewMoreHref?.replace('invoices', 'customers')}/new`}>
-                            <Users className="w-4 h-4 mr-2" />
-                            Add Customer
-                        </Link>
-                    </Button>
-                    <Button asChild variant="outline" size="sm" className="flex-1 md:flex-none h-10 border-primary/20 hover:bg-primary/5 hover:text-primary">
-                        <Link href={`${viewMoreHref?.replace('invoices', 'stock')}/new`}>
-                            <Package className="w-4 h-4 mr-2" />
-                            Add Item
-                        </Link>
-                    </Button>
-                </div>
+            {/* Decorative Gold Gem */}
+            <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                <Gem className="w-32 h-32 text-[#D4AF37]" />
             </div>
+
+            <div className="relative z-10 grid md:grid-cols-2 gap-8">
+                {/* Left: Revenue (Main) */}
+                <div className="flex flex-col justify-between h-full space-y-4">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="p-1.5 rounded-lg bg-[#D4AF37]/10 text-[#D4AF37]">
+                                <TrendingUp className="w-4 h-4" />
+                            </span>
+                            <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">{title}</span>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <motion.h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+                                {displayValue}
+                            </motion.h2>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                        <span className={cn(
+                            "flex items-center gap-1 font-medium px-2 py-0.5 rounded-full",
+                            isPositive ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" : "text-rose-600 bg-rose-50 dark:bg-rose-900/20"
+                        )}>
+                            {isPositive ? '+' : ''}{change.toFixed(1)}%
+                        </span>
+                        <span className="text-muted-foreground">from last month</span>
+                    </div>
+                </div>
+
+                {/* Right: Digital Stats (Catalogue) */}
+                {catalogueStats && (
+                    <div className="flex flex-col justify-center space-y-4 border-t md:border-t-0 md:border-l border-[#D4AF37]/20 md:pl-8 pt-4 md:pt-0">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-semibold text-[#D4AF37] uppercase tracking-wider">Digital Storefront</h3>
+                            <Link href="/shop/dashboard/catalogue" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 z-20 relative">
+                                View <ArrowRight className="w-3 h-3" />
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 rounded-lg bg-background/50 border border-[#D4AF37]/10 hover:border-[#D4AF37]/30 transition-colors">
+                                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                                    <Eye className="w-3 h-3" /> Views
+                                </div>
+                                <p className="text-xl font-bold">{catalogueStats.page_views + catalogueStats.product_views}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-background/50 border border-[#D4AF37]/10 hover:border-[#D4AF37]/30 transition-colors">
+                                <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                                    <MessageCircle className="w-3 h-3" /> Leads
+                                </div>
+                                <p className="text-xl font-bold">{catalogueStats.leads}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* View More Button overlay */}
+            {viewMoreHref && (
+                <Link href={viewMoreHref} className="absolute inset-0 z-0" aria-label="View Details" />
+            )}
         </motion.div>
     );
-}
-
-// Helper to generate smooth sparkline path for larger chart
-function generateLargeSparklinePath(data: number[]): string {
-    if (data.length === 0) return '';
-
-    const points = data.map((value, index) => ({
-        x: (index / (data.length - 1)) * 200,
-        y: 60 - (value / 100) * 60,
-    }));
-
-    let path = `M ${points[0].x} ${points[0].y}`;
-
-    for (let i = 0; i < points.length - 1; i++) {
-        const current = points[i];
-        const next = points[i + 1];
-        const midX = (current.x + next.x) / 2;
-
-        path += ` Q ${current.x} ${current.y}, ${midX} ${(current.y + next.y) / 2}`;
-    }
-
-    const last = points[points.length - 1];
-    path += ` T ${last.x} ${last.y}`;
-
-    return path;
 }

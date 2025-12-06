@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Receipt, Wallet, Gift, Package, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 
 interface StatChip {
     label: string;
@@ -67,35 +67,33 @@ export function CompactStatsRow({
     ];
 
     return (
-        <div className="flex flex-wrap gap-2 md:gap-3">
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full rounded-2xl bg-gradient-to-r from-white/80 via-white/50 to-white/80 dark:from-[#1a1500]/80 dark:via-[#1c1917]/80 dark:to-[#1a1500]/80 backdrop-blur-xl border border-[#D4AF37]/20 shadow-lg shadow-[#D4AF37]/5 p-2 flex flex-wrap md:flex-nowrap items-center justify-between gap-2"
+        >
             {stats.map((stat, index) => (
-                <motion.div
+                <Link
                     key={stat.label}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    href={stat.href || '#'}
+                    className="flex-1 min-w-[140px] group relative p-3 rounded-xl hover:bg-[#D4AF37]/5 transition-colors duration-300 flex items-center justify-between border border-transparent hover:border-[#D4AF37]/10"
                 >
-                    <Link
-                        href={stat.href || '#'}
-                        className={`
-              flex items-center gap-2 px-3 py-2 rounded-full border
-              ${stat.bgColor}
-              backdrop-blur-md
-              hover:scale-105 hover:shadow-glow-sm
-              transition-all duration-300
-              group cursor-pointer
-            `}
-                    >
-                        <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                        <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
-                            {stat.label}:
+                    <div className="flex items-center gap-2">
+                        <div className={cn("p-1.5 rounded-lg", stat.bgColor !== '' ? stat.bgColor : 'bg-gray-100')}>
+                            <stat.icon className={cn("h-4 w-4 display-icon", stat.color)} />
+                        </div>
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground group-hover:text-[#D4AF37] transition-colors">
+                            {stat.label}
                         </span>
-                        <span className={`text-sm font-bold ${stat.color} glow-text-sm`}>
-                            {stat.value}
-                        </span>
-                    </Link>
-                </motion.div>
+                    </div>
+                    <span className={cn("text-lg font-bold tabular-nums", stat.color)}>
+                        {stat.value}
+                    </span>
+
+                    {/* Hover Glow */}
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#D4AF37]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                </Link>
             ))}
-        </div>
+        </motion.div>
     );
 }

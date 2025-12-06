@@ -1,29 +1,13 @@
 import { createClient } from '@/supabase/server';
 import { InsightsClient } from './client';
-import { MobileSalesInsights } from '@/components/mobile/mobile-sales-insights';
 import type { Invoice } from '@/lib/definitions';
 import { Suspense } from 'react';
-import { getDeviceType } from '@/lib/device';
 
 export default async function InsightsPage({ params }: { params: Promise<{ shopId: string }> }) {
     const { shopId } = await params;
     const supabase = await createClient();
-    const deviceType = await getDeviceType();
-    const isMobile = deviceType === 'mobile';
 
-    // 1. Mobile Optimized Path
-    if (isMobile) {
-        const { data: insights, error } = await supabase.rpc('get_sales_insights', { p_shop_id: shopId });
-
-        if (error) {
-            console.error('Error fetching insights RPC:', error);
-            return <div className="p-8 text-center text-destructive">Error loading data.</div>;
-        }
-
-        return <MobileSalesInsights data={insights} />;
-    }
-
-    // 2. Desktop Legacy Path (Fetch All)
+    // Fetch All Data (previously only desktop)
     const { data: invData, error: invError } = await supabase
         .from('invoices')
         .select('*')
@@ -65,14 +49,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ shopI
 
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <div className="hidden md:block">
-                <InsightsClient invoices={mappedInvoices} invoiceItems={itemsData || []} shopId={shopId} />
-            </div>
-            {/* Fallback for potential resize on desktop - Show message or nothing */}
-            <div className="md:hidden p-8 text-center text-muted-foreground">
-                <p>Resize window or refresh to view mobile layout.</p>
-            </div>
+            <InsightsClient invoices={mappedInvoices} invoiceItems={itemsData || []} shopId={shopId} />
         </Suspense>
     );
-
 }

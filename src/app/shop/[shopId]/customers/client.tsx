@@ -150,7 +150,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
             {/* Top Customer Card */}
             {topCustomer && (
                 <FadeIn>
-                    <Card className="border border-border shadow-sm">
+                    <Card className="border border-border shadow-sm mt-4 md:mt-0">
                         <CardContent className="p-4 md:p-6 flex items-center justify-between">
                             <div className="flex items-center gap-3 md:gap-4">
                                 <div className="p-2 md:p-3 bg-primary/10 rounded-full">
@@ -174,8 +174,8 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
             )}
 
             <Card className="border border-border shadow-sm">
-                {/* Sticky Header for Mobile */}
-                <CardHeader className="pb-3 sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b md:border-b-0 md:static md:bg-transparent">
+                {/* Search Header - Sticky on mobile for checks */}
+                <CardHeader className="pb-3 border-b sticky top-0 z-30 bg-background pt-4 md:pt-6">
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center justify-between">
                             <div className="md:block hidden">
@@ -279,7 +279,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     <div className="hidden md:block rounded-xl border border-border overflow-hidden">
                         <Table className="table-modern">
                             <TableHeader className="bg-muted/50">

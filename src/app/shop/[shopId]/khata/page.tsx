@@ -1,11 +1,10 @@
+// ... imports
 import { Suspense } from 'react';
 import { createClient } from '@/supabase/server';
 import { redirect } from 'next/navigation';
 import { KhataClient } from './client';
-import { MobileKhataBook } from '@/components/mobile/mobile-khata-book';
 import type { CustomerBalance, LedgerTransaction } from '@/lib/ledger-types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDeviceType } from '@/lib/device';
 
 type PageProps = {
     params: Promise<{ shopId: string }>;
@@ -52,14 +51,7 @@ export default async function KhataPage({ params, searchParams }: PageProps) {
         redirect('/dashboard');
     }
 
-    // --- 1. Fetch Aggregated Stats (Optimized) ---
-    // Instead of fetching all transactions, we use the View to get sums directly if possible, or count.
-    // Ideally we'd have a separate `shop_stats_view`, but we can query the `customer_balances_view` efficiently.
-
-    // Check if view exists first (Development fallback safety) or just query it.
-    // We assume the view implementation applies here.
-
-    // Calculate total Stats
+    // --- 1. Fetch Aggregated Stats ---
     const { data: statsData, error: statsError } = await supabase
         .from('customer_balances_view')
         .select('current_balance')
@@ -89,12 +81,10 @@ export default async function KhataPage({ params, searchParams }: PageProps) {
         .select('*', { count: 'exact' })
         .eq('shop_id', shopId);
 
-    // Apply Search
     if (search) {
         query = query.ilike('name', `%${search}%`);
     }
 
-    // Apply Filters
     if (balance_type === 'receivable') {
         query = query.gt('current_balance', 0);
     } else if (balance_type === 'payable') {
@@ -103,16 +93,14 @@ export default async function KhataPage({ params, searchParams }: PageProps) {
         query = query.eq('current_balance', 0);
     }
 
-    // Apply Pagination
     const from = (currentPage - 1) * itemsPerPage;
     const to = from + itemsPerPage - 1;
 
     const { data: customersRaw, count, error: queryError } = await query
-        .order('current_balance', { ascending: false }) // Show highest debt first usually
+        .order('current_balance', { ascending: false })
         .range(from, to);
 
     if (queryError) console.error('[Khata] Query Error:', queryError);
-    console.log('[Khata] Customers Found:', count, 'Search:', search, 'Filter:', balance_type);
 
     const totalPages = count ? Math.ceil(count / itemsPerPage) : 0;
 
@@ -129,7 +117,7 @@ export default async function KhataPage({ params, searchParams }: PageProps) {
     }));
 
 
-    // --- 3. Fetch Recent Activity (Optimized limit) ---
+    // --- 3. Fetch Recent Activity ---
     const { data: recentTransactionsRaw } = await supabase
         .from('ledger_transactions')
         .select(`
@@ -150,54 +138,27 @@ export default async function KhataPage({ params, searchParams }: PageProps) {
         customer: Array.isArray(t.customer) ? t.customer[0] : t.customer
     }));
 
-    const deviceType = await getDeviceType();
-    const isMobile = deviceType === 'mobile';
-
-    if (isMobile) {
-        return (
-            <Suspense fallback={<KhataLoading />}>
-                <MobileKhataBook
-                    shopId={shopId}
-                    customers={customers}
-                    stats={{
-                        total_customers: stats.total_customers,
-                        total_receivable: stats.total_receivable,
-                        total_payable: stats.total_payable,
-                        net_balance: stats.net_balance,
-                    }}
-                    recentTransactions={recentTransactions}
-                />
-            </Suspense>
-        );
-    }
-
     return (
         <Suspense fallback={<KhataLoading />}>
-            <div className="hidden md:block">
-                <KhataClient
-                    customers={customers}
-                    stats={{
-                        total_customers: stats.total_customers,
-                        total_receivable: stats.total_receivable,
-                        total_payable: stats.total_payable,
-                        net_balance: stats.net_balance,
-                    }}
-                    recentTransactions={recentTransactions}
-                    shopId={shopId}
-                    userId={user.id}
-                    initialSearch={search || ''}
-                    initialBalanceType={balance_type as any}
-                    pagination={{
-                        currentPage,
-                        totalPages,
-                        totalItems: count || 0
-                    }}
-                />
-            </div>
-            {/* Fallback for resizing on desktop */}
-            <div className="md:hidden p-8 text-center text-muted-foreground">
-                <p>Resize window or refresh to view mobile layout.</p>
-            </div>
+            <KhataClient
+                customers={customers}
+                stats={{
+                    total_customers: stats.total_customers,
+                    total_receivable: stats.total_receivable,
+                    total_payable: stats.total_payable,
+                    net_balance: stats.net_balance,
+                }}
+                recentTransactions={recentTransactions}
+                shopId={shopId}
+                userId={user.id}
+                initialSearch={search || ''}
+                initialBalanceType={balance_type as any}
+                pagination={{
+                    currentPage,
+                    totalPages,
+                    totalItems: count || 0
+                }}
+            />
         </Suspense>
     );
 }

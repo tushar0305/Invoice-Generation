@@ -1,11 +1,10 @@
+// ... imports
 import { Suspense } from 'react';
 import { createClient } from '@/supabase/server';
 import { redirect } from 'next/navigation';
 import { LoansDashboardClient } from './client';
-import { MobileLoanList } from '@/components/mobile/mobile-loan-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Loan, LoanDashboardStats } from '@/lib/loan-types';
-import { getDeviceType } from '@/lib/device';
 
 type PageProps = {
     params: Promise<{ shopId: string }>;
@@ -61,13 +60,12 @@ export default async function LoansPage({ params }: PageProps) {
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
-    // Only log in development, not production (table may not exist yet)
+    // Only log in development, not production
     if (loansError && process.env.NODE_ENV === 'development') {
         console.log('Loans table not available:', loansError.code);
     }
 
     // Calculate stats
-    // Note: In a real app with many records, these should be optimized DB queries or RPCs
     const { data: allLoans } = await supabase
         .from('loans')
         .select('id, status, principal_amount, total_interest_accrued')
@@ -76,7 +74,7 @@ export default async function LoansPage({ params }: PageProps) {
     const stats: LoanDashboardStats = {
         total_active_loans: 0,
         total_principal_disbursed: 0,
-        total_interest_earned: 0, // This should ideally come from payments table
+        total_interest_earned: 0,
         total_overdue_loans: 0,
     };
 
@@ -86,7 +84,6 @@ export default async function LoansPage({ params }: PageProps) {
         stats.total_principal_disbursed = allLoans
             .filter(l => l.status === 'active' || l.status === 'overdue')
             .reduce((sum, l) => sum + Number(l.principal_amount), 0);
-        // Approximate interest earned from accrued for now, better to fetch from payments
         stats.total_interest_earned = allLoans.reduce((sum, l) => sum + Number(l.total_interest_accrued), 0);
     }
 
@@ -95,36 +92,19 @@ export default async function LoansPage({ params }: PageProps) {
         .from('loan_payments')
         .select('amount')
         .eq('payment_type', 'interest')
-        .in('loan_id', (allLoans || []).map(l => l.id)); // This might be limited by URL length if too many loans, ok for MVP
+        .in('loan_id', (allLoans || []).map(l => l.id));
 
     if (interestPayments) {
         stats.total_interest_earned = interestPayments.reduce((sum, p) => sum + Number(p.amount), 0);
     }
 
-    const deviceType = await getDeviceType();
-    const isMobile = deviceType === 'mobile';
-
-    if (isMobile) {
-        return (
-            <Suspense fallback={<DashboardLoading />}>
-                <MobileLoanList shopId={shopId} loans={activeLoans || []} stats={stats} />
-            </Suspense>
-        );
-    }
-
     return (
         <Suspense fallback={<DashboardLoading />}>
-            <div className="hidden md:block">
-                <LoansDashboardClient
-                    loans={activeLoans || []}
-                    stats={stats}
-                    shopId={shopId}
-                />
-            </div>
-            {/* Fallback for resizing on desktop */}
-            <div className="md:hidden p-8 text-center text-muted-foreground">
-                <p>Resize window or refresh to view mobile layout.</p>
-            </div>
+            <LoansDashboardClient
+                loans={activeLoans || []}
+                stats={stats}
+                shopId={shopId}
+            />
         </Suspense>
     );
 }
