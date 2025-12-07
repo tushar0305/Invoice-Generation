@@ -25,6 +25,9 @@ import { CustomerInsightsWidget } from '@/components/dashboard/customer-insights
 
 import { DashboardInvoiceRow } from '@/components/dashboard/dashboard-invoice-row';
 
+// Revalidate dashboard data every 60 seconds for fresh data
+export const revalidate = 60;
+
 // Helper function for sparklines
 function generateSparkline(invoices: any[], days: number) {
   const data = [];

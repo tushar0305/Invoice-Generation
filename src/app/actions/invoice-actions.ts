@@ -2,10 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/supabase/server';
-import {
-    deleteInvoice as deleteInvoiceService,
-} from '@/services/invoices';
-import { upsertCustomer } from '@/services/customers';
 import { Customer } from '@/lib/definitions';
 
 /**
@@ -50,16 +46,62 @@ export async function createInvoiceAction(formData: {
         let customerCurrentPoints = 0;
 
         if (formData.customerPhone) {
-            // Atomic Upsert using Service Layer
-            const upsertId = await upsertCustomer(formData.shopId, {
-                name: formData.customerName,
-                phone: formData.customerPhone,
-                address: formData.customerAddress,
-                state: formData.customerState,
-                pincode: formData.customerPincode,
-            });
+            // Atomic Upsert using authenticated client
+            const { data: upsertResult, error: upsertError } = await supabase
+                .from('customers')
+                .upsert(
+                    {
+                        shop_id: formData.shopId,
+                        phone: formData.customerPhone,
+                        name: formData.customerName,
+                        address: formData.customerAddress,
+                        state: formData.customerState,
+                        pincode: formData.customerPincode,
+                        updated_at: new Date().toISOString(),
+                    },
+                    {
+                        onConflict: 'shop_id, phone',
+                        ignoreDuplicates: false,
+                    }
+                )
+                .select('id')
+                .single();
 
-            customerId = upsertId;
+            if (upsertError) {
+                console.error('Error upserting customer:', upsertError);
+                // Fallback: try to find existing
+                const { data: existing } = await supabase
+                    .from('customers')
+                    .select('id')
+                    .eq('shop_id', formData.shopId)
+                    .eq('phone', formData.customerPhone)
+                    .maybeSingle();
+                
+                if (existing) {
+                    customerId = existing.id;
+                    // Update details
+                    await supabase.from('customers').update({
+                        name: formData.customerName,
+                        address: formData.customerAddress,
+                        state: formData.customerState,
+                        pincode: formData.customerPincode,
+                    }).eq('id', customerId);
+                } else {
+                    // Try insert if upsert failed (e.g. constraint issue)
+                     const { data: newC, error: insertError } = await supabase.from('customers').insert({
+                        shop_id: formData.shopId,
+                        phone: formData.customerPhone,
+                        name: formData.customerName,
+                        address: formData.customerAddress,
+                        state: formData.customerState,
+                        pincode: formData.customerPincode,
+                    }).select('id').single();
+                    if (insertError) throw insertError;
+                    customerId = newC?.id || null;
+                }
+            } else {
+                customerId = upsertResult?.id || null;
+            }
 
             if (customerId) {
                 // Fetch current points for validation if redeeming
@@ -128,7 +170,7 @@ export async function createInvoiceAction(formData: {
 
         if (rpcError) throw rpcError;
 
-        // Revalidate relevant paths
+        // Revalidate caches (paths for both server-side cache and client)
         revalidatePath(`/shop/${formData.shopId}/invoices`);
         revalidatePath(`/shop/${formData.shopId}/dashboard`);
         revalidatePath(`/shop/${formData.shopId}/insights`);
@@ -227,17 +269,9 @@ export async function updateInvoiceAction(
             const existingIds = new Set((existingItems || []).map((item) => item.id));
             const newIds = new Set(formData.items.map((item) => item.id).filter(Boolean));
 
-            // Delete removed items
+            // Prepare operations
             const toDelete = [...existingIds].filter((id) => !newIds.has(id));
-            if (toDelete.length > 0) {
-                const { error: deleteError } = await supabase
-                    .from('invoice_items')
-                    .delete()
-                    .in('id', toDelete);
-                if (deleteError) throw deleteError;
-            }
-
-            // Upsert all items
+            
             const itemsToUpsert = formData.items.map((item) => {
                 const itemData: any = {
                     invoice_id: invoiceId,
@@ -252,15 +286,31 @@ export async function updateInvoiceAction(
                 return itemData;
             });
 
+            // Execute operations in parallel
+            const promises = [];
+
+            if (toDelete.length > 0) {
+                promises.push(
+                    supabase.from('invoice_items').delete().in('id', toDelete)
+                );
+            }
+
             if (itemsToUpsert.length > 0) {
-                const { error: upsertError } = await supabase
-                    .from('invoice_items')
-                    .upsert(itemsToUpsert, { onConflict: 'id' });
-                if (upsertError) throw upsertError;
+                promises.push(
+                    supabase.from('invoice_items').upsert(itemsToUpsert, { onConflict: 'id' })
+                );
+            }
+
+            if (promises.length > 0) {
+                const results = await Promise.all(promises);
+                const errors = results.map(r => r.error).filter(Boolean);
+                if (errors.length > 0) throw errors[0];
             }
         }
 
         // Revalidate relevant paths
+        // Use Promise.allSettled to ensure revalidation doesn't block response if it fails (though it shouldn't)
+        // But revalidatePath is sync-ish in Next.js logic, so we just call them.
         revalidatePath(`/shop/${shopId}/invoices`);
         revalidatePath(`/shop/${shopId}/dashboard`);
         revalidatePath(`/shop/${shopId}/insights`);
@@ -274,8 +324,14 @@ export async function updateInvoiceAction(
 }
 
 export async function deleteInvoiceAction(invoiceId: string, shopId: string) {
+    const supabase = await createClient();
     try {
-        await deleteInvoiceService(invoiceId);
+        const { error } = await supabase
+            .from('invoices')
+            .delete()
+            .eq('id', invoiceId);
+
+        if (error) throw error;
 
         // Revalidate relevant paths
         revalidatePath(`/shop/${shopId}/invoices`);

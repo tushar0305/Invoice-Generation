@@ -37,7 +37,7 @@ export default function LoyaltyProgramPage() {
             setLoading(true);
 
             try {
-                // Fetch Settings
+                // 1. Fetch Settings
                 const { data: settingsData } = await supabase
                     .from('shop_loyalty_settings')
                     .select('*')
@@ -46,55 +46,82 @@ export default function LoyaltyProgramPage() {
 
                 setSettings(settingsData);
 
-                // Fetch Logs for Stats
-                const { data: logs } = await supabase
+                // 2. Fetch Recent Logs (Limit 10) - For Activity Feed
+                const { data: recent } = await supabase
                     .from('customer_loyalty_logs')
                     .select('points_change, created_at, customer:customers(name)')
                     .eq('shop_id', activeShop.id)
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false })
+                    .limit(10);
 
-                if (logs) {
-                    const issued = logs.filter(l => l.points_change > 0).reduce((acc, l) => acc + l.points_change, 0);
-                    const redeemed = logs.filter(l => l.points_change < 0).reduce((acc, l) => acc + Math.abs(l.points_change), 0);
+                // 3. Fetch Chart Data (Last 30 Days only) - Optimized
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                
+                const { data: chartLogs } = await supabase
+                    .from('customer_loyalty_logs')
+                    .select('points_change, created_at')
+                    .eq('shop_id', activeShop.id)
+                    .gte('created_at', thirtyDaysAgo.toISOString())
+                    .order('created_at', { ascending: true });
 
-                    // Fetch Customers for Liability
-                    const { data: customers } = await supabase
-                        .from('customers')
-                        .select('id, name, loyalty_points, phone')
-                        .eq('shop_id', activeShop.id)
-                        .gt('loyalty_points', 0)
-                        .order('loyalty_points', { ascending: false })
-                        .limit(5);
+                // 4. Fetch Total Stats (All Time) - Optimized to fetch only points_change
+                // Note: For very large datasets, this should be replaced with an RPC call
+                const { data: allPoints } = await supabase
+                    .from('customer_loyalty_logs')
+                    .select('points_change')
+                    .eq('shop_id', activeShop.id);
 
-                    const { count } = await supabase
-                        .from('customers')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('shop_id', activeShop.id)
-                        .gt('loyalty_points', 0);
-
-                    // Calculate Liability
-                    const conversionRate = settingsData?.redemption_conversion_rate || 1;
-
-                    // Calculate total outstanding points from customers table
-                    const { data: allCustomers } = await supabase
-                        .from('customers')
-                        .select('loyalty_points')
-                        .eq('shop_id', activeShop.id)
-                        .gt('loyalty_points', 0);
-
-                    const outstanding = allCustomers?.reduce((acc, c) => acc + (c.loyalty_points || 0), 0) || 0;
-
-                    setStats({
-                        totalIssued: issued,
-                        totalRedeemed: redeemed,
-                        liability: outstanding * conversionRate,
-                        totalCustomers: count || 0,
-                    });
-
-                    setRecentLogs(logs.slice(0, 10));
-                    setAllLogs(logs); // Store all logs for chart calculation
-                    setTopCustomers(customers || []);
+                let issued = 0;
+                let redeemed = 0;
+                
+                if (allPoints) {
+                    // Calculate totals in a single pass
+                    for (const log of allPoints) {
+                        if (log.points_change > 0) {
+                            issued += log.points_change;
+                        } else {
+                            redeemed += Math.abs(log.points_change);
+                        }
+                    }
                 }
+
+                // 5. Fetch Top Customers
+                const { data: customers } = await supabase
+                    .from('customers')
+                    .select('id, name, loyalty_points, phone')
+                    .eq('shop_id', activeShop.id)
+                    .gt('loyalty_points', 0)
+                    .order('loyalty_points', { ascending: false })
+                    .limit(5);
+
+                // 6. Fetch Total Customer Count
+                const { count } = await supabase
+                    .from('customers')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('shop_id', activeShop.id)
+                    .gt('loyalty_points', 0);
+
+                // 7. Calculate Liability (Sum of all points)
+                const { data: allCustomerPoints } = await supabase
+                    .from('customers')
+                    .select('loyalty_points')
+                    .eq('shop_id', activeShop.id)
+                    .gt('loyalty_points', 0);
+
+                const outstanding = allCustomerPoints?.reduce((acc, c) => acc + (c.loyalty_points || 0), 0) || 0;
+                const conversionRate = settingsData?.redemption_conversion_rate || 1;
+
+                setStats({
+                    totalIssued: issued,
+                    totalRedeemed: redeemed,
+                    liability: outstanding * conversionRate,
+                    totalCustomers: count || 0,
+                });
+
+                setRecentLogs(recent || []);
+                setAllLogs(chartLogs || []); // Pass only chart logs to dashboard to prevent freezing
+                setTopCustomers(customers || []);
 
             } catch (error) {
                 console.error("Error fetching loyalty data:", error);
