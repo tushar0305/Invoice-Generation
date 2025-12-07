@@ -7,6 +7,7 @@ interface Props {
     params: Promise<{ shopId: string }>;
 }
 
+// Force HMR update
 export default async function MarketingPage({ params }: Props) {
     const { shopId } = await params;
     const supabase = await createClient();

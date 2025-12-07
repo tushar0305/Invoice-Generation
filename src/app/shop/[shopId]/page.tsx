@@ -1,7 +1,8 @@
 'use client';
 
 import { useActiveShop } from '@/hooks/use-active-shop';
-import { useInvoices } from '@/hooks/use-cached-data';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/supabase/client';
 
 import { useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -60,7 +61,40 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // ✅ Use React Query for cached data fetching
-  const { data: invoices = [], isLoading } = useInvoices(activeShop?.id);
+  const { data: invoices = [], isLoading } = useQuery({
+    queryKey: ['invoices', activeShop?.id],
+    queryFn: async () => {
+      if (!activeShop?.id) return [];
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('shop_id', activeShop.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((r: any) => ({
+        id: r.id,
+        shopId: r.shop_id,
+        invoiceNumber: r.invoice_number,
+        customerId: r.customer_id,
+        customerSnapshot: r.customer_snapshot,
+        invoiceDate: r.invoice_date,
+        status: r.status,
+        subtotal: Number(r.subtotal) || 0,
+        discount: Number(r.discount) || 0,
+        cgstAmount: Number(r.cgst_amount) || 0,
+        sgstAmount: Number(r.sgst_amount) || 0,
+        grandTotal: Number(r.grand_total) || 0,
+        notes: r.notes,
+        createdByName: r.created_by_name,
+        createdBy: r.created_by,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      })) as Invoice[];
+    },
+    enabled: !!activeShop?.id,
+  });
 
   const [settings, setSettings] = useState<any | null>(null);
 

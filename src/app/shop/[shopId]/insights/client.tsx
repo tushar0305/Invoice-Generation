@@ -307,7 +307,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                     {/* Key Metrics Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {metrics && metrics.map((metric, i) => (
-                            <m.div key={i} variants={item}>
+                            <m.div key={`${timeRange}-${i}`} variants={item}>
                                 <Card className="bg-card border-border shadow-sm hover:border-primary/30 transition-all duration-300 group">
                                     <CardContent className="p-4 md:p-6">
                                         <div className="flex justify-between items-start">

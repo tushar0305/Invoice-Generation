@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useMemo, useTransition, useEffect } from 'react';
+import { useState, useMemo, useTransition, useEffect, useOptimistic } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -52,13 +52,20 @@ type InvoicesClientProps = {
     shopId: string;
     initialStatus: string;
     initialSearch: string;
+    pagination?: {
+        currentPage: number;
+        totalPages: number;
+        totalCount: number;
+        limit: number;
+    };
 };
 
 export function InvoicesClient({
     initialInvoices,
     shopId,
     initialStatus,
-    initialSearch
+    initialSearch,
+    pagination
 }: InvoicesClientProps) {
     const [searchTerm, setSearchTerm] = useState(initialSearch);
     const [statusFilter, setStatusFilter] = useState(initialStatus);
@@ -67,6 +74,7 @@ export function InvoicesClient({
     const [isRefreshing, setIsRefreshing] = useState(false);
     const router = useRouter();
     const { toast } = useToast();
+    const { user } = useUser();
     const [isDeleting, startDeleteTransition] = useTransition();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
@@ -77,13 +85,21 @@ export function InvoicesClient({
     const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
     const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
-    const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
-    const { user } = useUser();
-
-    // Sync local state when server data changes
-    useEffect(() => {
-        setInvoices(initialInvoices);
-    }, [initialInvoices]);
+    const [optimisticInvoices, addOptimisticInvoice] = useOptimistic(
+        initialInvoices,
+        (state: Invoice[], action: { type: 'DELETE' | 'UPDATE_STATUS'; payload: any }) => {
+            switch (action.type) {
+                case 'DELETE':
+                    return state.filter((inv) => inv.id !== action.payload.id);
+                case 'UPDATE_STATUS':
+                    return state.map((inv) =>
+                        inv.id === action.payload.id ? { ...inv, status: action.payload.status } : inv
+                    );
+                default:
+                    return state;
+            }
+        }
+    );
 
     const handleDeleteConfirmation = (invoiceId: string) => {
         setInvoiceToDelete(invoiceId);
@@ -98,8 +114,11 @@ export function InvoicesClient({
                 const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete).eq('user_id', user?.uid || '');
                 if (error) throw error;
 
-                // Update local state
-                setInvoices(prev => prev.filter(inv => inv.id !== invoiceToDelete));
+                // Optimistic UI update
+                addOptimisticInvoice({ type: 'DELETE', payload: { id: invoiceToDelete } });
+
+                // Server re-fetch
+                router.refresh();
 
                 toast({
                     title: 'Invoice Deleted',
@@ -120,7 +139,7 @@ export function InvoicesClient({
     };
 
     const handleMarkPaid = async (id: string) => {
-        const invoice = invoices?.find(inv => inv.id === id);
+        const invoice = optimisticInvoices?.find(inv => inv.id === id);
         if (!invoice) return;
 
         setInvoiceToChangeStatus({ id, currentStatus: invoice.status });
@@ -143,12 +162,11 @@ export function InvoicesClient({
 
             if (error) throw error;
 
-            // Update local state
-            setInvoices(prev => prev.map(inv =>
-                inv.id === invoiceToChangeStatus.id
-                    ? { ...inv, status: newStatus as 'paid' | 'due' }
-                    : inv
-            ));
+            // Optimistic Update
+            addOptimisticInvoice({ type: 'UPDATE_STATUS', payload: { id: invoiceToChangeStatus.id, status: newStatus } });
+
+            // Server re-fetch
+            router.refresh();
 
             haptics.notification(NotificationType.Success);
             toast({
@@ -170,7 +188,7 @@ export function InvoicesClient({
 
     const handleShare = async (id: string) => {
         try {
-            const inv = invoices.find(i => i.id === id);
+            const inv = optimisticInvoices.find(i => i.id === id);
             if (!inv) return;
             const { shareInvoice } = await import('@/lib/share');
             await shareInvoice(inv);
@@ -183,34 +201,9 @@ export function InvoicesClient({
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
-            const { data } = await supabase
-                .from('invoices')
-                .select('*')
-                .eq('shop_id', shopId)
-                .order('created_at', { ascending: false });
-
-            if (data) {
-                const refreshedInvoices: Invoice[] = data.map((r: any) => ({
-                    id: r.id,
-                    shopId: r.shop_id,
-                    invoiceNumber: r.invoice_number,
-                    customerId: r.customer_id,
-                    customerSnapshot: r.customer_snapshot,
-                    invoiceDate: r.invoice_date,
-                    status: r.status,
-                    subtotal: Number(r.subtotal) || 0,
-                    discount: Number(r.discount) || 0,
-                    cgstAmount: Number(r.cgst_amount) || 0,
-                    sgstAmount: Number(r.sgst_amount) || 0,
-                    grandTotal: Number(r.grand_total) || 0,
-                    notes: r.notes,
-                    createdByName: r.created_by_name,
-                    createdBy: r.created_by,
-                    createdAt: r.created_at,
-                    updatedAt: r.updated_at,
-                }));
-                setInvoices(refreshedInvoices);
-            }
+            // We just need to trigger a router refresh to get the latest server data
+            // The optimistic UI handles the immediate display
+            router.refresh();
 
             haptics.impact(ImpactStyle.Light);
             setLastRefreshed(new Date());
@@ -245,11 +238,29 @@ export function InvoicesClient({
         return `${diffInDays}d ago`;
     };
 
+    // Debounced Search with Page Reset
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const params = new URLSearchParams(window.location.search);
+            if (searchTerm) {
+                params.set('q', searchTerm);
+                params.set('page', '1'); // Reset to page 1 on search
+            } else {
+                params.delete('q');
+                // Keep page if just clearing search, or reset? Resetting is safer.
+                params.set('page', '1');
+            }
+            router.push(`?${params.toString()}`);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchTerm, router]);
+
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
     // Client-side filtering for search and date range (status filter already server-side)
     const filteredInvoices = useMemo(() => {
-        let result = invoices;
+        let result = optimisticInvoices;
 
         // Search filter (client-side for instant feedback)
         const lower = debouncedSearchTerm.toLowerCase();
@@ -273,7 +284,7 @@ export function InvoicesClient({
         }
 
         return result;
-    }, [invoices, debouncedSearchTerm, dateRange]);
+    }, [optimisticInvoices, debouncedSearchTerm, dateRange]);
 
     // Batch Operations - Defined AFTER filteredInvoices
     const toggleSelectAll = () => {
@@ -306,7 +317,10 @@ export function InvoicesClient({
                 const { error } = await supabase.from('invoices').delete().in('id', idsToDelete).eq('user_id', user?.uid || '');
                 if (error) throw error;
 
-                setInvoices(prev => prev.filter(inv => !selectedInvoices.has(inv.id)));
+
+                // Optimistic batch delete (approximation)
+                idsToDelete.forEach(id => addOptimisticInvoice({ type: 'DELETE', payload: { id } }));
+                router.refresh();
                 setSelectedInvoices(new Set());
 
                 toast({
@@ -358,7 +372,7 @@ export function InvoicesClient({
         if (!user) return;
         setIsExporting(true);
         try {
-            const dataToExport = scope === 'filtered' ? filteredInvoices : invoices;
+            const dataToExport = scope === 'filtered' ? filteredInvoices : optimisticInvoices;
 
             const dataRows = dataToExport.map(r => ({
                 Invoice: r.invoiceNumber,
@@ -778,7 +792,7 @@ export function InvoicesClient({
             {(searchTerm || statusFilter !== 'all' || dateRange) && (
                 <div className="flex items-center justify-between py-2 px-4 bg-muted/30 rounded-lg border border-border/40">
                     <div className="text-sm text-muted-foreground">
-                        Showing <span className="font-semibold text-foreground">{filteredInvoices.length}</span> of <span className="font-semibold text-foreground">{invoices.length}</span> invoices
+                        Showing <span className="font-semibold text-foreground">{filteredInvoices.length}</span> of <span className="font-semibold text-foreground">{pagination?.totalCount ?? optimisticInvoices.length}</span> invoices
                     </div>
                     {(searchTerm || dateRange) && (
                         <Button
@@ -867,6 +881,41 @@ export function InvoicesClient({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Pagination Controls */}
+            {pagination && (
+                <div className="flex items-center justify-between pt-4 pb-6 border-t border-border mt-4">
+                    <div className="text-sm text-muted-foreground">
+                        Showing <span className="font-medium text-foreground">{(pagination.currentPage - 1) * pagination.limit + 1}</span> to <span className="font-medium text-foreground">{Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)}</span> of <span className="font-medium text-foreground">{pagination.totalCount}</span> invoices
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pagination.currentPage <= 1}
+                            onClick={() => {
+                                const params = new URLSearchParams(window.location.search);
+                                params.set('page', String(pagination.currentPage - 1));
+                                router.push(`?${params.toString()}`);
+                            }}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pagination.currentPage >= pagination.totalPages}
+                            onClick={() => {
+                                const params = new URLSearchParams(window.location.search);
+                                params.set('page', String(pagination.currentPage + 1));
+                                router.push(`?${params.toString()}`);
+                            }}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+            )}
         </MotionWrapper>
     );
 }

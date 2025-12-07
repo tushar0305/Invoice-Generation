@@ -18,21 +18,66 @@ export default async function StockPage({
     searchParams,
 }: {
     params: Promise<{ shopId: string }>;
-    searchParams: Promise<{ filter?: string; q?: string }>;
+    searchParams: Promise<{ filter?: string; q?: string; page?: string; limit?: string }>;
 }) {
     const { shopId } = await params;
-    const { filter, q } = await searchParams;
+    const { filter, q, page: pageParam, limit: limitParam } = await searchParams;
     const supabase = await createClient();
 
-    // Fetch all items
-    const { data: allItems } = await supabase
+    const page = Number(pageParam) || 1;
+    const limit = Number(limitParam) || 50;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // Fetch all items with pagination
+    let query = supabase
         .from('stock_items')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('shop_id', shopId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+    // Apply filters server-side
+    // Note: This logic needs adjustment because we're fetching paginated data based on filters.
+    // The previous code fetched ALL items then filtered in memory.
+    // We must move filtering to the database query for pagination to work correctly.
+
+    if (filter) {
+        if (filter === 'low') {
+            query = query.gt('quantity', 0).lt('quantity', 3);
+        } else if (filter === 'out') {
+            query = query.eq('quantity', 0);
+        }
+    }
+
+    if (q) {
+        // Simple case-insensitive search on name, purity, category
+        // Note: ILIKE might be slow on large datasets without indexes, but better than memory filtering 2k items.
+        // Complex OR conditions in Supabase can be tricky with other filters.
+        // Using a comprehensive OR for search:
+        query = query.or(`name.ilike.%${q}%,purity.ilike.%${q}%,category.ilike.%${q}%`);
+    }
+
+    const { data: itemsData, count } = await query;
+
+    // Fetch counts separately to show in badges even when filtered
+    // We need "all", "low", "out" counts regardless of current filter
+    // This requires separate queries or a single query with conditional counts (less trivial in Supabase JS client)
+    // For now, let's fire parallel count queries. It's safe/fast enough.
+    const [countAll, countLow, countOut] = await Promise.all([
+        supabase.from('stock_items').select('*', { count: 'exact', head: true }).eq('shop_id', shopId),
+        supabase.from('stock_items').select('*', { count: 'exact', head: true }).eq('shop_id', shopId).gt('quantity', 0).lt('quantity', 3),
+        supabase.from('stock_items').select('*', { count: 'exact', head: true }).eq('shop_id', shopId).eq('quantity', 0)
+    ]);
+
+    const counts = {
+        all: countAll.count || 0,
+        low: countLow.count || 0,
+        out: countOut.count || 0
+    };
 
     // Map to simplified object for components, explicit casting for safety
-    const items = (allItems || []).map((r: any) => ({
+    const items = (itemsData || []).map((r: any) => ({
         id: r.id,
         userId: r.user_id,
         shopId: r.shop_id,
@@ -52,38 +97,20 @@ export default async function StockPage({
         updatedAt: r.updated_at,
     }));
 
-    // Calculate counts
-    const counts = {
-        all: items.length,
-        low: items.filter(i => i.quantity > 0 && i.quantity < 3).length,
-        out: items.filter(i => i.quantity === 0).length
-    };
-
-    // Apply filters server-side
-    let filteredItems = items;
-
-    if (filter) {
-        if (filter === 'low') filteredItems = filteredItems.filter(i => i.quantity > 0 && i.quantity < 3);
-        else if (filter === 'out') filteredItems = filteredItems.filter(i => i.quantity === 0);
-    }
-
-    if (q) {
-        const lower = q.toLowerCase();
-        filteredItems = filteredItems.filter(i =>
-            i.name.toLowerCase().includes(lower) ||
-            i.purity.toLowerCase().includes(lower) ||
-            (i.category && i.category.toLowerCase().includes(lower))
-        );
-    }
-
     return (
         <Suspense fallback={<StockLoading />}>
             <StockClient
-                initialItems={filteredItems}
+                initialItems={items}
                 counts={counts}
                 initialFilter={filter || 'all'}
                 initialSearch={q || ''}
                 shopId={shopId}
+                pagination={{
+                    currentPage: page,
+                    totalPages: Math.ceil((count || 0) / limit),
+                    totalCount: count || 0,
+                    limit: limit
+                }}
             />
         </Suspense>
     );

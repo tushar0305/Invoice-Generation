@@ -33,11 +33,11 @@ const fetchDashboardDataCached = cache(async (shopId: string) => {
             .eq('shop_id', shopId)
             .order('created_at', { ascending: false })
             .limit(30),
-        
+
         // 2. Monthly Revenue
         supabase
             .from('invoices')
-            .select('grand_total')
+            .select('grand_total, created_at, customer:customers(name, phone)')
             .eq('shop_id', shopId)
             .eq('status', 'paid')
             .gte('created_at', startOfCurrentMonth.toISOString()),
@@ -54,7 +54,7 @@ const fetchDashboardDataCached = cache(async (shopId: string) => {
         // 4. Due Invoices
         supabase
             .from('invoices')
-            .select('*')
+            .select('id, invoice_number, grand_total, due_date, created_at, customer:customers(name, phone)')
             .eq('shop_id', shopId)
             .eq('status', 'due'),
 
@@ -112,10 +112,20 @@ const fetchDashboardDataCached = cache(async (shopId: string) => {
     const normalizedDue = dueInvoices.map((inv: any) => ({
         ...inv,
         grand_total: Number(inv.grand_total) || 0,
+        customer_name: inv.customer?.name || 'Walk-in',
+        customer_phone: inv.customer?.phone || '',
+    }));
+
+    const normalizedMonthInvoices = currentMonthInvoices.map((inv: any) => ({
+        ...inv,
+        grand_total: Number(inv.grand_total) || 0,
+        customer_name: inv.customer?.name || 'Walk-in',
+        customer_phone: inv.customer?.phone || '',
     }));
 
     return {
         recentInvoices: normalizedRecent,
+        currentMonthInvoices: normalizedMonthInvoices,
         totalPaidThisMonth,
         totalOrdersThisMonth,
         revenueMoM,
@@ -139,7 +149,7 @@ export async function getMarketRates() {
     if (marketRatesCache && (now - marketRatesCache.timestamp) < MARKET_RATES_TTL) {
         return marketRatesCache.data;
     }
-    
+
     // Mock Data for now - in production, this would fetch from an API
     const data = {
         gold_24k: 7250,
@@ -147,7 +157,7 @@ export async function getMarketRates() {
         silver: 78000,
         updated_at: new Date().toISOString(),
     };
-    
+
     marketRatesCache = { data, timestamp: now };
     return data;
 }
@@ -157,7 +167,7 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const supabase = await createClient();
 
     // Execute all queries in parallel
-    const [customerResult, productResult, invoiceResult] = await Promise.all([
+    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult] = await Promise.all([
         // 1. Total Customers
         supabase
             .from('customers')
@@ -174,18 +184,38 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
         supabase
             .from('invoices')
             .select('*', { count: 'exact', head: true })
+            .eq('shop_id', shopId),
+
+        // 4. Khata Balance (Total Due)
+        supabase
+            .from('invoices')
+            .select('grand_total')
             .eq('shop_id', shopId)
+            .eq('status', 'due'),
+
+        // 5. Total Loyalty Points
+        supabase
+            .from('customers')
+            .select('loyalty_points')
+            .eq('shop_id', shopId)
+            .not('loyalty_points', 'is', null)
     ]);
+
+    const khataBalance = (dueInvoicesResult.data || []).reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
+    const totalLoyaltyPoints = (loyaltyResult.data || []).reduce((sum, customer) => sum + (Number(customer.loyalty_points) || 0), 0);
+
+    // Calculate active loyalty members (customers with > 0 points)
+    const loyaltyMembers = (loyaltyResult.data || []).filter(c => (Number(c.loyalty_points) || 0) > 0).length;
 
     return {
         customerCount: customerResult.count || 0,
         productCount: productResult.count || 0,
         totalInvoices: invoiceResult.count || 0,
-        activeLoans: 0, // Mock
-        khataBalance: 0, // Mock
-        totalLoyaltyPoints: 0, // Mock
+        activeLoans: 0, // Keeping as 0 for now as 'loans' table not found
+        khataBalance: khataBalance,
+        totalLoyaltyPoints: totalLoyaltyPoints,
         lowStockItems: [], // Mock array
-        loyaltyMembers: 0, // Mock
+        loyaltyMembers: loyaltyMembers,
     };
 });
 

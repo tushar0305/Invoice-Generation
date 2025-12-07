@@ -27,8 +27,13 @@ import { supabase } from '@/supabase/client';
 import type { Invoice } from '@/lib/definitions';
 import type { LoyaltySettings } from '@/lib/loyalty-types';
 import { cn, formatCurrency } from '@/lib/utils';
-import { LiveInvoicePreview } from '@/components/invoice-preview';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
+import dynamic from 'next/dynamic';
+
+const LiveInvoicePreview = dynamic(() => import('@/components/invoice-preview').then(mod => mod.LiveInvoicePreview), {
+  loading: () => <div className="h-full w-full flex items-center justify-center bg-slate-50 min-h-[400px]">Loading preview...</div>,
+  ssr: false
+});
 
 // Sub-components
 import { CustomerDetailsCard } from '@/components/invoice/customer-details-card';

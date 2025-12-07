@@ -62,8 +62,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   }
 
   // Calculate metrics (previously only for desktop)
-  const uniqueCustomers = new Set(stats.recentInvoices.map((inv: any) => inv.customer_phone));
-  const totalUniqueCustomers = uniqueCustomers.size;
+  const totalUniqueCustomers = additionalStats.customerCount;
 
   const monthSparkline = generateSparkline(stats.recentInvoices, 30);
   const weekSparkline = generateSparkline(stats.recentInvoices, 7);
@@ -82,9 +81,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   const returningCustomers = Math.floor(totalUniqueCustomers * 0.3);
   const newCustomers = totalUniqueCustomers - returningCustomers;
 
-  // Top customer
+  // Top customer (using this month's data for accuracy)
   const customerSpending: Record<string, { name: string, total: number, count: number }> = {};
-  stats.recentInvoices.forEach((inv: any) => {
+  stats.currentMonthInvoices.forEach((inv: any) => {
     const id = inv.customer_phone || 'unknown';
     if (!customerSpending[id]) {
       customerSpending[id] = { name: inv.customer_name, total: 0, count: 0 };

@@ -25,18 +25,24 @@ export default async function InvoicesPage({
     searchParams,
 }: {
     params: Promise<{ shopId: string }>;
-    searchParams: Promise<{ status?: string; q?: string }>;
+    searchParams: Promise<{ status?: string; q?: string; page?: string; limit?: string }>;
 }) {
     const { shopId } = await params;
-    const { status, q } = await searchParams;
+    const { status, q, page: pageParam, limit: limitParam } = await searchParams;
     const supabase = await createClient();
 
-    // ✅ Server-side data fetching with filters
+    const page = Number(pageParam) || 1;
+    const limit = Number(limitParam) || 50;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // ✅ Server-side data fetching with filters and pagination
     let query = supabase
         .from('invoices')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('shop_id', shopId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
     // Apply server-side filters if provided
     if (status && status !== 'all') {
@@ -52,7 +58,7 @@ export default async function InvoicesPage({
         query = query.or(`customer_snapshot->>name.ilike.%${q}%,invoice_number.ilike.%${q}%`);
     }
 
-    const { data } = await query;
+    const { data, count } = await query;
 
     // Transform data to match Invoice type
     const invoices: Invoice[] = (data || []).map((r: any) => ({
@@ -82,6 +88,12 @@ export default async function InvoicesPage({
                 shopId={shopId}
                 initialStatus={status || 'all'}
                 initialSearch={q || ''}
+                pagination={{
+                    currentPage: page,
+                    totalPages: Math.ceil((count || 0) / limit),
+                    totalCount: count || 0,
+                    limit: limit
+                }}
             />
         </Suspense>
     );
