@@ -257,8 +257,8 @@ export function StockClient({
                                                         <TableRow key={item.id} className={`${!item.isActive ? 'opacity-50' : 'hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-white/5'}`}>
                                                             <TableCell className="font-medium pl-6 sm:pl-4 text-gray-900 dark:text-gray-200">
                                                                 <div className="flex flex-col">
-                                                                    <span className="truncate max-w-[120px] sm:max-w-none">{item.name}</span>
-                                                                    <span className="text-xs text-muted-foreground dark:text-gray-500 sm:hidden">{item.purity}</span>
+                                                                    <span className="truncate max-w-[120px] sm:max-w-[200px] md:max-w-xs">{item.name}</span>
+                                                                    <span className="text-xs text-muted-foreground dark:text-gray-500 sm:hidden truncate">{item.purity}</span>
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell className="hidden sm:table-cell text-muted-foreground dark:text-gray-400">{item.purity}</TableCell>
@@ -404,8 +404,8 @@ function StockCard({ item, onEdit, onDelete, canManage }: { item: StockItem; onE
                                 {item.quantity === 0 && <div className="text-[10px] bg-red-500/20 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full font-medium border border-red-500/20">Out</div>}
                                 {item.quantity > 0 && item.quantity < 3 && <div className="text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium border border-amber-500/20">Low</div>}
                             </div>
-                            <h3 className="text-lg font-bold text-foreground dark:text-white">{item.name}</h3>
-                            <div className="text-xs text-muted-foreground dark:text-gray-400">{item.category || 'Uncategorized'}</div>
+                            <h3 className="text-lg font-bold text-foreground dark:text-white truncate pr-2">{item.name}</h3>
+                            <div className="text-xs text-muted-foreground dark:text-gray-400 truncate">{item.category || 'Uncategorized'}</div>
                         </div>
                         <div className="text-right">
                             <div className="text-[10px] text-muted-foreground dark:text-gray-500 mb-0.5 uppercase tracking-wide">Base Price</div>

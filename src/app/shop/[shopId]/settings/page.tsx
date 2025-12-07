@@ -334,9 +334,10 @@ export default function SettingsPage() {
     <>
       <MotionWrapper className="max-w-5xl mx-auto space-y-8 p-6 pb-24">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="general">General Settings</TabsTrigger>
             <TabsTrigger value="loyalty">Loyalty Program</TabsTrigger>
+            <TabsTrigger value="billing">Billing & Plans</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general">
@@ -665,6 +666,35 @@ export default function SettingsPage() {
 
           <TabsContent value="loyalty">
             <LoyaltySettingsForm />
+          </TabsContent>
+
+          <TabsContent value="billing">
+            <Card className="border border-border shadow-sm">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500">
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-lg">Subscription & Billing</CardTitle>
+                </div>
+                <CardDescription>
+                  Manage your subscription plan, view invoices, and update payment methods.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                  <h4 className="font-semibold mb-2">Current Plan</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Upgrade to Pro to unlock unlimited invoices, advanced analytics, and priority support.
+                  </p>
+                  <Button asChild className="w-full sm:w-auto">
+                    <a href={`/shop/${activeShop?.id}/settings/billing`}>
+                      Manage Subscription <Store className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

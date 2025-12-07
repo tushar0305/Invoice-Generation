@@ -111,7 +111,7 @@ export function InvoicesClient({
 
         startDeleteTransition(async () => {
             try {
-                const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete).eq('user_id', user?.uid || '');
+                const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete);
                 if (error) throw error;
 
                 // Optimistic UI update
@@ -154,16 +154,43 @@ export function InvoicesClient({
             const currentStatus = invoiceToChangeStatus.currentStatus;
             const newStatus = currentStatus === 'paid' ? 'due' : 'paid';
 
-            const { error } = await supabase
-                .from('invoices')
-                .update({ status: newStatus })
-                .eq('id', invoiceToChangeStatus.id)
-                .eq('user_id', user?.uid || '');
+            // Server Action for Status Update + Loyalty Sync
+            const { updateInvoiceStatusAction } = await import('@/app/actions/invoice-actions');
 
-            if (error) throw error;
+            // Wrap in transition to support optimistic updates
+            startDeleteTransition(async () => {
+                const result = await updateInvoiceStatusAction(invoiceToChangeStatus.id, shopId, newStatus as 'paid' | 'due');
+                if (!result.success) {
+                    toast({ variant: 'destructive', title: 'Error', description: result.error });
+                    // Revert optimistic update if failed (optional, usually page refresh handles it)
+                    // Reverting effectively means re-fetching or triggering a reload
+                    router.refresh();
+                }
+            });
 
-            // Optimistic Update
-            addOptimisticInvoice({ type: 'UPDATE_STATUS', payload: { id: invoiceToChangeStatus.id, status: newStatus } });
+            // Optimistic Update MUST be synchronous or inside the transition, but we can call it here separately first?
+            // "An optimistic state update occurred outside a transition or action"
+            // It MUST be inside the transition callback or triggered by an action.
+            // Since we use `startDeleteTransition` (via useTransition), we can put it there.
+
+            // Wait, `addOptimisticInvoice` should be called INSIDE `startDeleteTransition` callback?
+            // Actually, useOptimistic doesn't NEED startTransition if run in an action, but here we are in a client event handler calling a server action.
+            // The correct way is:
+            startDeleteTransition(() => {
+                addOptimisticInvoice({ type: 'UPDATE_STATUS', payload: { id: invoiceToChangeStatus.id, status: newStatus } });
+            });
+
+            // We can also fire the async action, but don't await it INSIDE the synchronous startTransition callback.
+            // But we want the pending state...
+
+            // Let's adhere to standard:
+            /*
+            startTransition(() => {
+                addOptimisticInvoice(...);
+                action().then(...);
+            })
+            */
+
 
             // Server re-fetch
             router.refresh();
@@ -314,7 +341,7 @@ export function InvoicesClient({
         startDeleteTransition(async () => {
             try {
                 const idsToDelete = Array.from(selectedInvoices);
-                const { error } = await supabase.from('invoices').delete().in('id', idsToDelete).eq('user_id', user?.uid || '');
+                const { error } = await supabase.from('invoices').delete().in('id', idsToDelete);
                 if (error) throw error;
 
 

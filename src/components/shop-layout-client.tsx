@@ -49,6 +49,7 @@ import {
     Store,
     Search,
     Bell,
+    CreditCard,
 } from 'lucide-react';
 import { ShopSwitcher } from '@/components/shop-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -206,6 +207,7 @@ function ShopLayoutInner({
             title: 'Settings',
             items: [
                 { icon: Palette, label: 'Templates', href: `/shop/${shopId}/templates`, permission: 'canEditSettings' },
+                { icon: CreditCard, label: 'Billing & Plans', href: `/shop/${shopId}/settings/billing` },
                 { icon: Settings, label: 'Settings', href: `/shop/${shopId}/settings`, permission: 'canEditSettings' },
             ],
         },

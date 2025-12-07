@@ -121,23 +121,35 @@ export function StaffClient({
         loadProfileData(member.user_id);
     };
 
-    const handleInviteStaff = async () => {
-        if (!email) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please enter an email' });
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+
+    const handleCreateStaff = async () => {
+        if (!email || !password) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields' });
+            return;
+        }
+
+        if (password.length < 6) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Password must be at least 6 characters' });
             return;
         }
 
         startTransition(async () => {
-            const result = await inviteStaffAction({
+            // We use createStaffAction directly now
+            const { createStaffAction } = await import('@/app/actions/staff-actions');
+            const result = await createStaffAction({
                 email,
+                password,
                 role,
                 shopId,
             });
 
             if (result.success) {
-                toast({ title: 'Success', description: 'Invitation sent successfully' });
+                toast({ title: 'Success', description: 'Staff member created successfully' });
                 setIsCreateOpen(false);
                 setEmail('');
+                setPassword('');
                 router.refresh();
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.error });
@@ -230,15 +242,34 @@ export function StaffClient({
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
-                            <DialogTitle>Invite Staff Member</DialogTitle>
+                            <DialogTitle>Add New Staff Member</DialogTitle>
                             <DialogDescription>
-                                Send an email invitation to join your shop.
+                                Create an account for your staff member. They can use these credentials to login.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="email">Email Address</Label>
-                                <Input id="email" type="email" placeholder="john@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="staff@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="password">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="text"
+                                    placeholder="Set a password (min 6 chars)"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    You set this password for them.
+                                </p>
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="role">Role</Label>
@@ -255,9 +286,9 @@ export function StaffClient({
                         </div>
                         <div className="flex justify-end gap-3">
                             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                            <Button onClick={handleInviteStaff} disabled={isPending}>
+                            <Button onClick={handleCreateStaff} disabled={isPending}>
                                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Send Invite
+                                Create Account
                             </Button>
                         </div>
                     </DialogContent>

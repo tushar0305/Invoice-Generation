@@ -158,7 +158,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                 </div>
                                 <div>
                                     <p className="text-xs md:text-sm font-medium text-muted-foreground">Top Customer</p>
-                                    <h3 className="text-lg md:text-2xl font-bold text-foreground">{topCustomer[0]}</h3>
+                                    <h3 className="text-lg md:text-2xl font-bold text-foreground truncate max-w-[200px] md:max-w-[300px]">{topCustomer[0]}</h3>
                                     <p className="text-xs md:text-sm text-primary font-medium">
                                         {formatCurrency(topCustomer[1].totalPurchase)} Lifetime Spend
                                     </p>
@@ -310,7 +310,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                                                 {getInitials(name)}
                                                             </AvatarFallback>
                                                         </Avatar>
-                                                        <span className="font-medium">{name}</span>
+                                                        <span className="font-medium truncate max-w-[180px] md:max-w-[250px]">{name}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">

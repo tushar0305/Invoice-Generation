@@ -48,6 +48,7 @@ export function CatalogueSetupWizard({ shopId, onComplete, initialData }: SetupW
             primary_color: initialData?.primary_color || '#D4AF37',
             contact_phone: initialData?.contact_phone || '',
             is_active: true,
+            template_id: initialData?.template_id || 'basic',
         }
     });
 
@@ -146,6 +147,33 @@ export function CatalogueSetupWizard({ shopId, onComplete, initialData }: SetupW
                     {(step === 2 || isEditMode) && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                             {isEditMode && <h3 className="font-semibold text-lg border-b pb-2">Branding & Appearance</h3>}
+
+                            {/* Template Selection */}
+                            <div>
+                                <Label className="text-base">Choose Template</Label>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                                    {['basic', 'modern', 'premium'].map((t) => (
+                                        <div
+                                            key={t}
+                                            onClick={() => form.setValue('template_id', t)}
+                                            className={`cursor-pointer border-2 rounded-xl p-4 transition-all hover:border-blue-300 ${form.watch('template_id') === t ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'}`}
+                                        >
+                                            <div className="aspect-[4/5] bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-xs text-gray-400 uppercase tracking-widest overflow-hidden relative">
+                                                {/* Mini Preview Placeholder */}
+                                                {t === 'basic' && <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200" />}
+                                                {t === 'modern' && <div className="absolute inset-0 bg-white border-t-4 border-gray-900" />}
+                                                {t === 'premium' && <div className="absolute inset-0 bg-gray-900 text-white flex items-center justify-center">Dark</div>}
+                                                <span className="relative z-10">{t}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium capitalize">{t}</span>
+                                                {form.watch('template_id') === t && <Check className="h-4 w-4 text-blue-600" />}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div>
                                 <Label>Brand Color</Label>
                                 <div className="flex flex-wrap gap-3 mt-3">
@@ -169,8 +197,8 @@ export function CatalogueSetupWizard({ shopId, onComplete, initialData }: SetupW
                                     {/* Custom Color Picker */}
                                     <div className="relative group">
                                         <div className={`h-10 w-10 rounded-full border-2 flex items-center justify-center bg-white transition-all ${!COLORS.some(c => c.value === form.watch('primary_color'))
-                                                ? 'border-gray-900 scale-110'
-                                                : 'border-gray-200'
+                                            ? 'border-gray-900 scale-110'
+                                            : 'border-gray-200'
                                             }`}>
                                             <Palette className="h-5 w-5 text-gray-500" />
                                         </div>

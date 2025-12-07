@@ -16,6 +16,7 @@ export interface CatalogueSettings {
     is_active: boolean;
     logo_url: string | null;
     banner_url: string | null;
+    template_id: string; // 'basic' | 'modern' | 'premium'
 }
 
 // Validation Schema
@@ -28,6 +29,7 @@ const SettingsSchema = z.object({
     primary_color: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid color code'),
     contact_phone: z.string().min(10, 'Valid phone number required'),
     is_active: z.boolean(),
+    template_id: z.enum(['basic', 'modern', 'premium']).default('basic'),
 });
 
 // Check if slug is available

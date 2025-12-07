@@ -76,7 +76,7 @@ export function KPICard({
                     </div>
 
                     <div className="relative z-10 flex flex-col justify-between min-h-[60px]">
-                        <div className="text-2xl font-bold tracking-tight mb-2 text-foreground">
+                        <div className="text-2xl font-bold tracking-tight mb-2 text-foreground truncate" title={value}>
                             {value}
                         </div>
 

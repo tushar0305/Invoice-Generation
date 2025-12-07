@@ -15,6 +15,7 @@ import { Eye, ArrowRight, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { RecentInvoicesEmptyState, PendingActionsEmptyState } from '@/components/dashboard/empty-states';
 
 import { CompactStatsRow } from '@/components/dashboard/compact-stats-row';
 import { LowStockWidget } from '@/components/dashboard/low-stock-widget';
@@ -67,7 +68,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   const monthSparkline = generateSparkline(stats.recentInvoices, 30);
   const weekSparkline = generateSparkline(stats.recentInvoices, 7);
 
-  const lastMonthRevenue = stats.totalPaidThisMonth / (1 + (stats.revenueMoM / 100));
+  // Use direct value from server action instead of reverse calculation
+  const lastMonthRevenue = stats.totalPaidLastMonth;
   const changeAmount = stats.totalPaidThisMonth - lastMonthRevenue;
 
   // Calculate pending payments
@@ -229,7 +231,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
       {/* Activity Cards - 2 columns (stack on mobile) */}
       <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
         {/* Recent Invoices */}
-        {/* Recent Invoices */}
         <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
           <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-gray-100 dark:border-white/5">
             <CardTitle className="text-sm font-semibold text-foreground">Recent Activity</CardTitle>
@@ -247,15 +248,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-muted-foreground">
-                <FileText className="h-6 w-6 mx-auto mb-2 opacity-30" />
-                <p className="text-xs font-medium">No invoices yet</p>
-              </div>
+              <RecentInvoicesEmptyState />
             )}
           </CardContent>
         </Card>
 
-        {/* Pending Actions */}
         {/* Pending Actions */}
         <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
           <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-gray-100 dark:border-white/5">
@@ -272,10 +269,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-muted-foreground">
-                <Eye className="h-6 w-6 mx-auto mb-2 opacity-30" />
-                <p className="text-xs font-medium">All caught up!</p>
-              </div>
+              <PendingActionsEmptyState />
             )}
           </CardContent>
         </Card>

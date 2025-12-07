@@ -158,18 +158,22 @@
   .dark {
     /* ==================== DEEP PREMIUM DARK MODE (Gold/Black Theme) ==================== */
     /* Deep Warm Black Base */
-    --background: 20 14% 4%; /* #0c0a09 - Stone 950ish */
-    --foreground: 60 9% 98%; /* Soft White */
+    --background: 20 14% 4%;
+    /* #0c0a09 - Stone 950ish */
+    --foreground: 60 9% 98%;
+    /* Soft White */
 
     /* Glassy Cards with Warmth */
-    --card: 24 10% 7%; /* Deep Stone */
+    --card: 24 10% 7%;
+    /* Deep Stone */
     --card-foreground: 60 9% 98%;
 
     --popover: 24 10% 7%;
     --popover-foreground: 60 9% 98%;
 
     /* Gold Accents */
-    --primary: 42 75% 55%; /* Gold */
+    --primary: 42 75% 55%;
+    /* Gold */
     --primary-foreground: 20 14% 4%;
 
     /* Secondary - Muted Warm */
@@ -185,13 +189,16 @@
     --accent-foreground: 20 14% 4%;
 
     /* Destructive - Neon Red */
-    --destructive: 0 100% 61%; /* #FF3B30 */
+    --destructive: 0 100% 61%;
+    /* #FF3B30 */
     --destructive-foreground: 0 0% 100%;
 
     /* Translucent Borders */
-    --border: 240 4% 16%; /* Subtle Dark Border */
+    --border: 240 4% 16%;
+    /* Subtle Dark Border */
     --input: 240 4% 16%;
-    --ring: 200 100% 55%; /* Electric Blue Ring */
+    --ring: 200 100% 55%;
+    /* Electric Blue Ring */
 
     /* Sidebar - Glassy Frosted */
     --sidebar-background: 240 10% 4%;
@@ -207,13 +214,18 @@
     --glow-primary: 200 100% 55%;
     --glow-secondary: 157 100% 50%;
     --glow-tertiary: 33 100% 68%;
-    
+
     /* Neon Chart Colors */
-    --chart-1: 200 100% 55%; /* Electric Blue */
-    --chart-2: 157 100% 50%; /* Neon Green */
-    --chart-3: 33 100% 68%; /* Warm Amber */
-    --chart-4: 265 100% 65%; /* Purple Glow */
-    --chart-5: 0 100% 61%; /* Neon Red */
+    --chart-1: 200 100% 55%;
+    /* Electric Blue */
+    --chart-2: 157 100% 50%;
+    /* Neon Green */
+    --chart-3: 33 100% 68%;
+    /* Warm Amber */
+    --chart-4: 265 100% 65%;
+    /* Purple Glow */
+    --chart-5: 0 100% 61%;
+    /* Neon Red */
   }
 
   /* Global focus-visible improvements */
@@ -1809,12 +1821,14 @@ body {
     gap: 20px;
   }
 }
+
 @layer utilities {
+
   /* ==================== ETHERIS GLOW UTILITIES ==================== */
   .glow-primary {
     box-shadow: 0 0 20px -5px hsl(var(--glow-primary) / 0.5);
   }
-  
+
   .glow-secondary {
     box-shadow: 0 0 20px -5px hsl(var(--glow-secondary) / 0.5);
   }
@@ -1832,7 +1846,7 @@ body {
   .glass-edge {
     box-shadow: inset 0 1px 0 0 hsl(0 0% 100% / 0.1);
   }
-  
+
   .bottom-shader {
     background: linear-gradient(to top, hsl(var(--primary) / 0.1) 0%, transparent 100%);
   }

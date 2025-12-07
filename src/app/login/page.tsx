@@ -383,7 +383,7 @@ export default function LoginPage() {
                     control={form.control}
                     name="email"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem id="login-email">
                         <FormLabel className="text-slate-700 font-medium">Email Address</FormLabel>
                         <FormControl>
                           <div className="relative group">
@@ -404,7 +404,7 @@ export default function LoginPage() {
                     control={form.control}
                     name="password"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem id="login-password">
                         <FormLabel className="text-slate-700 font-medium">Password</FormLabel>
                         <FormControl>
                           <div className="relative group">

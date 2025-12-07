@@ -9,6 +9,8 @@ import { Customer } from '@/lib/definitions';
  * These run on the server and provide automatic serialization and revalidation
  */
 
+import { checkSubscriptionLimit } from '@/lib/subscription-utils';
+
 export async function createInvoiceAction(formData: {
     shopId: string;
     userId: string;
@@ -39,7 +41,14 @@ export async function createInvoiceAction(formData: {
         making: number;
     }>;
 }) {
+    // 0. Check Limits
+    const limitCheck = await checkSubscriptionLimit(formData.shopId, 'invoices');
+    if (!limitCheck.allowed) {
+        return { success: false, error: limitCheck.message };
+    }
+
     const supabase = await createClient();
+
     try {
         // ===== STEP 1: Get or Create Customer FIRST =====
         let customerId: string | null = null;
@@ -76,7 +85,7 @@ export async function createInvoiceAction(formData: {
                     .eq('shop_id', formData.shopId)
                     .eq('phone', formData.customerPhone)
                     .maybeSingle();
-                
+
                 if (existing) {
                     customerId = existing.id;
                     // Update details
@@ -88,7 +97,7 @@ export async function createInvoiceAction(formData: {
                     }).eq('id', customerId);
                 } else {
                     // Try insert if upsert failed (e.g. constraint issue)
-                     const { data: newC, error: insertError } = await supabase.from('customers').insert({
+                    const { data: newC, error: insertError } = await supabase.from('customers').insert({
                         shop_id: formData.shopId,
                         phone: formData.customerPhone,
                         name: formData.customerName,
@@ -271,7 +280,7 @@ export async function updateInvoiceAction(
 
             // Prepare operations
             const toDelete = [...existingIds].filter((id) => !newIds.has(id));
-            
+
             const itemsToUpsert = formData.items.map((item) => {
                 const itemData: any = {
                     invoice_id: invoiceId,
@@ -342,5 +351,78 @@ export async function deleteInvoiceAction(invoiceId: string, shopId: string) {
     } catch (error: any) {
         console.error('deleteInvoiceAction error:', error);
         return { success: false, error: error.message || 'Failed to delete invoice' };
+    }
+}
+
+export async function updateInvoiceStatusAction(invoiceId: string, shopId: string, newStatus: 'paid' | 'due') {
+    const supabase = await createClient();
+    try {
+        // 1. Fetch Invoice to get details + loyalty points earned (assuming column exists or we calc)
+        // We need customer_id and current status (though we have newStatus)
+        const { data: invoice, error: fetchError } = await supabase
+            .from('invoices')
+            .select('id, customer_id, status, grand_total, loyalty_points_earned')
+            .eq('id', invoiceId)
+            .single();
+
+        if (fetchError || !invoice) throw new Error('Invoice not found');
+
+        const pointsEarned = invoice.loyalty_points_earned || 0;
+        const customerId = invoice.customer_id;
+
+        // 2. Loyalty Logic
+        // Only adjust if there are points and a customer
+        if (customerId && pointsEarned > 0) {
+            if (newStatus === 'due' && invoice.status === 'paid') {
+                // Changing Paid -> Due: Deduct points
+                // We use RPC or raw SQL to decrement safely
+                const { error: deductError } = await supabase.rpc('decrement_loyalty_points', {
+                    p_customer_id: customerId,
+                    p_points: pointsEarned
+                });
+
+                // Fallback to manual update if RPC missing (less safe but works for now)
+                if (deductError) {
+                    const { data: cust } = await supabase.from('customers').select('loyalty_points').eq('id', customerId).single();
+                    if (cust) {
+                        await supabase.from('customers')
+                            .update({ loyalty_points: Math.max(0, (cust.loyalty_points || 0) - pointsEarned) })
+                            .eq('id', customerId);
+                    }
+                }
+
+            } else if (newStatus === 'paid' && invoice.status === 'due') {
+                // Changing Due -> Paid: Add points
+                const { error: addError } = await supabase.rpc('increment_loyalty_points', {
+                    p_customer_id: customerId,
+                    p_points: pointsEarned
+                });
+                if (addError) {
+                    const { data: cust } = await supabase.from('customers').select('loyalty_points').eq('id', customerId).single();
+                    if (cust) {
+                        await supabase.from('customers')
+                            .update({ loyalty_points: (cust.loyalty_points || 0) + pointsEarned })
+                            .eq('id', customerId);
+                    }
+                }
+            }
+        }
+
+        // 3. Update Status
+        const { error: updateError } = await supabase
+            .from('invoices')
+            .update({ status: newStatus })
+            .eq('id', invoiceId);
+
+        if (updateError) throw updateError;
+
+        revalidatePath(`/shop/${shopId}/invoices`);
+        revalidatePath(`/shop/${shopId}/dashboard`);
+        revalidatePath(`/shop/${shopId}/insights`);
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('updateInvoiceStatusAction error:', error);
+        return { success: false, error: error.message || 'Failed to update status' };
     }
 }

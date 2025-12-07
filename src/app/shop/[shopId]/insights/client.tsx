@@ -55,6 +55,14 @@ interface InsightsClientProps {
     shopId: string;
 }
 
+// Helper for Y-Axis validation (Indian System)
+const formatCompactNumber = (val: number) => {
+    if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
+    if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+    if (val >= 1000) return `₹${(val / 1000).toFixed(0)}k`;
+    return `₹${val}`;
+};
+
 export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClientProps) {
     const [timeRange, setTimeRange] = useState('30d');
     const [visibleMetrics, setVisibleMetrics] = useState<Record<string, boolean>>({
@@ -400,8 +408,8 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                                                         fontSize={12}
                                                         tickLine={false}
                                                         axisLine={false}
-                                                        tickFormatter={(value) => `₹${value / 1000}k`}
-                                                        width={40}
+                                                        tickFormatter={formatCompactNumber}
+                                                        width={45}
                                                     />
                                                     <Tooltip
                                                         contentStyle={{
@@ -412,6 +420,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                                                             color: '#fff'
                                                         }}
                                                         itemStyle={{ color: '#fff' }}
+                                                        wrapperStyle={{ zIndex: 100 }}
                                                     />
                                                     <Area
                                                         type="monotone"
@@ -464,6 +473,7 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                                                             border: '1px solid rgba(255,255,255,0.1)',
                                                             borderRadius: '8px'
                                                         }}
+                                                        wrapperStyle={{ zIndex: 100 }}
                                                     />
                                                 </PieChart>
                                             </ResponsiveContainer>

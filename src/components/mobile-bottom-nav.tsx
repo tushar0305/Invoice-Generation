@@ -17,7 +17,8 @@ import {
     Megaphone,
     X,
     Store,
-    Plus
+    Plus,
+    CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +65,7 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
         { href: `/shop/${shopId}/loans`, label: 'Loans', icon: Banknote },
         { href: `/shop/${shopId}/khata`, label: 'Khata Book', icon: BookOpen },
         { href: `/shop/${shopId}/loyalty`, label: 'Loyalty', icon: Crown },
+        { href: `/shop/${shopId}/settings/billing`, label: 'Billing & Plans', icon: CreditCard },
         { href: `/shop/${shopId}/settings`, label: 'Settings', icon: Settings },
     ];
 

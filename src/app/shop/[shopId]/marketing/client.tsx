@@ -390,9 +390,9 @@ function TemplateCard({ template, idx }: { template: WhatsAppTemplate, idx: numb
             </div>
 
             {/* Chat Body Mock */}
-            <div className="flex-1 bg-[#E5DDD5] dark:bg-slate-800 p-4 relative bg-opacity-50">
+            <div className="flex-1 bg-[#E5DDD5] dark:bg-slate-800 p-4 relative bg-opacity-50 overflow-hidden">
                 <div className="bg-white dark:bg-slate-700 p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-sm max-w-[90%] relative">
-                    <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed font-sans">{template.body}</p>
+                    <p className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed font-sans line-clamp-4">{template.body}</p>
                     <div className="mt-2 flex justify-end">
                         <span className="text-[10px] text-slate-400">12:00 PM</span>
                     </div>

@@ -51,7 +51,22 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
   // Common Data Preparation
   const shopName = settings?.shopName || 'Jewellery Shop';
   const addressLines = doc.splitTextToSize(settings?.address || '', 80);
-  const invoiceDate = format(new Date(invoice.invoiceDate), 'dd MMM, yyyy');
+
+  // Safe Date Parsing
+  let invoiceDate = '';
+  try {
+    const d = invoice.invoiceDate ? new Date(invoice.invoiceDate) : new Date();
+    // Check if valid date
+    if (isNaN(d.getTime())) {
+      throw new Error('Invalid date');
+    }
+    invoiceDate = format(d, 'dd MMM, yyyy');
+  } catch (e) {
+    console.error('Date formatting error, falling back to simple string', e);
+    // Fallback that is guaranteed to work
+    const now = new Date();
+    invoiceDate = `${now.getDate()} ${now.toLocaleString('default', { month: 'short' })}, ${now.getFullYear()}`;
+  }
 
   // Calculations
   const subtotal = items.reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);

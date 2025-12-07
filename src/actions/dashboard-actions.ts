@@ -127,6 +127,7 @@ const fetchDashboardDataCached = cache(async (shopId: string) => {
         recentInvoices: normalizedRecent,
         currentMonthInvoices: normalizedMonthInvoices,
         totalPaidThisMonth,
+        totalPaidLastMonth, // Added for accurate comparisons
         totalOrdersThisMonth,
         revenueMoM,
         dueInvoices: normalizedDue,
@@ -150,7 +151,31 @@ export async function getMarketRates() {
         return marketRatesCache.data;
     }
 
-    // Mock Data for now - in production, this would fetch from an API
+    // Try to fetch from DB first
+    try {
+        const supabase = await createClient();
+        const { data: dbData, error } = await supabase
+            .from('market_rates')
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (dbData && !error) {
+            const rates = {
+                gold_24k: Number(dbData.gold_24k),
+                gold_22k: Number(dbData.gold_22k),
+                silver: Number(dbData.silver),
+                updated_at: dbData.updated_at,
+            };
+            marketRatesCache = { data: rates, timestamp: now };
+            return rates;
+        }
+    } catch (err) {
+        console.warn('Failed to fetch market rates from DB, falling back to mock', err);
+    }
+
+    // Mock Data Fallback
     const data = {
         gold_24k: 7250,
         gold_22k: 6800,
@@ -167,7 +192,7 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const supabase = await createClient();
 
     // Execute all queries in parallel
-    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult] = await Promise.all([
+    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult, loansResult] = await Promise.all([
         // 1. Total Customers
         supabase
             .from('customers')
@@ -198,7 +223,14 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
             .from('customers')
             .select('loyalty_points')
             .eq('shop_id', shopId)
-            .not('loyalty_points', 'is', null)
+            .not('loyalty_points', 'is', null),
+
+        // 6. Active Loans (New)
+        supabase
+            .from('loans')
+            .select('*', { count: 'exact', head: true })
+            .eq('shop_id', shopId)
+            .eq('status', 'active')
     ]);
 
     const khataBalance = (dueInvoicesResult.data || []).reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
@@ -211,7 +243,7 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
         customerCount: customerResult.count || 0,
         productCount: productResult.count || 0,
         totalInvoices: invoiceResult.count || 0,
-        activeLoans: 0, // Keeping as 0 for now as 'loans' table not found
+        activeLoans: loansResult.count || 0,
         khataBalance: khataBalance,
         totalLoyaltyPoints: totalLoyaltyPoints,
         lowStockItems: [], // Mock array
