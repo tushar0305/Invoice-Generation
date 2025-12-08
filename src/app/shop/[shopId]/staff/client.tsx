@@ -163,21 +163,21 @@ export function StaffClient({
     }
 
     return (
-        <MotionWrapper className="space-y-6 p-6 pb-24 md:pb-6 max-w-[1800px] mx-auto">
+        <MotionWrapper className="space-y-6 p-4 md:p-6 pb-24 md:pb-6 max-w-[1800px] mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight font-heading text-foreground">Staff Management</h1>
-                    <p className="text-muted-foreground mt-1">Manage your team members and their permissions.</p>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-heading text-foreground">Staff Management</h1>
+                    <p className="text-sm md:text-base text-muted-foreground mt-1">Manage your team members and their permissions.</p>
                 </div>
 
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                     <DialogTrigger asChild>
-                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md">
+                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md w-full md:w-auto">
                             <UserPlus className="mr-2 h-4 w-4" />
                             Create Staff Account
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
+                    <DialogContent className="max-w-[95vw] sm:max-w-[425px]">
                         <DialogHeader>
                             <DialogTitle>Add New Staff Member</DialogTitle>
                             <DialogDescription>
@@ -312,7 +312,7 @@ export function StaffClient({
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
                                         <div className="text-muted-foreground mb-1">Joined</div>

@@ -7,6 +7,7 @@ import { QueryProvider } from '@/components/query-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AppListeners } from '@/components/app-listeners';
 import { InstallPrompt } from '@/components/install-prompt';
+import { UpdatePrompt } from '@/components/update-prompt';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://swarnavyapar.in'),
@@ -107,6 +108,7 @@ export default function RootLayout({
                 <AppListeners />
                 {children}
                 <InstallPrompt />
+                <UpdatePrompt />
                 {/* Service worker registration */}
                 {/* Service worker registration */}
                 <script dangerouslySetInnerHTML={{

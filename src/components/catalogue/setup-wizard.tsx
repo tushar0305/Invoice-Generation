@@ -2,267 +2,360 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { motion } from 'framer-motion';
-import {
-    Store,
-    Globe,
-    Palette,
-    Check,
-    ChevronRight,
-    Loader2,
-    Layout,
-    ArrowRight
-} from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, ArrowRight, Check, Smartphone, Globe, Palette, ChevronLeft, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { saveCatalogueSettings } from '@/actions/catalogue-actions';
+import { cn } from '@/lib/utils';
 
-interface SetupWizardProps {
+// Import Templates for Preview
+import { TemplateBasic } from './templates/template-basic';
+import { TemplateModern } from './templates/template-modern';
+import { TemplatePremium } from './templates/template-premium';
+
+// Dummy Data for Preview
+const PREVIEW_DATA = {
+    shop: {
+        shop_id: 'preview',
+        shop_display_name: 'Luxe Jewellery',
+        about_text: 'Crafting elegance since 1990. We specialize in diamond and gold jewellery.',
+        contact_address: '123 Gold Market, Mumbai',
+        contact_phone: '+919876543210',
+    },
+    products: [
+        {
+            id: '1',
+            name: 'Diamond Necklace',
+            price: 145000,
+            purity: '22K',
+            weight_g: 24.5,
+            category_id: 'necklaces',
+            images: []
+        },
+        {
+            id: '2',
+            name: 'Gold Bangles Set',
+            price: 85000,
+            purity: '22K',
+            weight_g: 18.2,
+            category_id: 'bangles',
+            images: []
+        },
+        {
+            id: '3',
+            name: 'Solitaire Ring',
+            price: 45000,
+            purity: '18K',
+            weight_g: 4.2,
+            category_id: 'rings',
+            images: []
+        }
+    ],
+    categories: [
+        { id: 'necklaces', name: 'Necklaces' },
+        { id: 'bangles', name: 'Bangles' },
+        { id: 'rings', name: 'Rings' }
+    ]
+};
+
+const formSchema = z.object({
+    shop_display_name: z.string().min(3, "Shop name must be at least 3 characters"),
+    public_slug: z.string().min(3, "URL slug must be at least 3 characters").regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens allowed"),
+    about_text: z.string().optional(),
+    template_id: z.enum(['basic', 'modern', 'premium']),
+    contact_phone: z.string().min(10, "Valid phone number required"),
+    primary_color: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid color code').default('#D4AF37'),
+    is_active: z.boolean().default(true),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+interface Props {
     shopId: string;
     onComplete: () => void;
-    initialData?: any;
+    initialData?: Partial<FormValues>;
 }
 
-const COLORS = [
-    { name: 'Gold', value: '#D4AF37' },
-    { name: 'Classic Blue', value: '#1e40af' },
-    { name: 'Emerald', value: '#059669' },
-    { name: 'Ruby', value: '#dc2626' },
-    { name: 'Black', value: '#000000' },
-];
-
-export function CatalogueSetupWizard({ shopId, onComplete, initialData }: SetupWizardProps) {
-    const [step, setStep] = useState(1);
-    const [isLoading, setIsLoading] = useState(false);
+export function CatalogueSetupWizard({ shopId, onComplete, initialData }: Props) {
     const { toast } = useToast();
+    const [step, setStep] = useState(1);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const form = useForm({
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
         defaultValues: {
-            public_slug: initialData?.public_slug || '',
             shop_display_name: initialData?.shop_display_name || '',
+            public_slug: initialData?.public_slug || '',
             about_text: initialData?.about_text || '',
-            primary_color: initialData?.primary_color || '#D4AF37',
+            template_id: (initialData?.template_id as any) || 'basic',
             contact_phone: initialData?.contact_phone || '',
-            is_active: true,
-            template_id: initialData?.template_id || 'basic',
+            primary_color: initialData?.primary_color || '#D4AF37',
+            is_active: true
         }
     });
 
-    const isEditMode = !!initialData;
+    const watchTemplate = form.watch('template_id');
 
-    const onSubmit = async (data: any) => {
-        setIsLoading(true);
+    const onSubmit = async (data: FormValues) => {
+        setIsSubmitting(true);
         try {
             const result = await saveCatalogueSettings(shopId, data);
             if (result.success) {
-                toast({
-                    title: 'Success!',
-                    description: isEditMode ? 'Settings updated.' : 'Your online catalogue is ready.',
-                });
+                toast({ title: 'Success!', description: 'Your store has been updated.' });
                 onComplete();
             } else {
-                toast({
-                    title: 'Error',
-                    description: result.error,
-                    variant: 'destructive',
-                });
+                toast({ title: 'Error', description: result.error, variant: 'destructive' });
             }
         } catch (error) {
             toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' });
         } finally {
-            setIsLoading(false);
+            setIsSubmitting(false);
         }
     };
 
     const nextStep = async () => {
-        let fieldsToValidate: any[] = [];
-        if (step === 1) fieldsToValidate = ['public_slug', 'shop_display_name'];
-        if (step === 2) fieldsToValidate = ['primary_color', 'about_text'];
+        // Validate current step fields
+        let fieldsToValidate: (keyof FormValues)[] = [];
+        if (step === 1) fieldsToValidate = ['shop_display_name', 'public_slug'];
+        if (step === 2) fieldsToValidate = ['template_id'];
 
         const isValid = await form.trigger(fieldsToValidate);
         if (isValid) setStep(s => s + 1);
     };
 
+    const prevStep = () => setStep(s => s - 1);
+
     return (
-        <Card className="max-w-2xl mx-auto border-gray-200 dark:border-gray-800 shadow-xl">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Store className="h-6 w-6 text-blue-600" />
-                    {isEditMode ? 'Catalogue Settings' : 'Setup Online Catalogue'}
-                </CardTitle>
-                {!isEditMode && (
-                    <CardDescription>
-                        Step {step} of 3: {step === 1 ? 'Basic Info' : step === 2 ? 'Branding' : 'Review'}
-                    </CardDescription>
-                )}
-            </CardHeader>
-            <CardContent>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <Card className="border-none shadow-none bg-transparent">
+            <CardContent className="p-0">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
-                    {/* Basic Info Section */}
-                    {(step === 1 || isEditMode) && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                            {isEditMode && <h3 className="font-semibold text-lg border-b pb-2">Basic Information</h3>}
-                            <div>
-                                <Label>Catalogue URL</Label>
-                                <div className="flex mt-1.5">
-                                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                                        swarnavyapar.com/store/
-                                    </span>
-                                    <Input
-                                        {...form.register('public_slug')}
-                                        placeholder="my-shop-name"
-                                        className="rounded-l-none"
-                                    />
+                    {/* Step Visualization for Mobile */}
+                    <div className="flex items-center justify-between mb-8 px-2 max-w-sm mx-auto w-full md:max-w-none md:justify-center md:gap-8">
+                        {[
+                            { id: 1, label: 'Identity', icon: Store },
+                            { id: 2, label: 'Design', icon: Palette },
+                            { id: 3, label: 'Launch', icon: Globe }
+                        ].map((s, idx) => (
+                            <div key={s.id} className="flex items-center">
+                                <div className={cn(
+                                    "flex flex-col items-center gap-2 transition-colors",
+                                    step >= s.id ? "text-primary" : "text-muted-foreground/50"
+                                )}>
+                                    <div className={cn(
+                                        "h-8 w-8 rounded-full flex items-center justify-center border-2 text-xs font-bold transition-all",
+                                        step === s.id ? "border-primary bg-primary text-primary-foreground scale-110 shadow-glow" :
+                                            step > s.id ? "border-primary bg-primary text-primary-foreground" :
+                                                "border-muted-foreground/30 bg-background"
+                                    )}>
+                                        {step > s.id ? <Check className="h-4 w-4" /> : s.icon ? <s.icon className="h-4 w-4" /> : s.id}
+                                    </div>
+                                    <span className="text-[10px] font-medium uppercase tracking-wider">{s.label}</span>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">Unique link for your customers</p>
+                                {idx < 2 && (
+                                    <div className={cn(
+                                        "h-[2px] w-12 mx-2 mb-6 transition-colors",
+                                        step > s.id ? "bg-primary" : "bg-muted-foreground/20"
+                                    )} />
+                                )}
                             </div>
+                        ))}
+                    </div>
 
-                            <div>
-                                <Label>Shop Display Name</Label>
-                                <Input
-                                    {...form.register('shop_display_name')}
-                                    placeholder="e.g. Kohinoor Jewellers"
-                                    className="mt-1.5"
-                                />
-                            </div>
-
-                            <div>
-                                <Label>WhatsApp Number</Label>
-                                <Input
-                                    {...form.register('contact_phone')}
-                                    placeholder="+91 9876543210"
-                                    className="mt-1.5"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">Customers will message you on this number</p>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Branding Section */}
-                    {(step === 2 || isEditMode) && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                            {isEditMode && <h3 className="font-semibold text-lg border-b pb-2">Branding & Appearance</h3>}
-
-                            {/* Template Selection */}
-                            <div>
-                                <Label className="text-base">Choose Template</Label>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                                    {['basic', 'modern', 'premium'].map((t) => (
-                                        <div
-                                            key={t}
-                                            onClick={() => form.setValue('template_id', t)}
-                                            className={`cursor-pointer border-2 rounded-xl p-4 transition-all hover:border-blue-300 ${form.watch('template_id') === t ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'}`}
-                                        >
-                                            <div className="aspect-[4/5] bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-xs text-gray-400 uppercase tracking-widest overflow-hidden relative">
-                                                {/* Mini Preview Placeholder */}
-                                                {t === 'basic' && <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200" />}
-                                                {t === 'modern' && <div className="absolute inset-0 bg-white border-t-4 border-gray-900" />}
-                                                {t === 'premium' && <div className="absolute inset-0 bg-gray-900 text-white flex items-center justify-center">Dark</div>}
-                                                <span className="relative z-10">{t}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-medium capitalize">{t}</span>
-                                                {form.watch('template_id') === t && <Check className="h-4 w-4 text-blue-600" />}
-                                            </div>
-                                        </div>
-                                    ))}
+                    <AnimatePresence mode="wait">
+                        {step === 1 && (
+                            <motion.div
+                                key="step1"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-6 max-w-md mx-auto"
+                            >
+                                <div className="text-center mb-6">
+                                    <h2 className="text-xl font-bold">Store Identity</h2>
+                                    <p className="text-sm text-muted-foreground">Setup your store name and public link</p>
                                 </div>
-                            </div>
 
-                            <div>
-                                <Label>Brand Color</Label>
-                                <div className="flex flex-wrap gap-3 mt-3">
-                                    {COLORS.map((color) => (
-                                        <button
-                                            key={color.value}
-                                            type="button"
-                                            onClick={() => form.setValue('primary_color', color.value)}
-                                            className={`h-10 w-10 rounded-full border-2 flex items-center justify-center transition-all ${form.watch('primary_color') === color.value
-                                                ? 'border-gray-900 scale-110'
-                                                : 'border-transparent'
-                                                }`}
-                                            style={{ backgroundColor: color.value }}
-                                        >
-                                            {form.watch('primary_color') === color.value && (
-                                                <Check className="h-5 w-5 text-white drop-shadow-md" />
-                                            )}
-                                        </button>
-                                    ))}
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Shop Display Name</Label>
+                                        <Input {...form.register('shop_display_name')} placeholder="e.g. Luxe Jewellery" className="h-11" />
+                                        {form.formState.errors.shop_display_name && (
+                                            <p className="text-xs text-red-500">{form.formState.errors.shop_display_name.message}</p>
+                                        )}
+                                    </div>
 
-                                    {/* Custom Color Picker */}
-                                    <div className="relative group">
-                                        <div className={`h-10 w-10 rounded-full border-2 flex items-center justify-center bg-white transition-all ${!COLORS.some(c => c.value === form.watch('primary_color'))
-                                            ? 'border-gray-900 scale-110'
-                                            : 'border-gray-200'
-                                            }`}>
-                                            <Palette className="h-5 w-5 text-gray-500" />
+                                    <div className="space-y-2">
+                                        <Label>Public URL Slug</Label>
+                                        <div className="flex items-center">
+                                            <span className="bg-muted px-3 py-3 border border-r-0 rounded-l-md text-sm text-muted-foreground border-input">
+                                                swarnavyapar.in/store/
+                                            </span>
+                                            <Input {...form.register('public_slug')} className="rounded-l-none h-11" placeholder="luxe-jewellery" />
                                         </div>
-                                        <Input
-                                            type="color"
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                            onChange={(e) => form.setValue('primary_color', e.target.value)}
-                                            value={form.watch('primary_color')}
+                                        <p className="text-xs text-muted-foreground">This will be your website link.</p>
+                                        {form.formState.errors.public_slug && (
+                                            <p className="text-xs text-red-500">{form.formState.errors.public_slug.message}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>About Text</Label>
+                                        <Textarea
+                                            {...form.register('about_text')}
+                                            placeholder="Tell customers about your brand..."
+                                            className="min-h-[100px] resize-none"
                                         />
                                     </div>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Selected: <span className="font-mono">{form.watch('primary_color')}</span>
-                                </p>
-                            </div>
 
-                            <div>
-                                <Label>About Shop</Label>
-                                <Textarea
-                                    {...form.register('about_text')}
-                                    placeholder="Tell customers about your legacy..."
-                                    className="mt-1.5 min-h-[100px]"
-                                />
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Review Section (Only for Wizard) */}
-                    {!isEditMode && step === 3 && (
-                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="text-center py-6">
-                            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Layout className="h-8 w-8 text-blue-600" />
-                            </div>
-                            <h3 className="text-lg font-semibold mb-2">Ready to Launch?</h3>
-                            <p className="text-gray-500 mb-6">
-                                Your catalogue will be live at:<br />
-                                <span className="font-mono text-blue-600 font-medium">
-                                    swarnavyapar.com/store/{form.watch('public_slug')}
-                                </span>
-                            </p>
-                        </motion.div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex justify-between pt-4 border-t gap-4">
-                        {!isEditMode && step > 1 && (
-                            <Button type="button" variant="outline" onClick={() => setStep(s => s - 1)}>
-                                Back
-                            </Button>
+                                <Button type="button" onClick={nextStep} className="w-full h-11 mt-4">
+                                    Next Step <ArrowRight className="ml-2 h-4 w-4" />
+                                </Button>
+                            </motion.div>
                         )}
 
-                        {!isEditMode && step < 3 ? (
-                            <Button type="button" onClick={nextStep} className="ml-auto bg-blue-600 hover:bg-blue-700">
-                                Continue <ChevronRight className="h-4 w-4 ml-1" />
-                            </Button>
-                        ) : (
-                            <Button type="submit" disabled={isLoading} className={`ml-auto bg-green-600 hover:bg-green-700 w-full md:w-auto ${isEditMode ? 'w-full' : ''}`}>
-                                {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                {isEditMode ? 'Save Changes' : (
-                                    <>Launch Catalogue <ArrowRight className="h-4 w-4 ml-2" /></>
-                                )}
-                            </Button>
+                        {step === 2 && (
+                            <motion.div
+                                key="step2"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-6"
+                            >
+                                <div className="text-center mb-4">
+                                    <h2 className="text-xl font-bold">Choose Layout</h2>
+                                    <p className="text-sm text-muted-foreground">Select a design for your store</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {['basic', 'modern', 'premium'].map((template) => (
+                                        <div
+                                            key={template}
+                                            onClick={() => form.setValue('template_id', template as any)}
+                                            className={cn(
+                                                "cursor-pointer rounded-xl border-2 overflow-hidden transition-all duration-300 relative group",
+                                                watchTemplate === template ? "border-[#D4AF37] ring-4 ring-[#D4AF37]/10 shadow-lg scale-[1.02]" : "border-border hover:border-gray-300"
+                                            )}
+                                        >
+                                            {/* Live Preview Container */}
+                                            <div className="aspect-[9/16] md:aspect-[3/5] bg-gray-100 relative overflow-hidden pointer-events-none select-none">
+                                                {/* Scaled Preview Wrapper */}
+                                                <div className="absolute inset-0 w-[400%] h-[400%] origin-top-left transform scale-25">
+                                                    {template === 'basic' && (
+                                                        <TemplateBasic
+                                                            shop={{ ...PREVIEW_DATA.shop, shop_display_name: form.getValues('shop_display_name') || 'Your Shop' }}
+                                                            initialProducts={PREVIEW_DATA.products}
+                                                            categories={PREVIEW_DATA.categories}
+                                                        />
+                                                    )}
+                                                    {template === 'modern' && (
+                                                        <TemplateModern
+                                                            shop={{ ...PREVIEW_DATA.shop, shop_display_name: form.getValues('shop_display_name') || 'Your Shop' }}
+                                                            initialProducts={PREVIEW_DATA.products}
+                                                            categories={PREVIEW_DATA.categories}
+                                                        />
+                                                    )}
+                                                    {template === 'premium' && (
+                                                        <TemplatePremium
+                                                            shop={{ ...PREVIEW_DATA.shop, shop_display_name: form.getValues('shop_display_name') || 'Your Shop' }}
+                                                            initialProducts={PREVIEW_DATA.products}
+                                                            categories={PREVIEW_DATA.categories}
+                                                        />
+                                                    )}
+                                                </div>
+
+                                                {/* Overlay to prevent interaction */}
+                                                <div className="absolute inset-0 bg-transparent group-hover:bg-black/5 transition-colors" />
+
+                                                {watchTemplate === template && (
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
+                                                        <div className="bg-[#D4AF37] text-white px-4 py-2 rounded-full shadow-lg font-bold flex items-center gap-2">
+                                                            <Check className="h-4 w-4" /> Selected
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="p-4 bg-card text-center relative z-10 border-t">
+                                                <h3 className="font-bold capitalize mb-1">{template} Theme</h3>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {template === 'basic' && "Clean & Simple. Fast loading."}
+                                                    {template === 'modern' && "Soft tones with smooth animations."}
+                                                    {template === 'premium' && "Dark luxury aesthetic with gold accents."}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex gap-3 max-w-md mx-auto pt-6">
+                                    <Button type="button" variant="outline" onClick={prevStep} className="flex-1 h-11">
+                                        <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                                    </Button>
+                                    <Button type="button" onClick={nextStep} className="flex-1 h-11">
+                                        Next
+                                    </Button>
+                                </div>
+                            </motion.div>
                         )}
-                    </div>
+
+                        {step === 3 && (
+                            <motion.div
+                                key="step3"
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className="space-y-6 max-w-md mx-auto"
+                            >
+                                <div className="text-center mb-6">
+                                    <h2 className="text-xl font-bold">Contact Details</h2>
+                                    <p className="text-sm text-muted-foreground">Where customers can reach you</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>WhatsApp Number</Label>
+                                        <div className="flex items-center">
+                                            <span className="bg-muted px-3 py-3 border border-r-0 rounded-l-md text-sm text-muted-foreground border-input">
+                                                +91
+                                            </span>
+                                            <Input {...form.register('contact_phone')} className="rounded-l-none h-11" placeholder="9876543210" />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">Customers will message this number from one-click buttons.</p>
+                                        {form.formState.errors.contact_phone && (
+                                            <p className="text-xs text-red-500">{form.formState.errors.contact_phone.message}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg flex gap-3 items-start md:items-center">
+                                        <Smartphone className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 md:mt-0" />
+                                        <p className="text-xs text-amber-800 dark:text-amber-300">
+                                            This number is crucial. All "Enquire" buttons on your store will open a WhatsApp chat with this number.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-6">
+                                    <Button type="button" variant="outline" onClick={prevStep} className="flex-1 h-11">
+                                        Back
+                                    </Button>
+                                    <Button type="submit" disabled={isSubmitting} className="flex-1 h-11 bg-green-600 hover:bg-green-700 text-white">
+                                        {isSubmitting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+                                        Launch Store
+                                    </Button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </form>
             </CardContent>
         </Card>

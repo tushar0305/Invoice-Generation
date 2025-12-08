@@ -188,10 +188,10 @@ export function ViewInvoiceClient() {
 
     const handleDownloadPdf = async () => {
         if (!invoice) return;
-        
+
         // Use server-side generation for security and consistency
         const url = `/api/v1/invoices/${invoice.id}/pdf`;
-        
+
         // Trigger download
         const link = document.createElement('a');
         link.href = url;
@@ -203,10 +203,10 @@ export function ViewInvoiceClient() {
 
     const handlePrintPdf = async () => {
         if (!invoice) return;
-        
+
         // Use server-side generation
         const url = `/api/v1/invoices/${invoice.id}/pdf`;
-        
+
         // Open in new tab for printing
         window.open(url, '_blank');
     };
@@ -234,15 +234,33 @@ export function ViewInvoiceClient() {
     })();
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <Button variant="ghost" size="sm" onClick={() => router.back()} className="-ml-2 text-muted-foreground">
-                    <ArrowLeft className="mr-1 h-5 w-5" />
-                    Back
-                </Button>
-                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div className="space-y-6 p-4 md:p-6 pb-24 md:pb-6">
+            {/* Header with Back Button */}
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0 h-10 w-10">
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div className="flex-1 min-w-0">
+                        <h1 className="text-lg md:text-xl font-bold truncate">Invoice #{invoice.invoiceNumber}</h1>
+                        <p className="text-xs md:text-sm text-muted-foreground">
+                            {format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}
+                        </p>
+                    </div>
+                    <Badge
+                        variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                        className={`shrink-0 ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                    >
+                        {invoice.status.toUpperCase()}
+                    </Badge>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2">
                     <Button
                         variant="outline"
+                        size="sm"
+                        className="flex-1 sm:flex-none"
                         onClick={async () => {
                             if (!invoice) return;
                             await shareInvoice(invoice);
@@ -251,22 +269,22 @@ export function ViewInvoiceClient() {
                         <Send className="mr-2 h-4 w-4" /> Share
                     </Button>
                     {invoice.status === 'due' ? (
-                        <Button onClick={() => handleStatusChange('paid')} disabled={isPending}>
+                        <Button size="sm" className="flex-1 sm:flex-none" onClick={() => handleStatusChange('paid')} disabled={isPending}>
                             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                            Mark as Paid
+                            Mark Paid
                         </Button>
                     ) : (
-                        <Button variant="outline" onClick={() => handleStatusChange('due')} disabled={isPending}>
+                        <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={() => handleStatusChange('due')} disabled={isPending}>
                             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
-                            Mark as Due
+                            Mark Due
                         </Button>
                     )}
-                    <Button asChild>
+                    <Button size="sm" variant="outline" className="flex-1 sm:flex-none" asChild>
                         <Link href={`/dashboard/invoices/edit?id=${invoice.id}`}>
                             <Edit className="mr-2 h-4 w-4" /> Edit
                         </Link>
                     </Button>
-                    <Button variant="outline" onClick={handlePrintPdf}>
+                    <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={handlePrintPdf}>
                         <Printer className="mr-2 h-4 w-4" /> Print
                     </Button>
                 </div>
@@ -314,11 +332,6 @@ export function ViewInvoiceClient() {
                                         <span>{invoice.customerSnapshot.phone}</span>
                                     </div>
                                 )}
-                            </div>
-                            <div className="flex sm:justify-end items-start">
-                                <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'} className={`text-lg px-4 py-1 rounded-full ${invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                    {invoice.status.toUpperCase()}
-                                </Badge>
                             </div>
                         </div>
 

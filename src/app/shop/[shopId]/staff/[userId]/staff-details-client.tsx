@@ -42,7 +42,7 @@ import { recordPaymentAction, markAttendanceAction } from '@/app/actions/staff-a
 type StaffDetailsProps = {
     shopId: string;
     staff: {
-        id: string; // user_shop_roles id
+        id: string;
         user_id: string;
         role: string;
         name: string;
@@ -65,11 +65,9 @@ export function StaffDetailsClient({
     const router = useRouter();
     const { toast } = useToast();
 
-    // Data State with Optimistic Updates
     const [payments, setPayments] = useState(initialPayments);
     const [attendance, setAttendance] = useState(initialAttendance);
 
-    // Sync with server updates
     useEffect(() => {
         setPayments(initialPayments);
     }, [initialPayments]);
@@ -78,14 +76,12 @@ export function StaffDetailsClient({
         setAttendance(initialAttendance);
     }, [initialAttendance]);
 
-    // Payment Form State
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [paymentAmount, setPaymentAmount] = useState('');
     const [paymentType, setPaymentType] = useState('salary');
     const [paymentNotes, setPaymentNotes] = useState('');
     const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
 
-    // Attendance Form State
     const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
     const [attendanceStatus, setAttendanceStatus] = useState('present');
     const [attendanceNotes, setAttendanceNotes] = useState('');
@@ -146,32 +142,35 @@ export function StaffDetailsClient({
     };
 
     return (
-        <div className="space-y-6 p-6 max-w-[1200px] mx-auto">
+        <div className="space-y-6 p-4 md:p-6 pb-24 md:pb-6 max-w-[1200px] mx-auto">
             {/* Header */}
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div className="flex-1">
-                    <h1 className="text-2xl font-bold tracking-tight">{staff.name}</h1>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Badge variant={staff.role === 'owner' ? 'default' : 'secondary'}>
-                            {staff.role.toUpperCase()}
-                        </Badge>
-                        <span>•</span>
-                        <span>Joined {format(new Date(staff.joined_at), 'MMM d, yyyy')}</span>
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" className="shrink-0" onClick={() => router.back()}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div className="flex-1 min-w-0">
+                        <h1 className="text-xl md:text-2xl font-bold tracking-tight truncate">{staff.name}</h1>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            <Badge variant={staff.role === 'owner' ? 'default' : 'secondary'} className="shrink-0">
+                                {staff.role.toUpperCase()}
+                            </Badge>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="text-xs md:text-sm">Joined {format(new Date(staff.joined_at), 'MMM d, yyyy')}</span>
+                        </div>
                     </div>
                 </div>
+
                 {currentUserRole === 'owner' && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                         <Dialog open={isAttendanceOpen} onOpenChange={setIsAttendanceOpen}>
                             <DialogTrigger asChild>
-                                <Button variant="outline">
+                                <Button variant="outline" className="flex-1 sm:flex-none text-sm">
                                     <Clock className="mr-2 h-4 w-4" />
-                                    Mark Attendance
+                                    Attendance
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Mark Attendance</DialogTitle>
                                     <DialogDescription>Record attendance for {staff.name}</DialogDescription>
@@ -217,12 +216,12 @@ export function StaffDetailsClient({
 
                         <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
                             <DialogTrigger asChild>
-                                <Button>
+                                <Button className="flex-1 sm:flex-none text-sm">
                                     <IndianRupee className="mr-2 h-4 w-4" />
-                                    Record Payment
+                                    Payment
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Record Payment</DialogTitle>
                                     <DialogDescription>Add a salary or bonus payment for {staff.name}</DialogDescription>
@@ -280,11 +279,13 @@ export function StaffDetailsClient({
 
             {/* Content Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-                <TabsList>
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="payments">Payments & Salary</TabsTrigger>
-                    <TabsTrigger value="attendance">Attendance</TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                    <TabsList className="w-full sm:w-auto inline-flex">
+                        <TabsTrigger value="overview" className="flex-1 sm:flex-none text-xs sm:text-sm">Overview</TabsTrigger>
+                        <TabsTrigger value="payments" className="flex-1 sm:flex-none text-xs sm:text-sm">Payments</TabsTrigger>
+                        <TabsTrigger value="attendance" className="flex-1 sm:flex-none text-xs sm:text-sm">Attendance</TabsTrigger>
+                    </TabsList>
+                </div>
 
                 <TabsContent value="overview" className="space-y-4 mt-4">
                     <div className="grid gap-4 md:grid-cols-3">
@@ -306,8 +307,8 @@ export function StaffDetailsClient({
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">
-                                    {attendance.length > 0 
-                                        ? Math.round((attendance.filter(a => a.status === 'present').length / attendance.length) * 100) 
+                                    {attendance.length > 0
+                                        ? Math.round((attendance.filter(a => a.status === 'present').length / attendance.length) * 100)
                                         : 0}%
                                 </div>
                                 <p className="text-xs text-muted-foreground">Last 30 days</p>
@@ -320,12 +321,12 @@ export function StaffDetailsClient({
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">
-                                    {payments.length > 0 
+                                    {payments.length > 0
                                         ? formatCurrency(Number(payments[0].amount))
                                         : '₹0'}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    {payments.length > 0 
+                                    {payments.length > 0
                                         ? format(new Date(payments[0].payment_date), 'MMM d, yyyy')
                                         : 'No payments yet'}
                                 </p>
@@ -336,80 +337,131 @@ export function StaffDetailsClient({
 
                 <TabsContent value="payments" className="mt-4">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Payment History</CardTitle>
-                            <CardDescription>All salary, bonus, and advance payments.</CardDescription>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-lg">Payment History</CardTitle>
+                            <CardDescription className="text-xs md:text-sm">All salary, bonus, and advance payments.</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Type</TableHead>
-                                        <TableHead>Amount</TableHead>
-                                        <TableHead>Notes</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {payments.length === 0 ? (
+                        <CardContent className="p-0 md:p-6">
+                            {/* Mobile View */}
+                            <div className="md:hidden divide-y">
+                                {payments.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground px-4">
+                                        No payments recorded yet.
+                                    </div>
+                                ) : (
+                                    payments.map((payment) => (
+                                        <div key={payment.id} className="p-4 space-y-1">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <span className="font-medium">{formatCurrency(payment.amount)}</span>
+                                                    <Badge variant="outline" className="ml-2 capitalize text-xs">{payment.payment_type}</Badge>
+                                                </div>
+                                                <span className="text-xs text-muted-foreground">{format(new Date(payment.payment_date), 'MMM d')}</span>
+                                            </div>
+                                            {payment.description && (
+                                                <p className="text-xs text-muted-foreground">{payment.description}</p>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            {/* Desktop View */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                                No payments recorded yet.
-                                            </TableCell>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead>Amount</TableHead>
+                                            <TableHead>Notes</TableHead>
                                         </TableRow>
-                                    ) : (
-                                        payments.map((payment) => (
-                                            <TableRow key={payment.id}>
-                                                <TableCell>{format(new Date(payment.payment_date), 'MMM d, yyyy')}</TableCell>
-                                                <TableCell className="capitalize">{payment.payment_type}</TableCell>
-                                                <TableCell className="font-medium">{formatCurrency(payment.amount)}</TableCell>
-                                                <TableCell className="text-muted-foreground">{payment.description || '-'}</TableCell>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {payments.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                                    No payments recorded yet.
+                                                </TableCell>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
+                                        ) : (
+                                            payments.map((payment) => (
+                                                <TableRow key={payment.id}>
+                                                    <TableCell>{format(new Date(payment.payment_date), 'MMM d, yyyy')}</TableCell>
+                                                    <TableCell className="capitalize">{payment.payment_type}</TableCell>
+                                                    <TableCell className="font-medium">{formatCurrency(payment.amount)}</TableCell>
+                                                    <TableCell className="text-muted-foreground">{payment.description || '-'}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
                 <TabsContent value="attendance" className="mt-4">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Attendance Log</CardTitle>
-                            <CardDescription>Attendance records for the last 30 days.</CardDescription>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-lg">Attendance Log</CardTitle>
+                            <CardDescription className="text-xs md:text-sm">Attendance records for the last 30 days.</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Notes</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {attendance.length === 0 ? (
+                        <CardContent className="p-0 md:p-6">
+                            {/* Mobile View */}
+                            <div className="md:hidden divide-y">
+                                {attendance.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground px-4">
+                                        No attendance records found.
+                                    </div>
+                                ) : (
+                                    attendance.map((record) => (
+                                        <div key={record.id} className="p-4 flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <Badge variant="outline" className={`${getStatusColor(record.status)} text-xs`}>
+                                                    {record.status.replace('_', ' ').toUpperCase()}
+                                                </Badge>
+                                                {record.notes && (
+                                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]">{record.notes}</span>
+                                                )}
+                                            </div>
+                                            <span className="text-xs text-muted-foreground shrink-0">{format(new Date(record.date), 'MMM d')}</span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            {/* Desktop View */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                                                No attendance records found.
-                                            </TableCell>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Notes</TableHead>
                                         </TableRow>
-                                    ) : (
-                                        attendance.map((record) => (
-                                            <TableRow key={record.id}>
-                                                <TableCell>{format(new Date(record.date), 'MMM d, yyyy')}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant="outline" className={getStatusColor(record.status)}>
-                                                        {record.status.replace('_', ' ').toUpperCase()}
-                                                    </Badge>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {attendance.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                                                    No attendance records found.
                                                 </TableCell>
-                                                <TableCell className="text-muted-foreground">{record.notes || '-'}</TableCell>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
+                                        ) : (
+                                            attendance.map((record) => (
+                                                <TableRow key={record.id}>
+                                                    <TableCell>{format(new Date(record.date), 'MMM d, yyyy')}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline" className={getStatusColor(record.status)}>
+                                                            {record.status.replace('_', ' ').toUpperCase()}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground">{record.notes || '-'}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
