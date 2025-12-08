@@ -22,7 +22,7 @@ export default async function BillingPage({ params }: { params: Promise<{ shopId
 
     // If we have an active subscription, fetch details from Razorpay
     let razorpayDetails = null;
-    if (subscription?.razorpay_subscription_id) {
+    if (subscription?.razorpay_subscription_id && razorpay) {
         try {
             const rzpSub = await razorpay.subscriptions.fetch(subscription.razorpay_subscription_id);
             razorpayDetails = {

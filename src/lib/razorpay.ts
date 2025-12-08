@@ -1,10 +1,23 @@
 import Razorpay from 'razorpay';
 
 // Server-side SDK uses secret key
-export const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-});
+// Create Razorpay instance only if credentials are available
+const createRazorpayInstance = () => {
+    const keyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    
+    if (!keyId || !keySecret) {
+        console.warn('Razorpay credentials not configured');
+        return null;
+    }
+    
+    return new Razorpay({
+        key_id: keyId,
+        key_secret: keySecret,
+    });
+};
+
+export const razorpay = createRazorpayInstance();
 
 export const RAZORPAY_PLANS = {
     FREE: {

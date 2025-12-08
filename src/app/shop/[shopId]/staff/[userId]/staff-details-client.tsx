@@ -108,12 +108,6 @@ export function StaffDetailsClient({
             setIsPaymentOpen(false);
             setPaymentAmount('');
             setPaymentNotes('');
-            
-            // Optimistic update
-            if (result.data) {
-                setPayments(prev => [result.data, ...prev]);
-            }
-            
             router.refresh();
         } else {
             toast({ title: 'Failed to record payment', description: result.error, variant: 'destructive' });
@@ -135,12 +129,6 @@ export function StaffDetailsClient({
             toast({ title: 'Attendance marked successfully' });
             setIsAttendanceOpen(false);
             setAttendanceNotes('');
-            
-            // Optimistic update
-            if (result.data) {
-                setAttendance(prev => [result.data, ...prev]);
-            }
-            
             router.refresh();
         } else {
             toast({ title: 'Failed to mark attendance', description: result.error, variant: 'destructive' });

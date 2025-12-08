@@ -30,6 +30,10 @@ export async function createSubscriptionAction(shopId: string, planType: 'PRO_MO
     }
 
     try {
+        if (!razorpay) {
+            throw new Error('Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your environment variables.');
+        }
+
         const subscription = await razorpay.subscriptions.create({
             plan_id: planConfig.razorpayPlanId,
             customer_notify: 1,
@@ -81,6 +85,9 @@ export async function cancelSubscriptionAction(shopId: string, subscriptionId: s
     try {
         // Cancel in Razorpay
         // cancel_at_cycle_end: true means subscription will remain active till period end
+        if (!razorpay) {
+            throw new Error('Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your environment variables.');
+        }
         await razorpay.subscriptions.cancel(subscriptionId, cancelAtPeriodEnd);
 
         // Update DB
