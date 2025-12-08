@@ -18,10 +18,14 @@ export function InstallPrompt() {
             return;
         }
 
-        console.log('[InstallPrompt] Component mounted, listening for beforeinstallprompt');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[InstallPrompt] Component mounted, listening for beforeinstallprompt');
+        }
 
         const handler = (e: any) => {
-            console.log('[InstallPrompt] beforeinstallprompt event fired!');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[InstallPrompt] beforeinstallprompt event fired!');
+            }
             e.preventDefault();
             setDeferredPrompt(e);
             setIsVisible(true);

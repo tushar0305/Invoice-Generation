@@ -187,74 +187,28 @@ export function ViewInvoiceClient() {
     // ... existing imports
 
     const handleDownloadPdf = async () => {
-        if (!invoice || !items) return;
-        try {
-            const pdfBlob = await generateInvoicePdf({
-                invoice,
-                items,
-                settings: settings || undefined,
-            });
-
-            // Web: Standard download
-            const url = URL.createObjectURL(pdfBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `Invoice-${invoice.invoiceNumber}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error('Error generating PDF:', error);
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Failed to generate PDF.',
-            });
-        }
+        if (!invoice) return;
+        
+        // Use server-side generation for security and consistency
+        const url = `/api/v1/invoices/${invoice.id}/pdf`;
+        
+        // Trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Invoice-${invoice.invoiceNumber}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const handlePrintPdf = async () => {
-        if (!invoice || !items) return;
-
-        try {
-            const pdfBlob = await generateInvoicePdf({
-                invoice,
-                items,
-                settings: settings || undefined,
-            });
-            const url = URL.createObjectURL(pdfBlob);
-
-            // Try iframe print first (better UX on desktop)
-            try {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = url;
-                document.body.appendChild(iframe);
-                iframe.onload = () => {
-                    try {
-                        iframe.contentWindow?.print();
-                    } catch (e) {
-                        console.warn('Iframe print failed, falling back to new tab', e);
-                        window.open(url, '_blank');
-                    }
-                    setTimeout(() => {
-                        document.body.removeChild(iframe);
-                        URL.revokeObjectURL(url);
-                    }, 60000);
-                };
-            } catch (e) {
-                console.warn('Iframe creation failed, falling back to new tab', e);
-                window.open(url, '_blank');
-            }
-        } catch (error) {
-            console.error('Error generating PDF:', error);
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Failed to generate PDF.',
-            });
-        }
+        if (!invoice) return;
+        
+        // Use server-side generation
+        const url = `/api/v1/invoices/${invoice.id}/pdf`;
+        
+        // Open in new tab for printing
+        window.open(url, '_blank');
     };
 
     const isLoading = loading;

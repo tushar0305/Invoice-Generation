@@ -71,7 +71,9 @@ export function LoyaltySettingsForm() {
         .single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-        console.error('Error loading loyalty settings:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error loading loyalty settings:', error);
+        }
         // Don't show error toast for missing settings, just use defaults
       }
 

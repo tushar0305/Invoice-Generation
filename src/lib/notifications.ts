@@ -16,6 +16,8 @@ export const requestNotificationPermissions = async () => {
 
 export const registerPushNotifications = async () => {
     // No-op for web - would need to implement Web Push API
-    console.log('Push notifications not implemented for web');
+    if (process.env.NODE_ENV === 'development') {
+        console.log('Push notifications not implemented for web');
+    }
     return;
 };

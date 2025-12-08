@@ -63,7 +63,11 @@ export function TemplateBasic({ shop, initialProducts, categories }: StoreClient
             navigator.share({
                 title: shop.shop_display_name,
                 url: window.location.href
-            }).catch(console.error);
+            }).catch((err) => {
+                if (process.env.NODE_ENV === 'development') {
+                    console.error(err);
+                }
+            });
         }
     };
 

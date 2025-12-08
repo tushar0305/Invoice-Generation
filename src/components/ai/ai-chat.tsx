@@ -125,7 +125,9 @@ export function AIChat({ shopId }: AIChatProps) {
 
         } catch (err: any) {
             setError(err.message || 'Something went wrong');
-            console.error('AI Error:', err);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('AI Error:', err);
+            }
         } finally {
             setIsLoading(false);
         }

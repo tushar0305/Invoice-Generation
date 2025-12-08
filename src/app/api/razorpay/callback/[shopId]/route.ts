@@ -16,7 +16,9 @@ export async function POST(
         const razorpay_subscription_id = formData.get('razorpay_subscription_id') as string;
         const razorpay_signature = formData.get('razorpay_signature') as string;
 
-        console.log('Razorpay Callback:', { shopId, razorpay_payment_id, razorpay_subscription_id });
+        if (process.env.NODE_ENV === 'development') {
+            console.log('Razorpay Callback:', { shopId, razorpay_payment_id, razorpay_subscription_id });
+        }
 
         if (!razorpay_payment_id || !razorpay_subscription_id || !razorpay_signature) {
             return NextResponse.redirect(
@@ -59,10 +61,14 @@ export async function POST(
             );
             if (rzpResponse.ok) {
                 razorpaySubDetails = await rzpResponse.json();
-                console.log('Fetched Razorpay subscription:', razorpaySubDetails);
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('Fetched Razorpay subscription:', razorpaySubDetails);
+                }
             }
         } catch (err) {
-            console.error('Error fetching Razorpay subscription details:', err);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error fetching Razorpay subscription details:', err);
+            }
         }
 
         // Use service role client to bypass RLS
@@ -114,7 +120,9 @@ export async function POST(
                 .eq('razorpay_subscription_id', razorpay_subscription_id);
 
             if (updateError) throw updateError;
-            console.log('Subscription updated successfully');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('Subscription updated successfully');
+            }
         } else {
             const { error: insertError } = await supabase
                 .from('subscriptions')
@@ -125,7 +133,9 @@ export async function POST(
                 });
 
             if (insertError) throw insertError;
-            console.log('Subscription created successfully');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('Subscription created successfully');
+            }
         }
 
         return NextResponse.redirect(

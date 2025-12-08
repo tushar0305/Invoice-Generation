@@ -66,7 +66,9 @@ export function Pricing() {
 
     const handleGetStarted = useCallback((planName: string) => {
         // Track analytics and handle signup
-        console.log(`Selected plan: ${planName}`);
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`Selected plan: ${planName}`);
+        }
     }, []);
 
     return (

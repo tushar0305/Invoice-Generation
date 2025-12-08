@@ -53,7 +53,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     init();
 
     const { data: sub } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession: Session | null) => {
-      console.log('Auth state change:', event, !!newSession);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Auth state change:', event, !!newSession);
+      }
       if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);

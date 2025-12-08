@@ -108,7 +108,9 @@ export function ProductManager({ shopId }: ProductManagerProps) {
                 toast({ title: 'Error', description: result.error, variant: 'destructive' });
             }
         } catch (error) {
-            console.error(error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error(error);
+            }
         } finally {
             setIsSaving(false);
         }

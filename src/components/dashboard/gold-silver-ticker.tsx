@@ -65,7 +65,9 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
                 setLastUpdated(new Date(data.updated_at));
             }
         } catch (error) {
-            console.error('Error fetching prices:', JSON.stringify(error, null, 2));
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error fetching prices:', JSON.stringify(error, null, 2));
+            }
         }
     };
 
@@ -99,7 +101,9 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
                     : `Updated from ${result.source}.`,
             });
         } catch (error) {
-            console.error('Refresh error:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Refresh error:', error);
+            }
             toast({
                 variant: "destructive",
                 title: "Refresh Failed",

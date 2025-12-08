@@ -7,6 +7,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -49,7 +50,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { inviteStaffAction, removeStaffAction, recordPaymentAction, markAttendanceAction, getStaffPayments, getStaffAttendance } from '@/app/actions/staff-actions';
+import { inviteStaffAction, createStaffAction, removeStaffAction, recordPaymentAction, markAttendanceAction, getStaffPayments, getStaffAttendance } from '@/app/actions/staff-actions';
 import { formatCurrency } from '@/lib/utils';
 import { useActiveShop } from '@/hooks/use-active-shop';
 
@@ -57,6 +58,7 @@ type StaffMember = {
     id: string;
     user_id: string;
     role: 'owner' | 'manager' | 'staff';
+    name: string;
     email: string;
     joined_at: string;
     is_active: boolean;
@@ -90,42 +92,17 @@ export function StaffClient({
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
-    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     // Form State
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [role, setRole] = useState<'manager' | 'staff'>('staff');
-
-    // Profile Data State
-    const [payments, setPayments] = useState<any[]>([]);
-    const [attendance, setAttendance] = useState<any[]>([]);
-    const [paymentAmount, setPaymentAmount] = useState('');
-    const [paymentType, setPaymentType] = useState('salary');
-
-    const loadProfileData = async (staffId: string) => {
-        try {
-            const [paymentsData, attendanceData] = await Promise.all([
-                getStaffPayments(shopId, staffId),
-                getStaffAttendance(shopId, staffId)
-            ]);
-            setPayments(paymentsData || []);
-            setAttendance(attendanceData || []);
-        } catch (error) {
-            console.error('Error loading profile data:', error);
-        }
-    };
-
-    const handleViewProfile = (member: StaffMember) => {
-        setSelectedStaff(member);
-        setIsProfileOpen(true);
-        loadProfileData(member.user_id);
-    };
 
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
     const handleCreateStaff = async () => {
-        if (!email || !password) {
+        if (!name || !email || !password) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields' });
             return;
         }
@@ -136,9 +113,8 @@ export function StaffClient({
         }
 
         startTransition(async () => {
-            // We use createStaffAction directly now
-            const { createStaffAction } = await import('@/app/actions/staff-actions');
             const result = await createStaffAction({
+                name,
                 email,
                 password,
                 role,
@@ -148,6 +124,7 @@ export function StaffClient({
             if (result.success) {
                 toast({ title: 'Success', description: 'Staff member created successfully' });
                 setIsCreateOpen(false);
+                setName('');
                 setEmail('');
                 setPassword('');
                 router.refresh();
@@ -171,47 +148,7 @@ export function StaffClient({
         });
     };
 
-    const handleRecordPayment = async () => {
-        if (!selectedStaff || !paymentAmount) return;
 
-        startTransition(async () => {
-            const result = await recordPaymentAction({
-                shopId,
-                staffUserId: selectedStaff.user_id,
-                amount: parseFloat(paymentAmount),
-                paymentType: paymentType as any,
-                paymentDate: new Date(),
-            });
-
-            if (result.success) {
-                toast({ title: 'Success', description: 'Payment recorded' });
-                setPaymentAmount('');
-                loadProfileData(selectedStaff.user_id);
-            } else {
-                toast({ variant: 'destructive', title: 'Error', description: result.error });
-            }
-        });
-    };
-
-    const handleMarkAttendance = async (status: 'present' | 'absent' | 'half_day') => {
-        if (!selectedStaff) return;
-
-        startTransition(async () => {
-            const result = await markAttendanceAction({
-                shopId,
-                staffUserId: selectedStaff.user_id,
-                date: new Date(),
-                status,
-            });
-
-            if (result.success) {
-                toast({ title: 'Success', description: 'Attendance marked' });
-                loadProfileData(selectedStaff.user_id);
-            } else {
-                toast({ variant: 'destructive', title: 'Error', description: result.error });
-            }
-        });
-    };
 
     if (!permissions?.canInviteStaff) {
         return (
@@ -237,7 +174,7 @@ export function StaffClient({
                     <DialogTrigger asChild>
                         <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md">
                             <UserPlus className="mr-2 h-4 w-4" />
-                            Invite Staff
+                            Create Staff Account
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
@@ -248,6 +185,16 @@ export function StaffClient({
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="name">Full Name</Label>
+                                <Input
+                                    id="name"
+                                    type="text"
+                                    placeholder="John Doe"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                            </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="email">Email Address</Label>
                                 <Input
@@ -315,7 +262,78 @@ export function StaffClient({
                 </div>
             )}
 
-            <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
+            {/* Mobile View (Cards) */}
+            <div className="md:hidden space-y-4">
+                {initialStaff.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-8 border rounded-xl bg-card">
+                        <UserPlus className="h-8 w-8 opacity-50" />
+                        <p>No staff members found</p>
+                    </div>
+                ) : (
+                    initialStaff.map((member) => (
+                        <Card key={member.id} className="border border-border shadow-sm bg-card">
+                            <CardContent className="p-4 space-y-4">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-lg">
+                                            {member.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-foreground">{member.name}</div>
+                                            <Badge variant="secondary" className={`${getRoleBadgeColor(member.role)} capitalize mt-1`}>
+                                                {member.role}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/shop/${shopId}/staff/${member.user_id}`} className="flex items-center cursor-pointer">
+                                                    <User className="mr-2 h-4 w-4" />
+                                                    View Profile
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            {member.role !== 'owner' && (
+                                                <DropdownMenuItem
+                                                    className="text-red-600"
+                                                    onClick={() => handleRemoveStaff(member.id)}
+                                                >
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Remove Staff
+                                                </DropdownMenuItem>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <div className="text-muted-foreground mb-1">Joined</div>
+                                        <div>{format(new Date(member.joined_at), 'MMM d, yyyy')}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-muted-foreground mb-1">Status</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`h-2 w-2 rounded-full ${member.is_active ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                            <span>{member.is_active ? 'Active' : 'Inactive'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
+            </div>
+
+            {/* Desktop View (Table) */}
+            <div className="hidden md:block rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-muted/50 hover:bg-muted/50">
@@ -342,11 +360,10 @@ export function StaffClient({
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                                                {member.email.charAt(0).toUpperCase()}
+                                                {member.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="font-medium text-foreground">{member.email}</span>
-                                                <span className="text-xs text-muted-foreground">ID: {member.user_id.slice(0, 8)}</span>
+                                                <span className="font-medium text-foreground">{member.name}</span>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -373,9 +390,11 @@ export function StaffClient({
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem onClick={() => handleViewProfile(member)}>
-                                                    <User className="mr-2 h-4 w-4" />
-                                                    View Profile
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/shop/${shopId}/staff/${member.user_id}`} className="flex items-center cursor-pointer">
+                                                        <User className="mr-2 h-4 w-4" />
+                                                        View Profile
+                                                    </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 {member.role !== 'owner' && (
@@ -397,128 +416,7 @@ export function StaffClient({
                 </Table>
             </div>
 
-            {/* Staff Profile Dialog */}
-            <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Staff Profile</DialogTitle>
-                        <DialogDescription>Manage details, salary, and attendance for {selectedStaff?.email}</DialogDescription>
-                    </DialogHeader>
 
-                    <Tabs defaultValue="salary" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="salary">Salary & Payments</TabsTrigger>
-                            <TabsTrigger value="attendance">Attendance</TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="salary" className="space-y-4 mt-4">
-                            <div className="flex gap-2 items-end border p-4 rounded-lg bg-muted/20">
-                                <div className="space-y-2 flex-1">
-                                    <Label>Amount</Label>
-                                    <Input
-                                        type="number"
-                                        placeholder="0.00"
-                                        value={paymentAmount}
-                                        onChange={(e) => setPaymentAmount(e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-2 w-40">
-                                    <Label>Type</Label>
-                                    <Select value={paymentType} onValueChange={setPaymentType}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="salary">Salary</SelectItem>
-                                            <SelectItem value="bonus">Bonus</SelectItem>
-                                            <SelectItem value="advance">Advance</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <Button onClick={handleRecordPayment} disabled={isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                                    <IndianRupee className="mr-2 h-4 w-4" />
-                                    Pay
-                                </Button>
-                            </div>
-
-                            <Card>
-                                <CardContent className="p-0">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Date</TableHead>
-                                                <TableHead>Type</TableHead>
-                                                <TableHead>Amount</TableHead>
-                                                <TableHead>Status</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {payments.length === 0 ? (
-                                                <TableRow>
-                                                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No payments recorded</TableCell>
-                                                </TableRow>
-                                            ) : (
-                                                payments.map((payment) => (
-                                                    <TableRow key={payment.id}>
-                                                        <TableCell>{format(new Date(payment.payment_date), 'MMM d, yyyy')}</TableCell>
-                                                        <TableCell className="capitalize">{payment.payment_type}</TableCell>
-                                                        <TableCell>{formatCurrency(payment.amount)}</TableCell>
-                                                        <TableCell><Badge className="bg-green-500 capitalize">{payment.status}</Badge></TableCell>
-                                                    </TableRow>
-                                                ))
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        <TabsContent value="attendance" className="space-y-4 mt-4">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold">Today's Attendance</h3>
-                                <div className="flex gap-2">
-                                    <Button size="sm" variant="outline" onClick={() => handleMarkAttendance('absent')} disabled={isPending}>Mark Absent</Button>
-                                    <Button size="sm" variant="outline" onClick={() => handleMarkAttendance('half_day')} disabled={isPending}>Half Day</Button>
-                                    <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => handleMarkAttendance('present')} disabled={isPending}>Mark Present</Button>
-                                </div>
-                            </div>
-
-                            <Card>
-                                <CardContent className="p-0">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Date</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead>Notes</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {attendance.length === 0 ? (
-                                                <TableRow>
-                                                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">No attendance records</TableCell>
-                                                </TableRow>
-                                            ) : (
-                                                attendance.map((record) => (
-                                                    <TableRow key={record.id}>
-                                                        <TableCell>{format(new Date(record.date), 'MMM d, yyyy')}</TableCell>
-                                                        <TableCell>
-                                                            <Badge variant={record.status === 'present' ? 'default' : record.status === 'absent' ? 'destructive' : 'secondary'} className="capitalize">
-                                                                {record.status.replace('_', ' ')}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>{record.notes || '-'}</TableCell>
-                                                    </TableRow>
-                                                ))
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
-                </DialogContent>
-            </Dialog>
         </MotionWrapper>
     );
 }

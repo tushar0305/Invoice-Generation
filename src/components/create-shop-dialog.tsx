@@ -70,7 +70,9 @@ export function CreateShopDialog() {
             router.push(`/shop/${shopId}/dashboard`);
 
         } catch (error: any) {
-            console.error('Error creating shop:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error creating shop:', error);
+            }
             toast({
                 variant: 'destructive',
                 title: 'Creation Failed',

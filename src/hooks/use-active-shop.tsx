@@ -100,7 +100,9 @@ function ActiveShopProviderInner({ children, initialData }: ActiveShopProviderPr
             // Navigate to new shop (will trigger server-side data fetch)
             router.push(`/shop/${shopId}/dashboard`);
         } catch (error) {
-            console.error('Error switching shop:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error switching shop:', error);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -113,7 +115,9 @@ function ActiveShopProviderInner({ children, initialData }: ActiveShopProviderPr
             // Force a hard refresh by navigating to current page
             router.refresh();
         } catch (error) {
-            console.error('Error refreshing shops:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error refreshing shops:', error);
+            }
         } finally {
             setIsLoading(false);
         }

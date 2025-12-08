@@ -266,7 +266,9 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
                     className="mb-2"
                     shopId={shopId}
                     onAskQuestion={(question) => {
-                        console.log('[AI Insights] User asked:', question);
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('[AI Insights] User asked:', question);
+                        }
                     }}
                 />
 

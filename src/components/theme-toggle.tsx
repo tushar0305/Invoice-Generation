@@ -26,7 +26,9 @@ export function ThemeToggle() {
                 }, { onConflict: 'user_id' });
             
             if (error) {
-                console.error('Error updating theme preference:', error);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('Error updating theme preference:', error);
+                }
             }
         }
     };

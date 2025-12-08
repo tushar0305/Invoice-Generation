@@ -4,8 +4,10 @@ import { cookies } from 'next/headers';
 export async function createClient() {
     try {
         const cookieStore = await cookies();
-        console.log('createClient: Initializing Supabase server client');
-        console.log('URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Defined' : 'Undefined');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('createClient: Initializing Supabase server client');
+            console.log('URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Defined' : 'Undefined');
+        }
 
         const client = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,

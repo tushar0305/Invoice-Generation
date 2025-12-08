@@ -120,7 +120,9 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                     setRateLimit(parsed);
                 }
             } catch (e) {
-                console.error('Failed to parse saved rate limit', e);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('Failed to parse saved rate limit', e);
+                }
             }
         }
     }, [shopId]);
@@ -218,7 +220,9 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
             onAskQuestion?.(query);
 
         } catch (err: any) {
-            console.error('AI Error:', err);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('AI Error:', err);
+            }
             setError(err.message || 'Something went wrong. Please try again.');
         } finally {
             setIsLoading(false);
@@ -291,7 +295,7 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                 // Rounded
                 "rounded-2xl lg:rounded-3xl",
                 // Padding
-                "p-6 lg:p-8",
+                "p-4 md:p-6 lg:p-8",
                 className
             )}
         >
@@ -466,7 +470,7 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                             className="space-y-4"
                         >
                             {/* Loading card */}
-                            <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/50 dark:border-amber-800/30">
+                            <div className="p-4 md:p-6 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/50 dark:border-amber-800/30">
                                 <div className="flex items-center gap-4">
                                     <motion.div
                                         className="p-3 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500"
@@ -509,7 +513,7 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="p-5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50"
+                            className="p-4 md:p-5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50"
                         >
                             <div className="flex items-start gap-4">
                                 <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/50">
@@ -539,7 +543,7 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                         >
                             {/* Main response card */}
                             <div className={cn(
-                                "p-6 rounded-2xl border",
+                                "p-4 md:p-6 rounded-2xl border",
                                 "bg-white dark:bg-card",
                                 "border-slate-200 dark:border-border",
                                 "shadow-lg shadow-slate-200/50 dark:shadow-black/20"

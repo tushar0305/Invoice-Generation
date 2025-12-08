@@ -57,13 +57,22 @@ export default async function StaffPage({
     const staffData = staffResult.data || [];
     const inviteData = inviteResult.data || [];
 
+    // Fetch profiles for the staff members
+    const userIds = staffData.map((r: any) => r.user_id);
+    const { data: profilesData } = await supabase
+        .from('staff_profiles')
+        .select('user_id, name')
+        .eq('shop_id', shopId)
+        .in('user_id', userIds);
+
+    const profilesMap = new Map(profilesData?.map((p: any) => [p.user_id, p.name]) || []);
+
     // Map staff data
-    // Note: We don't have direct access to user emails from user_shop_roles unless we have a profiles table
-    // Replicating existing logic for now
     const mappedStaff = staffData.map((r: any) => ({
         id: r.id,
         user_id: r.user_id,
         role: r.role,
+        name: profilesMap.get(r.user_id) || 'Unknown Staff',
         email: r.user_id === user?.id ? 'You' : `User ${r.user_id.slice(0, 8)}...`,
         joined_at: r.accepted_at || r.created_at,
         is_active: r.is_active,

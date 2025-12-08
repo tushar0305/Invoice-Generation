@@ -98,7 +98,9 @@ export function DashboardInvoiceRow({ invoice, shopId }: DashboardInvoiceRowProp
             toast({ title: "Downloaded", description: "Invoice PDF saved successfully." });
 
         } catch (error) {
-            console.error(error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error(error);
+            }
             toast({ variant: "destructive", title: "Error", description: "Failed to download invoice." });
         }
     };

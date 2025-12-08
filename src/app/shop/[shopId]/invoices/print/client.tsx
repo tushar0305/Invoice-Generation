@@ -168,7 +168,9 @@ export function PrintInvoiceClient() {
     }, [isLoading, invoice, items, search]);
 
     useEffect(() => {
-        console.log('Invoice ID:', id);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('Invoice ID:', id);
+        }
     }, [id]);
 
     if (isLoading) {

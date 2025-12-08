@@ -91,7 +91,9 @@ export function NotificationCenter({ shopId, userId }: NotificationCenterProps) 
             allNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
             setNotifications(allNotifications);
         } catch (error) {
-            console.error('Error fetching notifications:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error fetching notifications:', error);
+            }
         } finally {
             setIsLoading(false);
         }

@@ -42,21 +42,27 @@ export async function logAudit(params: AuditLogParams): Promise<void> {
 
         if (error) {
             // Don't throw - audit logging should not break the main operation
-            console.error('[Audit Log Error]', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('[Audit Log Error]', error);
+            }
         }
 
         // Also log to console for development
-        console.log('[Audit]', {
-            userId,
-            shopId,
-            action,
-            entityType,
-            entityId,
-            timestamp: new Date().toISOString(),
-        });
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[Audit]', {
+                userId,
+                shopId,
+                action,
+                entityType,
+                entityId,
+                timestamp: new Date().toISOString(),
+            });
+        }
 
     } catch (error) {
-        console.error('[Audit Log Exception]', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('[Audit Log Exception]', error);
+        }
     }
 }
 

@@ -505,5 +505,7 @@ export async function generateInvoicePdf({ invoice, items, settings }: GenerateI
   doc.text('2. Subject to local jurisdiction.', 15, footerY + 9);
   doc.text('Authorized Signatory', 195, footerY + 15, { align: 'right' });
 
-  return doc.output('blob');
+  // Return as Blob (compatible with both Browser and Node.js if Blob is polyfilled/available)
+  const arrayBuffer = doc.output('arraybuffer');
+  return new Blob([arrayBuffer], { type: 'application/pdf' });
 }

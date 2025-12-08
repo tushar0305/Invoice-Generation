@@ -11,7 +11,9 @@ export async function getCustomers(shopId: string, limit = 100, offset = 0) {
         .range(offset, offset + limit - 1);
 
     if (error) {
-        console.error('Error fetching customers:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Error fetching customers:', error);
+        }
         return [];
     }
 
@@ -33,7 +35,9 @@ export async function searchCustomers(shopId: string, query: string, limit = 50)
         .limit(limit);
 
     if (error) {
-        console.error('Error searching customers:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Error searching customers:', error);
+        }
         return [];
     }
 
@@ -66,7 +70,9 @@ export async function getCustomerCount(shopId: string): Promise<number> {
         .is('deleted_at', null);
 
     if (error) {
-        console.error('Error getting customer count:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Error getting customer count:', error);
+        }
         return 0;
     }
 
@@ -132,14 +138,18 @@ export async function upsertCustomer(
             .single();
 
         if (error) {
-            console.error('Error upserting customer:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error upserting customer:', error);
+            }
             throw error;
         }
 
         return result?.id || null;
     } catch (err) {
         // Fallback for cases where constraint might not match exactly or other DB errors
-        console.error('Upsert failed, trying sequential logic:', err);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Upsert failed, trying sequential logic:', err);
+        }
 
         // Fallback manual check (less safe but better than crashing if upsert fails due to missing constraint)
         const { data: existing } = await supabase

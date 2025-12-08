@@ -12,6 +12,7 @@ const inviteSchema = z.object({
 
 const createStaffSchema = z.object({
     email: z.string().email(),
+    name: z.string().min(2, 'Name must be at least 2 characters'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
     role: z.enum(['manager', 'staff']),
     shopId: z.string(),
@@ -140,7 +141,7 @@ export async function createStaffAction(formData: z.infer<typeof createStaffSche
             .insert({
                 user_id: newUser.user.id,
                 shop_id: formData.shopId,
-                // Add other default fields if necessary
+                name: formData.name,
             });
 
         if (profileError) {

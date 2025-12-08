@@ -32,11 +32,15 @@ export default async function LoanDetailsPage({ params }: Props) {
         .single();
 
     if (error || !loan) {
-        console.error('Error fetching loan:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Error fetching loan:', error);
+        }
         return <div>Loan not found</div>;
     }
 
-    console.log('Loan data fetched successfully:', JSON.stringify(loan, null, 2));
+    if (process.env.NODE_ENV === 'development') {
+        console.log('Loan data fetched successfully:', JSON.stringify(loan, null, 2));
+    }
 
     return (
         <LoanDetailsClient

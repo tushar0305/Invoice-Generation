@@ -26,14 +26,16 @@ class ErrorHandler {
         const errorMessage = this.getErrorMessage(error);
 
         // Log to console with context
-        const logMethod = this.getLogMethod(severity);
-        logMethod('[Error]', {
-            message: errorMessage,
-            severity,
-            context,
-            timestamp: new Date().toISOString(),
-            stack: error instanceof Error ? error.stack : undefined,
-        });
+        if (process.env.NODE_ENV === 'development') {
+            const logMethod = this.getLogMethod(severity);
+            logMethod('[Error]', {
+                message: errorMessage,
+                severity,
+                context,
+                timestamp: new Date().toISOString(),
+                stack: error instanceof Error ? error.stack : undefined,
+            });
+        }
 
         // Show user-friendly notification
         this.showUserNotification(errorMessage, severity);

@@ -169,15 +169,21 @@ async function upsertCustomer(supabase: any, userId: string, input: any) {
                 .single();
 
             if (insertError) {
-                console.error('[Customer Insert Error]', insertError);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('[Customer Insert Error]', insertError);
+                }
                 return null;
             }
 
-            console.log('[Customer Created]', newCustomer?.id);
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[Customer Created]', newCustomer?.id);
+            }
             return newCustomer?.id;
         }
     } catch (err) {
-        console.error('Error upserting customer:', err);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Error upserting customer:', err);
+        }
         return null;
     }
 }
@@ -204,7 +210,9 @@ async function handleLoyalty(supabase: any, shopId: string, customerId: string, 
             pointsEarned = Math.floor(grandTotal * (settings.percentage_back / 100));
         }
 
-        console.log(`[Loyalty] Shop: ${shopId}, Cust: ${customerId}, Inv: ${invoiceNumber}, GrandTotal: ${grandTotal}, PointsEarned: ${pointsEarned}`);
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[Loyalty] Shop: ${shopId}, Cust: ${customerId}, Inv: ${invoiceNumber}, GrandTotal: ${grandTotal}, PointsEarned: ${pointsEarned}`);
+        }
 
         // Apply conditions (e.g. Discounted Items) - simplified for now as per audit
         // Future: Check items for discounts if `earn_on_discounted_items` is false
