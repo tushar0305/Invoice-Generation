@@ -356,7 +356,11 @@ export function StaffClient({
                             </TableRow>
                         ) : (
                             initialStaff.map((member) => (
-                                <TableRow key={member.id} className="group">
+                                <TableRow
+                                    key={member.id}
+                                    className="group cursor-pointer hover:bg-muted/50 border-b border-border transition-colors"
+                                    onClick={() => router.push(`/shop/${shopId}/staff/${member.user_id}`)}
+                                >
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">

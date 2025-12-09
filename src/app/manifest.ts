@@ -13,14 +13,14 @@ export default function manifest(): MetadataRoute.Manifest {
         theme_color: '#ffffff',
         icons: [
             {
-                src: '/logo/browser.webp',
+                src: '/logo/logo.png',
                 sizes: '192x192',
-                type: 'image/webp',
+                type: 'image/png',
             },
             {
-                src: '/logo/browser.webp',
+                src: '/logo/logo.png',
                 sizes: '512x512',
-                type: 'image/webp',
+                type: 'image/png',
             },
         ],
     };

@@ -38,12 +38,17 @@ export const metadata: Metadata = {
     siteName: 'SwarnaVyapar',
     images: [
       {
-        url: 'https://swarnavyapar.in/logo/browser.webp',
+        url: process.env.NEXT_PUBLIC_LOGO_URL || '/logo/logo.png',
         width: 1200,
         height: 630,
         alt: 'SwarnaVyapar Logo',
       },
     ],
+  },
+  icons: {
+    icon: process.env.NEXT_PUBLIC_LOGO_URL || '/logo/logo.png',
+    shortcut: process.env.NEXT_PUBLIC_LOGO_URL || '/logo/logo.png',
+    apple: process.env.NEXT_PUBLIC_LOGO_URL || '/logo/logo.png',
   },
   twitter: {
     card: 'summary_large_image',

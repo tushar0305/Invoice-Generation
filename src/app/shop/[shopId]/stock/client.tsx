@@ -7,6 +7,7 @@
 
 import { useState, useTransition, useEffect, useOptimistic } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
 import type { StockItem } from '@/lib/definitions';
@@ -21,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Edit2, Trash2, Package, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { Edit2, Trash2, Package, PackagePlus, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -170,14 +171,24 @@ export function StockClient({
         <MotionWrapper className="space-y-4 pb-24 pt-2 px-4 md:px-0">
             {/* Sticky Header Section for Mobile */}
             <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 px-4 md:mx-0 md:px-0 pb-3 md:static md:bg-transparent md:backdrop-blur-none">
-                <div className="relative w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search items..."
-                        className="pl-9 h-10 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all duration-300"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search items..."
+                            className="pl-9 h-10 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all duration-300"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Link href={`/shop/${shopId}/stock/new`}>
+                        <Button
+                            className="h-10 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium shrink-0"
+                        >
+                            <PackagePlus className="h-4 w-4" />
+                            <span className="hidden sm:inline">Add Item</span>
+                        </Button>
+                    </Link>
                 </div>
             </div>
 

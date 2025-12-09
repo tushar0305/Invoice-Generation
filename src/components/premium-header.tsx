@@ -108,25 +108,7 @@ export function PremiumHeader({ shopName, shopId, userId, userEmail, logoUrl }: 
         return segments;
     };
 
-    // Get quick action based on current page
-    const getQuickAction = () => {
-        if (pathname.includes('/invoices') && !pathname.includes('/new') && !pathname.includes('/edit')) {
-            return { label: 'New Invoice', href: `/shop/${shopId}/invoices/new`, icon: Plus };
-        }
-        if (pathname.includes('/customers') && !pathname.includes('/view') && !pathname.includes('/new')) {
-            return { label: 'Add Customer', href: `/shop/${shopId}/customers/new`, icon: Plus };
-        }
-        if (pathname.includes('/stock') && !pathname.includes('/new')) {
-            return { label: 'Add Item', href: `/shop/${shopId}/stock/new`, icon: Plus };
-        }
-        if (pathname.includes('/loans') && !pathname.includes('/new')) {
-            return { label: 'New Loan', href: `/shop/${shopId}/loans/new`, icon: Plus };
-        }
-        return null;
-    };
-
     const breadcrumb = getBreadcrumb();
-    const quickAction = getQuickAction();
 
     return (
         <>
@@ -167,20 +149,6 @@ export function PremiumHeader({ shopName, shopId, userId, userEmail, logoUrl }: 
 
                 {/* Right: Actions */}
                 <div className="flex items-center gap-2">
-                    {/* Quick Action Button */}
-                    {quickAction && (
-                        <Button
-                            asChild
-                            size="sm"
-                            className="h-9 px-4 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-lg font-medium"
-                        >
-                            <Link href={quickAction.href}>
-                                <quickAction.icon className="w-4 h-4" />
-                                <span className="hidden lg:inline">{quickAction.label}</span>
-                            </Link>
-                        </Button>
-                    )}
-
                     {/* Search Button */}
                     <button
                         onClick={() => setIsSearchOpen(true)}

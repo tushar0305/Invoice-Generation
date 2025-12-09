@@ -26,7 +26,11 @@ export function FloatingStoreAssistant({ shopId }: { shopId: string }) {
                     </Button>
                 </motion.div>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[100vw] sm:w-[540px] p-0 border-l border-white/10 z-[100]">
+            <SheetContent
+                side="right"
+                className="w-[100vw] sm:w-[540px] p-0 border-l border-white/10 z-[100]"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
                 {/* Visible Header helps with spacing for the Close button */}
                 <SheetHeader className="px-6 py-4 border-b border-border/40">
                     <SheetTitle>Store Assistant AI</SheetTitle>

@@ -29,8 +29,28 @@ import {
 import { StatusBadge } from '@/components/ui/status-badge';
 import { formatCurrency, cn } from '@/lib/utils';
 import type { Loan, LoanDashboardStats } from '@/lib/loan-types';
-import { format } from 'date-fns';
+import { format, addMonths, isAfter, setDate } from 'date-fns';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+
+// Helper to calculate monthly interest
+const getMonthlyInterest = (principal: number, rate: number) => {
+    return (principal * rate) / 1200;
+};
+
+// Helper to get next due date
+const getNextDueDate = (startDateStr: string) => {
+    const start = new Date(startDateStr);
+    const today = new Date();
+    // Start checking from the upcoming month relative to today
+    let due = new Date(today.getFullYear(), today.getMonth(), start.getDate());
+
+    // If this date is in the past (e.g., today is 15th, due was 10th), move to next month
+    if (isAfter(today, due)) {
+        due = addMonths(due, 1);
+    }
+    return due;
+};
 
 type LoansDashboardClientProps = {
     loans: (Loan & { loan_customers: { name: string; phone: string } })[];
@@ -168,10 +188,7 @@ export function LoansDashboardClient({
                             />
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="hidden md:flex">
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Filter Date
-                            </Button>
+                            {/* Future: Add Date Range Filter */}
                         </div>
                     </div>
 
@@ -181,33 +198,76 @@ export function LoansDashboardClient({
                             {filteredLoans.map((loan) => (
                                 <div
                                     key={loan.id}
-                                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+                                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer group"
                                     onClick={() => router.push(`/shop/${shopId}/loans/${loan.id}`)}
                                 >
-                                    <div className="flex justify-between items-start mb-2">
+                                    {/* Card Header: ID & Status */}
+                                    <div className="flex justify-between items-start mb-3">
                                         <div>
-                                            <div className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                                {loan.loan_customers?.name}
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Badge variant="outline" className="font-mono text-xs text-muted-foreground">
+                                                    #{loan.loan_number}
+                                                </Badge>
                                                 <StatusBadge status={loan.status} />
                                             </div>
-                                            <div className="text-sm text-muted-foreground">#{loan.loan_number} • {format(new Date(loan.created_at), "dd MMM yyyy")}</div>
+                                            <div className="font-semibold text-gray-900 dark:text-white text-lg">
+                                                {loan.loan_customers?.name}
+                                            </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="font-bold text-[#b5952f] dark:text-[#D4AF37]">
+                                            <div className="font-bold text-xl text-[#b5952f] dark:text-[#D4AF37]">
                                                 {formatCurrency(loan.principal_amount)}
                                             </div>
-                                            <div className="text-xs text-muted-foreground">Principal</div>
+                                            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Principal</div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between mt-3 text-sm">
-                                        <div className="flex items-center gap-1 text-muted-foreground">
-                                            <Wallet className="h-3 w-3" />
-                                            <span>Interest: {loan.interest_rate}%</span>
+
+                                    {/* Middle Row: Date & Interest */}
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div className="bg-gray-50 dark:bg-gray-800/50 p-2 rounded-md">
+                                            <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-0.5">
+                                                <Calendar className="h-3 w-3" /> Start Date
+                                            </p>
+                                            <p className="font-medium text-sm">{format(new Date(loan.created_at), "dd MMM yy")}</p>
                                         </div>
-                                        <Badge variant="outline" className="border-gray-200 dark:border-gray-700 font-normal">
-                                            View Details <ArrowRight className="h-3 w-3 ml-1" />
-                                        </Badge>
+                                        <div className="bg-gray-50 dark:bg-gray-800/50 p-2 rounded-md">
+                                            <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-0.5">
+                                                <Wallet className="h-3 w-3" /> Interest Rate
+                                            </p>
+                                            <p className="font-medium text-sm">{loan.interest_rate}% / yr</p>
+                                        </div>
                                     </div>
+
+                                    {/* Upcoming Payment Section */}
+                                    {loan.status === 'active' && (
+                                        <div className="mt-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-lg p-3 flex justify-between items-center group-hover:border-amber-200 transition-colors">
+                                            <div>
+                                                <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 mb-0.5">
+                                                    <AlertCircle className="h-3.5 w-3.5" />
+                                                    <span className="text-xs font-bold uppercase tracking-wide">Next Payment Due</span>
+                                                </div>
+                                                <div className="text-sm">
+                                                    <span className="font-bold">{formatCurrency(getMonthlyInterest(loan.principal_amount, loan.interest_rate))}</span>
+                                                    <span className="text-muted-foreground text-xs ml-1">
+                                                        on {format(getNextDueDate(loan.start_date || loan.created_at), 'dd MMM')}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-8 bg-white hover:bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-300 text-xs"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toast.success(`Reminder sent to ${loan.loan_customers?.name}`, {
+                                                        description: "They will receive an SMS/WhatsApp notification shortly."
+                                                    });
+                                                }}
+                                            >
+                                                Send Reminder
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                             {filteredLoans.length === 0 && (

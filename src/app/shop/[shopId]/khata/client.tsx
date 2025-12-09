@@ -383,10 +383,10 @@ export function KhataClient({
                                 All
                             </button>
                             <button
-                                onClick={() => handleFilterChange('positive')}
+                                onClick={() => handleFilterChange('receivable')}
                                 className={cn(
                                     "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                    currentFilter === 'positive'
+                                    currentFilter === 'receivable'
                                         ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
                                         : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
                                 )}
@@ -394,10 +394,10 @@ export function KhataClient({
                                 Receivable
                             </button>
                             <button
-                                onClick={() => handleFilterChange('negative')}
+                                onClick={() => handleFilterChange('payable')}
                                 className={cn(
                                     "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                    currentFilter === 'negative'
+                                    currentFilter === 'payable'
                                         ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
                                         : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
                                 )}
@@ -405,10 +405,10 @@ export function KhataClient({
                                 Payable
                             </button>
                             <button
-                                onClick={() => handleFilterChange('zero')}
+                                onClick={() => handleFilterChange('settled')}
                                 className={cn(
                                     "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                    currentFilter === 'zero'
+                                    currentFilter === 'settled'
                                         ? 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border border-gray-500/50 shadow-[0_0_15px_rgba(107,114,128,0.3)]'
                                         : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
                                 )}

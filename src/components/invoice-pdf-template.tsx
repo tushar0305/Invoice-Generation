@@ -505,7 +505,184 @@ const ElegantTemplate = ({ invoice, items, settings, calculations, shopDetails }
   );
 };
 
-// --- Bold Template ---
+// --- Premium Template ---
+const PremiumTemplate = ({ invoice, items, settings, calculations, shopDetails }: TemplateProps) => {
+  return (
+    <div className="mx-auto w-full max-w-[210mm] min-h-[297mm] bg-white text-slate-800 text-[10px] leading-[1.6] relative overflow-hidden flex flex-col font-serif">
+      {/* Watermark */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 opacity-[0.08]">
+        {settings?.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={settings.logoUrl}
+            alt="Watermark"
+            className="w-[80%] max-w-[500px] object-contain"
+            style={{ filter: 'grayscale(100%)' }}
+          />
+        ) : (
+          <div className="transform -rotate-45 text-[80px] font-bold text-gray-900 uppercase whitespace-nowrap opacity-50 select-none border-4 border-gray-900 p-8">
+            {shopDetails.name}
+          </div>
+        )}
+      </div>
+
+      {/* Decorative Borders */}
+      <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#b38728]"></div>
+      <div className="absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#b38728]"></div>
+
+      {/* Content Container (z-index to sit above watermark) */}
+      <div className="relative z-10 p-10 flex-grow flex flex-col">
+
+        {/* Header */}
+        <div className="flex justify-between items-start mb-10 border-b-2 border-[#b38728] pb-6">
+          <div className="w-[60%]">
+            {/* Logo if available (Small branding) */}
+            {settings?.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={settings.logoUrl} alt="Logo" className="h-16 object-contain mb-3" />
+            )}
+            <h1 className="text-4xl font-bold text-[#805d15] tracking-tight mb-2 uppercase font-serif">{shopDetails.name}</h1>
+            <div className="text-slate-600 space-y-1 text-[11px]">
+              <p className="font-medium">{shopDetails.address}</p>
+              <p>{[shopDetails.state, shopDetails.pincode].filter(Boolean).join(' - ')}</p>
+              <p>{shopDetails.phone && `Ph: ${shopDetails.phone}`} {shopDetails.email && `| Email: ${shopDetails.email}`}</p>
+            </div>
+          </div>
+          <div className="text-right w-[35%]">
+            <div className="bg-[#fcfbf7] border border-[#eaddcf] p-4 rounded-lg shadow-sm">
+              <h2 className="text-2xl font-bold text-[#805d15] uppercase tracking-wider mb-3 text-center border-b border-[#eaddcf] pb-2">Tax Invoice</h2>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="font-semibold text-slate-700">Invoice No:</span>
+                  <span className="font-bold text-slate-900">{invoice.invoiceNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold text-slate-700">Date:</span>
+                  <span className="font-bold text-slate-900">{format(new Date(invoice.invoiceDate), 'dd MMM, yyyy')}</span>
+                </div>
+                {shopDetails.gst && (
+                  <div className="flex justify-between">
+                    <span className="font-semibold text-slate-700">GSTIN:</span>
+                    <span className="font-medium">{shopDetails.gst}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Billed To */}
+        <div className="mb-8 flex gap-8">
+          <div className="flex-1">
+            <h3 className="text-xs font-bold text-[#805d15] uppercase tracking-wider mb-2 border-b border-[#eaddcf] inline-block pb-1">Billed To</h3>
+            <div className="pl-2 border-l-2 border-[#eaddcf]">
+              <p className="font-bold text-lg text-slate-900">{invoice.customerSnapshot?.name || 'Unknown'}</p>
+              <p className="text-slate-600 whitespace-pre-wrap">{invoice.customerSnapshot?.address || ''}</p>
+              {invoice.customerSnapshot?.phone && <p className="text-slate-600 font-medium mt-1">Ph: {invoice.customerSnapshot.phone}</p>}
+            </div>
+          </div>
+          {/* Optional: Add Shipping Address or other details here if needed */}
+        </div>
+
+        {/* Table */}
+        <div className="mb-8">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-[#fcfbf7] border-y-2 border-[#b38728]">
+                <th className="py-3 px-3 text-left font-bold text-[#805d15] uppercase w-[5%]">#</th>
+                <th className="py-3 px-3 text-left font-bold text-[#805d15] uppercase w-[35%]">Description</th>
+                <th className="py-3 px-3 text-center font-bold text-[#805d15] uppercase w-[10%]">Purity</th>
+                <th className="py-3 px-3 text-right font-bold text-[#805d15] uppercase w-[12%]">Net Wt</th>
+                <th className="py-3 px-3 text-right font-bold text-[#805d15] uppercase w-[12%]">Rate</th>
+                <th className="py-3 px-3 text-right font-bold text-[#805d15] uppercase w-[12%]">Making</th>
+                <th className="py-3 px-3 text-right font-bold text-[#805d15] uppercase w-[14%]">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calculations.safeItems.map((item, idx) => {
+                const makingTotal = item.netWeight * item.making;
+                const lineTotal = item.netWeight * item.rate + makingTotal;
+                return (
+                  <tr key={item.id} className="border-b border-[#eaddcf] hover:bg-[#fffdf5]">
+                    <td className="py-3 px-3 text-slate-500">{idx + 1}</td>
+                    <td className="py-3 px-3 font-medium text-slate-800">{item.description}</td>
+                    <td className="py-3 px-3 text-center text-slate-600">{item.purity}</td>
+                    <td className="py-3 px-3 text-right text-slate-600">{f2(item.netWeight)} <span className="text-[8px]">g</span></td>
+                    <td className="py-3 px-3 text-right text-slate-600">₹{f2(item.rate)}</td>
+                    <td className="py-3 px-3 text-right text-slate-600">₹{f2(makingTotal)}</td>
+                    <td className="py-3 px-3 text-right font-bold text-slate-900">₹{f2(lineTotal)}</td>
+                  </tr>
+                );
+              })}
+              {/* Empty rows filler if needed for layout height */}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Totals Section */}
+        <div className="flex justify-end mb-12">
+          <div className="w-[300px]">
+            <div className="space-y-2 text-[11px]">
+              <div className="flex justify-between px-2">
+                <span className="text-slate-600">Subtotal</span>
+                <span className="font-medium text-slate-900">₹ {f2(calculations.subtotal)}</span>
+              </div>
+              {invoice.discount > 0 && (
+                <div className="flex justify-between px-2 text-emerald-700">
+                  <span>Discount</span>
+                  <span>- ₹ {f2(invoice.discount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between px-2">
+                <span className="text-slate-600">CGST ({f2(calculations.cgstRate)}%)</span>
+                <span className="font-medium text-slate-900">₹ {f2(calculations.cgst)}</span>
+              </div>
+              <div className="flex justify-between px-2">
+                <span className="text-slate-600">SGST ({f2(calculations.sgstRate)}%)</span>
+                <span className="font-medium text-slate-900">₹ {f2(calculations.sgst)}</span>
+              </div>
+
+              {calculations.roundOff !== 0 && (
+                <div className="flex justify-between px-2 text-slate-500 italic">
+                  <span>Round Off</span>
+                  <span>{calculations.roundOff > 0 ? '+' : ''} ₹ {f2(calculations.roundOff)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 bg-[#fcfbf7] border-y-2 border-[#b38728] p-3">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-[#805d15] text-lg uppercase">Total</span>
+                <span className="font-bold text-[#805d15] text-xl">₹ {f2(calculations.finalAmount)}</span>
+              </div>
+            </div>
+            <div className="mt-2 text-right text-[10px] italic text-slate-500">
+              Amount in Words: <span className="font-medium text-slate-700">{toWords(calculations.finalAmount)} Rupees Only</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Terms */}
+        <div className="mt-auto flex items-end justify-between pt-6 border-t border-[#eaddcf]">
+          <div className="text-[9px] text-slate-500 max-w-[60%]">
+            <h4 className="font-bold text-[#805d15] uppercase mb-1">Terms & Conditions</h4>
+            <ul className="list-disc pl-3 space-y-0.5">
+              <li>Goods once sold will not be taken back.</li>
+              <li>Subject to local jurisdiction.</li>
+              <li>E. & O.E.</li>
+            </ul>
+          </div>
+          <div className="text-center">
+            <div className="h-16 w-32 border-b border-slate-400 mb-2"></div>
+            <p className="font-bold text-[#805d15] text-[10px] uppercase">Authorized Signatory</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
 const BoldTemplate = ({ invoice, items, settings, calculations, shopDetails }: TemplateProps) => {
   return (
     <div className="mx-auto w-full max-w-[210mm] bg-white text-black text-[10px] leading-[1.5] font-sans">
@@ -641,6 +818,8 @@ export default function InvoicePdfTemplate({ invoice, items, settings }: Props) 
       return <ElegantTemplate invoice={invoice} items={items} settings={settings} calculations={calculations} shopDetails={shopDetails} />;
     case 'bold':
       return <BoldTemplate invoice={invoice} items={items} settings={settings} calculations={calculations} shopDetails={shopDetails} />;
+    case 'premium':
+      return <PremiumTemplate invoice={invoice} items={items} settings={settings} calculations={calculations} shopDetails={shopDetails} />;
     default:
       return <ClassicTemplate invoice={invoice} items={items} settings={settings} calculations={calculations} shopDetails={shopDetails} />;
   }

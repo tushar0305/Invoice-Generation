@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabase/client';
-import { format } from 'date-fns';
+import { format, addMonths, isAfter } from 'date-fns';
 import {
     ArrowLeft,
     Calendar,
@@ -15,7 +15,9 @@ import {
     Printer,
     User,
     Plus,
-    Lock
+    Lock,
+    AlertCircle,
+    Wallet
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -82,6 +84,22 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
     const [settlementAmount, setSettlementAmount] = useState('');
     const [settlementNotes, setSettlementNotes] = useState('');
     const [collateralConfirmed, setCollateralConfirmed] = useState(false);
+
+    // Helpers
+    const getMonthlyInterest = (principal: number, rate: number) => {
+        return (principal * rate) / 1200;
+    };
+
+    const getNextDueDate = (startDateStr: string) => {
+        const start = new Date(startDateStr);
+        const today = new Date();
+        let due = new Date(today.getFullYear(), today.getMonth(), start.getDate());
+
+        if (isAfter(today, due)) {
+            due = addMonths(due, 1);
+        }
+        return due;
+    };
 
     const handleAddPayment = async () => {
         if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
@@ -213,6 +231,65 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
     const collateral = loan.collateral || [];
     const payments = loan.payments || [];
 
+    // Unified Transaction History
+    const transactions = [
+        {
+            id: 'disbursement',
+            type: 'disbursement',
+            amount: loan.principal_amount,
+            date: loan.start_date,
+            method: 'Cash/Online', // Default assumption or add field to DB
+            notes: 'Loan Disbursed',
+            payment_type: 'disbursement'
+        },
+        ...payments.map(p => ({
+            ...p,
+            type: 'payment',
+            date: p.payment_date,
+            method: p.payment_method
+        }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Add Upcoming Payment to History if Active
+    if (loan.status === 'active') {
+        const nextInterest = getMonthlyInterest(loan.principal_amount, loan.interest_rate);
+        const nextDate = getNextDueDate(loan.start_date);
+
+        const upcomingTx = {
+            id: 'upcoming-payment',
+            type: 'upcoming',
+            amount: nextInterest,
+            date: nextDate.toISOString(),
+            method: 'Pending',
+            notes: 'Estimated Interest Due',
+            payment_type: 'interest_due'
+        };
+
+        // precise sort to ensure it appears at the top if future
+        transactions.unshift(upcomingTx);
+        transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+
+    const handleWhatsAppReminder = () => {
+        if (!loan.customer.phone) {
+            toast({ title: "No Phone Number", description: "Customer phone number is missing.", variant: "destructive" });
+            return;
+        }
+
+        const interest = getMonthlyInterest(loan.principal_amount, loan.interest_rate);
+        const dueDate = getNextDueDate(loan.start_date);
+
+        const message = `Hello ${loan.customer.name},\nThis is a gentle reminder for your loan payment.\n\nLoan #${loan.loan_number}\nInterest Due: ₹${formatCurrency(interest, true)}\nDue Date: ${format(dueDate, 'dd MMM yyyy')}\n\nPlease pay at the earliest to avoid late fees.\nThank you.`;
+
+        const url = `https://wa.me/91${loan.customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+
+        toast({
+            title: "WhatsApp Opened",
+            description: "Please send the message in the new tab.",
+        });
+    };
+
     return (
         <div className="space-y-6 pb-12">
             {/* Header */}
@@ -338,16 +415,16 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                                     <div className="space-y-1 text-sm">
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Principal:</span>
-                                            <span>₹{formatCurrency(loan.principal_amount)}</span>
+                                            <span>{formatCurrency(loan.principal_amount)}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Total Paid:</span>
-                                            <span className="text-green-600">- ₹{formatCurrency(loan.total_amount_paid || 0)}</span>
+                                            <span className="text-green-600">- {formatCurrency(loan.total_amount_paid || 0)}</span>
                                         </div>
                                         <div className="flex justify-between font-bold border-t pt-1 mt-1">
                                             <span>Outstanding:</span>
                                             <span className={Math.max(0, loan.principal_amount - (loan.total_amount_paid || 0)) > 0 ? 'text-orange-600' : 'text-green-600'}>
-                                                ₹{formatCurrency(Math.max(0, loan.principal_amount - (loan.total_amount_paid || 0)))}
+                                                {formatCurrency(Math.max(0, loan.principal_amount - (loan.total_amount_paid || 0)))}
                                             </span>
                                         </div>
                                     </div>
@@ -424,7 +501,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">₹{formatCurrency(loan.principal_amount)}</div>
+                                <div className="text-2xl font-bold">{formatCurrency(loan.principal_amount)}</div>
                                 <p className="text-xs text-muted-foreground">
                                     {loan.interest_rate}% Interest p.a.
                                 </p>
@@ -436,7 +513,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                                 <CreditCard className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">₹{formatCurrency(loan.total_amount_paid || 0)}</div>
+                                <div className="text-2xl font-bold">{formatCurrency(loan.total_amount_paid || 0)}</div>
                                 <p className="text-xs text-muted-foreground">
                                     Last payment: {payments.length > 0 ? format(new Date(payments[0].payment_date), 'MMM d, yyyy') : 'No payments'}
                                 </p>
@@ -487,7 +564,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="font-bold">₹{formatCurrency(item.estimated_value || 0)}</div>
+                                                    <div className="font-bold">{formatCurrency(item.estimated_value || 0)}</div>
                                                     <p className="text-xs text-muted-foreground">Est. Value</p>
                                                 </div>
                                             </div>
@@ -500,30 +577,90 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                         <TabsContent value="payments" className="space-y-4 mt-4">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Payment History</CardTitle>
-                                    <CardDescription>All payments made for this loan</CardDescription>
+                                    <CardTitle>Transaction History</CardTitle>
+                                    <CardDescription>Visual timeline of all loan transactions</CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    {payments.length === 0 ? (
-                                        <div className="text-center py-8 text-muted-foreground">No payments recorded yet.</div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {payments.sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()).map((payment) => (
-                                                <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                                                    <div>
-                                                        <div className="font-semibold">₹{formatCurrency(payment.amount)}</div>
-                                                        <p className="text-xs text-muted-foreground capitalize">
-                                                            {payment.payment_type.replace('_', ' ')} • {payment.payment_method}
-                                                        </p>
+                                <CardContent className="p-0 md:p-6">
+                                    {/* Desktop Table View */}
+                                    <div className="hidden md:block overflow-hidden rounded-md border">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-muted/50 text-muted-foreground font-medium">
+                                                <tr>
+                                                    <th className="px-4 py-3">Date</th>
+                                                    <th className="px-4 py-3">Description</th>
+                                                    <th className="px-4 py-3">Method</th>
+                                                    <th className="px-4 py-3 text-right">Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y">
+                                                {transactions.map((tx) => (
+                                                    <tr key={tx.id} className="hover:bg-muted/50 transition-colors">
+                                                        <td className="px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">
+                                                            {format(new Date(tx.date), 'MMM d, yyyy')}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <Badge
+                                                                variant={tx.type === 'disbursement' ? 'secondary' : (tx.type === 'upcoming' ? 'outline' : 'outline')}
+                                                                className={
+                                                                    tx.type === 'disbursement' ? 'bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200' :
+                                                                        (tx.type === 'upcoming' ? 'bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 dashed border-2' : '')
+                                                                }
+                                                            >
+                                                                {tx.id === 'disbursement' ? 'Principal Disbursed' : (tx.type === 'upcoming' ? 'Upcoming Due' : tx.payment_type?.replace('_', ' '))}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="px-4 py-3 capitalize text-muted-foreground">
+                                                            {tx.type === 'upcoming' ? <span className="italic text-amber-600">Expected</span> : tx.method?.replace('_', ' ')}
+                                                        </td>
+                                                        <td className={`px-4 py-3 text-right font-bold ${tx.type === 'disbursement' ? 'text-red-600' :
+                                                                (tx.type === 'upcoming' ? 'text-amber-600' : 'text-green-600')
+                                                            }`}>
+                                                            {tx.type === 'disbursement' ? '-' : (tx.type === 'upcoming' ? '~' : '+')} {formatCurrency(tx.amount)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Mobile Card View */}
+                                    <div className="md:hidden space-y-3 px-4 pb-4">
+                                        {transactions.map((tx) => (
+                                            <div key={tx.id} className="flex items-start justify-between p-3 border rounded-lg bg-card shadow-sm">
+                                                <div className="space-y-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-semibold text-muted-foreground">
+                                                            {format(new Date(tx.date), 'dd MMM yyyy')}
+                                                        </span>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`text-[10px] h-5 px-1.5 ${tx.type === 'disbursement'
+                                                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                                    : (tx.type === 'upcoming'
+                                                                        ? 'bg-amber-50 text-amber-700 border-amber-200 border-dashed'
+                                                                        : 'bg-green-50 text-green-700 border-green-200')
+                                                                }`}
+                                                        >
+                                                            {tx.id === 'disbursement' ? 'OUT' : (tx.type === 'upcoming' ? 'DUE' : 'IN')}
+                                                        </Badge>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <div className="text-sm font-medium">{format(new Date(payment.payment_date), 'MMM d, yyyy')}</div>
-                                                        {payment.notes && <p className="text-xs text-muted-foreground max-w-[200px] truncate">{payment.notes}</p>}
+                                                    <p className="text-sm font-medium capitalize">
+                                                        {tx.id === 'disbursement' ? 'Principal Disbursed' : (tx.type === 'upcoming' ? 'Upcoming Interest' : tx.payment_type?.replace('_', ' '))}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground capitalize">
+                                                        Via {tx.type === 'upcoming' ? 'Expected' : tx.method?.replace('_', ' ')}
+                                                    </p>
+                                                </div>
+                                                <div className={`text-right font-bold ${tx.type === 'disbursement' ? 'text-red-600' :
+                                                        (tx.type === 'upcoming' ? 'text-amber-600' : 'text-green-600')
+                                                    }`}>
+                                                    <div className="text-base">
+                                                        {tx.type === 'disbursement' ? '-' : (tx.type === 'upcoming' ? '~' : '+')} {formatCurrency(tx.amount)}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -575,8 +712,43 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                                     <div className="font-medium">{format(new Date(loan.customer.created_at!), 'MMM d, yyyy')}</div>
                                 </div>
                             </div>
+
+
                         </CardContent>
                     </Card>
+
+                    {/* Upcoming Payment / Reminder Card */}
+                    {loan.status === 'active' && (
+                        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/50">
+                            <CardHeader className="pb-2">
+                                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-500">
+                                    <AlertCircle className="h-5 w-5" />
+                                    <CardTitle className="text-base">Upcoming Payment</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Estimated Interest</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+                                            {formatCurrency(getMonthlyInterest(loan.principal_amount, loan.interest_rate))}
+                                        </span>
+                                        <span className="text-sm font-medium text-muted-foreground">
+                                            due {format(getNextDueDate(loan.start_date), 'dd MMM')}
+                                        </span>
+                                    </div>
+                                </div>
+                                <Button
+                                    className="w-full bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 dark:text-amber-300 transition-colors"
+                                    variant="outline"
+                                    onClick={handleWhatsAppReminder}
+                                >
+                                    <Wallet className="h-4 w-4 mr-2" />
+                                    Send Payment Reminder
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     <Card>
                         <CardHeader>
@@ -585,7 +757,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                         <CardContent className="space-y-2 text-sm">
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Principal</span>
-                                <span>₹{formatCurrency(loan.principal_amount)}</span>
+                                <span>{formatCurrency(loan.principal_amount)}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Interest Rate</span>
@@ -593,11 +765,11 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Total Paid</span>
-                                <span className="text-green-600">- ₹{formatCurrency(loan.total_amount_paid || 0)}</span>
+                                <span className="text-green-600">- {formatCurrency(loan.total_amount_paid || 0)}</span>
                             </div>
                             <div className="border-t pt-2 mt-2 flex justify-between font-bold">
                                 <span>Balance Principal</span>
-                                <span>₹{formatCurrency(Math.max(0, loan.principal_amount - (loan.total_amount_paid || 0)))}</span>
+                                <span>{formatCurrency(Math.max(0, loan.principal_amount - (loan.total_amount_paid || 0)))}</span>
                             </div>
                             <p className="text-xs text-muted-foreground mt-2 italic">
                                 * Interest calculation pending

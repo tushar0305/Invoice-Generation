@@ -51,12 +51,12 @@ const fetchDashboardDataCached = cache(async (shopId: string) => {
             .gte('created_at', startOfLastMonth.toISOString())
             .lt('created_at', startOfCurrentMonth.toISOString()),
 
-        // 4. Due Invoices
+        // 4. Due/Pending Invoices
         supabase
             .from('invoices')
             .select('id, invoice_number, grand_total, due_date, created_at, customer:customers(name, phone)')
             .eq('shop_id', shopId)
-            .eq('status', 'due'),
+            .in('status', ['due', 'pending']),
 
         // 5. Today Revenue
         supabase

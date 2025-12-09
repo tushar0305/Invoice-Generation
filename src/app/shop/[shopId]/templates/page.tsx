@@ -37,6 +37,12 @@ const templates = [
     description: 'Sophisticated design with serif fonts and gold accents.',
     color: 'from-amber-500/20 to-amber-500/5',
   },
+  {
+    id: 'premium',
+    name: 'Premium',
+    description: 'Exclusive watermark design with sophisticated gold styling.',
+    color: 'from-yellow-600/20 to-yellow-600/5',
+  },
 ];
 
 export default function TemplatesPage() {

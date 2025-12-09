@@ -1,28 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import DOMPurify from "dompurify";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
-
-type CustomerRow = {
-  id: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  name_highlight?: string | null;
-  email_highlight?: string | null;
-  phone_highlight?: string | null;
-};
+import type { CustomerSearchResult } from "@/lib/customer-types";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 type CustomerFTSComboboxProps = {
   shopId: string;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  onSelect: (customer: CustomerRow) => void;
+  onSelect: (customer: CustomerSearchResult) => void;
 };
 
 export function CustomerFTSCombobox({
@@ -35,7 +32,7 @@ export function CustomerFTSCombobox({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<CustomerRow[]>([]);
+  const [data, setData] = useState<CustomerSearchResult[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,24 +91,37 @@ export function CustomerFTSCombobox({
   }, [shopId, debounced, open]);
 
   const highlightHTML = (text: string | null, fallback: string | null) => {
-    return text || fallback || "";
+    const html = text || fallback || "";
+    // Sanitize HTML to prevent XSS attacks from database-returned highlights
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['mark'],
+      ALLOWED_ATTR: []
+    });
   };
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
-      <Input
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        placeholder={placeholder}
-        disabled={disabled}
-      />
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div ref={containerRef} className={cn("relative", className)}>
+          <Input
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder={placeholder}
+            disabled={disabled}
+          />
+        </div>
+      </PopoverTrigger>
 
-      {open && (
-        <div className="absolute z-50 mt-2 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
+      <PopoverContent
+        className="p-0 w-[var(--radix-popover-trigger-width)]"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing from input
+      >
+        <div className="max-h-[300px] overflow-y-auto">
           {loading ? (
             <div className="p-3 space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -166,14 +176,14 @@ export function CustomerFTSCombobox({
                   />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
                   <Button
+                    size="sm"
                     onClick={async () => {
                       if (!shopId) return;
                       setCreating(true);
                       try {
                         setError(null);
-                        // Normalize and validate inputs before POST
                         const name = (createForm.name || debounced || '').trim();
                         const email = (createForm.email || '').trim();
                         const phoneDigits = (createForm.phone || '').replace(/\D/g, '');
@@ -181,64 +191,41 @@ export function CustomerFTSCombobox({
                         const state = (createForm.state || '').trim();
                         const pincode = (createForm.pincode || '').trim();
 
-                        if (!name) {
-                          throw new Error('Name is required');
-                        }
-                        // If phone provided, require at least 10 digits
-                        if (phoneDigits && phoneDigits.length < 10) {
-                          throw new Error('Validation failed: phone must have at least 10 digits');
-                        }
+                        if (!name) throw new Error('Name is required');
+                        if (phoneDigits && phoneDigits.length < 10) throw new Error('Phone must be 10+ digits');
 
                         const res = await fetch('/api/v1/customers', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            shopId,
-                            name,
-                            phone: phoneDigits || undefined,
-                            email: email || undefined,
-                            address: address || undefined,
-                            state: state || undefined,
-                            pincode: pincode || undefined,
-                          }),
+                          body: JSON.stringify({ shopId, name, phone: phoneDigits || undefined, email: email || undefined, address: address || undefined, state: state || undefined, pincode: pincode || undefined }),
                         });
                         const json = await res.json();
                         if (!res.ok) throw new Error(json.error || 'Failed to create customer');
-                        const created: CustomerRow & any = {
-                          id: json.id,
-                          name: json.name,
-                          email: json.email,
-                          phone: json.phone,
-                          address: json.address,
-                          state: json.state,
-                          pincode: json.pincode,
-                        };
+                        const created: CustomerSearchResult = { ...json, id: json.id };
                         onSelect(created);
                         setOpen(false);
-                        setQuery(created.name || created.phone || created.email || '');
-                      } catch (e) {
-                        console.error('Create customer error:', e);
-                        // Surface a friendly message if available
-                        const msg = e instanceof Error ? e.message : 'Failed to create customer';
-                        setError(msg);
+                        setQuery(created.name || '');
+                      } catch (e: any) {
+                        setError(e.message || 'Failed');
                       } finally {
                         setCreating(false);
                       }
                     }}
                     disabled={creating}
                   >
-                    {creating ? 'Creating...' : 'Create Customer'}
+                    {creating ? 'Creating...' : 'Create'}
                   </Button>
                 </div>
               </div>
             </div>
           ) : (
-            <ul className="max-h-64 overflow-auto divide-y">
+            <ul className="divide-y">
               {data.map((row) => (
                 <li
                   key={row.id}
-                  className="p-3 hover:bg-muted/50 cursor-pointer"
-                  onClick={() => {
+                  className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
                     onSelect(row);
                     setOpen(false);
                     setQuery(row.name || row.phone || row.email || "");
@@ -255,8 +242,8 @@ export function CustomerFTSCombobox({
             </ul>
           )}
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

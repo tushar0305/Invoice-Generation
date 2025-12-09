@@ -26,9 +26,9 @@ export default async function Image() {
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 20 }}>
-                    {/* Use browser.webp for better Google search visibility */}
+                    {/* Use logo.png for better brand consistency */}
                     <img
-                        src="https://swarnavyapar.in/logo/browser.webp"
+                        src="https://swarnavyapar.in/logo/logo.png"
                         alt="SwarnaVyapar"
                         width={160}
                         height={160}

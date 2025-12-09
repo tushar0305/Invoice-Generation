@@ -404,7 +404,13 @@ function ShopLayoutInner({
                     </header>
                 )}
 
-                <main id="shop-main-content" className="flex-1 overflow-y-auto overflow-x-hidden px-0 py-0 md:px-6 md:py-3 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6">
+                <main id="shop-main-content" className={cn(
+                    "flex-1 overflow-x-hidden px-0 py-0 md:px-6 md:py-3 md:pb-6",
+                    // Use overflow-hidden for creation pages (they handle their own scrolling), overflow-y-auto for others
+                    pathname.endsWith('/new') ? "overflow-hidden" : "overflow-y-auto",
+                    // Add bottom padding only if mobile nav is visible
+                    isMobile && !pathname.endsWith('/new') ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : ""
+                )}>
                     {children}
                 </main>
 
@@ -424,7 +430,7 @@ function ShopLayoutInner({
             </SidebarInset>
 
             {/* Mobile Navigation */}
-            {isMobile && (
+            {isMobile && !pathname.endsWith('/new') && (
                 <>
                     <MobileBottomNav shopId={shopId} />
                 </>

@@ -532,6 +532,7 @@ export function InvoicesClient({
                             size="sm"
                             onClick={() => {
                                 haptics.impact(ImpactStyle.Light);
+                                setStatusFilter(status);
                                 router.push(`/shop/${shopId}/invoices?status=${status}`);
                             }}
                             className={cn(
@@ -559,6 +560,14 @@ export function InvoicesClient({
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    <Link href={`/shop/${shopId}/invoices/new`}>
+                        <Button
+                            className="h-10 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium shrink-0"
+                        >
+                            <FilePlus2 className="h-4 w-4" />
+                            <span className="hidden sm:inline">New Invoice</span>
+                        </Button>
+                    </Link>
                     <div className="flex items-center gap-2">
                         <Button
                             variant="outline"
@@ -815,27 +824,7 @@ export function InvoicesClient({
                 </div>
             </div>
 
-            {/* Search/Filter Results Feedback */}
-            {(searchTerm || statusFilter !== 'all' || dateRange) && (
-                <div className="flex items-center justify-between py-2 px-4 bg-muted/30 rounded-lg border border-border/40">
-                    <div className="text-sm text-muted-foreground">
-                        Showing <span className="font-semibold text-foreground">{filteredInvoices.length}</span> of <span className="font-semibold text-foreground">{pagination?.totalCount ?? optimisticInvoices.length}</span> invoices
-                    </div>
-                    {(searchTerm || dateRange) && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                                setSearchTerm('');
-                                setDateRange(undefined);
-                            }}
-                            className="h-7 text-xs"
-                        >
-                            Clear filters
-                        </Button>
-                    )}
-                </div>
-            )}
+
 
             {/* Delete Confirmation Dialog */}
             <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>

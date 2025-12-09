@@ -25,6 +25,12 @@ const templates = [
         description: 'Clean and simple, ink-saving.',
         color: 'bg-white border-2 border-dashed',
     },
+    {
+        id: 'premium',
+        name: 'Premium',
+        description: 'Elegant design with watermark background.',
+        color: 'bg-amber-50 border-amber-200',
+    },
 ];
 
 export function TemplateSelector({ value, onChange }: TemplateSelectorProps) {
