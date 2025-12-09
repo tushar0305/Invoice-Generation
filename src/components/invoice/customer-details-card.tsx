@@ -1,16 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users } from 'lucide-react';
-import { PremiumCustomerAutocomplete } from '@/components/invoice/PremiumCustomerAutocomplete';
+import { CustomerFTSCombobox } from '@/components/search/customer-fts-combobox';
 import { UseFormReturn } from 'react-hook-form';
 
 interface CustomerDetailsCardProps {
     form: UseFormReturn<any>;
-    customers: any[];
-    onSearch: (q: string) => Promise<void>;
+    shopId: string;
     disabled?: boolean;
 }
 
-export function CustomerDetailsCard({ form, customers, onSearch, disabled }: CustomerDetailsCardProps) {
+export function CustomerDetailsCard({ form, shopId, disabled }: CustomerDetailsCardProps) {
     return (
         <Card className="border-2 shadow-sm relative z-30 overflow-visible">
             <CardHeader className="pb-2">
@@ -19,27 +18,37 @@ export function CustomerDetailsCard({ form, customers, onSearch, disabled }: Cus
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <PremiumCustomerAutocomplete
-                    customers={customers}
-                    value={{
-                        name: form.watch('customerName'),
-                        phone: form.watch('customerPhone'),
-                        address: form.watch('customerAddress'),
-                        state: form.watch('customerState'),
-                        pincode: form.watch('customerPincode'),
-                        email: form.watch('customerEmail'),
+                <CustomerFTSCombobox
+                    shopId={shopId}
+                    onSelect={(row) => {
+                        // Persist selected customer id for submission
+                        // @ts-ignore
+                        form.setValue('customerId', row.id, { shouldValidate: true });
+                        form.setValue('customerName', row.name || '', { shouldValidate: true });
+                        form.setValue('customerPhone', row.phone || '');
+                        form.setValue('customerEmail', row.email || '');
+                        // Pre-fill address/state/pincode if available in schema
+                        // @ts-ignore
+                        form.setValue('customerAddress', (row as any).address || '');
+                        // @ts-ignore
+                        form.setValue('customerState', (row as any).state || '');
+                        // @ts-ignore
+                        form.setValue('customerPincode', (row as any).pincode || '');
                     }}
-                    onChange={(c) => {
-                        if (c.name !== undefined) form.setValue('customerName', c.name, { shouldValidate: true });
-                        if (c.phone !== undefined) form.setValue('customerPhone', c.phone, { shouldValidate: true });
-                        if (c.address !== undefined) form.setValue('customerAddress', c.address || '');
-                        if (c.state !== undefined) form.setValue('customerState', c.state || '');
-                        if (c.pincode !== undefined) form.setValue('customerPincode', c.pincode || '');
-                        if (c.email !== undefined) form.setValue('customerEmail', c.email || '');
-                    }}
-                    onSearch={onSearch}
-                    disabled={disabled}
                 />
+
+                {/* Selected customer detail preview */}
+                {(form.watch('customerName') || form.watch('customerPhone') || form.watch('customerEmail')) && (
+                    <div className="mt-4 rounded-lg border bg-card p-3 text-sm">
+                        <div className="font-medium">{form.watch('customerName') || 'Unnamed'}</div>
+                        <div className="text-muted-foreground">
+                            {[form.watch('customerEmail'), form.watch('customerPhone')].filter(Boolean).join(' • ')}
+                        </div>
+                        <div className="mt-1 text-muted-foreground">
+                            {[form.watch('customerAddress'), form.watch('customerState'), form.watch('customerPincode')].filter(Boolean).join(', ')}
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

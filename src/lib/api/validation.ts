@@ -127,10 +127,13 @@ export const KhataTransactionSchema = z.object({
 export const CreateCustomerSchema = z.object({
     shopId: UUIDSchema,
     name: z.string().min(1).max(100),
-    email: z.string().email().optional(),
-    phone: z.string().min(10).max(15).optional(),
+    email: z.string().email().optional().or(z.literal('')),
+    phone: z.string().min(10, 'Phone must have at least 10 digits').max(15).optional(),
     address: z.string().max(500).optional(),
     gstNumber: z.string().max(15).optional(),
+    state: z.string().max(100).optional(),
+    pincode: z.string().max(10).optional(),
+    openingBalance: z.number().nonnegative().optional(),
 });
 
 export const UpdateCustomerSchema = CreateCustomerSchema.partial().omit({ shopId: true });

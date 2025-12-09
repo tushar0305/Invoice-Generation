@@ -83,7 +83,6 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const { activeShop, isLoading: shopLoading } = useActiveShop();
 
   // Local State
-  const [customers, setCustomers] = useState<any[]>([]);
   const [settings, setSettings] = useState<any | null>(null);
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings | null>(null);
   const [customerPoints, setCustomerPoints] = useState<number>(0);
@@ -146,14 +145,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         setLoyaltySettings(loyaltyData);
       }
 
-      // Load Customers
-      try {
-        const { getCustomers } = await import('@/services/customers');
-        const customerData = await getCustomers(activeShop.id);
-        setCustomers(customerData);
-      } catch (err) {
-        console.error('Failed to load customers', err);
-      }
+      // Do not pre-load customers; search happens on demand via FTS combobox
     };
 
     loadData();
@@ -307,13 +299,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                 {/* 1. Customer Details */}
                 <CustomerDetailsCard
                   form={form}
-                  customers={customers}
-                  onSearch={async (q) => {
-                    if (!activeShop?.id) return;
-                    const { searchCustomers } = await import('@/services/customers');
-                    const res = await searchCustomers(activeShop.id, q);
-                    setCustomers(res);
-                  }}
+                  shopId={activeShop?.id || ''}
                   disabled={isPending}
                 />
 

@@ -32,15 +32,17 @@ export const POST = withAuth(async (
         );
     }
 
-    // 3. Execute transaction via stored  // Execute DB function
+    // 3. Execute DB function with correct signature
     const { data, error } = await supabase.rpc('create_customer', {
         p_shop_id: input.shopId,
-        p_user_id: user.id,
         p_name: input.name,
         p_phone: input.phone,
         p_email: input.email || null,
         p_address: input.address || null,
         p_gst_number: input.gstNumber || null,
+        p_state: input.state || null,
+        p_pincode: input.pincode || null,
+        p_opening_balance: input.openingBalance ?? 0,
     });
 
     if (error) {
@@ -71,7 +73,7 @@ export const POST = withAuth(async (
         );
     }  // 4. Log audit trail
     const auditLogger = createAuditLogger(supabase, user.id, input.shopId);
-    await auditLogger.logCreate('customer', data.customer_id, {
+    await auditLogger.logCreate('customer', (data?.customer_id ?? data?.id), {
         name: input.name,
         phone: input.phone,
         role,
@@ -79,7 +81,13 @@ export const POST = withAuth(async (
 
     // 5. Return success response
     return successResponse({
-        customerId: data.customer_id,
+        id: (data?.customer_id ?? data?.id),
+        name: input.name,
+        email: input.email || null,
+        phone: input.phone,
+        address: input.address || null,
+        state: input.state || null,
+        pincode: input.pincode || null,
         message: 'Customer created successfully',
     }, 201);
 });
