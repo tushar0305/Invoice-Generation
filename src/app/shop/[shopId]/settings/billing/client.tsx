@@ -250,8 +250,9 @@ export function BillingClient({ shopId, currentSubscription, userEmail }: Billin
 
                 {/* Subscription Details (if subscribed) */}
                 {currentSubscription && (
-                    <div className="mt-12 p-6 rounded-2xl bg-muted/30 border">
-                        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+                    <Card className="mt-12 border border-border shadow-sm">
+                        <CardHeader>
+                            <div className="flex items-center justify-between flex-wrap gap-4">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-primary/10">
                                     <CreditCard className="h-5 w-5 text-primary" />
@@ -268,9 +269,10 @@ export function BillingClient({ shopId, currentSubscription, userEmail }: Billin
                                     Manage on Razorpay →
                                 </a>
                             )}
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             <DetailCard
                                 label="Status"
                                 value={currentSubscription.cancel_at_period_end
@@ -302,7 +304,7 @@ export function BillingClient({ shopId, currentSubscription, userEmail }: Billin
                                     : '1 payment'
                                 }
                             />
-                        </div>
+                            </div>
 
                         {/* Subscription ID & Plan ID */}
                         <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -363,7 +365,8 @@ export function BillingClient({ shopId, currentSubscription, userEmail }: Billin
                                 subscriptionId={currentSubscription.razorpay_subscription_id}
                             />
                         )}
-                    </div>
+                        </CardContent>
+                    </Card>
                 )}
 
                 {/* FAQ/Help */}
@@ -401,8 +404,8 @@ function PricingCard({
 }: any) {
     return (
         <Card className={cn(
-            "relative flex flex-col h-full transition-all duration-300",
-            highlight && "border-amber-500 shadow-xl shadow-amber-500/10 lg:scale-105 z-10",
+            "relative flex flex-col h-full rounded-xl border border-border bg-card shadow-sm transition-all duration-300 hover:shadow-md",
+            highlight && "border-amber-500 shadow-amber-500/10 lg:scale-105 z-10",
             current && "ring-2 ring-green-500 ring-offset-2 ring-offset-background",
             badge && "mt-3"
         )}>
@@ -494,7 +497,7 @@ function PricingCard({
 // Feature Highlight Component
 function FeatureHighlight({ icon, title, description, color }: any) {
     return (
-        <div className="p-4 md:p-6 rounded-2xl bg-card border text-center hover:shadow-lg transition-shadow">
+        <div className="p-4 md:p-6 rounded-xl bg-card border border-border text-center hover:shadow-md transition-shadow">
             <div className={cn("inline-flex p-3 rounded-xl mb-3", color)}>
                 {icon}
             </div>
@@ -507,7 +510,7 @@ function FeatureHighlight({ icon, title, description, color }: any) {
 // Detail Card Component
 function DetailCard({ label, value, status, mono }: any) {
     return (
-        <div className="p-4 rounded-xl bg-background border">
+        <div className="p-4 rounded-xl bg-card border border-border">
             <span className="text-xs text-muted-foreground uppercase tracking-wider">{label}</span>
             <div className={cn(
                 "font-medium mt-1 flex items-center gap-2",

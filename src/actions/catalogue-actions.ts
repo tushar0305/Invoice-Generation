@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -247,11 +248,16 @@ export async function getPublicProducts(shopId: string, categoryId?: string) {
 }
 
 export async function incrementView(shopId: string, type: 'page_view' | 'product_view' | 'whatsapp_click', metadata: any = {}) {
-    const supabase = await createClient();
+    // Use service role key to bypass RLS for public analytics
+    const supabase = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     await supabase.from('catalogue_analytics').insert({
         shop_id: shopId,
         view_type: type,
-        metadata
+        product_id: metadata?.product_id || null
     });
 }
 

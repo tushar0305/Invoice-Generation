@@ -509,23 +509,7 @@ export default function SettingsPage() {
                         </CardContent>
                       </Card>
 
-                      {/* Branding & Theme Card */}
-                      <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-300 group">
-                        <CardHeader className="pb-4">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
-                              <Receipt className="h-5 w-5" />
-                            </div>
-                            <CardTitle className="text-lg">Branding & Theme</CardTitle>
-                          </div>
-                          <CardDescription>Choose your brand color palette</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {activeShop?.id && (
-                            <PaletteSwitcher shopId={activeShop.id} />
-                          )}
-                        </CardContent>
-                      </Card>
+                      {/* Branding & Theme Card — removed as requested */}
 
                       {/* Tax & Finance Card */}
                       <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-300 group">
@@ -598,65 +582,7 @@ export default function SettingsPage() {
                       </Button>
                     </div>
 
-                    {/* Danger Zone */}
-                    {permissions.canEditSettings && (
-                      <div className="pt-8">
-                        <Card className="border-destructive/20 bg-destructive/5 backdrop-blur-sm overflow-hidden">
-                          <CardHeader>
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 rounded-full bg-destructive/10 text-destructive">
-                                <AlertTriangle className="h-5 w-5" />
-                              </div>
-                              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                            </div>
-                            <CardDescription className="text-destructive/70">
-                              Irreversible actions that will permanently delete your data
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/10 bg-background/50">
-                              <div>
-                                <h4 className="font-medium text-foreground">Delete Account</h4>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  Permanently remove your account and all associated data
-                                </p>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={async () => {
-                                  const confirmDelete = confirm('Are you absolutely sure? This cannot be undone.');
-                                  if (!confirmDelete) return;
-
-                                  const doubleConfirm = confirm('FINAL WARNING: Type your email to confirm deletion.');
-                                  if (!doubleConfirm) return;
-
-                                  try {
-                                    if (!user) throw new Error('No user found');
-                                    await supabase.from('invoices').delete().eq('user_id', user.uid);
-                                    await supabase.from('customers').delete().eq('user_id', user.uid);
-                                    await supabase.from('stock_items').delete().eq('user_id', user.uid);
-                                    // Shops will be handled by cascade or manual deletion if needed, but for now we just delete user data related
-                                    // If owner, maybe delete shop? For now let's keep it simple.
-                                    // await supabase.from('user_settings').delete().eq('user_id', user.uid); // Removed
-                                    const { error } = await supabase.auth.admin.deleteUser(user.uid);
-                                    if (error) throw error;
-                                    toast({ title: 'Account Deleted' });
-                                    await supabase.auth.signOut();
-                                    router.push('/');
-                                  } catch (e: any) {
-                                    console.error('Delete error:', e);
-                                    toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
-                                  }
-                                }}
-                              >
-                                Delete Account
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
+                    {/* Danger Zone — removed as requested */}
 
                   </fieldset>
                 </form>

@@ -29,7 +29,7 @@ export async function updateLoyaltySettingsAction(shopId: string, settings: Part
 
         const { error } = await supabase
             .from('shop_loyalty_settings')
-            .upsert(payload);
+            .upsert(payload, { onConflict: 'shop_id' });
 
         if (error) {
             console.error('Supabase Upsert Error:', error);

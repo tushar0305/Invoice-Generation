@@ -46,9 +46,15 @@ export const metadata: Metadata = {
     ],
   },
   icons: {
-    icon: process.env.NEXT_PUBLIC_LOGO_URL || '/logo/logo.png',
-    shortcut: process.env.NEXT_PUBLIC_LOGO_URL || '/logo/logo.png',
-    apple: process.env.NEXT_PUBLIC_LOGO_URL || '/logo/logo.png',
+    icon: [
+      { url: '/favicon/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/favicon/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon/favicon.ico' },
+    ],
+    shortcut: '/favicon/favicon.ico',
+    apple: [
+      { url: '/favicon/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -93,10 +99,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Favicons and touch icons */}
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/logo/swarnavyapar.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/logo/swarnavyapar.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/logo/swarnavyapar.png" />
+        <link rel="icon" href="/favicon/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/favicon/favicon-96x96.png" />
+        <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
 
         {/* Preload self-hosted fonts (place WOFF2 files under /public/fonts/) */}

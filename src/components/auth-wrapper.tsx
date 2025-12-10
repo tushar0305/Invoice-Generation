@@ -74,7 +74,7 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
     if (isUserLoading || !onboardingChecked || !roleChecked) return;
 
     // If not logged in and not on public pages, redirect to login
-    if (!user && pathname !== '/login' && pathname !== '/') {
+    if (!user && pathname !== '/login' && pathname !== '/' && !pathname.startsWith('/store')) {
       router.replace('/login');
       return;
     }
@@ -147,7 +147,7 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
   // Show loading screen during initial checks to prevent flash
   if (isUserLoading || !onboardingChecked || !roleChecked) {
     // Only show loader if we're navigating (not on public pages)
-    if (pathname !== '/login' && pathname !== '/') {
+    if (pathname !== '/login' && pathname !== '/' && !pathname.startsWith('/store')) {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />

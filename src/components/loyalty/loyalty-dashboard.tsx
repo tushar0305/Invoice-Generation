@@ -242,19 +242,27 @@ export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, sett
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            {recentLogs.slice(0, 5).map((log, i) => (
-                                <div key={i} className="flex items-center justify-between text-sm py-2 border-b last:border-0 border-border/50">
-                                    <span className="text-foreground font-medium">
-                                        {log.customer?.name}
-                                    </span>
-                                    <span className={cn(
-                                        "font-mono font-medium",
-                                        log.points_change > 0 ? "text-emerald-600" : "text-rose-600"
-                                    )}>
-                                        {log.points_change > 0 ? '+' : ''}{log.points_change}
-                                    </span>
-                                </div>
-                            ))}
+                            {recentLogs.slice(0, 5).map((log, i) => {
+                                const created = new Date(log.created_at);
+                                const validityDays = settings?.points_validity_days || 0;
+                                const expiry = validityDays > 0 ? new Date(created.getTime() + validityDays * 24 * 60 * 60 * 1000) : null;
+                                return (
+                                    <div key={i} className="grid grid-cols-2 md:grid-cols-3 items-center gap-2 text-sm py-2 border-b last:border-0 border-border/50">
+                                        <span className="text-foreground font-medium truncate">
+                                            {log.customer?.name}
+                                        </span>
+                                        <span className={cn(
+                                            "font-mono font-medium justify-self-end",
+                                            log.points_change > 0 ? "text-emerald-600" : "text-rose-600"
+                                        )}>
+                                            {log.points_change > 0 ? '+' : ''}{log.points_change}
+                                        </span>
+                                        <span className="hidden md:block text-xs text-muted-foreground justify-self-end">
+                                            {expiry ? `Expires ${format(expiry, 'MMM d, yyyy')}` : 'No expiry'}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </CardContent>
                     </Card>
                 </div>

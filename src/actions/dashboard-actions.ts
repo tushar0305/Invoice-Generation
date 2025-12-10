@@ -54,9 +54,9 @@ const fetchDashboardDataCached = cache(async (shopId: string) => {
         // 4. Due/Pending Invoices
         supabase
             .from('invoices')
-            .select('id, invoice_number, grand_total, due_date, created_at, customer:customers(name, phone)')
+            .select('id, invoice_number, grand_total, due_date, created_at, status, customer:customers(name, phone)')
             .eq('shop_id', shopId)
-            .in('status', ['due', 'pending']),
+            .in('status', ['due', 'pending', 'Due', 'Pending']),
 
         // 5. Today Revenue
         supabase
@@ -192,7 +192,7 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const supabase = await createClient();
 
     // Execute all queries in parallel
-    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult, loansResult] = await Promise.all([
+    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult, loansResult, lowStockResult] = await Promise.all([
         // 1. Total Customers
         supabase
             .from('customers')
@@ -216,28 +216,48 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
             .from('invoices')
             .select('grand_total')
             .eq('shop_id', shopId)
-            .eq('status', 'due'),
+            .in('status', ['due', 'pending', 'Due', 'Pending']),
 
         // 5. Total Loyalty Points
         supabase
             .from('customers')
-            .select('loyalty_points')
+            .select('name, loyalty_points')
             .eq('shop_id', shopId)
-            .not('loyalty_points', 'is', null),
+            .gt('loyalty_points', 0)
+            .order('loyalty_points', { ascending: false }),
 
         // 6. Active Loans (New)
         supabase
             .from('loans')
             .select('*', { count: 'exact', head: true })
             .eq('shop_id', shopId)
-            .eq('status', 'active')
+            .eq('status', 'active'),
+
+        // 7. Low Stock Items
+        supabase
+            .from('stock_items')
+            .select('id, name, quantity, unit')
+            .eq('shop_id', shopId)
+            .lte('quantity', 10)
+            .order('quantity', { ascending: true })
+            .limit(5)
     ]);
 
     const khataBalance = (dueInvoicesResult.data || []).reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
     const totalLoyaltyPoints = (loyaltyResult.data || []).reduce((sum, customer) => sum + (Number(customer.loyalty_points) || 0), 0);
 
     // Calculate active loyalty members (customers with > 0 points)
-    const loyaltyMembers = (loyaltyResult.data || []).filter(c => (Number(c.loyalty_points) || 0) > 0).length;
+    const loyaltyMembers = (loyaltyResult.data || []).length;
+    const topLoyaltyCustomer = (loyaltyResult.data || [])[0] || null;
+
+    // Map low stock items
+    const lowStockItems = (lowStockResult.data || []).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        currentQty: Number(item.quantity),
+        minQty: 10, // Default threshold since not in DB
+        unit: item.unit
+    }));
 
     return {
         customerCount: customerResult.count || 0,
@@ -246,9 +266,11 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
         activeLoans: loansResult.count || 0,
         khataBalance: khataBalance,
         totalLoyaltyPoints: totalLoyaltyPoints,
-        lowStockItems: [], // Mock array
+        lowStockItems: lowStockItems,
         loyaltyMembers: loyaltyMembers,
+        topLoyaltyCustomer: topLoyaltyCustomer ? { name: topLoyaltyCustomer.name, points: topLoyaltyCustomer.loyalty_points } : null,
     };
+
 });
 
 // Export cached function

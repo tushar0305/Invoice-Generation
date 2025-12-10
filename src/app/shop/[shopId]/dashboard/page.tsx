@@ -190,13 +190,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <LowStockWidget
           shopId={shopId}
-          items={additionalStats.lowStockItems.map((item: any) => ({
-            id: item.id,
-            name: item.item_name,
-            currentQty: item.current_quantity,
-            minQty: item.min_quantity || 5,
-            unit: item.unit || 'pcs'
-          }))}
+          items={additionalStats.lowStockItems}
         />
 
         <PendingPaymentsWidget
@@ -210,7 +204,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
           shopId={shopId}
           totalPointsDistributed={additionalStats.totalLoyaltyPoints}
           activeMembers={additionalStats.loyaltyMembers}
-          topRewarder={topCustomer ? { name: topCustomer.name, points: Math.floor(topCustomer.totalSpent / 100) } : undefined}
+          topRewarder={additionalStats.topLoyaltyCustomer ? { name: additionalStats.topLoyaltyCustomer.name, points: additionalStats.topLoyaltyCustomer.points } : undefined}
         />
       </div>
 

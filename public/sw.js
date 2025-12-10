@@ -6,8 +6,8 @@ const STATIC_CACHE = `sv-static-${CACHE_VERSION}`;
 
 // Static assets that rarely change
 const STATIC_ASSETS = [
-  '/favicon.ico',
-  '/manifest.webmanifest',
+  '/favicon/favicon.ico',
+  '/favicon/site.webmanifest',
   '/logo/swarnavyapar.webp',
   '/fonts/Inter-Variable.woff2',
   '/fonts/PlayfairDisplay-Regular.woff2',
