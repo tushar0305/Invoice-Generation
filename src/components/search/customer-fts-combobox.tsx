@@ -47,17 +47,7 @@ export function CustomerFTSCombobox({
   const debounced = useDebounce(query, 250);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      const el = containerRef.current;
-      if (!el) return;
-      if (!el.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, []);
+
 
   useEffect(() => {
     if (!shopId || !open) return;
@@ -201,10 +191,19 @@ export function CustomerFTSCombobox({
                         });
                         const json = await res.json();
                         if (!res.ok) throw new Error(json.error || 'Failed to create customer');
-                        const created: CustomerSearchResult = { ...json, id: json.id };
+                        const created: CustomerSearchResult = {
+                          id: json.id,
+                          name: name,
+                          phone: phoneDigits || null,
+                          email: email || null,
+                          address: address || null,
+                          state: state || null,
+                          pincode: pincode || null,
+                          created_at: new Date().toISOString(),
+                        } as unknown as CustomerSearchResult;
                         onSelect(created);
                         setOpen(false);
-                        setQuery(created.name || '');
+                        setQuery(name);
                       } catch (e: any) {
                         setError(e.message || 'Failed');
                       } finally {

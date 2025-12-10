@@ -56,7 +56,8 @@ const fetchDashboardDataCached = cache(async (shopId: string) => {
             .from('invoices')
             .select('id, invoice_number, grand_total, due_date, created_at, status, customer:customers(name, phone)')
             .eq('shop_id', shopId)
-            .in('status', ['due', 'pending', 'Due', 'Pending']),
+            .neq('status', 'paid')
+            .neq('status', 'cancelled'),
 
         // 5. Today Revenue
         supabase
@@ -192,8 +193,8 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const supabase = await createClient();
 
     // Execute all queries in parallel
-    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult, loansResult, lowStockResult] = await Promise.all([
-        // 1. Total Customers
+    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult, loansResult, lowStockResult, topCustomerResult, customerDatesResult] = await Promise.all([
+        // 1. Total Customers (Count only)
         supabase
             .from('customers')
             .select('*', { count: 'exact', head: true })
@@ -216,7 +217,8 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
             .from('invoices')
             .select('grand_total')
             .eq('shop_id', shopId)
-            .in('status', ['due', 'pending', 'Due', 'Pending']),
+            .neq('status', 'paid')
+            .neq('status', 'cancelled'),
 
         // 5. Total Loyalty Points
         supabase
@@ -240,11 +242,41 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
             .eq('shop_id', shopId)
             .lte('quantity', 10)
             .order('quantity', { ascending: true })
-            .limit(5)
+            .limit(5),
+
+        // 8. Top Customer (All Time by Spend)
+        supabase
+            .from('customers')
+            .select('name, total_spent, phone') // Using total_spent if available
+            .eq('shop_id', shopId)
+            .order('total_spent', { ascending: false })
+            .limit(1)
+            .single(),
+
+        // 9. Customer Dates for Sparkline
+        supabase
+            .from('customers')
+            .select('created_at')
+            .eq('shop_id', shopId)
     ]);
 
     const khataBalance = (dueInvoicesResult.data || []).reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
     const totalLoyaltyPoints = (loyaltyResult.data || []).reduce((sum, customer) => sum + (Number(customer.loyalty_points) || 0), 0);
+
+    // Generate Customer Sparkline (Last 7 Days Cumulative)
+    const customerDates = customerDatesResult.data || [];
+    const customerSparkline: number[] = [];
+    const now = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+        const dateLimit = new Date(now);
+        dateLimit.setDate(now.getDate() - i);
+        dateLimit.setHours(23, 59, 59, 999);
+
+        // Count customers created on or before this date
+        const count = customerDates.filter((c: any) => new Date(c.created_at) <= dateLimit).length;
+        customerSparkline.push(count);
+    }
 
     // Calculate active loyalty members (customers with > 0 points)
     const loyaltyMembers = (loyaltyResult.data || []).length;
@@ -268,7 +300,12 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
         totalLoyaltyPoints: totalLoyaltyPoints,
         lowStockItems: lowStockItems,
         loyaltyMembers: loyaltyMembers,
+        customerSparkline: customerSparkline,
         topLoyaltyCustomer: topLoyaltyCustomer ? { name: topLoyaltyCustomer.name, points: topLoyaltyCustomer.loyalty_points } : null,
+        topCustomerAllTime: topCustomerResult.data ? {
+            name: topCustomerResult.data.name,
+            totalSpent: topCustomerResult.data.total_spent || 0
+        } : null
     };
 
 });

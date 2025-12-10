@@ -80,7 +80,7 @@ export function Navbar() {
                         >
                             <div className="relative h-12 w-[200px] md:h-14 md:w-[260px] -ml-10 md:-ml-15">
                                 <Image
-                                    src="/logo/swarnavyapar.webp"
+                                    src="/logo/swarnavyapar_light.png"
                                     alt="SwarnaVyapar"
                                     fill
                                     style={{ objectFit: 'contain' }}

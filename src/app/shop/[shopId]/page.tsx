@@ -195,7 +195,10 @@ export default function DashboardPage() {
   const dueInvoices = useMemo(() => {
     if (!invoices) return [];
     return invoices
-      .filter(inv => inv.status === 'due')
+      .filter(inv => {
+        const s = inv.status?.toLowerCase();
+        return s !== 'paid' && s !== 'cancelled';
+      })
       .sort((a, b) => new Date(a.invoiceDate).getTime() - new Date(b.invoiceDate).getTime())
       .slice(0, 5);
   }, [invoices]);

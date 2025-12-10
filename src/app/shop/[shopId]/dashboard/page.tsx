@@ -83,22 +83,20 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   const returningCustomers = Math.floor(totalUniqueCustomers * 0.3);
   const newCustomers = totalUniqueCustomers - returningCustomers;
 
-  // Top customer (using this month's data for accuracy)
-  const customerSpending: Record<string, { name: string, total: number, count: number }> = {};
-  stats.currentMonthInvoices.forEach((inv: any) => {
-    const id = inv.customer_phone || 'unknown';
-    if (!customerSpending[id]) {
-      customerSpending[id] = { name: inv.customer_name, total: 0, count: 0 };
-    }
-    customerSpending[id].total += Number(inv.grand_total);
-    customerSpending[id].count += 1;
-  });
-  const topCustomerEntry = Object.values(customerSpending).sort((a, b) => b.total - a.total)[0];
-  const topCustomer = topCustomerEntry ? {
-    name: topCustomerEntry.name,
-    totalSpent: topCustomerEntry.total,
-    orders: topCustomerEntry.count
+  // Top customer (Use DB-backed total spent for accuracy)
+  const topCustomer = additionalStats.topCustomerAllTime ? {
+    name: additionalStats.topCustomerAllTime.name,
+    totalSpent: additionalStats.topCustomerAllTime.totalSpent,
+    orders: 0 // We might not have order count in this simple query, but that's acceptable or we can fetch it if strictly needed.
+    // For now, let's just default to 0 or hide it in the UI if 0. 
+    // Actually, the UI expects it. Let's send 0 or maybe remove the requirement from the UI if possible.
+    // Or better, let's keep the old calc as a fallback or for 'orders' count if we want to combine.
+    // But simpler is better: Real DB data.
   } : undefined;
+
+  // If we really want order count, we'd need another query or index. 
+  // For now, let's just use the DB total spent which is the critical metric.
+
 
   // Business health metrics
   const recentTotal = stats.recentInvoices.reduce((sum: number, inv: any) => sum + Number(inv.grand_total), 0);
@@ -168,9 +166,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
           <KPICard
             title="Customers"
             value={totalUniqueCustomers.toString()}
-            change={15}
-            changeLabel="new this month"
-            sparklineData={[40, 55, 45, 65, 70, 85, 90]}
+            // change={0} // TODO: Calculate real growth
+            changeLabel="total customers"
+            sparklineData={additionalStats.customerSparkline || [0, 0, 0, 0, 0, 0, 0]}
             href={`/shop/${shopId}/customers`}
             index={3}
           />

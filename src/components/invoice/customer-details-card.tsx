@@ -14,7 +14,7 @@ export function CustomerDetailsCard({ form, shopId, disabled }: CustomerDetailsC
         <Card className="border-2 shadow-sm relative z-30 overflow-visible">
             <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                    <Users className="h-5 w-5 text-primary" /> Customer Details
+                    <Users className="h-5 w-5 text-primary" /> Customer Search
                 </CardTitle>
             </CardHeader>
             <CardContent>

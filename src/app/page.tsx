@@ -3,13 +3,15 @@ import { HeroSection } from '@/components/landing/hero-section';
 import { ValueProp } from '@/components/landing/value-prop';
 import { AIShowcase } from '@/components/landing/ai-showcase';
 import { FeaturesJourney } from '@/components/landing/features-journey';
-import { Features } from '@/components/landing/features';
-import { Showcase } from '@/components/landing/showcase';
+
 import { WhyUs } from '@/components/landing/why-us';
 import { Pricing } from '@/components/landing/pricing';
 import { Testimonials } from '@/components/landing/testimonials';
 import { Footer } from '@/components/landing/footer';
 import { PlatformRedirect } from '@/components/platform-redirect';
+import { LoyaltyProgram } from '@/components/landing/loyalty-program';
+import { KhataLoanSection } from '@/components/landing/khata-loan-section';
+import { CatalogueSection } from '@/components/landing/catalogue-section';
 import { Metadata } from 'next';
 
 // Enhanced metadata for SEO
@@ -122,8 +124,9 @@ export default function LandingPage() {
                 <ValueProp />
                 <AIShowcase />
                 <FeaturesJourney />
-                <Features />
-                <Showcase />
+                <CatalogueSection />
+                <KhataLoanSection />
+                <LoyaltyProgram />
                 <WhyUs />
                 <Pricing />
                 <Testimonials />

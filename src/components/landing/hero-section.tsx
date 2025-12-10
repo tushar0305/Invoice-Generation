@@ -71,17 +71,17 @@ export function HeroSection() {
     };
 
     return (
-        <section 
+        <section
             className="relative min-h-screen flex items-center justify-center pt-20 md:pt-24 pb-12 overflow-hidden bg-white"
             aria-labelledby="hero-heading"
         >
             {/* Background Elements - using CSS for better performance */}
-            <div 
-                className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-gold-100/40 via-white to-white" 
-                aria-hidden="true" 
+            <div
+                className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-gold-100/40 via-white to-white"
+                aria-hidden="true"
             />
-            <div 
-                className="absolute top-0 left-0 w-full h-full bg-[url('/grid-pattern.svg')] opacity-[0.03]" 
+            <div
+                className="absolute top-0 left-0 w-full h-full bg-[url('/grid-pattern.svg')] opacity-[0.03]"
                 aria-hidden="true"
             />
 
@@ -149,32 +149,32 @@ export function HeroSection() {
                         transition={{ duration: 0.6, delay: 0.3 }}
                         className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 pt-4 w-full sm:w-auto px-4 sm:px-0"
                     >
-                        <a 
-                            href="#pricing" 
+                        <a
+                            href="#pricing"
                             onClick={(e) => handleSmoothScroll(e, '#pricing')}
                             className="w-full sm:w-auto group"
                         >
                             <div className="relative">
-                                <div 
-                                    className="absolute -inset-1 bg-gradient-to-r from-gold-400 via-pink-500 to-purple-600 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-500" 
+                                <div
+                                    className="absolute -inset-1 bg-gradient-to-r from-gold-400 via-pink-500 to-purple-600 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-500"
                                     aria-hidden="true"
                                 />
-                                <Button 
-                                    size="lg" 
+                                <Button
+                                    size="lg"
                                     className="relative w-full sm:w-auto min-h-[48px] md:min-h-[56px] px-6 md:px-8 bg-slate-900 text-white hover:bg-slate-800 shadow-2xl shadow-slate-900/20 rounded-full text-base md:text-lg font-semibold transition-all hover:scale-105 focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2"
                                 >
-                                    Get Started Free 
+                                    Get Started Free
                                     <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
                                 </Button>
                             </div>
                         </a>
-                        <Button 
-                            size="lg" 
-                            variant="outline" 
+                        <Button
+                            size="lg"
+                            variant="outline"
                             className="w-full sm:w-auto min-h-[48px] md:min-h-[56px] px-6 md:px-8 rounded-full border-2 border-slate-300 bg-white hover:bg-slate-50 text-base md:text-lg text-slate-900 font-semibold transition-all hover:scale-105 hover:border-gold-400 focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2"
                             aria-label="Watch demo video showing AI features in action"
                         >
-                            <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" /> 
+                            <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
                             See AI in Action
                         </Button>
                     </motion.div>
@@ -182,11 +182,11 @@ export function HeroSection() {
             </div>
 
             {/* Decorative Glows - CSS only for performance */}
-            <div 
+            <div
                 className="absolute top-1/4 -left-32 md:-left-64 w-64 md:w-96 h-64 md:h-96 bg-gold-200/30 rounded-full blur-[80px] md:blur-[128px] -z-10 mix-blend-multiply"
                 aria-hidden="true"
             />
-            <div 
+            <div
                 className="absolute bottom-0 -right-32 md:-right-64 w-64 md:w-96 h-64 md:h-96 bg-blue-200/20 rounded-full blur-[80px] md:blur-[128px] -z-10 mix-blend-multiply"
                 aria-hidden="true"
             />

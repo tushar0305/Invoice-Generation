@@ -350,7 +350,7 @@ export default function LoginPage() {
           <div className="flex justify-center mb-10">
             <div className="relative w-56 h-20">
               <Image
-                src="/logo/swarnavyapar.webp"
+                src="/logo/swarnavyapar_light.png"
                 alt="SwarnaVyapar Logo"
                 fill
                 className="object-contain"

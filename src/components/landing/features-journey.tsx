@@ -33,8 +33,7 @@ const features: Feature[] = [
         tagline: "Customer Retention, Simplified",
         description: "Build lasting relationships with automated loyalty programs. Reward repeat customers, track points, and boost retention effortlessly.",
         gradient: "from-pink-500 via-rose-500 to-red-500",
-        iconColor: "text-pink-600",
-        comingSoon: true
+        iconColor: "text-pink-600"
     },
     {
         icon: BookOpen,
@@ -42,8 +41,7 @@ const features: Feature[] = [
         tagline: "Loan Tracker with Smart Reminders",
         description: "Manage customer loans, track payments, set automatic reminders, and maintain perfect financial records—digitally.",
         gradient: "from-blue-500 via-indigo-500 to-purple-500",
-        iconColor: "text-blue-600",
-        comingSoon: true
+        iconColor: "text-blue-600"
     },
     {
         icon: Users,
@@ -51,8 +49,7 @@ const features: Feature[] = [
         tagline: "Salary, Attendance & Performance",
         description: "Track attendance, manage salaries, monitor performance, and empower your team with smart tools.",
         gradient: "from-green-500 via-emerald-500 to-teal-500",
-        iconColor: "text-green-600",
-        comingSoon: true
+        iconColor: "text-green-600"
     },
     {
         icon: ScanLine,
@@ -60,8 +57,7 @@ const features: Feature[] = [
         tagline: "Paper → Digital → WhatsApp",
         description: "Scan paper invoices with your phone camera, convert to digital format instantly, and share via WhatsApp. Say goodbye to filing cabinets.",
         gradient: "from-orange-500 via-amber-500 to-yellow-500",
-        iconColor: "text-orange-600",
-        comingSoon: true
+        iconColor: "text-orange-600"
     },
     {
         icon: Building2,
@@ -69,8 +65,7 @@ const features: Feature[] = [
         tagline: "One Dashboard, Multiple Locations",
         description: "Manage inventory, staff, and sales across all your locations from a single, unified dashboard.",
         gradient: "from-cyan-500 via-sky-500 to-blue-500",
-        iconColor: "text-cyan-600",
-        comingSoon: true
+        iconColor: "text-cyan-600"
     },
     {
         icon: TrendingUp,
@@ -102,8 +97,7 @@ const features: Feature[] = [
         tagline: "Business Insights at a Glance",
         description: "Track sales trends, inventory turnover, customer behavior, and profitability with beautiful, actionable dashboards.",
         gradient: "from-emerald-500 via-green-500 to-lime-500",
-        iconColor: "text-emerald-600",
-        comingSoon: true
+        iconColor: "text-emerald-600"
     }
 ];
 
@@ -146,8 +140,8 @@ export function FeaturesJourney() {
                         viewport={{ once: true }}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-gold-100/60 to-amber-100/60 border border-gold-200 text-gold-700 text-sm font-semibold mb-8"
                     >
-                        <Rocket className="h-4 w-4" />
-                        <span>Powerful Features Coming Soon</span>
+                        <Sparkles className="h-4 w-4" />
+                        <span>Complete Feature Suite</span>
                     </motion.div>
 
                     <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 text-slate-900 font-heading leading-tight">
@@ -221,12 +215,6 @@ function FeatureCard({ feature, index }: FeatureCardProps) {
                 {/* Gradient Background on Hover */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
 
-                {/* Coming Soon Badge */}
-                {feature.comingSoon && (
-                    <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-gold-100 text-gold-700 text-xs font-bold">
-                        Coming Soon
-                    </div>
-                )}
 
                 {/* Icon Container */}
                 <motion.div

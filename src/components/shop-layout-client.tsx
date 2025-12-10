@@ -131,7 +131,7 @@ function ShopLayoutInner({
     const { theme, setPalette } = useTheme();
 
     // Calculate logo based on theme
-    const logoSrc = theme === 'dark' ? '/logo/swarnavyapar_dark.webp' : '/logo/swarnavyapar.webp';
+    const logoSrc = theme === 'dark' ? '/logo/swarnavyapar_dark.png' : '/logo/swarnavyapar_light.png';
 
     // Apply shop branding palette if available
     useEffect(() => {
