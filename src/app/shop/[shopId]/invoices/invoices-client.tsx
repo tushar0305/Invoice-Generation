@@ -5,7 +5,8 @@
 
 'use client';
 
-import { useState, useMemo, useTransition, useEffect, useOptimistic } from 'react';
+// Force refresh
+import { useState, useMemo, useEffect, useTransition, useOptimistic } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -22,7 +23,18 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, FilePlus2, Trash2, Loader2, Calendar as CalendarIcon, Download, RefreshCw, Share2, Scan, Banknote, Undo2 } from 'lucide-react';
+import { 
+    Search, 
+    FilePlus2, 
+    Trash2, 
+    Loader2, 
+    Calendar as CalendarIcon, 
+    Download, 
+    RefreshCw, 
+    Share2, 
+    Banknote, 
+    Undo2 
+} from 'lucide-react';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -636,13 +648,6 @@ export function InvoicesClient({
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-
-                    <Button asChild size="sm" variant="outline" className="h-9 gap-2 shrink-0 border-primary/20 hover:bg-primary/10 text-primary hover:text-primary">
-                        <Link href={`/shop/${shopId}/invoices/scan`}>
-                            <Scan className="h-3.5 w-3.5" />
-                            <span className="text-xs">Scan</span>
-                        </Link>
-                    </Button>
 
                     <Button asChild size="sm" className="h-9 gap-2 shrink-0 bg-primary hover:bg-primary/90 shadow-glow-sm">
                         <Link href={`/shop/${shopId}/invoices/new`}>

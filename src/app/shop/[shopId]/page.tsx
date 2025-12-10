@@ -29,7 +29,6 @@ import { useUser } from '@/supabase/provider';
 import { KPICard } from '@/components/dashboard/kpi-card';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { FirstTimeWelcome } from '@/components/first-time-welcome';
-import { ShopSetupBanner } from '@/components/shop-setup-banner';
 import { SmartHero } from '@/components/dashboard/smart-hero';
 
 // Helper to generate sparkline data from invoices
@@ -206,11 +205,6 @@ export default function DashboardPage() {
       {/* First-time User Welcome */}
       {userRole?.role === 'owner' && (
         <FirstTimeWelcome settings={settings} isLoading={isLoading} hasInvoices={!!(invoices && invoices.length > 0)} />
-      )}
-
-      {/* Shop Setup Banner */}
-      {userRole?.role === 'owner' && (
-        <ShopSetupBanner settings={settings} isLoading={isLoading} />
       )}
 
       {/* Smart Hero Section */}

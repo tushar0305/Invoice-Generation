@@ -227,7 +227,7 @@ export function KhataClient({
     };
 
     return (
-        <div className="space-y-4 pb-24 px-4 md:px-0">
+        <div className="space-y-4 pb-24 px-4 md:px-0 pt-6">
             <div className="grid gap-4 md:grid-cols-4">
                 <Card className="shadow-sm hover:shadow-md transition-shadow border border-border bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

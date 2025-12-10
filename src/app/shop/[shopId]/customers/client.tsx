@@ -146,7 +146,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
     };
 
     return (
-        <MotionWrapper className="space-y-4 px-4 md:px-6 pb-24 md:pb-6 max-w-[1800px] mx-auto">
+        <MotionWrapper className="space-y-4 px-4 md:px-6 pb-24 md:pb-6 max-w-[1800px] mx-auto pt-6">
             {/* Top Customer Card */}
             {topCustomer && (
                 <FadeIn>

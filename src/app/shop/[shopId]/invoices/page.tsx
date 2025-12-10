@@ -5,7 +5,7 @@
 
 import { Suspense } from 'react';
 import { createClient } from '@/supabase/server';
-import { InvoicesClient } from './client';
+import { InvoicesClient } from './invoices-client';
 import { Loader2 } from 'lucide-react';
 import type { Invoice } from '@/lib/definitions';
 
