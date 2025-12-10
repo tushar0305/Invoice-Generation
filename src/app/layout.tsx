@@ -98,13 +98,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Favicons and touch icons */}
-        <link rel="icon" href="/favicon/favicon.ico" />
-        <link rel="icon" type="image/png" sizes="96x96" href="/favicon/favicon-96x96.png" />
-        <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
-        <link rel="manifest" href="/manifest.webmanifest" />
-
         {/* Preload self-hosted fonts (place WOFF2 files under /public/fonts/) */}
         <link rel="preload" href="/fonts/Inter-Variable.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/PlayfairDisplay-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
@@ -120,7 +113,6 @@ export default function RootLayout({
                 {children}
                 <InstallPrompt />
                 <UpdatePrompt />
-                {/* Service worker registration */}
                 {/* Service worker registration */}
                 <script dangerouslySetInnerHTML={{
                   __html: `
@@ -140,6 +132,54 @@ export default function RootLayout({
                     });
                   }
                 `}} />
+                {/* Structured Data for Google Rich Results */}
+                <script
+                  type="application/ld+json"
+                  dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                      '@context': 'https://schema.org',
+                      '@graph': [
+                        {
+                          '@type': 'Organization',
+                          '@id': 'https://swarnavyapar.in/#organization',
+                          name: 'SwarnaVyapar',
+                          url: 'https://swarnavyapar.in',
+                          logo: {
+                            '@type': 'ImageObject',
+                            url: 'https://swarnavyapar.in/logo/logo.png',
+                            width: 512,
+                            height: 512,
+                            caption: 'SwarnaVyapar'
+                          },
+                          image: {
+                            '@id': 'https://swarnavyapar.in/#logo',
+                            url: 'https://swarnavyapar.in/logo/logo.png'
+                          },
+                          sameAs: [
+                            'https://twitter.com/swarnavyapar',
+                            // Add other social profiles here if available
+                          ],
+                          contactPoint: {
+                            '@type': 'ContactPoint',
+                            contactType: 'customer support',
+                            // telephone: '+91-XXXXXXXXXX', // Add if available
+                            email: 'support@swarnavyapar.in'
+                          }
+                        },
+                        {
+                          '@type': 'WebSite',
+                          '@id': 'https://swarnavyapar.in/#website',
+                          url: 'https://swarnavyapar.in',
+                          name: 'SwarnaVyapar',
+                          publisher: {
+                            '@id': 'https://swarnavyapar.in/#organization'
+                          },
+                          inLanguage: 'en-IN'
+                        }
+                      ]
+                    }),
+                  }}
+                />
               </ThemeProvider>
             </AuthWrapper>
             <Toaster />
