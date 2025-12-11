@@ -47,21 +47,21 @@ export default function manifest(): MetadataRoute.Manifest {
                 short_name: "Invoice",
                 description: "Create a new invoice",
                 url: "/shop/active/invoices/new",
-                icons: [{ src: "/icons/shortcut-invoice.png", sizes: "96x96" }]
+                icons: [{ src: "/icons/add-invoice.png", sizes: "96x96" }]
             },
             {
                 name: "View Insights",
                 short_name: "Insights",
                 description: "View business analytics",
                 url: "/shop/active/insights",
-                icons: [{ src: "/icons/shortcut-insights.png", sizes: "96x96" }]
+                icons: [{ src: "/icons/sales.png", sizes: "96x96" }]
             },
             {
-                name: "Add Stock",
-                short_name: "Stock",
-                description: "Add new inventory items",
-                url: "/shop/active/stock/new",
-                icons: [{ src: "/icons/shortcut-stock.png", sizes: "96x96" }]
+                name: "Add Customer",
+                short_name: "Customer",
+                description: "Add a new customer",
+                url: "/shop/active/customers",
+                icons: [{ src: "/icons/add-customer.png", sizes: "96x96" }]
             }
         ],
         prefer_related_applications: false,
