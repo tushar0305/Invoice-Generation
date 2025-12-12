@@ -16,6 +16,23 @@ export const POST = withAuth(async (
     const body = await req.json();
     const input = validate(CreateCustomerSchema, body);
 
+    // [NEW] Rate Limiting
+    const { checkRateLimit, rateLimitResponse } = await import('@/lib/rate-limit');
+    const { allowed: rateLimited } = await checkRateLimit(req);
+    if (!rateLimited) return rateLimitResponse();
+
+    // [NEW] Check Subscription Limits
+    const { checkUsageLimit } = await import('@/lib/subscription-gate');
+    const { allowed, limit, used } = await checkUsageLimit(input.shopId, 'customers', 1);
+
+    if (!allowed) {
+        return errorResponse(
+            `Plan limit reached. You have added ${used}/${limit} customers. Please upgrade your plan.`,
+            403,
+            'PLAN_LIMIT_EXCEEDED'
+        );
+    }
+
     // 2. Check permissions
     const { hasAccess, role } = await checkShopAccess(
         supabase,

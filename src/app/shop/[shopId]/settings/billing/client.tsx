@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { UsageDashboard } from '@/components/subscription/usage-dashboard'; // [NEW] Import
 import {
     AlertDialog,
     AlertDialogAction,
@@ -87,6 +88,11 @@ export function BillingClient({ shopId, currentSubscription, userEmail }: Billin
             <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
             <div className="space-y-8">
+                {/* [NEW] Usage Dashboard */}
+                <div className="max-w-4xl mx-auto mb-6">
+                    <UsageDashboard shopId={shopId} />
+                </div>
+
                 {/* Header Section */}
                 <div className="text-center max-w-2xl mx-auto">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4">
@@ -253,118 +259,118 @@ export function BillingClient({ shopId, currentSubscription, userEmail }: Billin
                     <Card className="mt-12 border border-border shadow-sm">
                         <CardHeader>
                             <div className="flex items-center justify-between flex-wrap gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-primary/10">
-                                    <CreditCard className="h-5 w-5 text-primary" />
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-primary/10">
+                                        <CreditCard className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <h3 className="font-semibold text-lg">Subscription Details</h3>
                                 </div>
-                                <h3 className="font-semibold text-lg">Subscription Details</h3>
-                            </div>
-                            {currentSubscription.razorpay?.short_url && (
-                                <a
-                                    href={currentSubscription.razorpay.short_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-primary hover:underline flex items-center gap-1"
-                                >
-                                    Manage on Razorpay →
-                                </a>
-                            )}
+                                {currentSubscription.razorpay?.short_url && (
+                                    <a
+                                        href={currentSubscription.razorpay.short_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-primary hover:underline flex items-center gap-1"
+                                    >
+                                        Manage on Razorpay →
+                                    </a>
+                                )}
                             </div>
                         </CardHeader>
                         <CardContent>
                             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            <DetailCard
-                                label="Status"
-                                value={currentSubscription.cancel_at_period_end
-                                    ? 'Cancelling'
-                                    : (currentSubscription.razorpay?.status || currentSubscription.status)}
-                                status={currentSubscription.cancel_at_period_end
-                                    ? 'warning'
-                                    : (currentSubscription.razorpay?.status || currentSubscription.status) === 'active' ? 'success' : 'warning'}
-                            />
-                            <DetailCard
-                                label="Plan"
-                                value={currentSubscription.plan_id === 'pro' ? 'Pro' : 'Free'}
-                            />
-                            <DetailCard
-                                label="Billing Period"
-                                value={currentSubscription.current_period_end
-                                    ? `${new Date(currentSubscription.current_period_start || currentSubscription.created_at).toLocaleDateString('en-IN', {
-                                        day: 'numeric', month: 'short'
-                                    })} - ${new Date(currentSubscription.current_period_end).toLocaleDateString('en-IN', {
-                                        day: 'numeric', month: 'short'
-                                    })}`
-                                    : 'N/A'
-                                }
-                            />
-                            <DetailCard
-                                label="Payments Made"
-                                value={currentSubscription.razorpay?.paid_count
-                                    ? `${currentSubscription.razorpay.paid_count} payment${currentSubscription.razorpay.paid_count > 1 ? 's' : ''}`
-                                    : '1 payment'
-                                }
-                            />
+                                <DetailCard
+                                    label="Status"
+                                    value={currentSubscription.cancel_at_period_end
+                                        ? 'Cancelling'
+                                        : (currentSubscription.razorpay?.status || currentSubscription.status)}
+                                    status={currentSubscription.cancel_at_period_end
+                                        ? 'warning'
+                                        : (currentSubscription.razorpay?.status || currentSubscription.status) === 'active' ? 'success' : 'warning'}
+                                />
+                                <DetailCard
+                                    label="Plan"
+                                    value={currentSubscription.plan_id === 'pro' ? 'Pro' : 'Free'}
+                                />
+                                <DetailCard
+                                    label="Billing Period"
+                                    value={currentSubscription.current_period_end
+                                        ? `${new Date(currentSubscription.current_period_start || currentSubscription.created_at).toLocaleDateString('en-IN', {
+                                            day: 'numeric', month: 'short'
+                                        })} - ${new Date(currentSubscription.current_period_end).toLocaleDateString('en-IN', {
+                                            day: 'numeric', month: 'short'
+                                        })}`
+                                        : 'N/A'
+                                    }
+                                />
+                                <DetailCard
+                                    label="Payments Made"
+                                    value={currentSubscription.razorpay?.paid_count
+                                        ? `${currentSubscription.razorpay.paid_count} payment${currentSubscription.razorpay.paid_count > 1 ? 's' : ''}`
+                                        : '1 payment'
+                                    }
+                                />
                             </div>
 
-                        {/* Subscription ID & Plan ID */}
-                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                            <DetailCard
-                                label="Subscription ID"
-                                value={currentSubscription.razorpay_subscription_id || 'N/A'}
-                                mono
-                            />
-                            <DetailCard
-                                label="Razorpay Plan ID"
-                                value={currentSubscription.razorpay_plan_id || currentSubscription.razorpay?.plan_id || 'N/A'}
-                                mono
-                            />
-                        </div>
+                            {/* Subscription ID & Plan ID */}
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                <DetailCard
+                                    label="Subscription ID"
+                                    value={currentSubscription.razorpay_subscription_id || 'N/A'}
+                                    mono
+                                />
+                                <DetailCard
+                                    label="Razorpay Plan ID"
+                                    value={currentSubscription.razorpay_plan_id || currentSubscription.razorpay?.plan_id || 'N/A'}
+                                    mono
+                                />
+                            </div>
 
-                        {/* Next Billing Info */}
-                        {currentSubscription.current_period_end && !currentSubscription.cancel_at_period_end && (
-                            <div className="mt-6 p-4 rounded-xl bg-background border flex items-center justify-between flex-wrap gap-4">
-                                <div className="flex items-center gap-3">
-                                    <Clock className="h-5 w-5 text-muted-foreground" />
+                            {/* Next Billing Info */}
+                            {currentSubscription.current_period_end && !currentSubscription.cancel_at_period_end && (
+                                <div className="mt-6 p-4 rounded-xl bg-background border flex items-center justify-between flex-wrap gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <Clock className="h-5 w-5 text-muted-foreground" />
+                                        <div>
+                                            <span className="text-sm text-muted-foreground">Next billing on</span>
+                                            <p className="font-semibold">
+                                                {new Date(currentSubscription.current_period_end).toLocaleDateString('en-IN', {
+                                                    weekday: 'long',
+                                                    day: 'numeric',
+                                                    month: 'long',
+                                                    year: 'numeric'
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="text-xs">
+                                        ₹499/month
+                                    </Badge>
+                                </div>
+                            )}
+
+                            {/* Cancellation Notice */}
+                            {currentSubscription.cancel_at_period_end && currentSubscription.current_period_end && (
+                                <div className="mt-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center gap-3">
+                                    <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
                                     <div>
-                                        <span className="text-sm text-muted-foreground">Next billing on</span>
-                                        <p className="font-semibold">
-                                            {new Date(currentSubscription.current_period_end).toLocaleDateString('en-IN', {
-                                                weekday: 'long',
-                                                day: 'numeric',
-                                                month: 'long',
-                                                year: 'numeric'
+                                        <p className="font-medium text-yellow-700 dark:text-yellow-400">Subscription Ending</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Your Pro access will end on {new Date(currentSubscription.current_period_end).toLocaleDateString('en-IN', {
+                                                day: 'numeric', month: 'long', year: 'numeric'
                                             })}
                                         </p>
                                     </div>
                                 </div>
-                                <Badge variant="outline" className="text-xs">
-                                    ₹499/month
-                                </Badge>
-                            </div>
-                        )}
+                            )}
 
-                        {/* Cancellation Notice */}
-                        {currentSubscription.cancel_at_period_end && currentSubscription.current_period_end && (
-                            <div className="mt-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center gap-3">
-                                <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-                                <div>
-                                    <p className="font-medium text-yellow-700 dark:text-yellow-400">Subscription Ending</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Your Pro access will end on {new Date(currentSubscription.current_period_end).toLocaleDateString('en-IN', {
-                                            day: 'numeric', month: 'long', year: 'numeric'
-                                        })}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Cancel Subscription Button */}
-                        {isPro && !currentSubscription.cancel_at_period_end && (
-                            <CancelSubscriptionButton
-                                shopId={shopId}
-                                subscriptionId={currentSubscription.razorpay_subscription_id}
-                            />
-                        )}
+                            {/* Cancel Subscription Button */}
+                            {isPro && !currentSubscription.cancel_at_period_end && (
+                                <CancelSubscriptionButton
+                                    shopId={shopId}
+                                    subscriptionId={currentSubscription.razorpay_subscription_id}
+                                />
+                            )}
                         </CardContent>
                     </Card>
                 )}

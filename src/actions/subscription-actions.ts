@@ -92,7 +92,7 @@ export async function cancelSubscriptionAction(shopId: string, subscriptionId: s
 
         // Update DB
         await supabase
-            .from('subscriptions')
+            .from('shop_subscriptions')
             .update({
                 status: cancelAtPeriodEnd ? 'active' : 'canceled',
                 cancel_at_period_end: cancelAtPeriodEnd,

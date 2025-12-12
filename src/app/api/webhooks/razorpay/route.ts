@@ -53,20 +53,30 @@ export async function POST(req: NextRequest) {
         const payload = event.payload.subscription.entity;
 
         if (event.event === 'subscription.charged') {
+            // Determine Plan ID from Razorpay Plan ID (Mapping logic)
+            // You might want to query plans table to find match or hardcode mapping if simple.
+            // For now, assuming standard mapping or just keeping the razorpay_plan_id.
+            // Also need to set 'plan_id' column for our app logic (free/pro).
+
+            // NOTE: Ideally fetch this mapping from DB or config.
+            // Using a heuristic: if amount > 500 etc. or just update standard fields.
+            // Let's assume the action set the correct plan_id initially, but we should confirm/reactivate it here.
+
             await supabaseAdmin
-                .from('subscriptions')
+                .from('shop_subscriptions')
                 .update({
                     status: 'active',
                     current_period_start: new Date(payload.current_start * 1000),
                     current_period_end: new Date(payload.current_end * 1000),
                     razorpay_customer_id: payload.customer_id,
+                    razorpay_plan_id: payload.plan_id,
                     updated_at: new Date()
                 })
                 .eq('razorpay_subscription_id', payload.id);
         }
         else if (event.event === 'subscription.cancelled') {
             await supabaseAdmin
-                .from('subscriptions')
+                .from('shop_subscriptions')
                 .update({ status: 'canceled', updated_at: new Date() })
                 .eq('razorpay_subscription_id', payload.id);
         }
