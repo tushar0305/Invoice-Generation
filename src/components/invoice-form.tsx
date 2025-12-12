@@ -44,6 +44,7 @@ import { InvoiceItemsTable } from '@/components/invoice/invoice-items-table';
 // --- 1. Robust Schema Definition ---
 const invoiceItemSchema = z.object({
   id: z.string().optional(),
+  stockId: z.string().optional(),
   description: z.string().min(1, 'Description is required'),
   purity: z.string().default('22K'),
   grossWeight: z.coerce.number().min(0, 'Must be positive'),
@@ -361,7 +362,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   </Card>
 
                   {/* 3. Items Table */}
-                  <InvoiceItemsTable form={form} />
+                  <InvoiceItemsTable form={form} shopId={activeShop?.id} />
 
                   {/* 4. Loyalty Section */}
                   {loyaltySettings && watchedCustomerPhone && watchedCustomerPhone.length >= 10 && (

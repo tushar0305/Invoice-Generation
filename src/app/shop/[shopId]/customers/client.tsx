@@ -108,11 +108,22 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
         });
     };
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
     const filteredCustomers = useMemo(() => {
         return Object.entries(customerData).filter(([name]) =>
             name.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [customerData, searchTerm]);
+
+    const paginatedCustomers = useMemo(() => {
+        const sorted = filteredCustomers.sort(([, a], [, b]) => b.totalPurchase - a.totalPurchase);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return sorted.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredCustomers, currentPage]);
+
+    const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
 
     const topCustomer = useMemo(() => {
         const customers = Object.entries(customerData);
@@ -146,11 +157,11 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
     };
 
     return (
-        <MotionWrapper className="space-y-4 px-4 md:px-6 pb-24 md:pb-6 max-w-[1800px] mx-auto pt-6">
+        <MotionWrapper className="space-y-4 px-4 md:px-6 pb-24 md:pb-6 max-w-[1800px] mx-auto pt-2 md:pt-6">
             {/* Top Customer Card */}
             {topCustomer && (
                 <FadeIn>
-                    <Card className="border border-border shadow-sm mt-4 md:mt-0">
+                    <Card className="border border-border shadow-sm">
                         <CardContent className="p-4 md:p-6 flex items-center justify-between">
                             <div className="flex items-center gap-3 md:gap-4">
                                 <div className="p-2 md:p-3 bg-primary/10 rounded-full">
@@ -291,9 +302,8 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredCustomers.length > 0 ? (
-                                    filteredCustomers
-                                        .sort(([, a], [, b]) => b.totalPurchase - a.totalPurchase)
+                                {paginatedCustomers.length > 0 ? (
+                                    paginatedCustomers
                                         .map(([name, stats]) => (
                                             <TableRow
                                                 key={name}
@@ -355,10 +365,9 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                     </div>
 
                     {/* Mobile View */}
-                    <div className="md:hidden space-y-4">
-                        {filteredCustomers.length > 0 ? (
-                            filteredCustomers
-                                .sort(([, a], [, b]) => b.totalPurchase - a.totalPurchase)
+                    <div className="md:hidden space-y-3">
+                        {paginatedCustomers.length > 0 ? (
+                            paginatedCustomers
                                 .map(([name, stats]) => (
                                     <div
                                         key={name}
@@ -366,29 +375,30 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                             haptics.selection();
                                             router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(name)}`);
                                         }}
-                                        className="flex items-center gap-4 p-4 border border-border rounded-xl bg-card hover:bg-accent/50 transition-colors active:scale-[0.98]"
+                                        className="flex flex-col gap-3 p-5 border border-border/60 rounded-xl bg-card shadow-sm active:scale-[0.98] transition-all"
                                     >
-                                        <Avatar className="h-12 w-12 border border-border">
-                                            <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                                                {getInitials(name)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-semibold truncate">{name}</h3>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                                <Calendar className="h-3 w-3" />
-                                                <span>
-                                                    {new Date(stats.lastPurchase).toLocaleDateString('en-IN', {
-                                                        day: 'numeric',
-                                                        month: 'short'
-                                                    })}
-                                                </span>
-                                                <span>•</span>
-                                                <span>{stats.invoiceCount} inv</span>
+                                        <div className="flex justify-between items-start w-full">
+                                            <div className="flex-1 min-w-0 pr-4">
+                                                <h3 className="font-bold text-lg text-foreground truncate leading-tight">{name}</h3>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
+                                                    <Calendar className="h-3.5 w-3.5" />
+                                                    <span>
+                                                        {new Date(stats.lastPurchase).toLocaleDateString('en-IN', {
+                                                            day: 'numeric',
+                                                            month: 'short',
+                                                            year: 'numeric'
+                                                        })}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-primary">{formatCurrency(stats.totalPurchase)}</p>
+                                            <div className="text-right shrink-0">
+                                                <p className="font-bold text-lg text-primary tracking-tight">{formatCurrency(stats.totalPurchase)}</p>
+                                                <div className="flex justify-end mt-1">
+                                                    <Badge variant="secondary" className="text-[10px] h-5 px-2 font-medium bg-secondary/50 text-secondary-foreground">
+                                                        {stats.invoiceCount} Orders
+                                                    </Badge>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 ))
@@ -411,6 +421,33 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                             </div>
                         )}
                     </div>
+
+                    {/* Pagination Controls */}
+                    {filteredCustomers.length > itemsPerPage && (
+                        <div className="flex items-center justify-between border-t pt-4 mt-4">
+                            <div className="text-sm text-muted-foreground">
+                                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} customers
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    Previous
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </MotionWrapper>

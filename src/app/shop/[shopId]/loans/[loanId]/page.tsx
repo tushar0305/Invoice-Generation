@@ -31,6 +31,13 @@ export default async function LoanDetailsPage({ params }: Props) {
         .eq('shop_id', shopId)
         .single();
 
+    // Fetch shop details
+    const { data: shop } = await supabase
+        .from('shops')
+        .select('shop_name, address, phone_number, email, gst_number, state, pincode')
+        .eq('id', shopId)
+        .single();
+
     if (error || !loan) {
         if (process.env.NODE_ENV === 'development') {
             console.error('Error fetching loan:', error);
@@ -42,11 +49,22 @@ export default async function LoanDetailsPage({ params }: Props) {
         console.log('Loan data fetched successfully:', JSON.stringify(loan, null, 2));
     }
 
+    const formattedShopDetails = shop ? {
+        name: shop.shop_name,
+        address: shop.address,
+        phone: shop.phone_number,
+        email: shop.email,
+        gst: shop.gst_number,
+        state: shop.state,
+        pincode: shop.pincode
+    } : { name: 'Shop Name', address: '', phone: '', email: '' };
+
     return (
         <LoanDetailsClient
             shopId={shopId}
             loan={loan}
             currentUser={user}
+            shopDetails={formattedShopDetails}
         />
     );
 }

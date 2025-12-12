@@ -33,6 +33,7 @@ export async function createInvoiceAction(formData: {
     loyaltyDiscountAmount?: number;
     items: Array<{
         id: string;
+        stockId?: string;
         description: string;
         purity: string;
         grossWeight: number;
@@ -178,6 +179,34 @@ export async function createInvoiceAction(formData: {
         });
 
         if (rpcError) throw rpcError;
+
+        // Update Stock Quantities
+        for (const item of formData.items) {
+            if (item.stockId) {
+                const { data: stockItem } = await supabase
+                    .from('stock_items')
+                    .select('quantity, unit')
+                    .eq('id', item.stockId)
+                    .single();
+
+                if (stockItem) {
+                    let decrementAmount = 1;
+                    const unit = stockItem.unit?.toLowerCase() || 'pieces';
+
+                    // If unit is weight-based, decrement by net weight
+                    if (['grams', 'g', 'kg', 'mg'].includes(unit)) {
+                        decrementAmount = item.netWeight;
+                    }
+
+                    const newQuantity = (stockItem.quantity || 0) - decrementAmount;
+
+                    await supabase
+                        .from('stock_items')
+                        .update({ quantity: newQuantity })
+                        .eq('id', item.stockId);
+                }
+            }
+        }
 
         // Revalidate caches (paths for both server-side cache and client)
         revalidatePath(`/shop/${formData.shopId}/invoices`);

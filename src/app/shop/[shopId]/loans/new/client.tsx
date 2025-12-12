@@ -40,7 +40,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
+import { format, addMonths } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
@@ -82,7 +82,9 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
             loan_number: `LN-${Date.now().toString().slice(-6)}`,
             start_date: new Date(),
             principal_amount: 0,
-            interest_rate: 24 // Default 24% (2% monthly)
+            interest_rate: 24, // Default 24% (2% monthly)
+            repayment_type: 'interest_only',
+            tenure_months: 12,
         },
         documents: []
     });
@@ -179,22 +181,42 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
 
         setIsSubmitting(true);
         try {
-            // 1. Create customer if new
+            // 1. Resolve Customer ID (Ensure customer exists in loan_customers)
             let customerId = formData.customer.id;
-            if (formData.customer.isNew) {
-                const { data: cust, error: custError } = await supabase
-                    .from('loan_customers') // Reverted: Must use loan_customers as per FK constraint
-                    .insert({
-                        shop_id: shopId,
-                        name: formData.customer.name,
-                        phone: formData.customer.phone,
-                        address: formData.customer.address
-                    })
-                    .select()
-                    .single();
-
-                if (custError) throw custError;
-                customerId = cust.id;
+            
+            // If user selected from search (isNew=false), the ID is from 'customers' table, not 'loan_customers'.
+            // We must check if this customer exists in 'loan_customers' by phone, or create them.
+            // If user created new (isNew=true), we create them.
+            
+            // Strategy: Always try to find by phone first to avoid duplicates, then create if missing.
+            if (formData.customer.phone) {
+                 const { data: existingLoanCust } = await supabase
+                    .from('loan_customers')
+                    .select('id')
+                    .eq('shop_id', shopId)
+                    .eq('phone', formData.customer.phone)
+                    .maybeSingle();
+                 
+                 if (existingLoanCust) {
+                     customerId = existingLoanCust.id;
+                 } else {
+                     // Create new loan_customer
+                     const { data: newCust, error: createError } = await supabase
+                        .from('loan_customers')
+                        .insert({
+                            shop_id: shopId,
+                            name: formData.customer.name,
+                            phone: formData.customer.phone,
+                            address: formData.customer.address,
+                        })
+                        .select()
+                        .single();
+                     
+                     if (createError) throw createError;
+                     customerId = newCust.id;
+                 }
+            } else {
+                throw new Error("Customer phone is required");
             }
 
 
@@ -240,6 +262,9 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                     loanNumber: formData.terms.loan_number,
                     principalAmount: formData.terms.principal_amount,
                     interestRate: formData.terms.interest_rate,
+                    repaymentType: formData.terms.repayment_type,
+                    tenureMonths: formData.terms.tenure_months,
+                    emiAmount: formData.terms.emi_amount,
                     startDate: format(formData.terms.start_date, 'yyyy-MM-dd'),
                     collateral: formData.collateral,
                     documents: uploadedDocs
@@ -250,7 +275,7 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
             if (!res.ok) throw new Error(result.error || 'Failed to create loan');
 
             toast({ title: "Success", description: "Loan created successfully!" });
-            router.push(`/shop/${shopId}/loans/${result.id}`);
+            router.push(`/shop/${shopId}/loans/${result.data.id}`);
 
         } catch (error: any) {
             console.error(error);
@@ -356,6 +381,9 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                             principal={formData.terms.principal_amount}
                             interestRate={formData.terms.interest_rate}
                             interestPerMonth={interestPerMonth}
+                            repaymentType={formData.terms.repayment_type}
+                            tenureMonths={formData.terms.tenure_months}
+                            emiAmount={formData.terms.emi_amount}
                             totalCollateralValue={totalCollateralValue}
                             totalItems={formData.collateral.length}
                             startDate={formData.terms.start_date}
@@ -692,8 +720,26 @@ function TermsStep({ value, onChange }: {
     value: LoanTermsValues;
     onChange: (val: Partial<LoanTermsValues>) => void;
 }) {
+    // Calculate EMI helper
+    const calculateEMI = (principal: number, rate: number, months: number) => {
+        if (!principal || !rate || !months) return 0;
+        const r = rate / 12 / 100;
+        const emi = (principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+        return Math.round(emi);
+    };
+
+    // Update EMI when relevant fields change
+    useEffect(() => {
+        if (value.repayment_type === 'emi' && value.principal_amount && value.interest_rate && value.tenure_months) {
+            const emi = calculateEMI(value.principal_amount, value.interest_rate, value.tenure_months);
+            if (emi !== value.emi_amount) {
+                onChange({ emi_amount: emi });
+            }
+        }
+    }, [value.principal_amount, value.interest_rate, value.tenure_months, value.repayment_type]);
+
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Loan Number</Label>
@@ -730,6 +776,48 @@ function TermsStep({ value, onChange }: {
                 </div>
             </div>
 
+            <div className="space-y-2">
+                <Label>Repayment Type</Label>
+                <div className="grid grid-cols-3 gap-2">
+                    <div
+                        onClick={() => onChange({ repayment_type: 'interest_only' })}
+                        className={cn(
+                            "cursor-pointer rounded-lg border-2 p-3 text-center transition-all hover:border-primary/50",
+                            value.repayment_type === 'interest_only'
+                                ? "border-primary bg-primary/5"
+                                : "border-muted bg-transparent"
+                        )}
+                    >
+                        <div className="font-semibold text-sm">Interest Only</div>
+                        <div className="text-xs text-muted-foreground mt-1">Pay interest monthly, principal at end</div>
+                    </div>
+                    <div
+                        onClick={() => onChange({ repayment_type: 'emi' })}
+                        className={cn(
+                            "cursor-pointer rounded-lg border-2 p-3 text-center transition-all hover:border-primary/50",
+                            value.repayment_type === 'emi'
+                                ? "border-primary bg-primary/5"
+                                : "border-muted bg-transparent"
+                        )}
+                    >
+                        <div className="font-semibold text-sm">EMI</div>
+                        <div className="text-xs text-muted-foreground mt-1">Fixed monthly payments (Principal + Interest)</div>
+                    </div>
+                    <div
+                        onClick={() => onChange({ repayment_type: 'bullet' })}
+                        className={cn(
+                            "cursor-pointer rounded-lg border-2 p-3 text-center transition-all hover:border-primary/50",
+                            value.repayment_type === 'bullet'
+                                ? "border-primary bg-primary/5"
+                                : "border-muted bg-transparent"
+                        )}
+                    >
+                        <div className="font-semibold text-sm">One Time (Bullet)</div>
+                        <div className="text-xs text-muted-foreground mt-1">Pay full amount + interest at end</div>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Principal Amount (₹)</Label>
@@ -758,7 +846,6 @@ function TermsStep({ value, onChange }: {
                                 if (isNaN(monthly)) {
                                     onChange({ interest_rate: 0 });
                                 } else {
-                                    // Store as yearly rate, rounded to 2 decimal places
                                     const yearly = parseFloat((monthly * 12).toFixed(2));
                                     onChange({ interest_rate: yearly });
                                 }
@@ -772,6 +859,36 @@ function TermsStep({ value, onChange }: {
                 </div>
             </div>
 
+            {(value.repayment_type === 'emi' || value.repayment_type === 'bullet') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-2">
+                        <Label>Tenure (Months)</Label>
+                        <Input
+                            type="number"
+                            min="1"
+                            value={value.tenure_months || ''}
+                            onChange={e => onChange({ tenure_months: parseInt(e.target.value) || 0 })}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Due Date</Label>
+                        <div className="h-10 px-3 py-2 rounded-md border bg-muted/50 text-sm flex items-center">
+                            {value.start_date && value.tenure_months
+                                ? format(addMonths(value.start_date, value.tenure_months), 'dd MMM yyyy')
+                                : '-'}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {value.repayment_type === 'emi' && value.emi_amount && (
+                <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 animate-in fade-in">
+                    <div className="flex justify-between items-center">
+                        <span className="font-medium text-primary">Monthly EMI Amount</span>
+                        <span className="text-xl font-bold text-primary">{formatCurrency(value.emi_amount)}</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

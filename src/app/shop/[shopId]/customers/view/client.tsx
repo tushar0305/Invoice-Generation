@@ -33,12 +33,27 @@ export function CustomerDetailsClient() {
     const [invoices, setInvoices] = useState<Invoice[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const [customerData, setCustomerData] = useState<any>(null);
+
     useEffect(() => {
         const shopId = params.shopId as string;
         if (!shopId || !customerName) return;
 
         const load = async () => {
             setIsLoading(true);
+            
+            // Fetch real customer data for loyalty points
+            const { data: custData } = await supabase
+                .from('customers')
+                .select('*')
+                .eq('shop_id', shopId)
+                .ilike('name', customerName)
+                .maybeSingle();
+            
+            if (custData) {
+                setCustomerData(custData);
+            }
+
             // Query invoices by shop_id and customer name (case-insensitive)
             const { data, error } = await supabase
                 .from('invoices')
@@ -101,7 +116,7 @@ export function CustomerDetailsClient() {
     return (
         <MotionWrapper className="space-y-6">
             {/* Breadcrumb Navigation */}
-            <Breadcrumb>
+            <Breadcrumb className="hidden md:block">
                 <BreadcrumbList>
                     <BreadcrumbItem>
                         <BreadcrumbLink onClick={() => router.push('/dashboard')}>
@@ -165,6 +180,17 @@ export function CustomerDetailsClient() {
                                 {isLoading ? <Skeleton className="h-6 w-24" /> : stats.lastPurchase ? format(new Date(stats.lastPurchase), 'dd MMM, yyyy') : 'N/A'}
                             </span>
                         </div>
+                        {customerData && (
+                            <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <CreditCard className="h-4 w-4 text-purple-500" />
+                                    <span>Loyalty Points</span>
+                                </div>
+                                <span className="font-bold text-lg text-purple-600">
+                                    {customerData.loyalty_points || 0}
+                                </span>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

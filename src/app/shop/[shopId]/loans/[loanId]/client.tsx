@@ -55,6 +55,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import type { Loan, LoanCollateral, LoanPayment, LoanCustomer } from '@/lib/loan-types';
+import { createRoot } from 'react-dom/client';
+import { LoanPdfTemplate } from '@/components/loan-pdf-template';
 
 type LoanDetailsClientProps = {
     shopId: string;
@@ -64,9 +66,10 @@ type LoanDetailsClientProps = {
         payments: LoanPayment[];
     };
     currentUser: any;
+    shopDetails: any;
 };
 
-export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClientProps) {
+export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: LoanDetailsClientProps) {
     const router = useRouter();
     const { toast } = useToast();
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -99,6 +102,89 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
             due = addMonths(due, 1);
         }
         return due;
+    };
+
+    const handlePrint = () => {
+        // Create a hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow?.document;
+        if (!doc) return;
+
+        // Write the content
+        doc.open();
+        doc.write('<!DOCTYPE html><html><head><title>Loan Agreement</title>');
+        
+        // Add Tailwind CDN for styling in the iframe (simplest way for dynamic content)
+        doc.write('<script src="https://cdn.tailwindcss.com"></script>');
+        doc.write('<style>@media print { body { -webkit-print-color-adjust: exact; } }</style>');
+        
+        doc.write('</head><body><div id="print-root"></div></body></html>');
+        doc.close();
+
+        // Wait for the DOM to be ready
+        setTimeout(() => {
+            // Ensure the element exists before rendering
+            const printRoot = doc.getElementById('print-root');
+            if (!printRoot) {
+                console.error('Print root element not found');
+                document.body.removeChild(iframe);
+                return;
+            }
+
+            // Render the React component into the iframe
+            const root = createRoot(printRoot);
+            root.render(
+                <LoanPdfTemplate
+                    loan={loan}
+                    customer={loan.customer}
+                    collateral={loan.collateral}
+                    shopDetails={shopDetails}
+                />
+            );
+
+            // Wait for content and styles to load then print
+            setTimeout(() => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                // Cleanup after print dialog closes (or a reasonable timeout)
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }, 1000);
+        }, 100);
+    };
+
+    const generateEMISchedule = () => {
+        if (loan.repayment_type !== 'emi' || !loan.emi_amount || !loan.tenure_months) return [];
+        
+        const schedule = [];
+        let balance = loan.principal_amount;
+        let currentDate = new Date(loan.start_date);
+        
+        for (let i = 1; i <= loan.tenure_months; i++) {
+            currentDate = addMonths(currentDate, 1);
+            const interest = (balance * loan.interest_rate) / 100;
+            const principalComponent = loan.emi_amount - interest;
+            balance -= principalComponent;
+            
+            schedule.push({
+                installmentNo: i,
+                dueDate: new Date(currentDate),
+                principal: principalComponent,
+                interest: interest,
+                total: loan.emi_amount,
+                balance: balance > 0 ? balance : 0
+            });
+        }
+        return schedule;
     };
 
     const handleAddPayment = async () => {
@@ -386,7 +472,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => window.print()}>
+                            <DropdownMenuItem onClick={handlePrint}>
                                 <Printer className="h-4 w-4 mr-2" /> Print Details
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -502,9 +588,15 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{formatCurrency(loan.principal_amount)}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    {loan.interest_rate}% Interest p.a.
-                                </p>
+                                <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                                    <p>{loan.interest_rate}% Interest p.a.</p>
+                                    {loan.repayment_type && (
+                                        <p className="capitalize font-medium text-primary">
+                                            {loan.repayment_type.replace('_', ' ')}
+                                            {loan.repayment_type === 'emi' && loan.emi_amount && ` - ${formatCurrency(loan.emi_amount)}/mo`}
+                                        </p>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                         <Card>
@@ -537,8 +629,48 @@ export function LoanDetailsClient({ shopId, loan, currentUser }: LoanDetailsClie
                         <TabsList>
                             <TabsTrigger value="collateral">Collateral Items</TabsTrigger>
                             <TabsTrigger value="payments">Payment History</TabsTrigger>
+                            {loan.repayment_type === 'emi' && <TabsTrigger value="schedule">EMI Schedule</TabsTrigger>}
                             <TabsTrigger value="documents">Documents</TabsTrigger>
                         </TabsList>
+
+                        {loan.repayment_type === 'emi' && (
+                            <TabsContent value="schedule" className="space-y-4 mt-4">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>EMI Repayment Schedule</CardTitle>
+                                        <CardDescription>Projected repayment plan</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="rounded-md border">
+                                            <table className="w-full text-sm text-left">
+                                                <thead className="bg-muted/50 text-muted-foreground font-medium">
+                                                    <tr>
+                                                        <th className="px-4 py-3">#</th>
+                                                        <th className="px-4 py-3">Due Date</th>
+                                                        <th className="px-4 py-3 text-right">Principal</th>
+                                                        <th className="px-4 py-3 text-right">Interest</th>
+                                                        <th className="px-4 py-3 text-right">Total EMI</th>
+                                                        <th className="px-4 py-3 text-right">Balance</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {generateEMISchedule().map((row) => (
+                                                        <tr key={row.installmentNo} className="border-b last:border-0">
+                                                            <td className="px-4 py-3">{row.installmentNo}</td>
+                                                            <td className="px-4 py-3">{format(row.dueDate, 'dd MMM yyyy')}</td>
+                                                            <td className="px-4 py-3 text-right">{formatCurrency(row.principal)}</td>
+                                                            <td className="px-4 py-3 text-right">{formatCurrency(row.interest)}</td>
+                                                            <td className="px-4 py-3 text-right font-medium">{formatCurrency(row.total)}</td>
+                                                            <td className="px-4 py-3 text-right">{formatCurrency(row.balance)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        )}
 
                         <TabsContent value="collateral" className="space-y-4 mt-4">
                             <Card>

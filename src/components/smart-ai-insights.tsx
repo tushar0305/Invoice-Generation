@@ -293,43 +293,43 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                 // Shadow
                 "shadow-xl shadow-slate-200/50 dark:shadow-black/20",
                 // Rounded
-                "rounded-2xl lg:rounded-3xl",
-                // Padding
-                "p-4 md:p-6 lg:p-8",
+                "rounded-xl lg:rounded-3xl",
+                // Padding - Reduced for mobile
+                "p-3 md:p-6 lg:p-8",
                 className
             )}
         >
             {/* Background decorations */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl lg:rounded-3xl">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl lg:rounded-3xl">
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-gradient-to-br from-amber-400/20 to-orange-400/10 rounded-full blur-3xl" />
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-gradient-to-tr from-blue-400/10 to-purple-400/10 rounded-full blur-3xl" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-radial from-amber-200/10 to-transparent rounded-full" />
             </div>
 
-            <div className="relative z-10 space-y-6">
+            <div className="relative z-10 space-y-4 md:space-y-6">
                 {/* Header */}
                 <motion.div variants={itemVariants} className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3 md:gap-4">
                         <div className="relative">
-                            <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/25">
-                                <Sparkles className="w-6 h-6 text-white" />
+                            <div className="p-2 md:p-3 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/25">
+                                <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-white" />
                             </div>
                             {/* Animated glow */}
                             <motion.div
-                                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 blur-xl opacity-40"
+                                className="absolute inset-0 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 blur-xl opacity-40"
                                 animate={pulseKeyframes}
                                 transition={{ duration: 2, repeat: Infinity }}
                             />
                         </div>
                         <div>
-                            <h2 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                 Swarna AI
                                 <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 text-amber-700 dark:text-amber-300 border-0">
                                     BETA
                                 </Badge>
                             </h2>
-                            <p className="text-sm text-slate-500 dark:text-muted-foreground mt-1">
-                                Your intelligent business analyst. Ask anything about your shop.
+                            <p className="text-xs md:text-sm text-slate-500 dark:text-muted-foreground mt-0.5 md:mt-1">
+                                Your intelligent business analyst.
                             </p>
                         </div>
                     </div>
@@ -344,18 +344,18 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                 </motion.div>
 
                 {/* Input Section */}
-                <motion.div variants={itemVariants} className="space-y-4">
+                <motion.div variants={itemVariants} className="space-y-3 md:space-y-4">
                     {/* Input bar */}
                     <div
                         className={cn(
                             "relative flex items-center gap-2",
                             "bg-white dark:bg-card",
-                            "border-2 transition-all duration-300",
+                            "border transition-all duration-300",
                             isFocused
                                 ? "border-amber-400 dark:border-amber-500 shadow-lg shadow-amber-500/10"
                                 : "border-slate-200 dark:border-border",
-                            "rounded-2xl",
-                            "p-2"
+                            "rounded-xl md:rounded-2xl",
+                            "p-1.5 md:p-2"
                         )}
                     >
                         <input
@@ -366,14 +366,14 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                             onFocus={() => setIsFocused(true)}
                             onBlur={() => setIsFocused(false)}
                             onKeyDown={handleKeyPress}
-                            placeholder="Ask about your sales, stock, customers..."
+                            placeholder="Ask about sales, stock..."
                             className={cn(
                                 "flex-1 min-w-0",
                                 "bg-transparent",
                                 "text-slate-900 dark:text-foreground",
                                 "placeholder:text-slate-400 dark:placeholder:text-muted-foreground",
-                                "text-base",
-                                "px-4 py-3",
+                                "text-sm md:text-base",
+                                "px-3 py-2 md:px-4 md:py-3",
                                 "focus:outline-none"
                             )}
                             disabled={isLoading}
@@ -385,7 +385,7 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                             disabled={isLoading}
                             className={cn(
                                 "relative flex items-center justify-center",
-                                "w-12 h-12 rounded-xl",
+                                "w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl",
                                 "transition-all duration-200",
                                 isListening
                                     ? "bg-red-100 dark:bg-red-900/30 text-red-500"
@@ -396,14 +396,14 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                             {isListening ? (
                                 <>
                                     <motion.div
-                                        className="absolute inset-0 rounded-xl bg-red-400/30"
+                                        className="absolute inset-0 rounded-lg md:rounded-xl bg-red-400/30"
                                         animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
                                         transition={{ duration: 1, repeat: Infinity }}
                                     />
-                                    <MicOff className="w-5 h-5 relative z-10" />
+                                    <MicOff className="w-4 h-4 md:w-5 md:h-5 relative z-10" />
                                 </>
                             ) : (
-                                <Mic className="w-5 h-5" />
+                                <Mic className="w-4 h-4 md:w-5 md:h-5" />
                             )}
                         </button>
 
@@ -413,7 +413,7 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                             disabled={!query.trim() || isLoading}
                             className={cn(
                                 "flex items-center justify-center",
-                                "w-12 h-12 rounded-xl",
+                                "w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl",
                                 "transition-all duration-200",
                                 query.trim()
                                     ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105"
@@ -422,9 +422,9 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                             )}
                         >
                             {isLoading ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
                             ) : (
-                                <Send className="w-5 h-5" />
+                                <Send className="w-4 h-4 md:w-5 md:h-5" />
                             )}
                         </button>
                     </div>
@@ -436,9 +436,9 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                                 key={prompt.id}
                                 onClick={() => handleChipClick(prompt.text)}
                                 className={cn(
-                                    "inline-flex items-center gap-2",
-                                    "px-4 py-2",
-                                    "text-sm font-medium",
+                                    "inline-flex items-center gap-1.5 md:gap-2",
+                                    "px-3 py-1.5 md:px-4 md:py-2",
+                                    "text-xs md:text-sm font-medium",
                                     "bg-white dark:bg-card",
                                     "text-slate-600 dark:text-foreground",
                                     "border border-slate-200 dark:border-border",
@@ -447,12 +447,13 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                                     "hover:border-amber-300 dark:hover:border-amber-600",
                                     "hover:bg-amber-50 dark:hover:bg-amber-900/20",
                                     "hover:text-amber-700 dark:hover:text-amber-300",
-                                    "hover:shadow-md"
+                                    "hover:shadow-md",
+                                    "whitespace-nowrap"
                                 )}
                                 whileHover={{ scale: 1.02, y: -2 }}
                                 whileTap={{ scale: 0.98 }}
                             >
-                                <prompt.icon className="w-4 h-4 text-amber-500" />
+                                <prompt.icon className="w-3 h-3 md:w-4 md:h-4 text-amber-500" />
                                 {prompt.text}
                             </motion.button>
                         ))}

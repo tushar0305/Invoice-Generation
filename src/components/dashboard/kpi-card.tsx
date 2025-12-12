@@ -71,7 +71,7 @@ export function KPICard({
                             {title}
                         </h3>
                         {href && (
-                            <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-[#D4AF37] transition-all" />
+                            <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-primary transition-all" />
                         )}
                     </div>
 
@@ -87,14 +87,14 @@ export function KPICard({
                                     <polyline
                                         points={sparklinePoints}
                                         fill="none"
-                                        stroke="#D4AF37"
+                                        stroke="hsl(var(--primary))"
                                         strokeWidth="2"
                                         vectorEffect="non-scaling-stroke"
                                         strokeOpacity="0.8"
                                     />
                                     <linearGradient id={`grad-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.2" />
-                                        <stop offset="100%" stopColor="#D4AF37" stopOpacity="0" />
+                                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+                                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
                                     </linearGradient>
                                     <polygon
                                         points={`${0},30 ${sparklinePoints} ${100},30`}
@@ -105,7 +105,7 @@ export function KPICard({
                             </div>
                         ) : (
                             // Fallback if no data, maybe show a flat line or nothing
-                            <div className="h-0.5 w-full bg-[#D4AF37]/10 mt-auto rounded-full" />
+                            <div className="h-0.5 w-full bg-primary/10 mt-auto rounded-full" />
                         )}
                     </div>
                 </div>

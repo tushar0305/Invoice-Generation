@@ -73,9 +73,9 @@ export function LoansDashboardClient({
     );
 
     return (
-        <div className="min-h-screen bg-muted/10 pb-20">
+        <div className="min-h-screen bg-muted/10 dark:bg-background pb-20">
             {/* Gold Header Gradient */}
-            <div className="bg-gradient-to-b from-amber-50 to-background dark:from-background dark:to-background border-b border-border pt-8 pb-12 px-4 md:px-8">
+            <div className="bg-gradient-to-b from-amber-50 to-background dark:from-amber-950/20 dark:to-background border-b border-border pt-8 pb-12 px-4 md:px-8">
                 <div className="max-w-7xl mx-auto space-y-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
@@ -152,8 +152,8 @@ export function LoansDashboardClient({
 
                         {/* Overdue */}
                         <Card className={cn(
-                            "border-none shadow-xl shadow-red-900/5 relative overflow-hidden group transition-all",
-                            stats.total_overdue_loans > 0 ? "bg-red-50 dark:bg-red-900/20" : "bg-white dark:bg-gray-900"
+                            "border border-border shadow-sm relative overflow-hidden group transition-all",
+                            stats.total_overdue_loans > 0 ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50" : "bg-card"
                         )}>
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <AlertCircle className="h-16 w-16 text-red-500" />
@@ -162,7 +162,7 @@ export function LoansDashboardClient({
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Overdue Accounts</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className={cn("text-2xl font-bold", stats.total_overdue_loans > 0 ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white")}>
+                                <div className={cn("text-2xl font-bold", stats.total_overdue_loans > 0 ? "text-red-600 dark:text-red-400" : "text-foreground")}>
                                     {stats.total_overdue_loans}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -280,14 +280,14 @@ export function LoansDashboardClient({
                         {/* Desktop View - Table */}
                         <div className="hidden md:block overflow-hidden rounded-b-xl">
                             <Table>
-                                <TableHeader className="bg-gray-50/50 dark:bg-gray-900/50">
+                                <TableHeader className="bg-muted/50">
                                     <TableRow>
-                                        <TableHead>Loan Details</TableHead>
-                                        <TableHead>Customer</TableHead>
-                                        <TableHead>Principal</TableHead>
-                                        <TableHead>Interest</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Action</TableHead>
+                                        <TableHead className="text-muted-foreground">Loan Details</TableHead>
+                                        <TableHead className="text-muted-foreground">Customer</TableHead>
+                                        <TableHead className="text-muted-foreground">Principal</TableHead>
+                                        <TableHead className="text-muted-foreground">Interest</TableHead>
+                                        <TableHead className="text-muted-foreground">Status</TableHead>
+                                        <TableHead className="text-right text-muted-foreground">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>

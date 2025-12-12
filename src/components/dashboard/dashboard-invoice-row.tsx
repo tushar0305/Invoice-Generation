@@ -108,11 +108,11 @@ export function DashboardInvoiceRow({ invoice, shopId }: DashboardInvoiceRowProp
     return (
         <Link
             href={`/shop/${shopId}/invoices/view?id=${invoice.id}`}
-            className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-gray-100 dark:hover:border-white/10 group"
+            className="grid grid-cols-[1fr_auto] md:grid-cols-[1.5fr_1fr_1fr] items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 border border-transparent hover:border-border group"
         >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
                 <div className={cn(
-                    "h-8 w-8 rounded-full flex items-center justify-center text-xs shadow-sm",
+                    "h-8 w-8 rounded-full flex items-center justify-center text-xs shadow-sm shrink-0",
                     invoice.status === 'paid'
                         ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20"
                         : "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20"
@@ -125,7 +125,17 @@ export function DashboardInvoiceRow({ invoice, shopId }: DashboardInvoiceRowProp
                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Desktop: Date & Details */}
+            <div className="hidden md:flex flex-col items-center justify-center">
+                <p className="text-xs font-medium text-foreground">
+                    {new Date(invoice.created_at || invoice.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                    {new Date(invoice.created_at || invoice.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
                 <div className="text-right">
                     <p className="font-semibold text-xs text-foreground glow-text-sm">{formatCurrency(invoice.grand_total)}</p>
                     <span className={cn(

@@ -271,7 +271,7 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
     };
 
     return (
-        <div className="w-full py-2.5 px-3 md:px-4 rounded-2xl bg-card/30 backdrop-blur-xl border border-white/5 shadow-sm overflow-hidden flex items-center gap-4">
+        <div className="w-full py-2.5 px-3 md:px-4 rounded-2xl bg-card/30 backdrop-blur-xl border border-border shadow-sm overflow-hidden flex items-center gap-4">
 
             {/* Live Badge (Static) */}
             <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-amber-500 whitespace-nowrap tracking-widest flex-shrink-0 z-10 bg-background/5 p-1 rounded">

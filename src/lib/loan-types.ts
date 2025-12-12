@@ -9,6 +9,8 @@ export type LoanCustomer = {
     phone: string;
     email?: string | null;
     address?: string | null;
+    pan?: string | null;
+    aadhaar?: string | null;
     kyc_document_url?: string | null;
     photo_url?: string | null;
     created_at: string;
@@ -23,8 +25,11 @@ export type Loan = {
     customer_id: string;
     loan_number: string;
     status: LoanStatus;
+    repayment_type?: 'interest_only' | 'emi' | 'bullet';
     principal_amount: number;
     interest_rate: number; // Annual rate in %
+    tenure_months?: number;
+    emi_amount?: number;
     start_date: string;
     end_date?: string | null;
     total_interest_accrued: number;

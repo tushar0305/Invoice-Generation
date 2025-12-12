@@ -54,10 +54,10 @@ const fetchDashboardDataCached = cache(async (shopId: string) => {
         // 4. Due/Pending Invoices
         supabase
             .from('invoices')
-            .select('id, invoice_number, grand_total, due_date, created_at, status, customer:customers(name, phone)')
+            .select('id, invoice_number, grand_total, created_at, status, customer:customers(name)')
             .eq('shop_id', shopId)
-            .neq('status', 'paid')
-            .neq('status', 'cancelled'),
+            .eq('status', 'due')
+            .order('created_at', { ascending: false }),
 
         // 5. Today Revenue
         supabase

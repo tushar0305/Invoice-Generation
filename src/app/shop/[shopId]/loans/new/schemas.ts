@@ -35,6 +35,9 @@ export const loanTermsSchema = z.object({
     start_date: z.date(),
     principal_amount: z.number().positive("Principal amount must be positive"),
     interest_rate: z.number().min(0, "Interest rate cannot be negative"),
+    repayment_type: z.enum(['interest_only', 'emi', 'bullet']).default('interest_only'),
+    tenure_months: z.number().min(1).optional(),
+    emi_amount: z.number().optional(),
 });
 
 export const loanWizardSchema = z.object({

@@ -5,7 +5,7 @@ import { Invoice } from '@/lib/definitions';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, Trash2, Share2, CheckCircle, RefreshCw, Check } from 'lucide-react';
+import { Download, Trash2, Share2, CheckCircle, RefreshCw, Check, Printer } from 'lucide-react';
 import { haptics } from '@/lib/haptics';
 import { ImpactStyle, NotificationType } from '@/lib/haptics';
 import { useState, useRef } from 'react';
@@ -19,9 +19,10 @@ interface InvoiceMobileCardProps {
     onDownload: (id: string) => void;
     onShare: (id: string) => void;
     onMarkPaid: (id: string) => void;
+    onPrint?: (id: string) => void;
 }
 
-export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onShare, onMarkPaid }: InvoiceMobileCardProps) {
+export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onShare, onMarkPaid, onPrint }: InvoiceMobileCardProps) {
     const [isDragging, setIsDragging] = useState(false);
     const x = useMotionValue(0);
 
@@ -118,7 +119,7 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
                 onDragStart={() => setIsDragging(true)}
                 onDragEnd={handleDragEnd}
                 style={{ x, touchAction: 'none', background: 'hsl(var(--card))' }}
-                className="relative z-10 overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 bg-card shadow-sm transition-shadow active:shadow-md"
+                className="relative z-10 overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow active:shadow-md"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 onTouchMove={handleTouchEnd} // Cancel long press on move
@@ -139,14 +140,19 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
                         </Badge>
                     </div>
 
-                    <div className="flex justify-between items-end border-t border-gray-100 dark:border-white/5 pt-3">
+                    <div className="flex justify-between items-end border-t border-border pt-3">
                         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-primary hover:text-primary-foreground hover:border-primary" onClick={() => onDownload(invoice.id)}>
+                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border bg-muted/50 hover:bg-primary hover:text-primary-foreground hover:border-primary" onClick={() => onDownload(invoice.id)}>
                                 <Download className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 hover:bg-primary hover:text-primary-foreground" onClick={() => onShare(invoice.id)}>
+                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border bg-muted/50 hover:bg-primary hover:text-primary-foreground" onClick={() => onShare(invoice.id)}>
                                 <Share2 className="h-3.5 w-3.5" />
                             </Button>
+                            {onPrint && (
+                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border bg-muted/50 hover:bg-primary hover:text-primary-foreground" onClick={() => onPrint(invoice.id)}>
+                                    <Printer className="h-3.5 w-3.5" />
+                                </Button>
+                            )}
                         </div>
                         <div className="text-right">
                             <div className="text-xs text-muted-foreground mb-0.5">Total Amount</div>

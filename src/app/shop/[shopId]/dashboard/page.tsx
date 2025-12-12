@@ -26,8 +26,8 @@ import { CustomerInsightsWidget } from '@/components/dashboard/customer-insights
 
 import { DashboardInvoiceRow } from '@/components/dashboard/dashboard-invoice-row';
 
-// Revalidate dashboard data every 60 seconds for fresh data
-export const revalidate = 60;
+// Revalidate dashboard data every 0 seconds for fresh data
+export const revalidate = 0;
 
 // Helper function for sparklines
 function generateSparkline(invoices: any[], days: number) {
@@ -75,8 +75,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   // Calculate pending payments
   const totalDue = stats.dueInvoices.reduce((sum: number, inv: any) => sum + Number(inv.grand_total), 0);
   const overdueInvoices = stats.dueInvoices.filter((inv: any) => {
-    const dueDate = new Date(inv.due_date);
-    return dueDate < new Date();
+    // Fallback to created_at + 30 days if due_date is missing
+    const dateToCompare = inv.due_date ? new Date(inv.due_date) : new Date(new Date(inv.created_at).getTime() + 30 * 24 * 60 * 60 * 1000);
+    return dateToCompare < new Date();
   });
 
   // Customer insights
@@ -196,6 +197,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
           pendingCount={stats.dueInvoices.length}
           totalDue={totalDue}
           overdueCount={overdueInvoices.length}
+          recentDueInvoices={stats.dueInvoices.slice(0, 3)}
         />
 
         <LoyaltyWidget
@@ -220,8 +222,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
         />
       </div>
 
-      {/* Activity Cards - 2 columns (stack on mobile) */}
-      <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
+      {/* Activity Cards - Full Width */}
+      <div className="grid gap-3 grid-cols-1">
         {/* Recent Invoices */}
         <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
           <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-gray-100 dark:border-white/5">
@@ -235,33 +237,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
           <CardContent className="p-3">
             {stats.recentInvoices.length > 0 ? (
               <div className="space-y-1.5">
-                {stats.recentInvoices.slice(0, 4).map((invoice: any) => (
+                {stats.recentInvoices.slice(0, 5).map((invoice: any) => (
                   <DashboardInvoiceRow key={invoice.id} invoice={invoice} shopId={shopId} />
                 ))}
               </div>
             ) : (
               <RecentInvoicesEmptyState />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Pending Actions */}
-        <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-gray-100 dark:border-white/5">
-            <CardTitle className="text-sm font-semibold text-foreground">Pending Actions</CardTitle>
-            <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20">
-              {stats.dueInvoices.length}
-            </Badge>
-          </CardHeader>
-          <CardContent className="p-3">
-            {stats.dueInvoices.length > 0 ? (
-              <div className="space-y-1.5">
-                {stats.dueInvoices.slice(0, 4).map((invoice: any) => (
-                  <DashboardInvoiceRow key={invoice.id} invoice={invoice} shopId={shopId} />
-                ))}
-              </div>
-            ) : (
-              <PendingActionsEmptyState />
             )}
           </CardContent>
         </Card>

@@ -12,6 +12,9 @@ interface LoanSummaryProps {
     principal: number;
     interestRate: number; // Yearly %
     interestPerMonth: number;
+    repaymentType: 'interest_only' | 'emi' | 'bullet';
+    tenureMonths?: number;
+    emiAmount?: number;
     totalCollateralValue: number;
     totalItems: number;
     startDate: Date;
@@ -24,6 +27,9 @@ export function LoanSummary({
     principal,
     interestRate,
     interestPerMonth,
+    repaymentType,
+    tenureMonths,
+    emiAmount,
     totalCollateralValue,
     totalItems,
     startDate,
@@ -36,8 +42,8 @@ export function LoanSummary({
             <CardContent className="p-6 space-y-6">
                 <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-lg">Loan Summary</h3>
-                    <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
-                        New Loan
+                    <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 capitalize">
+                        {repaymentType.replace('_', ' ')}
                     </Badge>
                 </div>
 
@@ -52,16 +58,30 @@ export function LoanSummary({
 
                     <Separator />
 
-                    {/* Interest Details */}
+                    {/* Repayment Details */}
                     <div className="space-y-2">
                         <div className="flex justify-between text-muted-foreground">
                             <span>Interest Rate</span>
                             <span>{interestRate}% p.a.</span>
                         </div>
-                        <div className="flex justify-between text-muted-foreground">
-                            <span>Monthly Interest</span>
-                            <span className="font-medium text-foreground">{formatCurrency(interestPerMonth)}</span>
-                        </div>
+                        {repaymentType === 'emi' && emiAmount && (
+                            <div className="flex justify-between text-muted-foreground">
+                                <span className="text-primary font-medium">Monthly EMI</span>
+                                <span className="font-bold text-primary">{formatCurrency(emiAmount)}</span>
+                            </div>
+                        )}
+                        {repaymentType !== 'emi' && (
+                            <div className="flex justify-between text-muted-foreground">
+                                <span>Monthly Interest</span>
+                                <span className="font-medium text-foreground">{formatCurrency(interestPerMonth)}</span>
+                            </div>
+                        )}
+                        {(repaymentType === 'emi' || repaymentType === 'bullet') && tenureMonths && (
+                            <div className="flex justify-between text-muted-foreground">
+                                <span>Tenure</span>
+                                <span className="font-medium text-foreground">{tenureMonths} Months</span>
+                            </div>
+                        )}
                     </div>
 
                     <Separator />

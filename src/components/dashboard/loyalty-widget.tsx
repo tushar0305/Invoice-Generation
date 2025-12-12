@@ -24,7 +24,7 @@ export function LoyaltyWidget({
 }: LoyaltyWidgetProps) {
     return (
         <Card className="h-full overflow-hidden bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between border-b border-white/5">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between border-b border-border/50">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
                     <div className="p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
                         <Gift className="h-4 w-4 text-purple-500" />

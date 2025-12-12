@@ -21,54 +21,54 @@ export function CustomerInsightsWidget({ newCustomers, returningCustomers, topCu
     const returningPercentage = total > 0 ? (returningCustomers / total) * 100 : 0;
 
     return (
-        <Card className="h-full min-h-[400px] overflow-hidden relative flex flex-col bg-gradient-to-br from-white via-stone-50 to-[#D4AF37]/5 dark:from-[#2e2410] dark:via-[#1c1917] dark:to-[#D4AF37]/20 border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 shadow-lg hover:shadow-[#D4AF37]/10 transition-all duration-300">
+        <Card className="h-full min-h-[400px] overflow-hidden relative flex flex-col bg-card border border-border hover:border-primary/50 shadow-lg hover:shadow-primary/10 transition-all duration-300">
             {/* Subtle gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
 
-            <CardHeader className="pb-3 border-b border-white/5 relative">
+            <CardHeader className="pb-3 border-b border-border relative">
                 <CardTitle className="text-lg font-heading font-bold text-foreground flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <Users className="w-4 h-4 text-amber-500" />
+                    <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
+                        <Users className="w-4 h-4 text-primary" />
                     </div>
                     Customer Insights
                 </CardTitle>
             </CardHeader>
             <CardContent className="pt-5 space-y-5 relative">
                 {/* Retention Chart */}
-                <div className="space-y-3 p-4 rounded-2xl bg-white/5 border border-white/10">
+                <div className="space-y-3 p-4 rounded-2xl bg-muted/50 border border-border">
                     <div className="flex justify-between text-sm font-medium">
                         <motion.span
-                            className="flex items-center gap-1.5 text-amber-500"
+                            className="flex items-center gap-1.5 text-primary"
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.4, delay: 0.2 }}
                         >
-                            <div className="p-1 rounded-md bg-amber-500/10">
+                            <div className="p-1 rounded-md bg-primary/10">
                                 <UserPlus className="w-3 h-3" />
                             </div>
                             <span className="text-xs">New <span className="font-bold">({newCustomers})</span></span>
                         </motion.span>
                         <motion.span
-                            className="flex items-center gap-1.5 text-stone-400"
+                            className="flex items-center gap-1.5 text-muted-foreground"
                             initial={{ opacity: 0, x: 10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.4, delay: 0.3 }}
                         >
                             <span className="text-xs">Returning <span className="font-bold">({returningCustomers})</span></span>
-                            <div className="p-1 rounded-md bg-stone-500/10">
+                            <div className="p-1 rounded-md bg-muted">
                                 <UserCheck className="w-3 h-3" />
                             </div>
                         </motion.span>
                     </div>
-                    <div className="flex h-3.5 w-full rounded-full overflow-hidden bg-white/5 shadow-inner">
+                    <div className="flex h-3.5 w-full rounded-full overflow-hidden bg-muted shadow-inner">
                         <motion.div
-                            className="bg-gradient-to-r from-amber-500 to-yellow-400 h-full rounded-l-full"
+                            className="bg-gradient-to-r from-primary to-primary/80 h-full rounded-l-full"
                             initial={{ width: 0 }}
                             animate={{ width: `${newPercentage}%` }}
                             transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
                         />
                         <motion.div
-                            className="bg-gradient-to-r from-stone-500 to-stone-400 h-full rounded-r-full"
+                            className="bg-gradient-to-r from-muted-foreground/50 to-muted-foreground/30 h-full rounded-r-full"
                             initial={{ width: 0 }}
                             animate={{ width: `${returningPercentage}%` }}
                             transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
@@ -82,37 +82,37 @@ export function CustomerInsightsWidget({ newCustomers, returningCustomers, topCu
                 {/* Top Customer Spotlight */}
                 {topCustomer ? (
                     <motion.div
-                        className="relative overflow-hidden rounded-2xl bg-amber-500/5 border border-amber-500/10 p-4 shadow-sm hover:bg-amber-500/10 transition-colors"
+                        className="relative overflow-hidden rounded-2xl bg-primary/5 border border-primary/10 p-4 shadow-sm hover:bg-primary/10 transition-colors"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.6 }}
                     >
                         {/* Background crown decoration */}
                         <div className="absolute top-0 right-0 p-2 opacity-[0.08]">
-                            <Crown className="w-20 h-20 text-amber-500" />
+                            <Crown className="w-20 h-20 text-primary" />
                         </div>
 
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                    <Crown className="w-3.5 h-3.5 text-amber-500" />
+                                <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
+                                    <Crown className="w-3.5 h-3.5 text-primary" />
                                 </div>
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Top Spender</span>
-                                <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Top Spender</span>
+                                <Sparkles className="w-3 h-3 text-primary animate-pulse" />
                             </div>
                             <h4 className="text-lg font-bold text-foreground truncate font-heading">{topCustomer.name}</h4>
                             <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1 text-xs">
                                     <span className="font-medium text-foreground">{topCustomer.orders}</span> Orders
                                 </span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60" />
-                                <span className="font-bold text-amber-700 dark:text-amber-400 text-base">{formatCurrency(topCustomer.totalSpent)}</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+                                <span className="font-bold text-primary text-base">{formatCurrency(topCustomer.totalSpent)}</span>
                             </div>
                         </div>
                     </motion.div>
                 ) : (
-                    <div className="text-center py-4 text-muted-foreground text-sm bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/30 rounded-2xl border border-dashed border-slate-200/60 dark:border-slate-700/40">
-                        <Users className="w-7 h-7 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
+                    <div className="text-center py-4 text-muted-foreground text-sm bg-muted/30 rounded-2xl border border-dashed border-border">
+                        <Users className="w-7 h-7 mx-auto mb-2 text-muted-foreground/50" />
                         <p className="font-medium text-sm">No customer data yet</p>
                         <p className="text-xs text-muted-foreground/70 mt-0.5">Customer insights will appear here</p>
                     </div>

@@ -59,13 +59,11 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
     };
 
     const moreItems = [
-        { href: `/shop/${shopId}/catalogue`, label: 'Catalogue', icon: Store },
-        { href: `/shop/${shopId}/marketing`, label: 'Marketing', icon: Megaphone },
+        { href: `/shop/${shopId}/stock`, label: 'Stock', icon: Package },
         { href: `/shop/${shopId}/staff`, label: 'Staff', icon: UserCog },
         { href: `/shop/${shopId}/loans`, label: 'Loans', icon: Banknote },
         { href: `/shop/${shopId}/khata`, label: 'Khata Book', icon: BookOpen },
         { href: `/shop/${shopId}/loyalty`, label: 'Loyalty', icon: Crown },
-        { href: `/shop/${shopId}/settings/billing`, label: 'Billing & Plans', icon: CreditCard },
         { href: `/shop/${shopId}/settings`, label: 'Settings', icon: Settings },
     ];
 
@@ -92,7 +90,7 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="fixed bottom-20 right-4 z-50 w-56 overflow-hidden rounded-2xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border border-[#D4AF37]/20 shadow-2xl ring-1 ring-black/5"
+                            className="fixed bottom-20 right-4 z-50 w-56 overflow-hidden rounded-2xl bg-white/90 dark:bg-[#0c0a09]/95 backdrop-blur-xl border border-[#D4AF37]/20 shadow-2xl ring-1 ring-black/5"
                         >
                             <div className="p-2 space-y-1">
                                 {moreItems.map((item) => (

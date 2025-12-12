@@ -25,10 +25,10 @@ export function LowStockWidget({ shopId, items }: LowStockWidgetProps) {
 
     return (
         <Card className="h-full overflow-hidden bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <div className={`p-1.5 rounded-lg ${items.length > 0 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                        <Package className={`h-4 w-4 ${items.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500'}`} />
+            <CardHeader className="pb-2 flex flex-row items-center justify-between border-b border-border/50">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                    <div className={`p-1.5 rounded-lg ${items.length > 0 ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-muted border border-border'}`}>
+                        <Package className={`h-4 w-4 ${items.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`} />
                     </div>
                     Stock Alerts
                 </CardTitle>
@@ -36,18 +36,18 @@ export function LowStockWidget({ shopId, items }: LowStockWidgetProps) {
                     <motion.div
                         animate={{ scale: [1, 1.1, 1] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30"
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20"
                     >
-                        <AlertTriangle className="h-3 w-3 text-amber-600" />
-                        <span className="text-[10px] font-bold text-amber-600">{items.length}</span>
+                        <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{items.length}</span>
                     </motion.div>
                 )}
             </CardHeader>
             <CardContent className="pt-2">
                 {items.length === 0 ? (
                     <div className="text-center py-4">
-                        <Package className="h-8 w-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                        <p className="text-xs text-gray-500">All stock levels healthy!</p>
+                        <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                        <p className="text-xs text-muted-foreground">All stock levels healthy!</p>
                     </div>
                 ) : (
                     <div className="space-y-2">
@@ -60,22 +60,22 @@ export function LowStockWidget({ shopId, items }: LowStockWidgetProps) {
                                 className={`
                   flex items-center justify-between p-2 rounded-lg border
                   ${item.currentQty <= item.minQty * 0.5
-                                        ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                                        : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                                        ? 'bg-destructive/5 border-destructive/20'
+                                        : 'bg-amber-500/5 border-amber-500/20'
                                     }
                 `}
                             >
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium truncate">{item.name}</p>
-                                    <p className="text-[10px] text-gray-500">
+                                    <p className="text-xs font-medium truncate text-foreground">{item.name}</p>
+                                    <p className="text-[10px] text-muted-foreground">
                                         {item.currentQty} / {item.minQty} {item.unit}
                                     </p>
                                 </div>
                                 <div className={`
                   text-[10px] font-bold px-2 py-0.5 rounded
                   ${item.currentQty <= item.minQty * 0.5
-                                        ? 'bg-red-200 dark:bg-red-800 text-red-700 dark:text-red-300'
-                                        : 'bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300'
+                                        ? 'bg-destructive/10 text-destructive'
+                                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                                     }
                 `}>
                                     {item.currentQty <= item.minQty * 0.5 ? 'Critical' : 'Low'}
@@ -83,7 +83,7 @@ export function LowStockWidget({ shopId, items }: LowStockWidgetProps) {
                             </motion.div>
                         ))}
                         {items.length > 3 && (
-                            <Button variant="ghost" size="sm" className="w-full text-xs h-7" asChild>
+                            <Button variant="ghost" size="sm" className="w-full text-xs h-7 text-muted-foreground hover:text-primary hover:bg-primary/10" asChild>
                                 <Link href={`/shop/${shopId}/stock`}>
                                     +{items.length - 3} more <ArrowRight className="h-3 w-3 ml-1" />
                                 </Link>

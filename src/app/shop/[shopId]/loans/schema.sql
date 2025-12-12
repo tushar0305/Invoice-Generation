@@ -22,10 +22,13 @@ create table if not exists loans (
   customer_id uuid references loan_customers(id) on delete cascade not null,
   loan_number text not null,
   status text not null check (status in ('active', 'closed', 'overdue', 'rejected')),
+  repayment_type text check (repayment_type in ('interest_only', 'emi', 'bullet')), -- New field
   principal_amount numeric not null check (principal_amount >= 0),
   interest_rate numeric not null check (interest_rate >= 0), -- Annual Rate %
+  tenure_months integer, -- New field
+  emi_amount numeric, -- New field
   start_date date not null default current_date,
-  end_date date,
+  end_date date, -- Used as Due Date
   total_interest_accrued numeric default 0,
   total_amount_paid numeric default 0,
   settlement_amount numeric,

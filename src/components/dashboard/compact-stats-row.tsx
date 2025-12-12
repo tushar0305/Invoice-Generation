@@ -70,28 +70,28 @@ export function CompactStatsRow({
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full rounded-2xl bg-gradient-to-r from-white/80 via-white/50 to-white/80 dark:from-[#1a1500]/80 dark:via-[#1c1917]/80 dark:to-[#1a1500]/80 backdrop-blur-xl border border-[#D4AF37]/20 shadow-lg shadow-[#D4AF37]/5 p-2 grid grid-cols-2 md:flex md:flex-nowrap items-center justify-between gap-2"
+            className="w-full rounded-2xl bg-card/80 backdrop-blur-xl border border-border shadow-lg shadow-primary/5 p-2 grid grid-cols-2 md:flex md:flex-nowrap items-center justify-between gap-2"
         >
             {stats.map((stat, index) => (
                 <Link
                     key={stat.label}
                     href={stat.href || '#'}
-                    className="flex-1 min-w-0 group relative p-3 rounded-xl hover:bg-[#D4AF37]/5 transition-colors duration-300 flex items-center justify-between border border-transparent hover:border-[#D4AF37]/10"
+                    className="flex-1 min-w-0 group relative p-3 rounded-xl hover:bg-primary/5 transition-colors duration-300 flex flex-col items-start justify-center gap-1 md:flex-row md:items-center md:justify-between md:gap-0 border border-transparent hover:border-primary/10"
                 >
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <div className={cn("p-1.5 rounded-lg shrink-0", stat.bgColor !== '' ? stat.bgColor : 'bg-gray-100')}>
+                    <div className="flex items-center gap-2 overflow-hidden w-full md:w-auto">
+                        <div className={cn("p-1.5 rounded-lg shrink-0", stat.bgColor !== '' ? stat.bgColor : 'bg-muted')}>
                             <stat.icon className={cn("h-3 w-3 md:h-4 md:w-4 display-icon", stat.color)} />
                         </div>
-                        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground group-hover:text-[#D4AF37] transition-colors truncate">
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground group-hover:text-primary transition-colors truncate">
                             {stat.label}
                         </span>
                     </div>
-                    <span className={cn("text-xs md:text-lg font-bold tabular-nums shrink-0", stat.color)}>
+                    <span className={cn("text-lg md:text-lg font-bold tabular-nums shrink-0 pl-1 md:pl-0", stat.color)}>
                         {stat.value}
                     </span>
 
                     {/* Hover Glow */}
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#D4AF37]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 </Link>
             ))}
         </motion.div>

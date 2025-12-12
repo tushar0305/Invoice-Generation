@@ -4,6 +4,8 @@ import { withAuth, checkShopAccess, successResponse, errorResponse } from '@/lib
 import { createAuditLogger } from '@/lib/api/audit';
 import * as z from 'zod';
 
+import { addMonths, parseISO, format } from 'date-fns';
+
 // Validation Schema for Loan Creation
 const CollateralItemSchema = z.object({
     item_type: z.enum(['gold', 'silver', 'diamond']),
@@ -21,6 +23,9 @@ const CreateLoanSchema = z.object({
     loanNumber: z.string().min(1),
     principalAmount: z.number().positive(),
     interestRate: z.number().nonnegative(), // Annual rate
+    repaymentType: z.enum(['interest_only', 'emi', 'bullet']).optional().default('interest_only'),
+    tenureMonths: z.number().optional(),
+    emiAmount: z.number().optional(),
     startDate: z.string(), // ISO Date
     collateral: z.array(CollateralItemSchema).min(1),
     documents: z.array(z.object({
@@ -66,6 +71,16 @@ export const POST = withAuth(async (
             return errorResponse('Loan number already exists', 409);
         }
 
+        // Calculate End Date (Due Date)
+        let endDate = null;
+        if (input.tenureMonths && input.startDate) {
+            try {
+                endDate = format(addMonths(parseISO(input.startDate), input.tenureMonths), 'yyyy-MM-dd');
+            } catch (e) {
+                console.error('Date calculation error', e);
+            }
+        }
+
         // 3. Insert Loan
         const { data: loan, error: loanError } = await supabase
             .from('loans')
@@ -75,7 +90,11 @@ export const POST = withAuth(async (
                 loan_number: input.loanNumber,
                 principal_amount: input.principalAmount,
                 interest_rate: input.interestRate,
+                repayment_type: input.repaymentType,
+                tenure_months: input.tenureMonths,
+                emi_amount: input.emiAmount,
                 start_date: input.startDate,
+                end_date: endDate,
                 status: 'active',
             })
             .select()
@@ -89,7 +108,7 @@ export const POST = withAuth(async (
         // 4. Insert Collateral
         const collateralItems = input.collateral.map(item => ({
             loan_id: loan.id,
-            shop_id: input.shopId,
+            // shop_id: input.shopId, // Removed: Not in schema
             item_type: item.item_type,
             item_name: item.item_name,
             gross_weight: item.gross_weight,

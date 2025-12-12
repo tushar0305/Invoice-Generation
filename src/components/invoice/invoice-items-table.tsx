@@ -6,16 +6,38 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { Input } from '@/components/ui/input';
 import { FileText, Plus, Trash2 } from 'lucide-react';
 import { UseFormReturn, useFieldArray } from 'react-hook-form';
+import { useStockItems } from '@/hooks/use-stock-items';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface InvoiceItemsTableProps {
     form: UseFormReturn<any>;
+    shopId?: string;
 }
 
-export function InvoiceItemsTable({ form }: InvoiceItemsTableProps) {
+export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
     const { fields, append, remove } = useFieldArray({
         control: form.control,
         name: 'items',
     });
+    
+    const { items: stockItems } = useStockItems(shopId);
+
+    const handleStockSelect = (index: number, stockId: string) => {
+        const selected = stockItems?.find(s => s.id === stockId) as any;
+        if (selected) {
+            form.setValue(`items.${index}.description`, selected.name);
+            form.setValue(`items.${index}.purity`, selected.purity || '22K');
+            // If unit is grams, quantity is the weight available. 
+            // We don't auto-fill weight as user might sell partial.
+            // form.setValue(`items.${index}.grossWeight`, selected.quantity || 0);
+            
+            if (selected.making_charge_per_gram) {
+                 form.setValue(`items.${index}.making`, selected.making_charge_per_gram);
+            }
+            
+            form.setValue(`items.${index}.stockId`, selected.id);
+        }
+    };
 
     return (
         <Card className="border-2 shadow-sm">
@@ -46,6 +68,22 @@ export function InvoiceItemsTable({ form }: InvoiceItemsTableProps) {
                         >
                             <Trash2 className="h-4 w-4" />
                         </Button>
+
+                        <div className="mb-4">
+                             <FormLabel className="text-xs uppercase text-muted-foreground mb-1.5 block">Select from Stock (Optional)</FormLabel>
+                             <Select onValueChange={(val) => handleStockSelect(index, val)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Choose a stock item..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {stockItems?.map((item: any) => (
+                                        <SelectItem key={item.id} value={item.id}>
+                                            {item.name} - {item.quantity} {item.unit} ({item.purity})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                             </Select>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <FormField

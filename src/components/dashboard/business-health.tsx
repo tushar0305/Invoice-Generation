@@ -30,7 +30,7 @@ export function BusinessHealthWidget({ totalRevenue, totalOrders, previousRevenu
             {/* Subtle gradient overlay - muted tones */}
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-amber-500/5 pointer-events-none" />
 
-            <CardHeader className="pb-3 border-b border-white/5 relative">
+            <CardHeader className="pb-3 border-b border-border relative">
                 <CardTitle className="text-lg font-heading font-bold text-foreground flex items-center gap-2">
                     <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                         <Activity className="w-4 h-4 text-emerald-500" />
@@ -69,7 +69,7 @@ export function BusinessHealthWidget({ totalRevenue, totalOrders, previousRevenu
                 {/* Grid Metrics */}
                 <div className="grid grid-cols-2 gap-3">
                     <motion.div
-                        className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2 hover:bg-white/10 transition-colors"
+                        className="p-4 rounded-xl bg-muted/50 border border-border space-y-2 hover:bg-muted transition-colors"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, delay: 0.3 }}
@@ -96,9 +96,8 @@ export function BusinessHealthWidget({ totalRevenue, totalOrders, previousRevenu
                     </motion.div>
 
                     <motion.div
-                        className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2 hover:bg-white/10 transition-colors"
+                        className="p-4 rounded-xl bg-muted/50 border border-border space-y-2 hover:bg-muted transition-colors"
                         initial={{ opacity: 0, x: 10 }}
-
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, delay: 0.4 }}
                     >
@@ -112,36 +111,36 @@ export function BusinessHealthWidget({ totalRevenue, totalOrders, previousRevenu
                                 <div className="absolute inset-1 rounded-full bg-gradient-to-br from-[#A08CD5]/10 to-white dark:from-[#A08CD5]/20 dark:to-slate-900" />
                             </div>
                         </div>
-                        <p className="text-2xl font-bold text-[#1D1F23] dark:text-white tabular-nums">{formatCurrency(aov)}</p>
+                        <p className="text-2xl font-bold text-foreground tabular-nums">{formatCurrency(aov)}</p>
                     </motion.div>
                 </div>
 
                 {/* Insight */}
                 <motion.div
                     className={`flex items-start gap-3 p-4 rounded-xl border ${isPositive
-                        ? 'bg-gradient-to-r from-[#2AA198]/8 to-white dark:from-[#2AA198]/15 dark:to-slate-900/50 border-[#2AA198]/20 dark:border-[#2AA198]/30'
-                        : 'bg-gradient-to-r from-[#D97A5F]/10 to-white dark:from-[#D97A5F]/15 dark:to-slate-900/50 border-[#D97A5F]/30 dark:border-[#D97A5F]/30'
+                        ? 'bg-gradient-to-r from-emerald-500/5 to-card border-emerald-500/20'
+                        : 'bg-gradient-to-r from-destructive/5 to-card border-destructive/20'
                         }`}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.5 }}
                 >
                     <div className={`p-2 rounded-lg ${isPositive
-                        ? 'bg-[#2AA198]/15 dark:bg-[#2AA198]/25'
-                        : 'bg-[#D97A5F]/15 dark:bg-[#D97A5F]/25'
+                        ? 'bg-emerald-500/10'
+                        : 'bg-destructive/10'
                         }`}>
                         {isPositive ? (
-                            <TrendingUp className="w-4 h-4 text-[#2AA198]" />
+                            <TrendingUp className="w-4 h-4 text-emerald-500" />
                         ) : (
-                            <TrendingDown className="w-4 h-4 text-[#D97A5F]" />
+                            <TrendingDown className="w-4 h-4 text-destructive" />
                         )}
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-[#1D1F23] dark:text-white">
+                        <p className="text-sm font-semibold text-foreground">
                             {isPositive ? "Growth on track 📈" : "Revenue dip 📉"}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                            Revenue is {isPositive ? "up" : "down"} by <span className={`font-semibold ${isPositive ? 'text-[#2AA198]' : 'text-[#D97A5F]'}`}>{Math.abs(trendPercentage).toFixed(1)}%</span> compared to last period.
+                            Revenue is {isPositive ? "up" : "down"} by <span className={`font-semibold ${isPositive ? 'text-emerald-500' : 'text-destructive'}`}>{Math.abs(trendPercentage).toFixed(1)}%</span> compared to last period.
                         </p>
                     </div>
                 </motion.div>

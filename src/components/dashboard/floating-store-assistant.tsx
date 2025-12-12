@@ -35,7 +35,7 @@ export function FloatingStoreAssistant({ shopId }: { shopId: string }) {
                 <SheetHeader className="px-6 py-4 border-b border-border/40">
                     <SheetTitle>Store Assistant AI</SheetTitle>
                 </SheetHeader>
-                <div className="h-[calc(100vh-4rem)] w-full bg-slate-50 dark:bg-slate-950 overflow-hidden flex flex-col">
+                <div className="h-[calc(100vh-4rem)] w-full bg-background overflow-hidden flex flex-col">
                     <div className="flex-1 overflow-y-auto">
                         <SmartAIInsights
                             shopId={shopId}

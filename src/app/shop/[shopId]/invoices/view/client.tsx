@@ -202,13 +202,21 @@ export function ViewInvoiceClient() {
     };
 
     const handlePrintPdf = async () => {
-        if (!invoice) return;
+        if (!invoice || !items) return;
 
-        // Use server-side generation
-        const url = `/api/v1/invoices/${invoice.id}/pdf`;
-
-        // Open in new tab for printing
-        window.open(url, '_blank');
+        try {
+            const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
+            const url = URL.createObjectURL(pdfBlob);
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to generate PDF for printing.',
+            });
+        }
     };
 
     const isLoading = loading;
