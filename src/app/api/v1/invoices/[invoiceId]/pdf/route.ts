@@ -85,11 +85,28 @@ export async function GET(
     id: item.id,
     description: item.description,
     purity: item.purity,
-    grossWeight: Number(item.gross_weight),
-    netWeight: Number(item.net_weight),
-    rate: Number(item.rate),
-    making: Number(item.making),
-    amount: (Number(item.net_weight) * Number(item.rate)) + (Number(item.net_weight) * Number(item.making))
+
+    metalType: item.metal_type,
+    category: item.category,
+    hsnCode: item.hsn_code,
+
+    grossWeight: Number(item.gross_weight || 0),
+    netWeight: Number(item.net_weight || 0),
+    stoneWeight: Number(item.stone_weight || 0),
+    wastagePercent: Number(item.wastage_percent || 0),
+
+    rate: Number(item.rate || 0),
+    makingRate: Number(item.making_rate || 0),
+    making: Number(item.making || 0),
+    stoneAmount: Number(item.stone_amount || 0),
+
+    // Calculate total amount per item for display
+    amount: (
+      (Number(item.net_weight || 0) * Number(item.rate || 0)) +
+      (Number(item.making_rate || 0) * Number(item.net_weight || 0)) +
+      (Number(item.making || 0)) +
+      (Number(item.stone_amount || 0))
+    )
   }));
 
   const settings = {

@@ -146,7 +146,7 @@ export default function CreateSchemePage() {
                     </div>
                     <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-gradient-to-r from-primary to-amber-500 transition-all duration-500 ease-out rounded-full"
+                            className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
                             style={{ width: `${(step / 3) * 100}%` }}
                         />
                     </div>
@@ -154,8 +154,8 @@ export default function CreateSchemePage() {
             </div>
 
             {/* Form Card */}
-            <Card className="glass-card border-border/50 shadow-xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-primary/5 to-amber-500/5 border-b border-border/50">
+            <Card className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-border">
                     <CardTitle className="text-lg">
                         {step === 1 && "Basic Details"}
                         {step === 2 && "Payment & Benefits"}

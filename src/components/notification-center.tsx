@@ -63,27 +63,25 @@ export function NotificationCenter({ shopId, userId }: NotificationCenterProps) 
                 });
             }
 
-            // Fetch low stock items
-            const { data: lowStock } = await supabase
-                .from('stock_items')
-                .select('id, name, quantity, min_stock_level')
+            // Fetch items needing attention (DAMAGED status)
+            const { data: damagedItems } = await supabase
+                .from('inventory_items')
+                .select('id, name, status')
                 .eq('shop_id', shopId)
-                .lte('quantity', supabase.rpc('min_stock_level'))
+                .eq('status', 'DAMAGED')
                 .limit(5);
 
-            if (lowStock) {
-                lowStock.forEach(item => {
-                    if (item.quantity <= (item.min_stock_level || 10)) {
-                        allNotifications.push({
-                            id: `stock-${item.id}`,
-                            type: 'low_stock',
-                            title: 'Low Stock Alert',
-                            message: `${item.name} • Only ${item.quantity} units remaining`,
-                            timestamp: new Date(),
-                            read: false,
-                            href: `/shop/${shopId}/stock`,
-                        });
-                    }
+            if (damagedItems) {
+                damagedItems.forEach(item => {
+                    allNotifications.push({
+                        id: `damaged-${item.id}`,
+                        type: 'low_stock',
+                        title: 'Item Needs Attention',
+                        message: `${item.name} • Marked as damaged`,
+                        timestamp: new Date(),
+                        read: false,
+                        href: `/shop/${shopId}/inventory`,
+                    });
                 });
             }
 

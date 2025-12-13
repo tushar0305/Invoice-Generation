@@ -46,11 +46,20 @@ const invoiceItemSchema = z.object({
   id: z.string().optional(),
   stockId: z.string().optional(),
   description: z.string().min(1, 'Description is required'),
+  hsnCode: z.string().optional(),
   purity: z.string().default('22K'),
+
+  // Weights (Standardized to numeric)
   grossWeight: z.coerce.number().min(0, 'Must be positive'),
+  stoneWeight: z.coerce.number().min(0).default(0),
   netWeight: z.coerce.number().min(0, 'Must be positive'),
+  wastagePercent: z.coerce.number().min(0).default(0),
+
+  // Value Components
   rate: z.coerce.number().min(0, 'Must be positive'),
-  making: z.coerce.number().min(0, 'Must be positive'),
+  makingRate: z.coerce.number().min(0).default(0), // Per gram
+  making: z.number().default(0), // Legacy (calculated or fixed total)
+  stoneAmount: z.coerce.number().min(0).default(0),
 });
 
 const invoiceSchema = z.object({
@@ -107,10 +116,17 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         id: item.id || crypto.randomUUID(),
         description: item.description,
         purity: item.purity || '22K',
+        hsnCode: item.hsnCode || '',
+
         grossWeight: Number(item.grossWeight),
+        stoneWeight: Number(item.stoneWeight || 0),
         netWeight: Number(item.netWeight),
+        wastagePercent: Number(item.wastagePercent || 0),
+
         rate: Number(item.rate),
-        making: Number(item.making),
+        makingRate: Number(item.makingRate || item.making || 0), // Use 'making' as fallback for rate if needed, or total if legacy
+        making: Number(item.making || 0),
+        stoneAmount: Number(item.stoneAmount || 0),
       })) || [],
       discount: invoice?.discount || 0,
       status: (invoice?.status as 'paid' | 'due') || 'paid',
@@ -180,8 +196,16 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     const subtotal = watchedItems?.reduce((acc, item) => {
       const netWeight = Number(item.netWeight) || 0;
       const rate = Number(item.rate) || 0;
-      const making = Number(item.making) || 0;
-      return acc + (netWeight * rate) + making;
+      // Legacy vs New Making Logic:
+      // If makingRate > 0, use Rate * Wt. Else if makingAmount > 0 (fallback in future ui), use that.
+      // For now, we rely on Making Rate as primary input.
+      const makingRate = Number(item.makingRate) || 0;
+      const makingAmount = makingRate * netWeight;
+
+      const stoneAmount = Number(item.stoneAmount) || 0;
+
+      // Total = (Net * Rate) + Making + Stone
+      return acc + (netWeight * rate) + makingAmount + stoneAmount;
     }, 0) || 0;
 
     let loyaltyDiscount = 0;

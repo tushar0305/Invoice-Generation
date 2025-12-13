@@ -159,8 +159,8 @@ export async function createInvoiceAction(formData: {
             pointsToRedeem = 0;
         }
 
-        // ===== STEP 3: Call RPC to Create Invoice =====
-        const { data: invoiceId, error: rpcError } = await supabase.rpc('create_invoice_with_items', {
+        // ===== STEP 3: Call RPC to Create Invoice (V2 with Stones/Making Rate) =====
+        const { data: invoiceId, error: rpcError } = await supabase.rpc('create_invoice_v2', {
             p_shop_id: formData.shopId,
             p_customer_id: customerId,
             p_customer_snapshot: {
@@ -170,7 +170,7 @@ export async function createInvoiceAction(formData: {
                 state: formData.customerState || '',
                 pincode: formData.customerPincode || ''
             },
-            p_items: formData.items,
+            p_items: formData.items, // Now contains stoneWeight, makingRate etc which V2 expects
             p_discount: formData.discount,
             p_notes: '',
             p_status: formData.status,
@@ -180,31 +180,18 @@ export async function createInvoiceAction(formData: {
 
         if (rpcError) throw rpcError;
 
-        // Update Stock Quantities
+        // Update Inventory Items - Mark as SOLD instead of decrementing quantity
         for (const item of formData.items) {
             if (item.stockId) {
-                const { data: stockItem } = await supabase
-                    .from('stock_items')
-                    .select('quantity, unit')
-                    .eq('id', item.stockId)
-                    .single();
-
-                if (stockItem) {
-                    let decrementAmount = 1;
-                    const unit = stockItem.unit?.toLowerCase() || 'pieces';
-
-                    // If unit is weight-based, decrement by net weight
-                    if (['grams', 'g', 'kg', 'mg'].includes(unit)) {
-                        decrementAmount = item.netWeight;
-                    }
-
-                    const newQuantity = (stockItem.quantity || 0) - decrementAmount;
-
-                    await supabase
-                        .from('stock_items')
-                        .update({ quantity: newQuantity })
-                        .eq('id', item.stockId);
-                }
+                // In new inventory system, each item is unique - mark it as SOLD
+                await supabase
+                    .from('inventory_items')
+                    .update({
+                        status: 'SOLD',
+                        sold_invoice_id: invoiceId,
+                        sold_at: new Date().toISOString()
+                    })
+                    .eq('id', item.stockId);
             }
         }
 

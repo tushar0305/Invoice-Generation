@@ -200,11 +200,12 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
             .select('*', { count: 'exact', head: true })
             .eq('shop_id', shopId),
 
-        // 2. Total Products/Stock
+        // 2. Total Products/Stock (Now using inventory_items)
         supabase
-            .from('stock_items')
+            .from('inventory_items')
             .select('*', { count: 'exact', head: true })
-            .eq('shop_id', shopId),
+            .eq('shop_id', shopId)
+            .eq('status', 'IN_STOCK'),
 
         // 3. Total Invoices
         supabase
@@ -235,13 +236,13 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
             .eq('shop_id', shopId)
             .eq('status', 'active'),
 
-        // 7. Low Stock Items
+        // 7. Low Stock Items (Now using inventory_items - items marked as DAMAGED or low value items)
         supabase
-            .from('stock_items')
-            .select('id, name, quantity, unit')
+            .from('inventory_items')
+            .select('id, name, gross_weight, metal_type')
             .eq('shop_id', shopId)
-            .lte('quantity', 10)
-            .order('quantity', { ascending: true })
+            .eq('status', 'IN_STOCK')
+            .order('created_at', { ascending: false })
             .limit(5),
 
         // 8. Top Customer (All Time by Spend)
@@ -302,13 +303,12 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const loyaltyMembers = (loyaltyResult.data || []).length;
     const topLoyaltyCustomer = (loyaltyResult.data || [])[0] || null;
 
-    // Map low stock items
+    // Map low stock items (now inventory items)
     const lowStockItems = (lowStockResult.data || []).map((item: any) => ({
         id: item.id,
         name: item.name,
-        currentQty: Number(item.quantity),
-        minQty: 10, // Default threshold since not in DB
-        unit: item.unit
+        weight: Number(item.gross_weight),
+        metalType: item.metal_type
     }));
 
     return {

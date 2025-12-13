@@ -18,12 +18,12 @@ import { Badge } from '@/components/ui/badge';
 import { RecentInvoicesEmptyState, PendingActionsEmptyState } from '@/components/dashboard/empty-states';
 
 import { CompactStatsRow } from '@/components/dashboard/compact-stats-row';
-import { LowStockWidget } from '@/components/dashboard/low-stock-widget';
 import { PendingPaymentsWidget } from '@/components/dashboard/pending-payments-widget';
 import { LoyaltyWidget } from '@/components/dashboard/loyalty-widget';
 import { BusinessHealthWidget } from '@/components/dashboard/business-health';
 import { CustomerInsightsWidget } from '@/components/dashboard/customer-insights';
 import { SchemesWidget } from '@/components/dashboard/schemes-widget';
+import { QuickActions } from '@/components/dashboard/quick-actions';
 
 import { DashboardInvoiceRow } from '@/components/dashboard/dashboard-invoice-row';
 
@@ -112,6 +112,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
       {/* Gold & Silver Ticker - NOW AT TOP */}
       <GoldSilverTicker initialData={marketRates} />
 
+      {/* Quick Actions - Common tasks */}
+      <QuickActions shopId={shopId} />
+
       {/* Compact Hero Banner */}
       <Suspense fallback={<HeroSkeleton />}>
         <FinelessHero
@@ -188,11 +191,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
 
       {/* Quick Insights - 3 Compact Widgets + Schemes (stack on mobile, 2x2 on md, 4 on xl) */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-        <LowStockWidget
-          shopId={shopId}
-          items={additionalStats.lowStockItems}
-        />
-
         <PendingPaymentsWidget
           shopId={shopId}
           pendingCount={stats.dueInvoices.length}

@@ -6,8 +6,25 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { Input } from '@/components/ui/input';
 import { FileText, Plus, Trash2 } from 'lucide-react';
 import { UseFormReturn, useFieldArray } from 'react-hook-form';
-import { useStockItems } from '@/hooks/use-stock-items';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/supabase/client';
+import { useEffect, useState } from 'react';
+
+interface InventoryItem {
+    id: string;
+    tag_id: string;
+    name: string;
+    metal_type: string;
+    purity: string;
+    hsn_code?: string;
+    category?: string;
+    gross_weight: number;
+    net_weight: number;
+    stone_weight?: number;
+    wastage_percent?: number;
+    making_charge_value?: number;
+    selling_price?: number;
+}
 
 interface InvoiceItemsTableProps {
     form: UseFormReturn<any>;
@@ -19,24 +36,74 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
         control: form.control,
         name: 'items',
     });
-    
-    const { items: stockItems } = useStockItems(shopId);
 
-    const handleStockSelect = (index: number, stockId: string) => {
-        const selected = stockItems?.find(s => s.id === stockId) as any;
+    const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+
+    // Fetch inventory items from the new inventory_items table
+    useEffect(() => {
+        if (!shopId) return;
+
+        // Fetch expanded details for proper mapping
+        const fetchInventory = async () => {
+            const { data, error } = await supabase
+                .from('inventory_items')
+                .select('id, tag_id, name, metal_type, purity, hsn_code, category, gross_weight, net_weight, stone_weight, wastage_percent, making_charge_value, selling_price')
+                .eq('shop_id', shopId)
+                .eq('status', 'IN_STOCK')
+                .order('created_at', { ascending: false });
+
+            if (!error && data) {
+                setInventoryItems(data);
+            }
+        };
+
+        fetchInventory();
+    }, [shopId]);
+
+    const handleInventorySelect = (index: number, itemId: string) => {
+        const selected = inventoryItems.find(s => s.id === itemId);
         if (selected) {
             form.setValue(`items.${index}.description`, selected.name);
+            form.setValue(`items.${index}.metalType`, selected.metal_type);
             form.setValue(`items.${index}.purity`, selected.purity || '22K');
-            // If unit is grams, quantity is the weight available. 
-            // We don't auto-fill weight as user might sell partial.
-            // form.setValue(`items.${index}.grossWeight`, selected.quantity || 0);
-            
-            if (selected.making_charge_per_gram) {
-                 form.setValue(`items.${index}.making`, selected.making_charge_per_gram);
+            form.setValue(`items.${index}.hsnCode`, selected.hsn_code || '');
+            form.setValue(`items.${index}.category`, selected.category || '');
+
+            form.setValue(`items.${index}.grossWeight`, selected.gross_weight || 0);
+            form.setValue(`items.${index}.stoneWeight`, selected.stone_weight || 0);
+            form.setValue(`items.${index}.netWeight`, selected.net_weight || 0);
+            form.setValue(`items.${index}.wastagePercent`, selected.wastage_percent || 0);
+
+            // Important: Mapping making_charge_value (which is Rate ₹/g in Inventory) to makingRate
+            if (selected.making_charge_value) {
+                form.setValue(`items.${index}.makingRate`, selected.making_charge_value);
             }
-            
+
+            // Map selling_price to rate if available
+            if (selected.selling_price && selected.net_weight > 0) {
+                // Inventory 'selling_price' is actually the rate/g as per recent changes
+                form.setValue(`items.${index}.rate`, selected.selling_price);
+            }
+
             form.setValue(`items.${index}.stockId`, selected.id);
         }
+    };
+
+    // Auto-calculate Net Weight based on Gross - Stone
+    // Note: We can't easily auto-calc inside render loop without creating infinite loops or using effects per row.
+    // For now, we trust the inputs but in a real app we'd use useWatch or useEffect on fields.
+    const handleGrossChange = (index: number, val: string) => {
+        const gross = parseFloat(val) || 0;
+        const currentStone = form.getValues(`items.${index}.stoneWeight`) || 0;
+        form.setValue(`items.${index}.grossWeight`, gross);
+        form.setValue(`items.${index}.netWeight`, Number((gross - currentStone).toFixed(3)));
+    };
+
+    const handleStoneChange = (index: number, val: string) => {
+        const stone = parseFloat(val) || 0;
+        const currentGross = form.getValues(`items.${index}.grossWeight`) || 0;
+        form.setValue(`items.${index}.stoneWeight`, stone);
+        form.setValue(`items.${index}.netWeight`, Number((currentGross - stone).toFixed(3)));
     };
 
     return (
@@ -46,7 +113,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                     <FileText className="h-5 w-5 text-primary" /> Items
                 </CardTitle>
                 <Button type="button" size="sm" onClick={() => append({
-                    id: crypto.randomUUID(), description: '', purity: '22K', grossWeight: 0, netWeight: 0, rate: 0, making: 0
+                    id: crypto.randomUUID(), description: '', purity: '22K', grossWeight: 0, netWeight: 0, stoneWeight: 0, stoneAmount: 0, wastagePercent: 0, rate: 0, makingRate: 0, making: 0
                 })}>
                     <Plus className="h-4 w-4 mr-1" /> Add Item
                 </Button>
@@ -70,72 +137,158 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                         </Button>
 
                         <div className="mb-4">
-                             <FormLabel className="text-xs uppercase text-muted-foreground mb-1.5 block">Select from Stock (Optional)</FormLabel>
-                             <Select onValueChange={(val) => handleStockSelect(index, val)}>
+                            <FormLabel className="text-xs uppercase text-muted-foreground mb-1.5 block">Select from Inventory (Optional)</FormLabel>
+                            <Select onValueChange={(val) => handleInventorySelect(index, val)}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Choose a stock item..." />
+                                    <SelectValue placeholder="Choose an inventory item..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {stockItems?.map((item: any) => (
+                                    {inventoryItems.map((item) => (
                                         <SelectItem key={item.id} value={item.id}>
-                                            {item.name} - {item.quantity} {item.unit} ({item.purity})
+                                            {item.name} - {item.tag_id} ({item.purity})
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
-                             </Select>
+                            </Select>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <FormField
-                                control={form.control}
-                                name={`items.${index}.description`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs uppercase text-muted-foreground">Description</FormLabel>
-                                        <FormControl><Input {...field} placeholder="Item Name" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name={`items.${index}.purity`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs uppercase text-muted-foreground">Purity</FormLabel>
-                                        <FormControl><Input {...field} placeholder="22K" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {['grossWeight', 'netWeight', 'rate', 'making'].map((col) => (
+                        {/* Row 1: Description, Purity, HSN */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
+                            <div className="md:col-span-6">
                                 <FormField
-                                    key={col}
                                     control={form.control}
-                                    name={`items.${index}.${col}` as any}
+                                    name={`items.${index}.description`}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-xs uppercase text-muted-foreground capitalize">{col.replace(/([A-Z])/g, ' $1')}</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    type="number"
-                                                    {...field}
-                                                    onChange={e => field.onChange(e.target.value)} // Handle number input as string initially to avoid NaN issues
-                                                />
-                                            </FormControl>
+                                            <FormLabel className="text-xs uppercase text-muted-foreground">Description</FormLabel>
+                                            <FormControl><Input {...field} placeholder="Item Name" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                            ))}
+                            </div>
+                            <div className="md:col-span-3">
+                                <FormField
+                                    control={form.control}
+                                    name={`items.${index}.hsnCode`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs uppercase text-muted-foreground">HSN Code</FormLabel>
+                                            <FormControl><Input {...field} placeholder="HSN" /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="md:col-span-3">
+                                <FormField
+                                    control={form.control}
+                                    name={`items.${index}.purity`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs uppercase text-muted-foreground">Purity</FormLabel>
+                                            <FormControl><Input {...field} placeholder="22K" /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Row 2: Weights & Calculations */}
+                        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                            {/* Gross Weight */}
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.grossWeight`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs uppercase text-muted-foreground">Gross (g)</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                {...field}
+                                                onChange={(e) => handleGrossChange(index, e.target.value)}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Stone Weight */}
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.stoneWeight`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs uppercase text-muted-foreground">Stone (g)</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                {...field}
+                                                onChange={(e) => handleStoneChange(index, e.target.value)}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Net Weight (Read Only / Calculated) */}
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.netWeight`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs uppercase text-muted-foreground font-bold text-primary">Net (g)</FormLabel>
+                                        <FormControl><Input type="number" {...field} readOnly className="bg-muted font-bold" /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Rate */}
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.rate`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs uppercase text-muted-foreground">Rate (₹/g)</FormLabel>
+                                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.value)} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Making Rate */}
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.makingRate`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs uppercase text-muted-foreground">Making (₹/g)</FormLabel>
+                                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.value)} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Stone Amount */}
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.stoneAmount`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs uppercase text-muted-foreground">Stone Val (₹)</FormLabel>
+                                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.value)} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
                     </div>
                 ))}
-                {form.formState.errors.items && (
-                    <p className="text-sm font-medium text-destructive">{(form.formState.errors.items as any).message}</p>
-                )}
             </CardContent>
         </Card>
     );

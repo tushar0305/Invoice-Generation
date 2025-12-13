@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '@/lib/utils';
 
 interface SearchResult {
-    type: 'invoice' | 'customer' | 'stock';
+    type: 'invoice' | 'customer' | 'inventory';
     id: string;
     title: string;
     subtitle: string;
@@ -93,23 +93,24 @@ export function GlobalSearch({ shopId, isOpen, onClose }: GlobalSearchProps) {
                 });
             }
 
-            // Search Stock
-            const { data: stock } = await supabase
-                .from('stock_items')
-                .select('id, name, sku, quantity, unit_price')
+            // Search Inventory
+            const { data: inventory } = await supabase
+                .from('inventory_items')
+                .select('id, tag_id, name, metal_type, purity, status')
                 .eq('shop_id', shopId)
-                .or(`name.ilike.${searchPattern},sku.ilike.${searchPattern}`)
+                .eq('status', 'IN_STOCK')
+                .or(`name.ilike.${searchPattern},tag_id.ilike.${searchPattern}`)
                 .limit(5);
 
-            if (stock) {
-                stock.forEach(item => {
+            if (inventory) {
+                inventory.forEach(item => {
                     allResults.push({
-                        type: 'stock',
+                        type: 'inventory',
                         id: item.id,
                         title: item.name,
-                        subtitle: item.sku || `${item.quantity} units`,
-                        metadata: formatCurrency(item.unit_price),
-                        href: `/shop/${shopId}/stock`,
+                        subtitle: item.tag_id,
+                        metadata: `${item.metal_type} ${item.purity}`,
+                        href: `/shop/${shopId}/inventory/${item.tag_id}`,
                     });
                 });
             }
@@ -146,7 +147,7 @@ export function GlobalSearch({ shopId, isOpen, onClose }: GlobalSearchProps) {
         switch (type) {
             case 'invoice': return FileText;
             case 'customer': return Users;
-            case 'stock': return Package;
+            case 'inventory': return Package;
             default: return Search;
         }
     };
@@ -187,7 +188,7 @@ export function GlobalSearch({ shopId, isOpen, onClose }: GlobalSearchProps) {
                         <input
                             autoFocus
                             type="text"
-                            placeholder="Search invoices, customers, stock..."
+                            placeholder="Search invoices, customers, inventory..."
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             onKeyDown={handleKeyDown}

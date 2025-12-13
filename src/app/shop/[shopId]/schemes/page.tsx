@@ -34,10 +34,8 @@ export default function SchemesPage() {
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="text-center sm:text-left">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                            <span className="bg-gradient-to-r from-primary via-amber-500 to-primary bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer">
-                                Gold Schemes
-                            </span>
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                            Gold Schemes
                         </h1>
                         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
                             Launch and manage customer saving plans
@@ -46,7 +44,7 @@ export default function SchemesPage() {
 
                     <Link href={`/shop/${shopId}/schemes/create`} className="w-full sm:w-auto">
                         <Button
-                            className="w-full sm:w-auto h-11 sm:h-10 gap-2 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90"
+                            className="w-full sm:w-auto h-10 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md rounded-xl font-medium"
                         >
                             <Plus className="h-4 w-4" />
                             <span>Create New Scheme</span>
@@ -65,16 +63,14 @@ export default function SchemesPage() {
                             key={scheme.id}
                             className={cn(
                                 "group relative overflow-hidden",
-                                "glass-card border-border/50",
-                                "transition-all duration-300 ease-out",
-                                "hover:shadow-xl hover:-translate-y-1",
-                                "active:scale-[0.98] touch-manipulation",
-                                "animate-in fade-in slide-in-from-bottom-4",
+                                "bg-card border border-border",
+                                "transition-all duration-200",
+                                "hover:shadow-md hover:border-primary/30",
+                                "rounded-xl",
                             )}
-                            style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
                         >
-                            {/* Gradient Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-amber-500/5 pointer-events-none" />
+                            {/* Subtle gradient overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-transparent pointer-events-none" />
 
                             {/* Status Toggle */}
                             <div className="absolute top-4 right-4 z-10">
@@ -149,11 +145,10 @@ export default function SchemesPage() {
                                 <Link href={`/shop/${shopId}/schemes/${scheme.id}`} className="w-full">
                                     <Button
                                         className={cn(
-                                            "w-full h-11 gap-2 font-medium",
+                                            "w-full h-10 gap-2 font-medium rounded-lg",
                                             "bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground",
                                             "border border-primary/20 hover:border-transparent",
-                                            "transition-all duration-300",
-                                            "group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-md"
+                                            "transition-colors duration-200"
                                         )}
                                         variant="ghost"
                                     >
@@ -172,7 +167,7 @@ export default function SchemesPage() {
 
 function EmptyState({ shopId }: { shopId: string | null | undefined }) {
     return (
-        <Card className="flex flex-col items-center justify-center p-8 sm:p-12 text-center glass-card border-dashed border-2 border-primary/20">
+        <Card className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-card border-2 border-dashed border-border rounded-xl">
             <div className="relative mb-6">
                 <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center">
                     <Sparkles className="w-10 h-10 text-primary" />
@@ -188,7 +183,7 @@ function EmptyState({ shopId }: { shopId: string | null | undefined }) {
             </p>
 
             <Link href={`/shop/${shopId}/schemes/create`}>
-                <Button className="gap-2 h-11 px-6 shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-primary to-amber-600">
+                <Button className="gap-2 h-10 px-6 bg-primary hover:bg-primary/90 rounded-xl font-medium">
                     <Plus className="w-4 h-4" />
                     Create Your First Scheme
                 </Button>

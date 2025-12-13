@@ -10,7 +10,7 @@ import React from 'react';
 import { supabase } from '@/supabase/client';
 
 interface SchemaStatus {
-  stockItems: boolean;
+  inventoryItems: boolean;
   invoices: boolean;
   invoiceItems: boolean;
   allReady: boolean;
@@ -26,16 +26,16 @@ export function useSchemaCheck() {
       try {
         // Try to query each table with limit 1 to check if it exists
         const checks = await Promise.all([
-          checkTable(supabase, 'stock_items'),
+          checkTable(supabase, 'inventory_items'),
           checkTable(supabase, 'invoices'),
           checkTable(supabase, 'invoice_items'),
         ]);
 
-        const [stockItems, invoices, invoiceItems] = checks;
-        const allReady = stockItems && invoices && invoiceItems;
+        const [inventoryItems, invoices, invoiceItems] = checks;
+        const allReady = inventoryItems && invoices && invoiceItems;
 
         setStatus({
-          stockItems,
+          inventoryItems,
           invoices,
           invoiceItems,
           allReady,
@@ -43,7 +43,7 @@ export function useSchemaCheck() {
       } catch (error) {
         console.error('Schema check error:', error);
         setStatus({
-          stockItems: false,
+          inventoryItems: false,
           invoices: false,
           invoiceItems: false,
           allReady: false,
@@ -77,9 +77,8 @@ export function SchemaStatusBanner() {
   }
 
   const missingTables = [];
-  if (!status.stockItems) missingTables.push('stock_items');
+  if (!status.inventoryItems) missingTables.push('inventory_items');
   if (!status.invoices) missingTables.push('invoices');
-  if (!status.invoiceItems) missingTables.push('invoice_items');
   if (!status.invoiceItems) missingTables.push('invoice_items');
 
   return React.createElement(

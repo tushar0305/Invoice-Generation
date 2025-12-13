@@ -2,11 +2,18 @@ export type InvoiceItem = {
   id: string;
   description: string;
   purity: string;
-  grossWeight: number;
-  netWeight: number;
-  rate: number;
-  making: number;
-  amount?: number; // Calculated field
+  metalType?: string;
+  category?: string;
+  hsnCode?: string;
+  grossWeight: number; // in grams
+  netWeight: number;   // in grams
+  stoneWeight: number; // in grams
+  stoneAmount: number; // in currency
+  wastagePercent: number; // percentage
+  rate: number;        // per gram
+  makingRate: number;  // per gram (renamed from 'making' to be specific, though we'll keep 'making' as legacy alias if needed)
+  making: number;      // Legacy: This will now strictly represent (makingRate * netWeight) or fixed amount if older item
+  amount?: number;     // Calculated field
 };
 
 export type Invoice = {

@@ -651,7 +651,7 @@ export function InvoicesClient({
             <div className="flex flex-col gap-3">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/50" />
                         <Input
                             placeholder="Search invoices..."
                             className="pl-9 h-10 bg-white dark:bg-white/5 border-gray-400 dark:border-white/30 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm"

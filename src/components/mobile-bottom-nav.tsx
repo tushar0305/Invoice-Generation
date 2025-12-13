@@ -18,7 +18,9 @@ import {
     X,
     Store,
     Plus,
-    CreditCard
+    CreditCard,
+    QrCode,
+    PiggyBank
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,7 +61,8 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
     };
 
     const moreItems = [
-        { href: `/shop/${shopId}/stock`, label: 'Stock', icon: Package },
+        { href: `/shop/${shopId}/customers`, label: 'Customers', icon: Users },
+        { href: `/shop/${shopId}/schemes`, label: 'Schemes', icon: PiggyBank },
         { href: `/shop/${shopId}/staff`, label: 'Staff', icon: UserCog },
         { href: `/shop/${shopId}/loans`, label: 'Loans', icon: Banknote },
         { href: `/shop/${shopId}/khata`, label: 'Khata Book', icon: BookOpen },
@@ -146,9 +149,9 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
 
                     {/* Right Tabs */}
                     <div className="flex flex-1 justify-around">
-                        <Link href={`/shop/${shopId}/customers`} className="flex flex-col items-center gap-0.5 p-1 group">
-                            <Users className={cn("w-6 h-6 transition-colors", isActive(`/shop/${shopId}/customers`) ? "text-[#D4AF37] fill-current" : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500")} strokeWidth={1.5} />
-                            <span className={cn("text-[10px] font-medium transition-colors", isActive(`/shop/${shopId}/customers`) ? "text-[#D4AF37]" : "text-gray-400")}>Clients</span>
+                        <Link href={`/shop/${shopId}/inventory`} className="flex flex-col items-center gap-0.5 p-1 group">
+                            <QrCode className={cn("w-6 h-6 transition-colors", isActive(`/shop/${shopId}/inventory`, true) ? "text-[#D4AF37] fill-current" : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500")} strokeWidth={1.5} />
+                            <span className={cn("text-[10px] font-medium transition-colors", isActive(`/shop/${shopId}/inventory`, true) ? "text-[#D4AF37]" : "text-gray-400")}>Inventory</span>
                         </Link>
 
                         <button

@@ -50,6 +50,8 @@ import {
     Search,
     Bell,
     CreditCard,
+    QrCode,
+    PiggyBank,
 } from 'lucide-react';
 import { ShopSwitcher } from '@/components/shop-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -67,6 +69,7 @@ import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { CommandPalette } from '@/components/command-palette';
+import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { PageTransition } from '@/components/page-transition';
 import { PremiumHeader } from '@/components/premium-header';
 import type { Shop, UserShopRole, Permission } from '@/lib/definitions';
@@ -183,12 +186,13 @@ function ShopLayoutInner({
                 { icon: LayoutDashboard, label: 'Dashboard', href: `/shop/${shopId}/dashboard` },
                 { icon: FileText, label: 'Invoices', href: `/shop/${shopId}/invoices` },
                 { icon: Users, label: 'Customers', href: `/shop/${shopId}/customers` },
-                { icon: Package, label: 'Stock', href: `/shop/${shopId}/stock` },
+                { icon: QrCode, label: 'Inventory', href: `/shop/${shopId}/inventory` },
             ],
         },
         {
             title: 'Management',
             items: [
+                { icon: PiggyBank, label: 'Schemes', href: `/shop/${shopId}/schemes` },
                 { icon: Store, label: 'Catalogue', href: `/shop/${shopId}/catalogue` },
                 { icon: Megaphone, label: 'Marketing', href: `/shop/${shopId}/marketing` },
                 { icon: Users, label: 'Staff', href: `/shop/${shopId}/staff`, permission: 'canInviteStaff' },
@@ -237,6 +241,9 @@ function ShopLayoutInner({
         <div className="flex h-screen w-full overflow-hidden bg-gray-50/50 dark:bg-[hsl(220,10%,4%)]">
             {/* Command Palette */}
             <CommandPalette shopId={shopId} />
+
+            {/* Keyboard Shortcuts */}
+            <KeyboardShortcuts />
 
             {/* Sidebar - Shows on desktop always, on mobile when triggered */}
             <Sidebar className="bg-background border-r border-border backdrop-blur-xl shadow-2xl z-50">
@@ -364,17 +371,21 @@ function ShopLayoutInner({
                             <div className="flex items-center gap-3 flex-1">
                                 <SidebarTrigger className="h-9 w-9 border border-gray-200 dark:border-white/10 shadow-sm rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/20 active:scale-95 transition-all text-gray-700 dark:text-gray-200" />
 
-                                {/* Centered Page Title */}
-                                <div className="flex-1 flex justify-center mr-9">
-                                    <h1 className="font-bold text-lg tracking-tight text-gray-900 dark:text-white leading-none font-display">
+                                {/* Centered Page Title with Breadcrumb */}
+                                <div className="flex-1 flex flex-col items-center mr-9">
+                                    <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[140px]">{shopData.activeShop?.shopName || 'Shop'}</span>
+                                    <h1 className="font-bold text-base tracking-tight text-gray-900 dark:text-white leading-none font-display">
                                         {pathname === `/shop/${shopId}/dashboard` && 'Dashboard'}
                                         {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
                                         {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
                                         {pathname === `/shop/${shopId}/invoices/edit` && 'Edit Invoice'}
                                         {pathname === `/shop/${shopId}/customers` && 'Customers'}
                                         {pathname === `/shop/${shopId}/customers/view` && 'Customer Details'}
-                                        {pathname === `/shop/${shopId}/stock` && 'Inventory'}
-                                        {pathname === `/shop/${shopId}/stock/new` && 'Add Stock'}
+                                        {pathname === `/shop/${shopId}/inventory` && 'Inventory'}
+                                        {pathname === `/shop/${shopId}/inventory/new` && 'Add Item'}
+                                        {pathname.includes(`/shop/${shopId}/inventory/`) && !pathname.includes('/new') && 'Item Details'}
+                                        {pathname === `/shop/${shopId}/schemes` && 'Schemes'}
+                                        {pathname.includes(`/shop/${shopId}/schemes/`) && 'Scheme Details'}
                                         {pathname === `/shop/${shopId}/staff` && 'Staff Management'}
                                         {pathname === `/shop/${shopId}/loans` && 'Loans & Girvi'}
                                         {pathname === `/shop/${shopId}/loans/new` && 'New Loan'}
