@@ -193,7 +193,7 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const supabase = await createClient();
 
     // Execute all queries in parallel
-    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult, loansResult, lowStockResult, topCustomerResult, customerDatesResult] = await Promise.all([
+    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult, loansResult, lowStockResult, topCustomerResult, customerDatesResult, schemesResult, enrollmentsResult] = await Promise.all([
         // 1. Total Customers (Count only)
         supabase
             .from('customers')
@@ -257,11 +257,31 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
         supabase
             .from('customers')
             .select('created_at')
+            .eq('shop_id', shopId),
+
+        // 10. Total Schemes
+        supabase
+            .from('schemes')
+            .select('*', { count: 'exact', head: true })
             .eq('shop_id', shopId)
+            .eq('is_active', true),
+
+        // 11. Active Enrollments (with sums)
+        supabase
+            .from('scheme_enrollments')
+            .select('total_paid, total_gold_weight_accumulated, created_at')
+            .eq('shop_id', shopId)
+            .eq('status', 'ACTIVE')
     ]);
 
     const khataBalance = (dueInvoicesResult.data || []).reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
     const totalLoyaltyPoints = (loyaltyResult.data || []).reduce((sum, customer) => sum + (Number(customer.loyalty_points) || 0), 0);
+
+    // Scheme Metrics
+    const totalSchemes = schemesResult.count || 0;
+    const activeEnrollments = (enrollmentsResult.data || []).length;
+    const totalSchemeCollected = (enrollmentsResult.data || []).reduce((sum, en) => sum + (Number(en.total_paid) || 0), 0);
+    const totalGoldAccumulated = (enrollmentsResult.data || []).reduce((sum, en) => sum + (Number(en.total_gold_weight_accumulated) || 0), 0);
 
     // Generate Customer Sparkline (Last 7 Days Cumulative)
     const customerDates = customerDatesResult.data || [];
@@ -305,7 +325,12 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
         topCustomerAllTime: topCustomerResult.data ? {
             name: topCustomerResult.data.name,
             totalSpent: topCustomerResult.data.total_spent || 0
-        } : null
+        } : null,
+        // Scheme Stats
+        totalSchemes,
+        activeEnrollments,
+        totalSchemeCollected,
+        totalGoldAccumulated
     };
 
 });

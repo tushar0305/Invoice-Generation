@@ -22,6 +22,7 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { EnrollmentModal } from '@/components/schemes/enrollment-modal';
 
 export function CustomerDetailsClient() {
     const searchParams = useSearchParams();
@@ -34,6 +35,8 @@ export function CustomerDetailsClient() {
     const [isLoading, setIsLoading] = useState(true);
 
     const [customerData, setCustomerData] = useState<any>(null);
+    const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false);
+    const [enrollments, setEnrollments] = useState<any[]>([]);
 
     useEffect(() => {
         const shopId = params.shopId as string;
@@ -41,7 +44,7 @@ export function CustomerDetailsClient() {
 
         const load = async () => {
             setIsLoading(true);
-            
+
             // Fetch real customer data for loyalty points
             const { data: custData } = await supabase
                 .from('customers')
@@ -49,9 +52,20 @@ export function CustomerDetailsClient() {
                 .eq('shop_id', shopId)
                 .ilike('name', customerName)
                 .maybeSingle();
-            
+
             if (custData) {
                 setCustomerData(custData);
+
+                // Fetch active enrollments for this customer
+                const { data: enrollData } = await supabase
+                    .from('scheme_enrollments')
+                    .select('*, scheme:schemes(name, type, rules)')
+                    .eq('customer_id', custData.id)
+                    .neq('status', 'CLOSED');
+
+                if (enrollData) {
+                    setEnrollments(enrollData);
+                }
             }
 
             // Query invoices by shop_id and customer name (case-insensitive)
@@ -136,14 +150,21 @@ export function CustomerDetailsClient() {
                 </BreadcrumbList>
             </Breadcrumb>
 
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div>
-                    <h1 className="text-2xl font-heading font-bold text-primary">{customerName}</h1>
-                    <p className="text-sm text-muted-foreground">Customer Profile</p>
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-heading font-bold text-primary">{customerName}</h1>
+                        <p className="text-sm text-muted-foreground">Customer Profile</p>
+                    </div>
                 </div>
+                {customerData && (
+                    <Button onClick={() => setIsEnrollmentOpen(true)} className="gap-2">
+                        <CreditCard className="h-4 w-4" /> Enroll in Scheme
+                    </Button>
+                )}
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">
@@ -230,6 +251,8 @@ export function CustomerDetailsClient() {
                         )}
                     </CardContent>
                 </Card>
+
+
             </div>
 
             {/* Invoice History */}
@@ -290,6 +313,78 @@ export function CustomerDetailsClient() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Active Schemes Table */}
+            {enrollments.length > 0 && (
+                <Card className="glass-card md:col-span-3">
+                    <CardHeader>
+                        <CardTitle>Active Gold Schemes</CardTitle>
+                        <CardDescription>Currently enrolled saving plans and payment details</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="rounded-md border border-gray-200 dark:border-white/10 overflow-hidden">
+                            <Table>
+                                <TableHeader className="bg-muted/50">
+                                    <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
+                                        <TableHead className="text-primary">Scheme Name</TableHead>
+                                        <TableHead className="text-primary">Account #</TableHead>
+                                        <TableHead className="text-primary hidden md:table-cell">Start Date</TableHead>
+                                        <TableHead className="text-primary hidden md:table-cell">Maturity</TableHead>
+                                        <TableHead className="text-primary text-right">Total Paid</TableHead>
+                                        <TableHead className="text-primary text-right">Gold Acc.</TableHead>
+                                        <TableHead className="text-primary text-center">Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {enrollments.map((enrollment) => (
+                                        <TableRow
+                                            key={enrollment.id}
+                                            className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
+                                            onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
+                                        >
+                                            <TableCell className="font-medium">
+                                                <div className="flex flex-col">
+                                                    <span>{enrollment.scheme?.name}</span>
+                                                    <span className="text-xs text-muted-foreground md:hidden">{format(new Date(enrollment.start_date), 'MMM yyyy')}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm text-muted-foreground">{enrollment.account_number}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</TableCell>
+                                            <TableCell className="text-right font-bold text-green-600">
+                                                {formatCurrency(enrollment.total_paid)}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium text-amber-600">
+                                                {enrollment.total_gold_weight_accumulated > 0
+                                                    ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
+                                                    : '-'
+                                                }
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80 hover:bg-green-600/70' : ''}>
+                                                    {enrollment.status}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {customerData && (
+                <EnrollmentModal
+                    isOpen={isEnrollmentOpen}
+                    onClose={() => setIsEnrollmentOpen(false)}
+                    customerId={customerData.id}
+                    customerName={customerName}
+                    onSuccess={() => {
+                        // Optional: refresh data or show success toast
+                    }}
+                />
+            )}
         </MotionWrapper>
     );
 }

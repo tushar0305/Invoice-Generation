@@ -23,6 +23,7 @@ import { PendingPaymentsWidget } from '@/components/dashboard/pending-payments-w
 import { LoyaltyWidget } from '@/components/dashboard/loyalty-widget';
 import { BusinessHealthWidget } from '@/components/dashboard/business-health';
 import { CustomerInsightsWidget } from '@/components/dashboard/customer-insights';
+import { SchemesWidget } from '@/components/dashboard/schemes-widget';
 
 import { DashboardInvoiceRow } from '@/components/dashboard/dashboard-invoice-row';
 
@@ -185,8 +186,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
         loyaltyPoints={additionalStats.totalLoyaltyPoints}
       />
 
-      {/* Quick Insights - 3 Compact Widgets (stack on mobile) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Quick Insights - 3 Compact Widgets + Schemes (stack on mobile, 2x2 on md, 4 on xl) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         <LowStockWidget
           shopId={shopId}
           items={additionalStats.lowStockItems}
@@ -205,6 +206,14 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
           totalPointsDistributed={additionalStats.totalLoyaltyPoints}
           activeMembers={additionalStats.loyaltyMembers}
           topRewarder={additionalStats.topLoyaltyCustomer ? { name: additionalStats.topLoyaltyCustomer.name, points: additionalStats.topLoyaltyCustomer.points } : undefined}
+        />
+
+        <SchemesWidget
+          shopId={shopId}
+          totalSchemes={additionalStats.totalSchemes || 0}
+          activeEnrollments={additionalStats.activeEnrollments || 0}
+          totalCollectedMonth={additionalStats.totalSchemeCollected || 0}
+          totalGoldAccumulated={additionalStats.totalGoldAccumulated || 0}
         />
       </div>
 

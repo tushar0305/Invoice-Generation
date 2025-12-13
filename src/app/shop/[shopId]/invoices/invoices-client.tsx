@@ -23,16 +23,16 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { 
-    Search, 
-    FilePlus2, 
-    Trash2, 
-    Loader2, 
-    Calendar as CalendarIcon, 
-    Download, 
-    RefreshCw, 
-    Share2, 
-    Banknote, 
+import {
+    Search,
+    FilePlus2,
+    Trash2,
+    Loader2,
+    Calendar as CalendarIcon,
+    Download,
+    RefreshCw,
+    Share2,
+    Banknote,
     Undo2,
     Printer
 } from 'lucide-react';
@@ -602,10 +602,10 @@ export function InvoicesClient({
 
             const { generateInvoicePdf } = await import('@/lib/pdf');
             const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
-            
+
             const url = URL.createObjectURL(pdfBlob);
             window.open(url, '_blank');
-            
+
             setTimeout(() => URL.revokeObjectURL(url), 60000);
 
         } catch (error) {
@@ -993,14 +993,15 @@ export function InvoicesClient({
 
             {/* Pagination Controls */}
             {pagination && (
-                <div className="flex items-center justify-between pt-4 pb-6 border-t border-border mt-4">
-                    <div className="text-sm text-muted-foreground">
-                        Showing <span className="font-medium text-foreground">{(pagination.currentPage - 1) * pagination.limit + 1}</span> to <span className="font-medium text-foreground">{Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)}</span> of <span className="font-medium text-foreground">{pagination.totalCount}</span> invoices
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 pb-12 sm:pb-6 border-t border-border mt-4">
+                    <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
+                        Showing <span className="font-medium text-foreground">{(pagination.currentPage - 1) * pagination.limit + 1}</span> - <span className="font-medium text-foreground">{Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)}</span> of <span className="font-medium text-foreground">{pagination.totalCount}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
                         <Button
                             variant="outline"
                             size="sm"
+                            className="flex-1 sm:flex-none"
                             disabled={pagination.currentPage <= 1}
                             onClick={() => {
                                 const params = new URLSearchParams(window.location.search);
@@ -1013,6 +1014,7 @@ export function InvoicesClient({
                         <Button
                             variant="outline"
                             size="sm"
+                            className="flex-1 sm:flex-none"
                             disabled={pagination.currentPage >= pagination.totalPages}
                             onClick={() => {
                                 const params = new URLSearchParams(window.location.search);
