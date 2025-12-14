@@ -1,6 +1,6 @@
 import { Navbar } from '@/components/landing/navbar';
 import { HeroSection } from '@/components/landing/hero-section';
-import { ValueProp } from '@/components/landing/value-prop';
+
 import { AIShowcase } from '@/components/landing/ai-showcase';
 import { FeaturesJourney } from '@/components/landing/features-journey';
 
@@ -121,7 +121,7 @@ export default function LandingPage() {
 
                 <Navbar />
                 <HeroSection />
-                <ValueProp />
+
                 <AIShowcase />
                 <FeaturesJourney />
                 <CatalogueSection />

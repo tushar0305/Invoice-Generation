@@ -13,6 +13,7 @@ import type { Scheme, SchemeEnrollment } from '@/lib/scheme-types';
 import { PaymentEntryModal } from '@/components/schemes/payment-entry-modal';
 import { calculateMaturityValue } from '@/lib/utils/scheme-calculations';
 import { formatCurrency, cn } from '@/lib/utils';
+import { StatCard } from '@/components/schemes/stat-card';
 
 export default function SchemeDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const unwrappedParams = use(params);
@@ -100,185 +101,168 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
         );
     }
 
+
+
     const totalCollected = enrollments.reduce((sum, en) => sum + (en.total_paid || 0), 0);
     const totalGold = enrollments.reduce((sum, en) => sum + (en.total_gold_weight_accumulated || 0), 0);
 
     return (
-        <div className="space-y-6 pb-24 md:pb-8">
+        <div className="space-y-6 pb-24 md:pb-8 max-w-7xl mx-auto p-4 md:p-8">
             {/* Header */}
-            <div className="flex items-start gap-4">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => router.back()}
-                    className="shrink-0 h-10 w-10 rounded-full hover:bg-muted mt-1"
-                >
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h1 className="text-xl sm:text-2xl font-bold truncate">{scheme.name}</h1>
-                        <Badge
-                            variant={scheme.is_active ? 'default' : 'secondary'}
-                            className={cn(
-                                "text-xs font-medium px-2 py-0.5 rounded-full shrink-0",
-                                scheme.is_active
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                                    : 'bg-muted text-muted-foreground'
-                            )}
-                        >
-                            <span className={cn(
-                                "w-1.5 h-1.5 rounded-full mr-1.5",
-                                scheme.is_active ? "bg-emerald-500" : "bg-muted-foreground"
-                            )} />
-                            {scheme.is_active ? 'Active' : 'Paused'}
-                        </Badge>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50">
-                            <Calendar className="w-3.5 h-3.5 text-primary" />
-                            {scheme.duration_months} Months
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50">
-                            <Wallet className="w-3.5 h-3.5 text-primary" />
-                            {scheme.type === 'FIXED_AMOUNT' ? formatCurrency(scheme.scheme_amount || 0) + '/mo' : 'Flexible'}
-                        </span>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => router.back()}
+                        className="shrink-0 h-10 w-10 rounded-xl bg-background/50 border border-border/50 hover:bg-background mt-1 shadow-sm md:hidden"
+                    >
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">{scheme.name}</h1>
+                            <Badge
+                                variant={scheme.is_active ? 'default' : 'secondary'}
+                                className={cn(
+                                    "text-xs font-medium px-2.5 py-0.5 rounded-full shrink-0 border",
+                                    scheme.is_active
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                        : 'bg-muted text-muted-foreground border-border/50'
+                                )}
+                            >
+                                <span className={cn(
+                                    "w-1.5 h-1.5 rounded-full mr-1.5 animate-pulse",
+                                    scheme.is_active ? "bg-emerald-500" : "bg-muted-foreground"
+                                )} />
+                                {scheme.is_active ? 'Active' : 'Paused'}
+                            </Badge>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                                <Calendar className="w-4 h-4 text-primary/70" />
+                                <span className="font-medium text-foreground/80">{scheme.duration_months} Months</span>
+                            </div>
+                            <span className="text-border">|</span>
+                            <div className="flex items-center gap-1.5">
+                                <Wallet className="w-4 h-4 text-primary/70" />
+                                <span className="font-medium text-foreground/80">
+                                    {scheme.scheme_type === 'FIXED_DURATION' ? formatCurrency(scheme.installment_amount || 0) + '/mo' : 'Flexible Amount'}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                {/* Desktop Action (Optional) */}
+                {/* <Button>Edit Scheme</Button> */}
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card className="glass-card border-border/50 overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                                <UserPlus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            Enrollments
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold">{enrollments.length}</div>
-                        <p className="text-xs text-muted-foreground mt-1">Active members</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="glass-card border-border/50 overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                <Coins className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                            </div>
-                            Collected
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(totalCollected)}</div>
-                        {scheme.rules.gold_conversion === 'MONTHLY' && (
-                            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">{totalGold.toFixed(3)}g booked</p>
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card className="glass-card border-border/50 overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <TrendingUp className="h-4 w-4 text-primary" />
-                            </div>
-                            Est. Maturity
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-primary">~{formatCurrency(calculateMaturityValue(scheme, totalCollected))}</div>
-                        <p className="text-xs text-muted-foreground mt-1">Projected payout</p>
-                    </CardContent>
-                </Card>
+                <StatCard
+                    title="Total Enrollments"
+                    value={enrollments.length}
+                    subtext="Active members"
+                    icon={UserPlus}
+                    iconColor="text-blue-600 dark:text-blue-400"
+                    bgColor="bg-blue-500/10"
+                />
+                <StatCard
+                    title="Total Collected"
+                    value={formatCurrency(totalCollected)}
+                    subtext={scheme.scheme_type === 'FIXED_DURATION' ? `${scheme.duration_months} months term` : `${scheme.interest_rate}% Interest`}
+                    icon={Coins}
+                    iconColor="text-emerald-600 dark:text-emerald-400"
+                    bgColor="bg-emerald-500/10"
+                />
+                <StatCard
+                    title="Est. Maturity"
+                    value={`~${formatCurrency(calculateMaturityValue(scheme, totalCollected))}`}
+                    subtext="Projected total payout"
+                    icon={TrendingUp}
+                    iconColor="text-pink-600 dark:text-pink-400"
+                    bgColor="bg-pink-500/10"
+                />
             </div>
 
-            {/* Enrolled Customers */}
-            <Card className="glass-card border-border/50 overflow-hidden">
-                <CardHeader className="border-b border-border/50 bg-muted/30">
+            {/* Enrolled Customers Table/List */}
+            <Card className="border-border/60 shadow-sm overflow-hidden">
+                <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <CardTitle className="text-lg">Enrolled Customers</CardTitle>
-                            <CardDescription>Manage payments and track progress</CardDescription>
+                            <CardTitle className="text-lg font-semibold">Enrolled Customers</CardTitle>
+                            <CardDescription className="mt-1">Manage payments and track progress</CardDescription>
                         </div>
-                        <Badge variant="secondary" className="bg-background/50">
+                        <Badge variant="outline" className="bg-background">
                             {enrollments.length} members
                         </Badge>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     {enrollments.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                            <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                                <UserPlus className="h-8 w-8 text-muted-foreground/50" />
+                        <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                            <div className="h-20 w-20 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+                                <UserPlus className="h-10 w-10 text-muted-foreground/40" />
                             </div>
-                            <h3 className="font-semibold mb-1">No Enrollments Yet</h3>
-                            <p className="text-sm text-muted-foreground max-w-xs">
-                                Customers can be enrolled in this scheme from their profile page.
+                            <h3 className="font-semibold text-lg mb-2">No Enrollments Yet</h3>
+                            <p className="text-muted-foreground max-w-sm">
+                                Use the customer profile page to enroll customers into this scheme.
                             </p>
                         </div>
                     ) : (
                         <>
-                            {/* Mobile List */}
+                            {/* Mobile List - Transaction Style */}
                             <div className="md:hidden divide-y divide-border/50">
                                 {enrollments.map((enrollment, idx) => (
                                     <div
                                         key={enrollment.id}
-                                        className="p-4 hover:bg-muted/30 transition-colors animate-in fade-in slide-in-from-bottom-2"
-                                        style={{ animationDelay: `${idx * 30}ms`, animationFillMode: 'backwards' }}
+                                        className="p-4 hover:bg-muted/30 active:bg-muted/50 transition-colors"
                                     >
-                                        <div className="flex items-start gap-3">
+                                        <div className="flex items-start gap-4">
                                             {/* Avatar */}
-                                            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-amber-500/10 flex items-center justify-center text-primary font-bold text-lg shrink-0">
+                                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-primary font-bold text-sm shrink-0 border border-primary/10">
                                                 {enrollment.customer?.name?.charAt(0) || 'C'}
                                             </div>
 
                                             {/* Content */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between gap-2">
+                                                <div className="flex justify-between items-start mb-1">
                                                     <div>
-                                                        <div className="font-semibold text-foreground truncate">{enrollment.customer?.name}</div>
-                                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                                            <Phone className="w-3 h-3" />
-                                                            {enrollment.customer?.phone || 'No phone'}
+                                                        <h4 className="font-semibold text-sm text-foreground truncate">{enrollment.customer?.name}</h4>
+                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                            <span>{enrollment.customer?.phone}</span>
+                                                            <span className="text-border">•</span>
+                                                            <span className="font-mono bg-muted px-1 rounded">{enrollment.account_number}</span>
                                                         </div>
                                                     </div>
-                                                    <Badge variant="secondary" className="font-mono text-[10px] px-1.5 py-0.5 bg-muted shrink-0">
-                                                        {enrollment.account_number}
-                                                    </Badge>
-                                                </div>
-
-                                                {/* Stats Row */}
-                                                <div className="flex items-center gap-4 mt-3 text-sm">
-                                                    <div>
-                                                        <span className="text-muted-foreground text-xs">Paid</span>
-                                                        <div className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(enrollment.total_paid)}</div>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-muted-foreground text-xs">Gold</span>
-                                                        <div className="font-bold text-amber-600 dark:text-amber-400">
-                                                            {enrollment.total_gold_weight_accumulated > 0
-                                                                ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
-                                                                : '-'
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex-1" />
                                                     <Button
                                                         size="sm"
-                                                        onClick={() => handleOpenPayment(enrollment)}
-                                                        className="h-9 px-4 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/20"
                                                         variant="ghost"
+                                                        onClick={() => handleOpenPayment(enrollment)}
+                                                        className="h-8 px-3 text-xs font-medium bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground -mr-2"
                                                     >
                                                         Pay EMI
                                                     </Button>
+                                                </div>
+
+                                                {/* Stats Row */}
+                                                <div className="grid grid-cols-2 gap-2 mt-3 p-2 bg-muted/30 rounded-lg border border-border/50">
+                                                    <div>
+                                                        <span className="text-[10px] uppercase text-muted-foreground font-semibold">Paid</span>
+                                                        <div className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                                                            {formatCurrency(enrollment.total_paid)}
+                                                        </div>
+                                                    </div>
+                                                    <div className="border-l pl-3 border-border/50">
+                                                        <span className="text-[10px] uppercase text-muted-foreground font-semibold">Gold</span>
+                                                        <div className="font-bold text-sm text-amber-600 dark:text-amber-400">
+                                                            {enrollment.total_gold_weight_accumulated > 0
+                                                                ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
+                                                                : '0.000g'
+                                                            }
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -286,10 +270,10 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                                 ))}
                             </div>
 
-                            {/* Desktop Table */}
+                            {/* Desktop Table (Keep existing) */}
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-sm">
-                                    <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b border-border/50">
+                                    <thead className="text-xs uppercase bg-muted/40 text-muted-foreground border-b border-border/50">
                                         <tr>
                                             <th className="px-6 py-4 font-semibold text-left">Customer</th>
                                             <th className="px-6 py-4 font-semibold text-left">Account</th>

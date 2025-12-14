@@ -30,11 +30,7 @@ const benefits = [
     }
 ];
 
-const transactions = [
-    { type: 'earn', label: 'Purchase Reward', detail: '22k Gold Ring - 12g', points: '+250', color: 'green' },
-    { type: 'redeem', label: 'Points Redeemed', detail: 'Silver Coin Gift', points: '-500', color: 'rose' },
-    { type: 'upgrade', label: 'Tier Upgrade', detail: 'Silver → Gold', points: '🎉', color: 'blue' },
-];
+import { LoyaltyProgramPreview } from '@/components/landing/loyalty-program-preview';
 
 export function LoyaltyProgram() {
     return (
@@ -115,114 +111,7 @@ export function LoyaltyProgram() {
                             viewport={{ once: true }}
                             className="relative"
                         >
-                            {/* Main Card */}
-                            <div className="relative z-10 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden transform hover:scale-[1.02] transition-transform duration-500">
-                                {/* Card Header - Premium Dark */}
-                                <div className="bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-8 text-white relative overflow-hidden">
-                                    {/* Decorative Pattern */}
-                                    <div className="absolute inset-0 opacity-5">
-                                        <div className="absolute top-0 right-0 w-64 h-64 bg-gold-400 rounded-full translate-x-1/2 -translate-y-1/2" />
-                                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gold-400 rounded-full -translate-x-1/2 translate-y-1/2" />
-                                    </div>
-
-                                    <div className="relative">
-                                        <div className="flex justify-between items-start mb-8">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Crown className="w-5 h-5 text-gold-400" />
-                                                    <span className="text-gold-400 text-sm font-semibold">GOLD MEMBER</span>
-                                                </div>
-                                                <h3 className="text-3xl font-bold font-heading">Priya Sharma</h3>
-                                            </div>
-                                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-amber-500 flex items-center justify-center shadow-lg">
-                                                <Sparkles className="w-8 h-8 text-white" />
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-end justify-between">
-                                            <div>
-                                                <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Available Points</p>
-                                                <div className="flex items-baseline gap-2">
-                                                    <span className="text-5xl font-bold font-mono tracking-tight text-gold-400">2,450</span>
-                                                    <span className="text-sm font-medium text-white/60">pts</span>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-white/50 text-xs">Member Since</p>
-                                                <p className="text-white font-medium">Jan 2023</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Transaction History */}
-                                <div className="p-6 bg-white space-y-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h4 className="font-bold text-gray-900">Recent Activity</h4>
-                                        <span className="text-xs text-gold-600 font-medium">View All</span>
-                                    </div>
-
-                                    {transactions.map((tx, i) => (
-                                        <motion.div
-                                            key={i}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            whileInView={{ opacity: 1, x: 0 }}
-                                            viewport={{ once: true }}
-                                            transition={{ delay: 0.1 * i }}
-                                            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className={cn(
-                                                    "w-11 h-11 rounded-full flex items-center justify-center",
-                                                    tx.color === 'green' && "bg-green-100 text-green-600",
-                                                    tx.color === 'rose' && "bg-rose-100 text-rose-600",
-                                                    tx.color === 'blue' && "bg-blue-100 text-blue-600"
-                                                )}>
-                                                    {tx.type === 'earn' && <TrendingUp className="w-5 h-5" />}
-                                                    {tx.type === 'redeem' && <Gift className="w-5 h-5" />}
-                                                    {tx.type === 'upgrade' && <Award className="w-5 h-5" />}
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className="font-semibold text-gray-900 text-sm">{tx.label}</p>
-                                                    <p className="text-xs text-gray-500">{tx.detail}</p>
-                                                </div>
-                                            </div>
-                                            <span className={cn(
-                                                "font-bold text-sm",
-                                                tx.color === 'green' && "text-green-600",
-                                                tx.color === 'rose' && "text-rose-600",
-                                                tx.color === 'blue' && "text-blue-600"
-                                            )}>{tx.points}</span>
-                                        </motion.div>
-                                    ))}
-
-                                    {/* Progress Bar */}
-                                    <div className="pt-4 border-t border-gray-100 mt-4">
-                                        <div className="flex justify-between text-xs font-medium text-gray-500 mb-2">
-                                            <span>Gold Tier</span>
-                                            <span>750 pts to Platinum</span>
-                                        </div>
-                                        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                            <div className="bg-gradient-to-r from-gold-400 to-amber-500 h-full w-[75%] rounded-full" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Floating Badge */}
-                            <motion.div
-                                className="absolute -top-8 -right-8 bg-white p-5 rounded-2xl shadow-2xl z-20 hidden md:flex items-center gap-4 border border-slate-100"
-                                animate={{ y: [0, -8, 0] }}
-                                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-                            >
-                                <div className="w-14 h-14 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full flex items-center justify-center text-white shadow-lg">
-                                    <Gift className="w-7 h-7" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-bold text-gray-900 text-lg">FREE Gift!</p>
-                                    <p className="text-xs text-gray-500">Silver Coin Redeemed</p>
-                                </div>
-                            </motion.div>
+                            <LoyaltyProgramPreview />
 
                             {/* Background Shadow */}
                             <div className="absolute -bottom-4 -left-4 -z-10 w-full h-full bg-gradient-to-br from-gold-200 to-amber-200 rounded-3xl opacity-30 transform rotate-2" />

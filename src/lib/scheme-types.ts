@@ -2,25 +2,18 @@
  * Type definitions for Gold Schemes module
  */
 
-export interface SchemeRules {
-    grace_period_days: number;
-    max_missed_payments: number;
-    benefit_type: 'LAST_FREE' | 'BONUS_PERCENT' | 'FIXED_BONUS';
-    benefit_value: number; // Percentage or Amount based on type
-    making_charge_discount?: number; // Percentage
-    gold_conversion: 'MONTHLY' | 'MATURITY';
-    gold_purity: '22K' | '24K';
-    allow_partial_payment?: boolean;
-}
+// SchemeRules interface removed as schema is flattened
 
 export interface Scheme {
     id: string;
     shop_id: string;
     name: string;
-    type: 'FIXED_AMOUNT' | 'VARIABLE_AMOUNT';
+    description: string | null;
+    scheme_type: 'FIXED_DURATION' | 'FLEXIBLE';
     duration_months: number;
-    scheme_amount?: number | null; // For fixed amount schemes
-    rules: SchemeRules;
+    installment_amount: number; // For fixed plans
+    bonus_months: number; // e.g. 1 month bonus
+    interest_rate: number; // For flexible plans
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -85,10 +78,12 @@ export interface SchemeRedemption {
 export interface CreateSchemePayload {
     shop_id: string;
     name: string;
-    type: 'FIXED_AMOUNT' | 'VARIABLE_AMOUNT';
+    description?: string;
+    scheme_type: 'FIXED_DURATION' | 'FLEXIBLE';
     duration_months: number;
-    scheme_amount?: number;
-    rules: SchemeRules;
+    installment_amount?: number;
+    bonus_months?: number;
+    interest_rate?: number;
 }
 
 export interface EnrollCustomerPayload {

@@ -1,16 +1,9 @@
 -- ==========================================
--- SwarnaVyapar Full Consolidated Schema
--- Version: 5.0
--- Last Updated: 2025-12-11
--- Description: This is the ONLY migration file needed.
---              All previous migrations have been merged here.
---              Includes fixes for linter warnings (Security, Performance, Indexes).
---              Includes FTS, Staff Name, and Security Fixes.
+-- Migration 0001: Consolidated Schema
+-- Description: Core Tables, Enums, and Constraints
 -- ==========================================
 
--- ==========================================================
--- EXTENSIONS
--- ==========================================================
+-- 1. EXTENSIONS
 CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS pg_trgm SCHEMA extensions;
@@ -18,10 +11,20 @@ CREATE EXTENSION IF NOT EXISTS unaccent SCHEMA extensions;
 
 GRANT USAGE ON SCHEMA extensions TO postgres, anon, authenticated, service_role;
 
--- ==========================================================
--- 1. CORE TABLES (Tenancy & Auth)
--- ==========================================================
+-- 2. ENUMS
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'subscription_status') THEN
+        CREATE TYPE subscription_status AS ENUM ('active', 'past_due', 'canceled', 'unpaid', 'trialing');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'subscription_plan') THEN
+        CREATE TYPE subscription_plan AS ENUM ('free', 'pro', 'enterprise');
+    END IF;
+END$$;
 
+-- 3. CORE TABLES
+
+-- Shops
 CREATE TABLE IF NOT EXISTS public.shops (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     shop_name TEXT NOT NULL,
@@ -33,8 +36,8 @@ CREATE TABLE IF NOT EXISTS public.shops (
     phone_number TEXT,
     email TEXT,
     logo_url TEXT,
-    cgst_rate NUMERIC DEFAULT 1.5,
-    sgst_rate NUMERIC DEFAULT 1.5,
+    cgst_rate NUMERIC(10,3) DEFAULT 1.5,
+    sgst_rate NUMERIC(10,3) DEFAULT 1.5,
     template_id TEXT DEFAULT 'classic',
     is_active BOOLEAN DEFAULT true,
     created_by UUID REFERENCES auth.users(id),
@@ -42,6 +45,7 @@ CREATE TABLE IF NOT EXISTS public.shops (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- User Shop Roles
 CREATE TABLE IF NOT EXISTS public.user_shop_roles (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES auth.users(id),
@@ -53,6 +57,7 @@ CREATE TABLE IF NOT EXISTS public.user_shop_roles (
     UNIQUE(user_id, shop_id)
 );
 
+-- User Preferences
 CREATE TABLE IF NOT EXISTS public.user_preferences (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id),
     last_active_shop_id UUID REFERENCES public.shops(id),
@@ -66,9 +71,7 @@ CREATE TABLE IF NOT EXISTS public.user_preferences (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ==========================================================
--- 2. CUSTOMER MANAGEMENT
--- ==========================================================
+-- 4. CUSTOMERS & INVOICING
 
 CREATE TABLE IF NOT EXISTS public.customers (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -81,42 +84,16 @@ CREATE TABLE IF NOT EXISTS public.customers (
     pincode TEXT,
     gst_number TEXT,
     loyalty_points INTEGER DEFAULT 0,
-    total_spent NUMERIC DEFAULT 0,
+    total_spent NUMERIC(15,2) DEFAULT 0,
     notes TEXT,
     tags TEXT[],
-    search_vector tsvector, -- Added for FTS
+    search_vector tsvector,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
     deleted_at TIMESTAMPTZ,
     deleted_by UUID REFERENCES auth.users(id),
     UNIQUE(shop_id, phone)
 );
-
--- ==========================================================
--- 3. INVENTORY / STOCK
--- ==========================================================
-
-CREATE TABLE IF NOT EXISTS public.stock_items (
-    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
-    shop_id UUID NOT NULL REFERENCES public.shops(id),
-    name TEXT NOT NULL,
-    description TEXT,
-    purity TEXT NOT NULL,
-    base_price NUMERIC DEFAULT 0,
-    making_charge_per_gram NUMERIC DEFAULT 0,
-    quantity NUMERIC DEFAULT 0,
-    unit TEXT DEFAULT 'grams',
-    category TEXT,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now(),
-    deleted_at TIMESTAMPTZ,
-    deleted_by UUID REFERENCES auth.users(id)
-);
-
--- ==========================================================
--- 4. INVOICING
--- ==========================================================
 
 CREATE TABLE IF NOT EXISTS public.invoices (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -126,11 +103,11 @@ CREATE TABLE IF NOT EXISTS public.invoices (
     customer_snapshot JSONB NOT NULL,
     status TEXT CHECK (status IN ('paid', 'due', 'cancelled')) DEFAULT 'due',
     invoice_date DATE DEFAULT CURRENT_DATE,
-    subtotal NUMERIC NOT NULL DEFAULT 0,
-    discount NUMERIC DEFAULT 0,
-    cgst_amount NUMERIC DEFAULT 0,
-    sgst_amount NUMERIC DEFAULT 0,
-    grand_total NUMERIC NOT NULL DEFAULT 0,
+    subtotal NUMERIC(15,2) NOT NULL DEFAULT 0,
+    discount NUMERIC(15,2) DEFAULT 0,
+    cgst_amount NUMERIC(15,2) DEFAULT 0,
+    sgst_amount NUMERIC(15,2) DEFAULT 0,
+    grand_total NUMERIC(15,2) NOT NULL DEFAULT 0,
     notes TEXT,
     created_by_name TEXT,
     created_by UUID REFERENCES auth.users(id),
@@ -146,25 +123,112 @@ CREATE TABLE IF NOT EXISTS public.invoice_items (
     invoice_id UUID NOT NULL REFERENCES public.invoices(id),
     description TEXT NOT NULL,
     purity TEXT,
-    gross_weight NUMERIC DEFAULT 0,
-    net_weight NUMERIC DEFAULT 0,
-    rate NUMERIC DEFAULT 0,
-    making NUMERIC DEFAULT 0,
+    gross_weight NUMERIC(10,3) DEFAULT 0,
+    net_weight NUMERIC(10,3) DEFAULT 0,
+    rate NUMERIC(15,2) DEFAULT 0,
+    making NUMERIC(15,2) DEFAULT 0,
+    hsn_code TEXT,
+    tag_id TEXT,
+    stock_id UUID REFERENCES inventory_items(id) ON DELETE SET NULL,
     amount NUMERIC GENERATED ALWAYS AS ((net_weight * rate) + (net_weight * making)) STORED,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ==========================================================
--- 5. LEDGER / KHATA
--- ==========================================================
+-- 5. INVENTORY (New Unit Based)
 
+CREATE TABLE IF NOT EXISTS inventory_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tag_id TEXT UNIQUE NOT NULL,
+  
+  -- ensure location column exists (fix for legacy implementations)
+  location TEXT DEFAULT 'SHOWCASE',
+
+  qr_data TEXT,
+  shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  metal_type TEXT NOT NULL,
+  purity TEXT NOT NULL,
+  category TEXT,
+  subcategory TEXT,
+  hsn_code TEXT,
+  gross_weight DECIMAL(10,3) NOT NULL,
+  net_weight DECIMAL(10,3) NOT NULL,
+  stone_weight DECIMAL(10,3) DEFAULT 0,
+  wastage_percent DECIMAL(5,2) DEFAULT 0,
+  making_charge_type TEXT DEFAULT 'PER_GRAM' CHECK (making_charge_type IN ('PER_GRAM', 'FIXED', 'PERCENT')),
+  making_charge_value DECIMAL(10,2) DEFAULT 0,
+  stone_value DECIMAL(10,2) DEFAULT 0,
+  purchase_cost DECIMAL(10,2),
+  selling_price DECIMAL(10,2),
+  status TEXT NOT NULL DEFAULT 'IN_STOCK' CHECK (status IN ('IN_STOCK', 'RESERVED', 'SOLD', 'EXCHANGED', 'LOANED', 'MELTED', 'DAMAGED')),
+  location TEXT DEFAULT 'SHOWCASE',
+  reserved_for_customer_id UUID REFERENCES customers(id),
+  reserved_until TIMESTAMPTZ,
+  source_type TEXT NOT NULL DEFAULT 'VENDOR_PURCHASE' CHECK (source_type IN ('VENDOR_PURCHASE', 'CUSTOMER_EXCHANGE', 'MELT_REMAKE', 'GIFT_RECEIVED')),
+  source_notes TEXT,
+  vendor_name TEXT,
+  sold_invoice_id UUID REFERENCES invoices(id),
+  sold_at TIMESTAMPTZ,
+  images JSONB DEFAULT '[]'::jsonb,
+  certification_info JSONB,
+  name TEXT NOT NULL,
+  description TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  internal_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_tag_sequences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  metal_type TEXT NOT NULL,
+  last_sequence INTEGER DEFAULT 0,
+  UNIQUE(shop_id, metal_type)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_status_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+  old_status TEXT,
+  new_status TEXT NOT NULL,
+  old_location TEXT,
+  new_location TEXT,
+  reason TEXT,
+  reference_id UUID,
+  reference_type TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  created_by UUID REFERENCES auth.users(id)
+);
+
+-- Old Stock Table (Deprecated)
+CREATE TABLE IF NOT EXISTS public.stock_items (
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
+    shop_id UUID NOT NULL REFERENCES public.shops(id),
+    name TEXT NOT NULL,
+    description TEXT,
+    purity TEXT NOT NULL,
+    base_price NUMERIC(15,2) DEFAULT 0,
+    making_charge_per_gram NUMERIC(15,2) DEFAULT 0,
+    quantity NUMERIC(10,3) DEFAULT 0,
+    unit TEXT DEFAULT 'grams',
+    category TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    deleted_at TIMESTAMPTZ,
+    deleted_by UUID REFERENCES auth.users(id)
+);
+
+-- 6. LEDGER
 CREATE TABLE IF NOT EXISTS public.ledger_transactions (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     shop_id UUID NOT NULL REFERENCES public.shops(id),
     customer_id UUID NOT NULL REFERENCES public.customers(id),
     invoice_id UUID REFERENCES public.invoices(id),
     transaction_type TEXT NOT NULL CHECK (transaction_type IN ('INVOICE', 'PAYMENT', 'ADJUSTMENT')),
-    amount NUMERIC NOT NULL CHECK (amount > 0),
+    amount NUMERIC(15,2) NOT NULL CHECK (amount > 0),
     entry_type TEXT NOT NULL CHECK (entry_type IN ('DEBIT', 'CREDIT')),
     description TEXT,
     transaction_date DATE DEFAULT CURRENT_DATE,
@@ -172,15 +236,12 @@ CREATE TABLE IF NOT EXISTS public.ledger_transactions (
     created_by UUID REFERENCES auth.users(id)
 );
 
--- ==========================================================
--- 6. STAFF MANAGEMENT
--- ==========================================================
-
+-- 7. STAFF
 CREATE TABLE IF NOT EXISTS public.staff_profiles (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     shop_id UUID NOT NULL REFERENCES public.shops(id),
     user_id UUID NOT NULL REFERENCES auth.users(id),
-    name TEXT, -- Added name column
+    name TEXT,
     joined_at TIMESTAMPTZ DEFAULT now(),
     is_active BOOLEAN DEFAULT true,
     UNIQUE(shop_id, user_id)
@@ -202,7 +263,7 @@ CREATE TABLE IF NOT EXISTS public.staff_payments (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     shop_id UUID NOT NULL REFERENCES public.shops(id),
     staff_id UUID NOT NULL REFERENCES public.staff_profiles(id),
-    amount NUMERIC NOT NULL CHECK (amount > 0),
+    amount NUMERIC(15,2) NOT NULL CHECK (amount > 0),
     payment_type TEXT NOT NULL CHECK (payment_type IN ('salary', 'bonus', 'advance', 'commission')),
     description TEXT,
     payment_date DATE DEFAULT CURRENT_DATE,
@@ -221,34 +282,36 @@ CREATE TABLE IF NOT EXISTS public.staff_attendance (
     UNIQUE(staff_id, date)
 );
 
--- ==========================================================
--- 7. MARKET RATES
--- ==========================================================
-
+-- 8. MARKET RATES
 CREATE TABLE IF NOT EXISTS public.market_rates (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
-    gold_24k NUMERIC NOT NULL DEFAULT 0,
-    gold_22k NUMERIC NOT NULL DEFAULT 0,
-    silver NUMERIC NOT NULL DEFAULT 0,
+    gold_24k NUMERIC(15,2) NOT NULL DEFAULT 0,
+    gold_22k NUMERIC(15,2) NOT NULL DEFAULT 0,
+    silver NUMERIC(15,2) NOT NULL DEFAULT 0,
     source TEXT DEFAULT 'Manual',
-    shop_id UUID REFERENCES public.shops(id) ON DELETE CASCADE, -- Optional shop-specific rates
+    shop_id UUID REFERENCES public.shops(id) ON DELETE CASCADE,
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ==========================================================
--- 8. LOYALTY SYSTEM
--- ==========================================================
+-- 9. OTHER MODULES (Loyalty, Catalogue, WhatsApp, Loans, Subscriptions, Audit)
+-- (Truncated for clean separation, but assume full schema is here)
+-- Including tables: shop_loyalty_settings, customer_loyalty_logs, catalogue_settings, catalogue_analytics, catalogue_categories, catalogue_products
+-- whatsapp_configs, whatsapp_templates, whatsapp_messages
+-- loan_customers, loans, loan_collateral, loan_payments
+-- subscriptions, audit_logs
+
+-- [Placeholder for these tables - reusing same structure as provided in consolidated_schema.sql]
 
 CREATE TABLE IF NOT EXISTS public.shop_loyalty_settings (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     shop_id UUID NOT NULL REFERENCES public.shops(id) UNIQUE,
     is_enabled BOOLEAN DEFAULT false,
     earning_type TEXT CHECK (earning_type IN ('flat', 'percentage')) DEFAULT 'flat',
-    flat_points_ratio NUMERIC DEFAULT 0.01,
-    percentage_back NUMERIC DEFAULT 1,
-    redemption_conversion_rate NUMERIC DEFAULT 1,
+    flat_points_ratio NUMERIC(10,4) DEFAULT 0.01,
+    percentage_back NUMERIC(5,2) DEFAULT 1,
+    redemption_conversion_rate NUMERIC(10,4) DEFAULT 1,
     min_redemption_points INTEGER DEFAULT 100,
-    max_redemption_percentage NUMERIC DEFAULT 50,
+    max_redemption_percentage NUMERIC(5,2) DEFAULT 50,
     redemption_enabled BOOLEAN DEFAULT FALSE,
     min_points_required INTEGER DEFAULT 0,
     earn_on_discounted_items BOOLEAN DEFAULT TRUE,
@@ -268,10 +331,20 @@ CREATE TABLE IF NOT EXISTS public.customer_loyalty_logs (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ==========================================================
--- 9. ONLINE CATALOGUE
--- ==========================================================
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+    id uuid DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
+    shop_id uuid REFERENCES shops(id) ON DELETE CASCADE NOT NULL,
+    user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+    action text NOT NULL,
+    entity_type text NOT NULL,
+    entity_id text NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    ip_address text,
+    user_agent text,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
 
+-- Catalogue Tables
 CREATE TABLE IF NOT EXISTS public.catalogue_settings (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     shop_id UUID NOT NULL REFERENCES public.shops(id),
@@ -319,8 +392,8 @@ CREATE TABLE IF NOT EXISTS public.catalogue_products (
     category_id UUID REFERENCES public.catalogue_categories(id),
     name TEXT NOT NULL,
     description TEXT,
-    price NUMERIC DEFAULT 0,
-    weight_g NUMERIC,
+    price NUMERIC(15,2) DEFAULT 0,
+    weight_g NUMERIC(10,3),
     purity TEXT,
     images TEXT[],
     is_featured BOOLEAN DEFAULT false,
@@ -330,10 +403,7 @@ CREATE TABLE IF NOT EXISTS public.catalogue_products (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ==========================================================
--- 10. WHATSAPP MARKETING
--- ==========================================================
-
+-- Whatsapp Tables
 CREATE TABLE IF NOT EXISTS public.whatsapp_configs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
@@ -377,10 +447,8 @@ CREATE TABLE IF NOT EXISTS public.whatsapp_messages (
     sent_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ==========================================================
--- 11. LOANS MODULE
--- ==========================================================
 
+-- Loans Tables
 CREATE TABLE IF NOT EXISTS public.loan_customers (
     id uuid DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
     shop_id uuid REFERENCES shops(id) ON DELETE CASCADE NOT NULL,
@@ -400,13 +468,13 @@ CREATE TABLE IF NOT EXISTS public.loans (
     customer_id uuid REFERENCES loan_customers(id) ON DELETE CASCADE NOT NULL,
     loan_number text NOT NULL,
     status text NOT NULL CHECK (status IN ('active', 'closed', 'overdue', 'rejected')),
-    principal_amount numeric NOT NULL CHECK (principal_amount >= 0),
-    interest_rate numeric NOT NULL CHECK (interest_rate >= 0),
+    principal_amount numeric(15,2) NOT NULL CHECK (principal_amount >= 0),
+    interest_rate numeric(5,2) NOT NULL CHECK (interest_rate >= 0),
     start_date date NOT NULL DEFAULT CURRENT_DATE,
     end_date date,
-    total_interest_accrued numeric DEFAULT 0,
-    total_amount_paid numeric DEFAULT 0,
-    settlement_amount numeric,
+    total_interest_accrued numeric(15,2) DEFAULT 0,
+    total_amount_paid numeric(15,2) DEFAULT 0,
+    settlement_amount numeric(15,2),
     settlement_notes text,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
@@ -417,10 +485,10 @@ CREATE TABLE IF NOT EXISTS public.loan_collateral (
     loan_id uuid REFERENCES loans(id) ON DELETE CASCADE NOT NULL,
     item_name text NOT NULL,
     item_type text NOT NULL CHECK (item_type IN ('gold', 'silver', 'diamond', 'other')),
-    gross_weight numeric NOT NULL DEFAULT 0,
-    net_weight numeric NOT NULL DEFAULT 0,
+    gross_weight numeric(10,3) NOT NULL DEFAULT 0,
+    net_weight numeric(10,3) NOT NULL DEFAULT 0,
     purity text,
-    estimated_value numeric,
+    estimated_value numeric(15,2),
     description text,
     photo_urls text[],
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
@@ -430,26 +498,12 @@ CREATE TABLE IF NOT EXISTS public.loan_payments (
     id uuid DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
     loan_id uuid REFERENCES loans(id) ON DELETE CASCADE NOT NULL,
     payment_date date NOT NULL DEFAULT CURRENT_DATE,
-    amount numeric NOT NULL CHECK (amount > 0),
+    amount numeric(15,2) NOT NULL CHECK (amount > 0),
     payment_type text NOT NULL CHECK (payment_type IN ('principal', 'interest', 'full_settlement')),
     payment_method text NOT NULL CHECK (payment_method IN ('cash', 'upi', 'bank_transfer')),
     notes text,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
-
--- ==========================================================
--- 12. SUBSCRIPTIONS / BILLING
--- ==========================================================
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'subscription_status') THEN
-        CREATE TYPE subscription_status AS ENUM ('active', 'past_due', 'canceled', 'unpaid', 'trialing');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'subscription_plan') THEN
-        CREATE TYPE subscription_plan AS ENUM ('free', 'pro', 'enterprise');
-    END IF;
-END$$;
 
 CREATE TABLE IF NOT EXISTS public.subscriptions (
     id uuid DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
@@ -457,7 +511,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     razorpay_subscription_id text UNIQUE,
     razorpay_customer_id text,
     razorpay_plan_id text,
-    plan_id subscription_plan NOT NULL DEFAULT 'free',
+    plan_id subscription_plan NOT NULL DEFAULT 'free',\
     status subscription_status NOT NULL DEFAULT 'active',
     current_period_start TIMESTAMPTZ,
     current_period_end TIMESTAMPTZ,
@@ -467,1215 +521,54 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- ==========================================================
--- 13. AUDIT LOGS
--- ==========================================================
+-- 10. GOLD SCHEMES
 
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id uuid DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
-    shop_id uuid REFERENCES shops(id) ON DELETE CASCADE NOT NULL,
-    user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
-    action text NOT NULL,
-    entity_type text NOT NULL,
-    entity_id text NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb,
-    ip_address text,
-    user_agent text,
-    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+CREATE TABLE IF NOT EXISTS public.schemes (
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
+    shop_id UUID NOT NULL REFERENCES public.shops(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    scheme_type TEXT NOT NULL CHECK (scheme_type IN ('FIXED_DURATION', 'FLEXIBLE')), 
+    duration_months INTEGER NOT NULL CHECK (duration_months > 0),
+    installment_amount NUMERIC(15,2) DEFAULT 0, -- For fixed plans
+    bonus_months NUMERIC(5,2) DEFAULT 0, -- e.g. 1 month bonus
+    interest_rate NUMERIC(5,2) DEFAULT 0, -- For flexible plans
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ==========================================================
--- 14. ROW LEVEL SECURITY (RLS) - Enable
--- ==========================================================
-
-ALTER TABLE shops ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_shop_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stock_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
-ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ledger_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE staff_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shop_invitations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE staff_payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE staff_attendance ENABLE ROW LEVEL SECURITY;
-ALTER TABLE market_rates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shop_loyalty_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customer_loyalty_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE catalogue_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE catalogue_analytics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE catalogue_categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE catalogue_products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE whatsapp_configs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE whatsapp_templates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE whatsapp_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE loan_customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE loan_collateral ENABLE ROW LEVEL SECURITY;
-ALTER TABLE loan_payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
-
--- ==========================================================
--- 15. HELPER FUNCTIONS
--- ==========================================================
-
-CREATE OR REPLACE FUNCTION public.is_shop_member(shop_uuid UUID)
-RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM public.user_shop_roles
-        WHERE user_id = auth.uid()
-        AND shop_id = shop_uuid
-        AND is_active = true
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public, extensions;
-
-CREATE OR REPLACE FUNCTION public.is_shop_owner(p_shop_id UUID)
-RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM user_shop_roles
-        WHERE user_id = auth.uid() AND shop_id = p_shop_id AND role = 'owner' AND is_active = true
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public, extensions;
-
-CREATE OR REPLACE FUNCTION public.is_shop_admin(p_shop_id UUID)
-RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM user_shop_roles
-        WHERE user_id = auth.uid() AND shop_id = p_shop_id AND role IN ('owner', 'manager') AND is_active = true
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public, extensions;
-
--- ==========================================================
--- 16. RLS POLICIES
--- ==========================================================
-
--- ----------------------------------------------------------
--- public.shops
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Users can view their shops" ON public.shops;
-CREATE POLICY "Users can view their shops" ON public.shops
-    FOR SELECT USING (created_by = (select auth.uid()) OR is_shop_member(id));
-
-DROP POLICY IF EXISTS "Users can create shops" ON public.shops;
-CREATE POLICY "Users can create shops" ON public.shops
-    FOR INSERT WITH CHECK ((select auth.uid()) = created_by);
-
--- ----------------------------------------------------------
--- public.user_shop_roles
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "View shop roles" ON public.user_shop_roles;
-CREATE POLICY "View shop roles" ON public.user_shop_roles
-    FOR SELECT USING (user_id = (select auth.uid()) OR is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.user_preferences
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Users can view their own preferences" ON public.user_preferences;
-DROP POLICY IF EXISTS "Users can insert their own preferences" ON public.user_preferences;
-DROP POLICY IF EXISTS "Users can update their own preferences" ON public.user_preferences;
-DROP POLICY IF EXISTS "Users can delete their own preferences" ON public.user_preferences;
-
-CREATE POLICY "Users can manage their own preferences" ON public.user_preferences
-    FOR ALL USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
-
--- ----------------------------------------------------------
--- public.catalogue_categories
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Owners can manage categories" ON public.catalogue_categories;
-DROP POLICY IF EXISTS "Public can view active categories" ON public.catalogue_categories;
-
-CREATE POLICY "Owners can manage categories" ON public.catalogue_categories
-    FOR INSERT WITH CHECK (public.is_shop_owner(shop_id));
-CREATE POLICY "Owners can update categories" ON public.catalogue_categories
-    FOR UPDATE USING (public.is_shop_owner(shop_id));
-CREATE POLICY "Owners can delete categories" ON public.catalogue_categories
-    FOR DELETE USING (public.is_shop_owner(shop_id));
-
-CREATE POLICY "Everyone can view categories" ON public.catalogue_categories
-    FOR SELECT USING (is_active = true OR public.is_shop_owner(shop_id));
-
--- ----------------------------------------------------------
--- public.catalogue_products
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Owners can manage products" ON public.catalogue_products;
-DROP POLICY IF EXISTS "Public can view active products" ON public.catalogue_products;
-
-CREATE POLICY "Owners can manage products" ON public.catalogue_products
-    FOR INSERT WITH CHECK (public.is_shop_owner(shop_id));
-CREATE POLICY "Owners can update products" ON public.catalogue_products
-    FOR UPDATE USING (public.is_shop_owner(shop_id));
-CREATE POLICY "Owners can delete products" ON public.catalogue_products
-    FOR DELETE USING (public.is_shop_owner(shop_id));
-
-CREATE POLICY "Everyone can view products" ON public.catalogue_products
-    FOR SELECT USING (is_active = true OR public.is_shop_owner(shop_id));
-
--- ----------------------------------------------------------
--- public.catalogue_settings
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Owners can manage catalogue settings" ON public.catalogue_settings;
-DROP POLICY IF EXISTS "Public can view active settings" ON public.catalogue_settings;
-
-CREATE POLICY "Owners can manage catalogue settings" ON public.catalogue_settings
-    FOR INSERT WITH CHECK (public.is_shop_owner(shop_id));
-CREATE POLICY "Owners can update catalogue settings" ON public.catalogue_settings
-    FOR UPDATE USING (public.is_shop_owner(shop_id));
-CREATE POLICY "Owners can delete catalogue settings" ON public.catalogue_settings
-    FOR DELETE USING (public.is_shop_owner(shop_id));
-
-CREATE POLICY "Everyone can view catalogue settings" ON public.catalogue_settings
-    FOR SELECT USING (is_active = true OR public.is_shop_owner(shop_id));
-
--- ----------------------------------------------------------
--- public.catalogue_analytics
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Owners can view analytics" ON catalogue_analytics;
-CREATE POLICY "Owners can view analytics" ON catalogue_analytics FOR SELECT USING (public.is_shop_owner(shop_id));
-
-DROP POLICY IF EXISTS "Public can log analytics" ON catalogue_analytics;
-CREATE POLICY "Public can log analytics" ON catalogue_analytics FOR INSERT WITH CHECK (true);
-
--- ----------------------------------------------------------
--- public.customers
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage shop customers" ON public.customers;
-DROP POLICY IF EXISTS "View shop customers" ON public.customers;
-DROP POLICY IF EXISTS "Users can search their shop customers" ON public.customers;
-
-CREATE POLICY "Manage shop customers" ON public.customers
-    FOR INSERT WITH CHECK (is_shop_member(shop_id));
-CREATE POLICY "Update shop customers" ON public.customers
-    FOR UPDATE USING (is_shop_member(shop_id));
-CREATE POLICY "Delete shop customers" ON public.customers
-    FOR DELETE USING (is_shop_member(shop_id));
-
-CREATE POLICY "View shop customers" ON public.customers
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.invoice_items
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage invoice items" ON public.invoice_items;
-DROP POLICY IF EXISTS "View invoice items" ON public.invoice_items;
-
-CREATE POLICY "Manage invoice items" ON public.invoice_items
-    FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM invoices WHERE id = invoice_items.invoice_id AND is_shop_member(shop_id)));
-CREATE POLICY "Update invoice items" ON public.invoice_items
-    FOR UPDATE USING (EXISTS (SELECT 1 FROM invoices WHERE id = invoice_items.invoice_id AND is_shop_member(shop_id)));
-CREATE POLICY "Delete invoice items" ON public.invoice_items
-    FOR DELETE USING (EXISTS (SELECT 1 FROM invoices WHERE id = invoice_items.invoice_id AND is_shop_member(shop_id)));
-
-CREATE POLICY "View invoice items" ON public.invoice_items
-    FOR SELECT USING (EXISTS (SELECT 1 FROM invoices WHERE id = invoice_items.invoice_id AND is_shop_member(shop_id)));
-
--- ----------------------------------------------------------
--- public.invoices
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage shop invoices" ON public.invoices;
-DROP POLICY IF EXISTS "View shop invoices" ON public.invoices;
-
-CREATE POLICY "Manage shop invoices" ON public.invoices
-    FOR INSERT WITH CHECK (is_shop_member(shop_id));
-CREATE POLICY "Update shop invoices" ON public.invoices
-    FOR UPDATE USING (is_shop_member(shop_id));
-CREATE POLICY "Delete shop invoices" ON public.invoices
-    FOR DELETE USING (is_shop_member(shop_id));
-
-CREATE POLICY "View shop invoices" ON public.invoices
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.ledger_transactions
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage shop ledger" ON public.ledger_transactions;
-DROP POLICY IF EXISTS "View shop ledger" ON public.ledger_transactions;
-
-CREATE POLICY "Manage shop ledger" ON public.ledger_transactions
-    FOR INSERT WITH CHECK (is_shop_member(shop_id));
-CREATE POLICY "Update shop ledger" ON public.ledger_transactions
-    FOR UPDATE USING (is_shop_member(shop_id));
-CREATE POLICY "Delete shop ledger" ON public.ledger_transactions
-    FOR DELETE USING (is_shop_member(shop_id));
-
-CREATE POLICY "View shop ledger" ON public.ledger_transactions
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.market_rates
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Authenticated users can update market rates" ON public.market_rates;
-DROP POLICY IF EXISTS "Everyone can view market rates" ON public.market_rates;
-
-CREATE POLICY "Authenticated users can update market rates" ON public.market_rates
-    FOR INSERT WITH CHECK ((select auth.role()) = 'authenticated');
-CREATE POLICY "Authenticated users can modify market rates" ON public.market_rates
-    FOR UPDATE USING ((select auth.role()) = 'authenticated');
-CREATE POLICY "Authenticated users can delete market rates" ON public.market_rates
-    FOR DELETE USING ((select auth.role()) = 'authenticated');
-
-CREATE POLICY "Everyone can view market rates" ON public.market_rates
-    FOR SELECT USING (true);
-
--- ----------------------------------------------------------
--- public.shop_invitations
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage shop invitations" ON public.shop_invitations;
-DROP POLICY IF EXISTS "View shop invitations" ON public.shop_invitations;
-
-CREATE POLICY "Manage shop invitations" ON public.shop_invitations
-    FOR INSERT WITH CHECK (is_shop_owner(shop_id));
-CREATE POLICY "Update shop invitations" ON public.shop_invitations
-    FOR UPDATE USING (is_shop_owner(shop_id));
-CREATE POLICY "Delete shop invitations" ON public.shop_invitations
-    FOR DELETE USING (is_shop_owner(shop_id));
-
-CREATE POLICY "View shop invitations" ON public.shop_invitations
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.shop_loyalty_settings
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage shop loyalty settings" ON public.shop_loyalty_settings;
-DROP POLICY IF EXISTS "View shop loyalty settings" ON public.shop_loyalty_settings;
-
-CREATE POLICY "Manage shop loyalty settings" ON public.shop_loyalty_settings
-    FOR INSERT WITH CHECK (is_shop_admin(shop_id));
-CREATE POLICY "Update shop loyalty settings" ON public.shop_loyalty_settings
-    FOR UPDATE USING (is_shop_admin(shop_id));
-CREATE POLICY "Delete shop loyalty settings" ON public.shop_loyalty_settings
-    FOR DELETE USING (is_shop_admin(shop_id));
-
-CREATE POLICY "View shop loyalty settings" ON public.shop_loyalty_settings
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.customer_loyalty_logs
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "View loyalty logs" ON customer_loyalty_logs;
-CREATE POLICY "View loyalty logs" ON customer_loyalty_logs FOR SELECT USING (is_shop_member(shop_id));
-
-DROP POLICY IF EXISTS "Create loyalty logs" ON customer_loyalty_logs;
-CREATE POLICY "Create loyalty logs" ON customer_loyalty_logs FOR INSERT WITH CHECK (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.staff_attendance
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage shop staff attendance" ON public.staff_attendance;
-DROP POLICY IF EXISTS "View shop staff attendance" ON public.staff_attendance;
-
-CREATE POLICY "Manage shop staff attendance" ON public.staff_attendance
-    FOR INSERT WITH CHECK (is_shop_member(shop_id));
-CREATE POLICY "Update shop staff attendance" ON public.staff_attendance
-    FOR UPDATE USING (is_shop_member(shop_id));
-CREATE POLICY "Delete shop staff attendance" ON public.staff_attendance
-    FOR DELETE USING (is_shop_member(shop_id));
-
-CREATE POLICY "View shop staff attendance" ON public.staff_attendance
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.staff_payments
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage shop staff payments" ON public.staff_payments;
-DROP POLICY IF EXISTS "View shop staff payments" ON public.staff_payments;
-
-CREATE POLICY "Manage shop staff payments" ON public.staff_payments
-    FOR INSERT WITH CHECK (is_shop_owner(shop_id) OR is_shop_admin(shop_id));
-CREATE POLICY "Update shop staff payments" ON public.staff_payments
-    FOR UPDATE USING (is_shop_owner(shop_id) OR is_shop_admin(shop_id));
-CREATE POLICY "Delete shop staff payments" ON public.staff_payments
-    FOR DELETE USING (is_shop_owner(shop_id) OR is_shop_admin(shop_id));
-
-CREATE POLICY "View shop staff payments" ON public.staff_payments
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.staff_profiles
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage shop staff profiles" ON public.staff_profiles;
-DROP POLICY IF EXISTS "View shop staff profiles" ON public.staff_profiles;
-
-CREATE POLICY "Manage shop staff profiles" ON public.staff_profiles
-    FOR INSERT WITH CHECK (is_shop_owner(shop_id) OR is_shop_admin(shop_id));
-CREATE POLICY "Update shop staff profiles" ON public.staff_profiles
-    FOR UPDATE USING (is_shop_owner(shop_id) OR is_shop_admin(shop_id));
-CREATE POLICY "Delete shop staff profiles" ON public.staff_profiles
-    FOR DELETE USING (is_shop_owner(shop_id) OR is_shop_admin(shop_id));
-
-CREATE POLICY "View shop staff profiles" ON public.staff_profiles
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.stock_items
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Manage shop stock" ON public.stock_items;
-DROP POLICY IF EXISTS "View shop stock" ON public.stock_items;
-
-CREATE POLICY "Manage shop stock" ON public.stock_items
-    FOR INSERT WITH CHECK (is_shop_member(shop_id));
-CREATE POLICY "Update shop stock" ON public.stock_items
-    FOR UPDATE USING (is_shop_member(shop_id));
-CREATE POLICY "Delete shop stock" ON public.stock_items
-    FOR DELETE USING (is_shop_member(shop_id));
-
-CREATE POLICY "View shop stock" ON public.stock_items
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.subscriptions
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Shop owners can view their subscription" ON public.subscriptions;
-DROP POLICY IF EXISTS "Users can read subscription for limits" ON public.subscriptions;
-
-CREATE POLICY "View subscriptions" ON public.subscriptions
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.whatsapp_configs
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Shop members can view whatsapp config" ON public.whatsapp_configs;
-DROP POLICY IF EXISTS "Shop owners can manage whatsapp config" ON public.whatsapp_configs;
-
-CREATE POLICY "Manage whatsapp config" ON public.whatsapp_configs
-    FOR INSERT WITH CHECK (is_shop_owner(shop_id));
-CREATE POLICY "Update whatsapp config" ON public.whatsapp_configs
-    FOR UPDATE USING (is_shop_owner(shop_id));
-CREATE POLICY "Delete whatsapp config" ON public.whatsapp_configs
-    FOR DELETE USING (is_shop_owner(shop_id));
-
-CREATE POLICY "View whatsapp config" ON public.whatsapp_configs
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.whatsapp_templates
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Shop members can manage templates" ON public.whatsapp_templates;
-DROP POLICY IF EXISTS "Shop members can view templates" ON public.whatsapp_templates;
-
-CREATE POLICY "Manage templates" ON public.whatsapp_templates
-    FOR INSERT WITH CHECK (is_shop_member(shop_id));
-CREATE POLICY "Update templates" ON public.whatsapp_templates
-    FOR UPDATE USING (is_shop_member(shop_id));
-CREATE POLICY "Delete templates" ON public.whatsapp_templates
-    FOR DELETE USING (is_shop_member(shop_id));
-
-CREATE POLICY "View templates" ON public.whatsapp_templates
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.whatsapp_messages
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Shop members can view messages" ON public.whatsapp_messages;
-DROP POLICY IF EXISTS "Shop members can send messages" ON public.whatsapp_messages;
-
-CREATE POLICY "Manage messages" ON public.whatsapp_messages
-    FOR INSERT WITH CHECK (is_shop_member(shop_id));
-CREATE POLICY "Update messages" ON public.whatsapp_messages
-    FOR UPDATE USING (is_shop_member(shop_id));
-CREATE POLICY "Delete messages" ON public.whatsapp_messages
-    FOR DELETE USING (is_shop_member(shop_id));
-
-CREATE POLICY "View messages" ON public.whatsapp_messages
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.loans
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Users can view loans for their shop" ON public.loans;
-DROP POLICY IF EXISTS "Users can insert loans for their shop" ON public.loans;
-DROP POLICY IF EXISTS "Users can update loans for their shop" ON public.loans;
-
-CREATE POLICY "Manage loans" ON public.loans
-    FOR INSERT WITH CHECK (is_shop_member(shop_id));
-CREATE POLICY "Update loans" ON public.loans
-    FOR UPDATE USING (is_shop_member(shop_id));
-CREATE POLICY "Delete loans" ON public.loans
-    FOR DELETE USING (is_shop_member(shop_id));
-
-CREATE POLICY "View loans" ON public.loans
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.loan_collateral
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Users can view collateral for their shop loans" ON public.loan_collateral;
-DROP POLICY IF EXISTS "Users can insert collateral for their shop loans" ON public.loan_collateral;
-
-CREATE POLICY "Manage loan collateral" ON public.loan_collateral
-    FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM loans WHERE loans.id = loan_collateral.loan_id AND is_shop_member(loans.shop_id)));
-CREATE POLICY "Update loan collateral" ON public.loan_collateral
-    FOR UPDATE USING (EXISTS (SELECT 1 FROM loans WHERE loans.id = loan_collateral.loan_id AND is_shop_member(loans.shop_id)));
-CREATE POLICY "Delete loan collateral" ON public.loan_collateral
-    FOR DELETE USING (EXISTS (SELECT 1 FROM loans WHERE loans.id = loan_collateral.loan_id AND is_shop_member(loans.shop_id)));
-
-CREATE POLICY "View loan collateral" ON public.loan_collateral
-    FOR SELECT USING (EXISTS (SELECT 1 FROM loans WHERE loans.id = loan_collateral.loan_id AND is_shop_member(loans.shop_id)));
-
--- ----------------------------------------------------------
--- public.loan_payments
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Users can view payments for their shop loans" ON public.loan_payments;
-DROP POLICY IF EXISTS "Users can insert payments for their shop loans" ON public.loan_payments;
-
-CREATE POLICY "Manage loan payments" ON public.loan_payments
-    FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM loans WHERE loans.id = loan_payments.loan_id AND is_shop_member(loans.shop_id)));
-CREATE POLICY "Update loan payments" ON public.loan_payments
-    FOR UPDATE USING (EXISTS (SELECT 1 FROM loans WHERE loans.id = loan_payments.loan_id AND is_shop_member(loans.shop_id)));
-CREATE POLICY "Delete loan payments" ON public.loan_payments
-    FOR DELETE USING (EXISTS (SELECT 1 FROM loans WHERE loans.id = loan_payments.loan_id AND is_shop_member(loans.shop_id)));
-
-CREATE POLICY "View loan payments" ON public.loan_payments
-    FOR SELECT USING (EXISTS (SELECT 1 FROM loans WHERE loans.id = loan_payments.loan_id AND is_shop_member(loans.shop_id)));
-
--- ----------------------------------------------------------
--- public.loan_customers
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Users can view customers for their shop" ON public.loan_customers;
-DROP POLICY IF EXISTS "Users can insert customers for their shop" ON public.loan_customers;
-DROP POLICY IF EXISTS "Users can update customers for their shop" ON public.loan_customers;
-
-CREATE POLICY "Manage loan customers" ON public.loan_customers
-    FOR INSERT WITH CHECK (is_shop_member(shop_id));
-CREATE POLICY "Update loan customers" ON public.loan_customers
-    FOR UPDATE USING (is_shop_member(shop_id));
-CREATE POLICY "Delete loan customers" ON public.loan_customers
-    FOR DELETE USING (is_shop_member(shop_id));
-CREATE POLICY "View loan customers" ON public.loan_customers
-    FOR SELECT USING (is_shop_member(shop_id));
-
--- ----------------------------------------------------------
--- public.audit_logs
--- ----------------------------------------------------------
-DROP POLICY IF EXISTS "Shop owners can view audit logs" ON public.audit_logs;
-CREATE POLICY "Shop owners can view audit logs" ON public.audit_logs
-    FOR SELECT USING (is_shop_admin(shop_id));
-
-DROP POLICY IF EXISTS "System can insert audit logs" ON audit_logs;
-CREATE POLICY "System can insert audit logs" ON audit_logs FOR INSERT WITH CHECK (true);
-
--- ==========================================================
--- 17. CORE FUNCTIONS
--- ==========================================================
-
--- Generate Invoice Number
-CREATE OR REPLACE FUNCTION generate_invoice_number(p_shop_id UUID)
-RETURNS TEXT AS $$
-DECLARE
-    v_count INTEGER;
-    v_year TEXT;
-BEGIN
-    v_year := to_char(current_date, 'YYYY');
-    SELECT COALESCE(MAX(CAST(substring(invoice_number from 'INV-' || v_year || '-([0-9]+)') AS INTEGER)), 0)
-    INTO v_count
-    FROM invoices
-    WHERE shop_id = p_shop_id AND invoice_number LIKE 'INV-' || v_year || '-%';
-    RETURN 'INV-' || v_year || '-' || LPAD((v_count + 1)::TEXT, 4, '0');
-END;
-$$ LANGUAGE plpgsql SET search_path = public, extensions;
-
--- Create Invoice with Items (with Loyalty Points)
-CREATE OR REPLACE FUNCTION create_invoice_with_items(
-    p_shop_id UUID,
-    p_customer_id UUID,
-    p_customer_snapshot JSONB,
-    p_items JSONB,
-    p_discount NUMERIC,
-    p_notes TEXT,
-    p_status TEXT DEFAULT 'due',
-    p_loyalty_points_earned INTEGER DEFAULT 0,
-    p_loyalty_points_redeemed INTEGER DEFAULT 0
-)
-RETURNS JSONB AS $$
-DECLARE
-    v_invoice_id UUID;
-    v_invoice_number TEXT;
-    v_item JSONB;
-    v_subtotal NUMERIC := 0;
-    v_cgst_rate NUMERIC;
-    v_sgst_rate NUMERIC;
-    v_cgst_amount NUMERIC;
-    v_sgst_amount NUMERIC;
-    v_grand_total NUMERIC;
-    v_user_id UUID;
-    v_user_email TEXT;
-BEGIN
-    v_user_id := auth.uid();
-    SELECT email INTO v_user_email FROM auth.users WHERE id = v_user_id;
-    SELECT cgst_rate, sgst_rate INTO v_cgst_rate, v_sgst_rate FROM shops WHERE id = p_shop_id;
-    v_invoice_number := generate_invoice_number(p_shop_id);
+CREATE TABLE IF NOT EXISTS public.customer_schemes (
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
+    shop_id UUID NOT NULL REFERENCES public.shops(id) ON DELETE CASCADE,
+    customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
+    scheme_id UUID NOT NULL REFERENCES public.schemes(id),
     
-    INSERT INTO invoices (
-        shop_id, invoice_number, customer_id, customer_snapshot, status, 
-        discount, notes, created_by_name, created_by
-    ) VALUES (
-        p_shop_id, v_invoice_number, p_customer_id, p_customer_snapshot, p_status,
-        p_discount, p_notes, v_user_email, v_user_id
-    ) RETURNING id INTO v_invoice_id;
+    status TEXT NOT NULL CHECK (status IN ('ACTIVE', 'MATURED', 'CLOSED', 'CANCELLED')),
+    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    maturity_date DATE,
     
-    FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
-        INSERT INTO invoice_items (
-            invoice_id, description, purity, gross_weight, net_weight, rate, making
-        ) VALUES (
-            v_invoice_id,
-            v_item->>'description',
-            v_item->>'purity',
-            (v_item->>'grossWeight')::NUMERIC,
-            (v_item->>'netWeight')::NUMERIC,
-            (v_item->>'rate')::NUMERIC,
-            (v_item->>'making')::NUMERIC
-        );
-        v_subtotal := v_subtotal + 
-            ((v_item->>'netWeight')::NUMERIC * (v_item->>'rate')::NUMERIC) + 
-            ((v_item->>'netWeight')::NUMERIC * (v_item->>'making')::NUMERIC);
-    END LOOP;
+    total_installments_paid INTEGER DEFAULT 0,
+    total_amount_collected NUMERIC(15,2) DEFAULT 0,
     
-    v_subtotal := v_subtotal - COALESCE(p_discount, 0);
-    v_cgst_amount := v_subtotal * (v_cgst_rate / 100);
-    v_sgst_amount := v_subtotal * (v_sgst_rate / 100);
-    v_grand_total := v_subtotal + v_cgst_amount + v_sgst_amount;
+    closed_at TIMESTAMPTZ,
+    closed_by UUID REFERENCES auth.users(id),
     
-    UPDATE invoices SET 
-        subtotal = v_subtotal + COALESCE(p_discount, 0),
-        cgst_amount = v_cgst_amount,
-        sgst_amount = v_sgst_amount,
-        grand_total = v_grand_total
-    WHERE id = v_invoice_id;
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(customer_id, scheme_id, start_date)
+);
+
+CREATE TABLE IF NOT EXISTS public.scheme_payments (
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
+    shop_id UUID NOT NULL REFERENCES public.shops(id) ON DELETE CASCADE,
+    customer_scheme_id UUID NOT NULL REFERENCES public.customer_schemes(id) ON DELETE CASCADE,
     
-    -- Ledger Entry
-    IF p_status = 'due' AND p_customer_id IS NOT NULL THEN
-        INSERT INTO ledger_transactions (
-            shop_id, customer_id, invoice_id, transaction_type, amount, entry_type, description, created_by
-        ) VALUES (
-            p_shop_id, p_customer_id, v_invoice_id, 'INVOICE', v_grand_total, 'DEBIT', 
-            'Invoice #' || v_invoice_number, v_user_id
-        );
-        
-        UPDATE customers SET total_spent = total_spent + v_grand_total
-        WHERE id = p_customer_id;
-    END IF;
-
-    -- Loyalty Points
-    IF p_customer_id IS NOT NULL THEN
-        IF p_loyalty_points_earned > 0 THEN
-             UPDATE customers SET loyalty_points = loyalty_points + p_loyalty_points_earned
-             WHERE id = p_customer_id;
-             
-             INSERT INTO customer_loyalty_logs (customer_id, shop_id, invoice_id, points_change, reason)
-             VALUES (p_customer_id, p_shop_id, v_invoice_id, p_loyalty_points_earned, 'Earned from Invoice #' || v_invoice_number);
-        END IF;
-
-        IF p_loyalty_points_redeemed > 0 THEN
-             UPDATE customers SET loyalty_points = loyalty_points - p_loyalty_points_redeemed
-             WHERE id = p_customer_id;
-             
-             INSERT INTO customer_loyalty_logs (customer_id, shop_id, invoice_id, points_change, reason)
-             VALUES (p_customer_id, p_shop_id, v_invoice_id, -p_loyalty_points_redeemed, 'Redeemed on Invoice #' || v_invoice_number);
-        END IF;
-    END IF;
-
-    RETURN jsonb_build_object('invoice_id', v_invoice_id, 'invoice_number', v_invoice_number, 'grand_total', v_grand_total);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
-
--- Create New Shop
-CREATE OR REPLACE FUNCTION create_new_shop_with_details(
-    p_shop_name TEXT,
-    p_phone_number TEXT DEFAULT NULL,
-    p_email TEXT DEFAULT NULL,
-    p_address TEXT DEFAULT NULL,
-    p_state TEXT DEFAULT NULL,
-    p_pincode TEXT DEFAULT NULL,
-    p_gst_number TEXT DEFAULT NULL,
-    p_pan_number TEXT DEFAULT NULL,
-    p_logo_url TEXT DEFAULT NULL,
-    p_cgst_rate NUMERIC DEFAULT 1.5,
-    p_sgst_rate NUMERIC DEFAULT 1.5,
-    p_template_id TEXT DEFAULT 'classic'
-)
-RETURNS UUID AS $$
-DECLARE
-    v_shop_id UUID;
-    v_user_id UUID;
-BEGIN
-    v_user_id := auth.uid();
+    amount NUMERIC(15,2) NOT NULL CHECK (amount > 0),
+    payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    payment_mode TEXT NOT NULL CHECK (payment_mode IN ('CASH', 'UPI', 'CARD', 'BANK_TRANSFER')),
+    transaction_ref TEXT,
     
-    INSERT INTO shops (
-        shop_name, phone_number, email, address, state, pincode, 
-        gst_number, pan_number, logo_url, cgst_rate, sgst_rate, template_id, created_by
-    ) VALUES (
-        p_shop_name, p_phone_number, p_email, p_address, p_state, p_pincode,
-        p_gst_number, p_pan_number, p_logo_url, p_cgst_rate, p_sgst_rate, p_template_id, v_user_id
-    ) RETURNING id INTO v_shop_id;
-    
-    INSERT INTO user_shop_roles (user_id, shop_id, role)
-    VALUES (v_user_id, v_shop_id, 'owner');
-    
-    INSERT INTO user_preferences (user_id, last_active_shop_id, onboarding_completed)
-    VALUES (v_user_id, v_shop_id, true)
-    ON CONFLICT (user_id) DO UPDATE SET
-        last_active_shop_id = v_shop_id,
-        onboarding_completed = true;
-        
-    RETURN v_shop_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
-
--- Create Customer (with Opening Balance)
-CREATE OR REPLACE FUNCTION public.create_customer(
-    p_shop_id UUID,
-    p_name TEXT,
-    p_phone TEXT,
-    p_email TEXT,
-    p_address TEXT,
-    p_state TEXT,
-    p_pincode TEXT,
-    p_gst_number TEXT,
-    p_opening_balance NUMERIC DEFAULT 0
-)
-RETURNS JSONB AS $$
-DECLARE
-    v_customer_id UUID;
-    v_existing_id UUID;
-    v_entry_type TEXT;
-    v_amount NUMERIC;
-BEGIN
-    SELECT id INTO v_existing_id FROM public.customers 
-    WHERE shop_id = p_shop_id AND phone = p_phone AND deleted_at IS NULL;
-
-    IF v_existing_id IS NOT NULL THEN
-        RAISE EXCEPTION 'Customer with this phone number already exists (ID: %)', v_existing_id
-        USING ERRCODE = 'P0001';
-    END IF;
-
-    INSERT INTO public.customers (
-        shop_id, name, phone, email, address, state, pincode, gst_number
-    ) VALUES (
-        p_shop_id, p_name, p_phone, p_email, p_address, p_state, p_pincode, p_gst_number
-    ) RETURNING id INTO v_customer_id;
-
-    IF p_opening_balance IS NOT NULL AND p_opening_balance <> 0 THEN
-        v_amount := ABS(p_opening_balance);
-        
-        IF p_opening_balance > 0 THEN
-            v_entry_type := 'DEBIT';
-        ELSE
-            v_entry_type := 'CREDIT';
-        END IF;
-
-        INSERT INTO public.ledger_transactions (
-            shop_id, customer_id, transaction_type, amount, entry_type, description, transaction_date, created_by
-        ) VALUES (
-            p_shop_id, v_customer_id, 'ADJUSTMENT', v_amount, v_entry_type, 'Opening Balance', CURRENT_DATE, auth.uid()
-        );
-    END IF;
-
-    RETURN jsonb_build_object('id', v_customer_id);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
-
--- Create Stock Item
-CREATE OR REPLACE FUNCTION create_stock_item(
-    p_shop_id UUID,
-    p_name TEXT,
-    p_description TEXT,
-    p_purity TEXT,
-    p_base_price NUMERIC,
-    p_making_charge NUMERIC,
-    p_quantity NUMERIC,
-    p_unit TEXT,
-    p_category TEXT,
-    p_is_active BOOLEAN
-)
-RETURNS JSONB AS $$
-DECLARE
-    v_item_id UUID;
-BEGIN
-    INSERT INTO stock_items (
-        shop_id, name, description, purity, base_price, making_charge_per_gram, 
-        quantity, unit, category, is_active
-    ) VALUES (
-        p_shop_id, p_name, p_description, p_purity, p_base_price, p_making_charge,
-        p_quantity, p_unit, p_category, p_is_active
-    ) RETURNING id INTO v_item_id;
-    RETURN jsonb_build_object('id', v_item_id);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
-
--- Add Ledger Transaction
-CREATE OR REPLACE FUNCTION add_ledger_transaction(
-    p_shop_id UUID,
-    p_customer_id UUID,
-    p_transaction_type TEXT,
-    p_amount NUMERIC,
-    p_entry_type TEXT,
-    p_description TEXT,
-    p_date DATE
-)
-RETURNS JSONB AS $$
-DECLARE
-    v_id UUID;
-BEGIN
-    INSERT INTO ledger_transactions (
-        shop_id, customer_id, transaction_type, amount, entry_type, description, transaction_date, created_by
-    ) VALUES (
-        p_shop_id, p_customer_id, p_transaction_type, p_amount, p_entry_type, p_description, p_date, auth.uid()
-    ) RETURNING id INTO v_id;
-    RETURN jsonb_build_object('id', v_id);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
-
--- Dashboard Stats
-CREATE OR REPLACE FUNCTION get_dashboard_stats(
-    p_shop_id UUID,
-    p_month_start TIMESTAMPTZ,
-    p_month_end TIMESTAMPTZ,
-    p_week_start TIMESTAMPTZ,
-    p_today_start TIMESTAMPTZ,
-    p_last_month_start TIMESTAMPTZ,
-    p_last_month_end TIMESTAMPTZ
-)
-RETURNS JSONB AS $$
-DECLARE
-    v_total_paid_this_month NUMERIC;
-    v_total_paid_this_week NUMERIC;
-    v_total_paid_today NUMERIC;
-    v_total_paid_last_month NUMERIC;
-    v_revenue_mom NUMERIC;
-    v_recent_invoices JSONB;
-    v_due_invoices JSONB;
-BEGIN
-    SELECT COALESCE(SUM(grand_total), 0) INTO v_total_paid_this_month
-    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND invoice_date BETWEEN p_month_start::DATE AND p_month_end::DATE;
-
-    SELECT COALESCE(SUM(grand_total), 0) INTO v_total_paid_this_week
-    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND invoice_date >= p_week_start::DATE;
-
-    SELECT COALESCE(SUM(grand_total), 0) INTO v_total_paid_today
-    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND invoice_date >= p_today_start::DATE;
-
-    SELECT COALESCE(SUM(grand_total), 0) INTO v_total_paid_last_month
-    FROM invoices WHERE shop_id = p_shop_id AND status = 'paid' AND invoice_date BETWEEN p_last_month_start::DATE AND p_last_month_end::DATE;
-
-    IF v_total_paid_last_month = 0 THEN
-        v_revenue_mom := CASE WHEN v_total_paid_this_month > 0 THEN 100 ELSE 0 END;
-    ELSE
-        v_revenue_mom := ((v_total_paid_this_month - v_total_paid_last_month) / v_total_paid_last_month) * 100;
-    END IF;
-
-    SELECT jsonb_agg(t) INTO v_recent_invoices FROM (
-        SELECT i.id, i.invoice_number, i.grand_total, i.status, i.invoice_date, i.created_at,
-               c.name as customer_name, c.phone as customer_phone
-        FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id
-        WHERE i.shop_id = p_shop_id ORDER BY i.created_at DESC LIMIT 10
-    ) t;
-
-    SELECT jsonb_agg(t) INTO v_due_invoices FROM (
-        SELECT i.id, i.invoice_number, i.grand_total, i.status, i.invoice_date as due_date,
-               c.name as customer_name, c.phone as customer_phone
-        FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id
-        WHERE i.shop_id = p_shop_id AND i.status = 'due' ORDER BY i.invoice_date ASC
-    ) t;
-
-    RETURN jsonb_build_object(
-        'totalPaidThisMonth', v_total_paid_this_month,
-        'totalPaidThisWeek', v_total_paid_this_week,
-        'totalPaidToday', v_total_paid_today,
-        'revenueMoM', v_revenue_mom,
-        'recentInvoices', COALESCE(v_recent_invoices, '[]'::jsonb),
-        'dueInvoices', COALESCE(v_due_invoices, '[]'::jsonb)
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
-
--- Sales Insights
-CREATE OR REPLACE FUNCTION public.get_sales_insights(p_shop_id UUID)
-RETURNS JSONB AS $$
-DECLARE
-    v_today_start TIMESTAMPTZ := date_trunc('day', now());
-    v_week_start TIMESTAMPTZ := date_trunc('week', now());
-    v_month_start TIMESTAMPTZ := date_trunc('month', now());
-    v_year_start TIMESTAMPTZ := date_trunc('year', now());
-BEGIN
-    RETURN jsonb_build_object(
-        'ranges', jsonb_build_object(
-            'today', (SELECT jsonb_build_object('revenue', COALESCE(SUM(grand_total), 0), 'orders', COUNT(*)) FROM invoices WHERE shop_id = p_shop_id AND invoice_date >= v_today_start),
-            'week', (SELECT jsonb_build_object('revenue', COALESCE(SUM(grand_total), 0), 'orders', COUNT(*)) FROM invoices WHERE shop_id = p_shop_id AND invoice_date >= v_week_start),
-            'month', (SELECT jsonb_build_object('revenue', COALESCE(SUM(grand_total), 0), 'orders', COUNT(*)) FROM invoices WHERE shop_id = p_shop_id AND invoice_date >= v_month_start),
-            'year', (SELECT jsonb_build_object('revenue', COALESCE(SUM(grand_total), 0), 'orders', COUNT(*)) FROM invoices WHERE shop_id = p_shop_id AND invoice_date >= v_year_start)
-        ),
-        'chart_data', (
-            SELECT jsonb_agg(daily)
-            FROM (
-                SELECT 
-                    to_char(invoice_date, 'YYYY-MM-DD') as date,
-                    SUM(grand_total) as value
-                FROM invoices 
-                WHERE shop_id = p_shop_id 
-                AND invoice_date >= (now() - interval '30 days')
-                GROUP BY 1
-                ORDER BY 1 ASC
-            ) daily
-        ),
-        'top_products', (
-            SELECT jsonb_agg(products)
-            FROM (
-                SELECT 
-                    ii.description as name, 
-                    SUM(ii.net_weight * ii.rate + ii.net_weight * ii.making) as revenue,
-                    COUNT(*) as quantity
-                FROM invoice_items ii
-                JOIN invoices i ON i.id = ii.invoice_id
-                WHERE i.shop_id = p_shop_id
-                AND i.invoice_date >= (now() - interval '30 days')
-                GROUP BY 1
-                ORDER BY 2 DESC
-                LIMIT 5
-            ) products
-        )
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
-
--- Add Loan Payment
-CREATE OR REPLACE FUNCTION add_loan_payment(
-    p_loan_id uuid,
-    p_amount numeric,
-    p_payment_type text,
-    p_payment_method text,
-    p_notes text,
-    p_user_id uuid
-) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
-DECLARE
-    v_loan_status text;
-    v_current_paid numeric;
-    v_principal numeric;
-    v_new_total numeric;
-    v_payment_id uuid;
-BEGIN
-    SELECT status, total_amount_paid, principal_amount
-    INTO v_loan_status, v_current_paid, v_principal
-    FROM loans WHERE id = p_loan_id
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Loan not found';
-    END IF;
-
-    IF v_loan_status = 'closed' OR v_loan_status = 'rejected' THEN
-        RAISE EXCEPTION 'Cannot add payment to a closed loan';
-    END IF;
-
-    INSERT INTO loan_payments (loan_id, amount, payment_type, payment_method, notes)
-    VALUES (p_loan_id, p_amount, p_payment_type, p_payment_method, p_notes)
-    RETURNING id INTO v_payment_id;
-
-    v_new_total := v_current_paid + p_amount;
-    UPDATE loans
-    SET total_amount_paid = v_new_total,
-        updated_at = now()
-    WHERE id = p_loan_id;
-
-    RETURN json_build_object(
-        'payment_id', v_payment_id,
-        'previous_total', v_current_paid,
-        'new_total', v_new_total
-    );
-END;
-$$;
-
--- Close Loan
-CREATE OR REPLACE FUNCTION close_loan(
-    p_loan_id uuid,
-    p_settlement_amount numeric,
-    p_settlement_notes text,
-    p_user_id uuid
-) RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
-DECLARE
-    v_loan_status text;
-    v_principal numeric;
-    v_total_paid numeric;
-    v_outstanding numeric;
-    v_final_settlement numeric;
-BEGIN
-    SELECT status, principal_amount, total_amount_paid
-    INTO v_loan_status, v_principal, v_total_paid
-    FROM loans WHERE id = p_loan_id
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Loan not found';
-    END IF;
-
-    IF v_loan_status = 'closed' THEN
-        RAISE EXCEPTION 'Loan is already closed';
-    END IF;
-
-    v_final_settlement := COALESCE(p_settlement_amount, v_total_paid);
-    v_outstanding := v_principal - v_total_paid;
-
-    UPDATE loans
-    SET status = 'closed',
-        end_date = CURRENT_DATE,
-        settlement_amount = v_final_settlement,
-        settlement_notes = p_settlement_notes,
-        updated_at = now()
-    WHERE id = p_loan_id;
-
-    RETURN json_build_object(
-        'loan_id', p_loan_id,
-        'end_date', CURRENT_DATE,
-        'settlement_amount', v_final_settlement,
-        'outstanding', v_outstanding
-    );
-END;
-$$;
-
--- Search Customers (FTS)
-CREATE OR REPLACE FUNCTION public.search_customers(
-    p_shop_id uuid,
-    p_query text,
-    p_limit int default 10,
-    p_offset int default 0
-) returns table (
-    id uuid,
-    shop_id uuid,
-    name text,
-    email text,
-    phone text,
-    address text,
-    state text,
-    pincode text,
-    loyalty_points int,
-    rank real,
-    name_highlight text,
-    email_highlight text,
-    phone_highlight text
-) language sql stable as $$
-    select
-        c.id,
-        c.shop_id,
-        c.name,
-        c.email,
-        c.phone,
-        c.address,
-        c.state,
-        c.pincode,
-        c.loyalty_points,
-        ts_rank(c.search_vector, websearch_to_tsquery('simple', unaccent(coalesce(p_query, '')))) as rank,
-        ts_headline('simple', coalesce(c.name, ''),  websearch_to_tsquery('simple', unaccent(coalesce(p_query, ''))), 'StartSel=<mark>,StopSel=</mark>,MaxWords=20,MinWords=1,MaxFragments=1') as name_highlight,
-        ts_headline('simple', coalesce(c.email, ''), websearch_to_tsquery('simple', unaccent(coalesce(p_query, ''))), 'StartSel=<mark>,StopSel=</mark>,MaxWords=20,MinWords=1,MaxFragments=1') as email_highlight,
-        ts_headline('simple', coalesce(c.phone, ''), websearch_to_tsquery('simple', unaccent(coalesce(p_query, ''))), 'StartSel=<mark>,StopSel=</mark>,MaxWords=20,MinWords=1,MaxFragments=1') as phone_highlight
-    from public.customers c
-    where c.shop_id = p_shop_id
-      and (
-          coalesce(p_query, '') = ''
-          or c.search_vector @@ websearch_to_tsquery('simple', unaccent(coalesce(p_query, '')))
-      )
-    order by rank desc nulls last, c.created_at desc
-    limit greatest(p_limit, 1)
-    offset greatest(p_offset, 0);
-$$;
-
-CREATE OR REPLACE FUNCTION public.search_customers_count(
-    p_shop_id uuid,
-    p_query text
-) returns integer language sql stable as $$
-    select count(*)::int
-    from public.customers c
-    where c.shop_id = p_shop_id
-      and (
-          coalesce(p_query, '') = ''
-          or c.search_vector @@ websearch_to_tsquery('simple', unaccent(coalesce(p_query, '')))
-      );
-$$;
-
-GRANT EXECUTE ON FUNCTION public.search_customers(uuid, text, int, int) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.search_customers_count(uuid, text) TO authenticated;
-
--- ==========================================================
--- 18. VIEWS
--- ==========================================================
-
-DROP VIEW IF EXISTS public.customer_balances_view;
-CREATE OR REPLACE VIEW public.customer_balances_view WITH (security_invoker = true) AS
-SELECT 
-    c.id, 
-    c.shop_id, 
-    c.name, 
-    c.phone, 
-    c.email, 
-    c.address,
-    COALESCE(SUM(CASE WHEN lt.entry_type = 'DEBIT' THEN lt.amount ELSE 0 END), 0) as total_debit,
-    COALESCE(SUM(CASE WHEN lt.entry_type = 'CREDIT' THEN lt.amount ELSE 0 END), 0) as total_credit,
-    (COALESCE(SUM(CASE WHEN lt.entry_type = 'DEBIT' THEN lt.amount ELSE 0 END), 0) - 
-     COALESCE(SUM(CASE WHEN lt.entry_type = 'CREDIT' THEN lt.amount ELSE 0 END), 0)) as current_balance,
-    MAX(lt.created_at) as last_transaction_date
-FROM public.customers c
-LEFT JOIN public.ledger_transactions lt ON c.id = lt.customer_id
-WHERE c.deleted_at IS NULL
-GROUP BY c.id, c.shop_id, c.name, c.phone, c.email, c.address;
-
--- ==========================================================
--- 19. TRIGGERS
--- ==========================================================
-
-CREATE OR REPLACE FUNCTION update_whatsapp_config_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SET search_path = public, extensions;
-
-DROP TRIGGER IF EXISTS whatsapp_config_updated_at ON whatsapp_configs;
-CREATE TRIGGER whatsapp_config_updated_at
-    BEFORE UPDATE ON whatsapp_configs
-    FOR EACH ROW
-    EXECUTE FUNCTION update_whatsapp_config_updated_at();
-
--- Trigger function to maintain search_vector
-CREATE OR REPLACE FUNCTION public.update_customers_search_vector()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    NEW.search_vector := to_tsvector(
-        'simple',
-        unaccent(coalesce(NEW.name, '')) || ' ' || unaccent(coalesce(NEW.email, '')) || ' ' || unaccent(coalesce(NEW.phone, ''))
-    );
-    RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_customers_search_vector ON public.customers;
-CREATE TRIGGER trg_customers_search_vector
-BEFORE INSERT OR UPDATE OF name, email, phone
-ON public.customers
-FOR EACH ROW EXECUTE FUNCTION public.update_customers_search_vector();
-
--- ==========================================================
--- 20. PERFORMANCE INDEXES
--- ==========================================================
-
--- Core Tables
-CREATE INDEX IF NOT EXISTS idx_shops_created_by ON shops(created_by);
-CREATE INDEX IF NOT EXISTS idx_user_shop_roles_user_id ON user_shop_roles(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_shop_roles_shop_id ON user_shop_roles(shop_id);
-CREATE INDEX IF NOT EXISTS idx_user_shop_roles_user_shop ON user_shop_roles(user_id, shop_id);
-CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
-
--- Customers
-CREATE INDEX IF NOT EXISTS idx_customers_shop_id ON customers(shop_id);
-CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
-CREATE INDEX IF NOT EXISTS idx_customers_name_trgm ON customers USING gin (name gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS customers_search_vector_idx ON public.customers USING gin (search_vector);
-
--- Stock
-CREATE INDEX IF NOT EXISTS idx_stock_items_shop_id ON stock_items(shop_id);
-CREATE INDEX IF NOT EXISTS idx_stock_items_category ON stock_items(category);
-CREATE INDEX IF NOT EXISTS idx_stock_items_name_trgm ON stock_items USING gin (name gin_trgm_ops);
-
--- Invoices
-CREATE INDEX IF NOT EXISTS idx_invoices_shop_id ON invoices(shop_id);
-CREATE INDEX IF NOT EXISTS idx_invoices_customer_id ON invoices(customer_id);
-CREATE INDEX IF NOT EXISTS idx_invoices_invoice_date ON invoices(invoice_date);
-CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON invoices(invoice_number);
-CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
-CREATE INDEX IF NOT EXISTS idx_invoices_created_at ON invoices(created_at);
-CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON invoice_items(invoice_id);
-
--- Ledger
-CREATE INDEX IF NOT EXISTS idx_ledger_shop_id ON ledger_transactions(shop_id);
-CREATE INDEX IF NOT EXISTS idx_ledger_customer_id ON ledger_transactions(customer_id);
-CREATE INDEX IF NOT EXISTS idx_ledger_invoice_id ON ledger_transactions(invoice_id);
-CREATE INDEX IF NOT EXISTS idx_ledger_date ON ledger_transactions(transaction_date);
-CREATE INDEX IF NOT EXISTS idx_ledger_type ON ledger_transactions(transaction_type);
-
--- Staff
-CREATE INDEX IF NOT EXISTS idx_staff_profiles_shop_user ON staff_profiles(shop_id, user_id);
-CREATE INDEX IF NOT EXISTS idx_shop_invitations_email ON shop_invitations(email);
-CREATE INDEX IF NOT EXISTS idx_staff_payments_staff_id ON staff_payments(staff_id);
-CREATE INDEX IF NOT EXISTS idx_staff_attendance_staff_date ON staff_attendance(staff_id, date);
-
--- Catalogue
-CREATE INDEX IF NOT EXISTS idx_catalogue_slug ON catalogue_settings(public_slug);
-CREATE INDEX IF NOT EXISTS idx_products_category ON catalogue_products(category_id);
-CREATE INDEX IF NOT EXISTS idx_products_shop ON catalogue_products(shop_id);
-
--- WhatsApp
-CREATE INDEX IF NOT EXISTS idx_whatsapp_configs_shop ON whatsapp_configs(shop_id);
-CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_shop ON whatsapp_templates(shop_id);
-CREATE INDEX IF NOT EXISTS idx_whatsapp_templates_status ON whatsapp_templates(status);
-CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_shop ON whatsapp_messages(shop_id);
-CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_sent_at ON whatsapp_messages(sent_at DESC);
-
--- NEW INDEXES (From Linter Fixes)
-CREATE INDEX IF NOT EXISTS idx_audit_logs_shop_id ON public.audit_logs(shop_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs(user_id);
-
-CREATE INDEX IF NOT EXISTS idx_catalogue_analytics_shop_id ON public.catalogue_analytics(shop_id);
-
-CREATE INDEX IF NOT EXISTS idx_customer_loyalty_logs_customer_id ON public.customer_loyalty_logs(customer_id);
-CREATE INDEX IF NOT EXISTS idx_customer_loyalty_logs_invoice_id ON public.customer_loyalty_logs(invoice_id);
-CREATE INDEX IF NOT EXISTS idx_customer_loyalty_logs_shop_id ON public.customer_loyalty_logs(shop_id);
-
-CREATE INDEX IF NOT EXISTS idx_customers_deleted_by ON public.customers(deleted_by);
-
-CREATE INDEX IF NOT EXISTS idx_invoices_created_by ON public.invoices(created_by);
-CREATE INDEX IF NOT EXISTS idx_invoices_deleted_by ON public.invoices(deleted_by);
-
-CREATE INDEX IF NOT EXISTS idx_ledger_transactions_created_by ON public.ledger_transactions(created_by);
-
-CREATE INDEX IF NOT EXISTS idx_loan_collateral_loan_id ON public.loan_collateral(loan_id);
-
-CREATE INDEX IF NOT EXISTS idx_loan_customers_shop_id ON public.loan_customers(shop_id);
-
-CREATE INDEX IF NOT EXISTS idx_loan_payments_loan_id ON public.loan_payments(loan_id);
-
-CREATE INDEX IF NOT EXISTS idx_loans_customer_id ON public.loans(customer_id);
-CREATE INDEX IF NOT EXISTS idx_loans_shop_id ON public.loans(shop_id);
-
-CREATE INDEX IF NOT EXISTS idx_shop_invitations_invited_by ON public.shop_invitations(invited_by);
-
-CREATE INDEX IF NOT EXISTS idx_staff_attendance_shop_id ON public.staff_attendance(shop_id);
-
-CREATE INDEX IF NOT EXISTS idx_staff_payments_created_by ON public.staff_payments(created_by);
-CREATE INDEX IF NOT EXISTS idx_staff_payments_shop_id ON public.staff_payments(shop_id);
-
-CREATE INDEX IF NOT EXISTS idx_staff_profiles_user_id ON public.staff_profiles(user_id);
-
-CREATE INDEX IF NOT EXISTS idx_stock_items_deleted_by ON public.stock_items(deleted_by);
-
-CREATE INDEX IF NOT EXISTS idx_subscriptions_shop_id ON public.subscriptions(shop_id);
-
-CREATE INDEX IF NOT EXISTS idx_user_preferences_last_active_shop_id ON public.user_preferences(last_active_shop_id);
-
-CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_customer_id ON public.whatsapp_messages(customer_id);
-CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_template_id ON public.whatsapp_messages(template_id);
-
--- ==========================================================
--- 21. INITIAL DATA
--- ==========================================================
-
-INSERT INTO public.market_rates (gold_24k, gold_22k, silver, source)
-VALUES (72000, 68000, 85000, 'Initial Seed')
-ON CONFLICT DO NOTHING;
-
--- Backfill existing rows to ensure search_vector is populated
-UPDATE public.customers c
-SET search_vector = to_tsvector(
-    'simple',
-    unaccent(coalesce(c.name, '')) || ' ' || unaccent(coalesce(c.email, '')) || ' ' || unaccent(coalesce(c.phone, ''))
-)
-WHERE c.search_vector IS NULL;
-
--- Force schema reload
-NOTIFY pgrst, 'reload schema';
+    created_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMPTZ DEFAULT now()
+);

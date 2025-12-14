@@ -64,6 +64,7 @@ const invoiceItemSchema = z.object({
   makingRate: z.coerce.number().min(0).default(0), // Per gram
   making: z.number().default(0), // Legacy (calculated or fixed total)
   stoneAmount: z.coerce.number().min(0).default(0),
+  tagId: z.string().optional(),
 });
 
 const invoiceSchema = z.object({
@@ -270,9 +271,10 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         rate: 0,
         stoneAmount: item.stone_value || 0,
         stockId: item.id,
+        tagId: item.tag_id,
       });
     });
-    
+
     toast({
       title: 'Success',
       description: `Added ${items.length} item${items.length > 1 ? 's' : ''} from QR scan`
@@ -480,9 +482,9 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   {/* 4. Items Table with Scan Option */}
                   <div className="space-y-3">
                     <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-                      <Button 
+                      <Button
                         type="button"
-                        variant="outline" 
+                        variant="outline"
                         onClick={() => setIsScannerOpen(true)}
                         className="gap-2 w-full sm:w-auto"
                       >

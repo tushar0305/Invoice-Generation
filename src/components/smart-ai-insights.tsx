@@ -714,27 +714,46 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
                         </motion.div>
                     )}
 
-                    {/* Empty state */}
+                    {/* Empty state - Replaced with Quick Actions Grid */}
                     {!isLoading && !error && !aiResponse && (
                         <motion.div
                             key="empty"
                             variants={itemVariants}
-                            className={cn(
-                                "flex flex-col items-center justify-center py-12",
-                                "border-2 border-dashed border-slate-200 dark:border-border",
-                                "rounded-2xl",
-                                "bg-slate-50/50 dark:bg-muted/20"
-                            )}
+                            className="py-4"
                         >
-                            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-muted mb-4">
-                                <Bot className="w-8 h-8 text-slate-400" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                                <div className="p-4 rounded-xl bg-slate-50/80 dark:bg-muted/20 border border-slate-100 dark:border-border">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="group-hover:scale-110 transition-transform p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+                                            <TrendingUp className="w-4 h-4" />
+                                        </div>
+                                        <h4 className="font-semibold text-sm">Revenue Analysis</h4>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mb-3">Get detailed breakdown of your daily, weekly, or monthly earnings.</p>
+                                    <button
+                                        onClick={() => handleChipClick("Analyze my revenue trends for this month")}
+                                        className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-1"
+                                    >
+                                        Analyze Revenue <ChevronRight className="w-3 h-3" />
+                                    </button>
+                                </div>
+
+                                <div className="p-4 rounded-xl bg-slate-50/80 dark:bg-muted/20 border border-slate-100 dark:border-border">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg text-emerald-600 dark:text-emerald-400">
+                                            <Package className="w-4 h-4" />
+                                        </div>
+                                        <h4 className="font-semibold text-sm">Inventory Health</h4>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mb-3">Identify low stock items and best performing products.</p>
+                                    <button
+                                        onClick={() => handleChipClick("Which items are low in stock?")}
+                                        className="text-xs font-medium text-emerald-600 hover:underline flex items-center gap-1"
+                                    >
+                                        Check Inventory <ChevronRight className="w-3 h-3" />
+                                    </button>
+                                </div>
                             </div>
-                            <p className="text-slate-500 dark:text-muted-foreground font-medium mb-1">
-                                Ask me anything about your business
-                            </p>
-                            <p className="text-sm text-slate-400 dark:text-muted-foreground/70">
-                                I can analyze sales, inventory, customers, and more
-                            </p>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -742,5 +761,3 @@ export function SmartAIInsights({ className, shopId, onAskQuestion }: SmartAIIns
         </motion.div>
     );
 }
-
-export default SmartAIInsights;

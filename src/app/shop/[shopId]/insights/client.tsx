@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { m, LazyMotion, domAnimation } from 'framer-motion';
+import { useState, useMemo, useEffect } from 'react';
+import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import {
     TrendingUp,
     TrendingDown,
@@ -9,11 +9,14 @@ import {
     ShoppingBag,
     Users,
     CreditCard,
-    Eye,
-    EyeOff,
+    Calendar,
     RefreshCw,
     MoreHorizontal,
-    Package
+    Package,
+    ArrowUpRight,
+    ArrowDownRight,
+    Filter,
+    ChevronDown
 } from 'lucide-react';
 import {
     AreaChart,
@@ -23,16 +26,20 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
+    BarChart,
+    Bar,
     PieChart,
     Pie,
-    Cell
+    Cell,
+    Legend
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { Invoice } from '@/lib/definitions';
-import { subDays, startOfDay, isWithinInterval, format } from 'date-fns';
+import { subDays, startOfDay, isWithinInterval, format, parseISO } from 'date-fns';
 import { SmartAIInsights } from '@/components/smart-ai-insights';
+import { Badge } from '@/components/ui/badge';
 
 const container = {
     hidden: { opacity: 0 },
@@ -55,550 +62,474 @@ interface InsightsClientProps {
     shopId: string;
 }
 
-// Helper for Y-Axis validation (Indian System)
-const formatCompactNumber = (val: number) => {
-    if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
-    if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
-    if (val >= 1000) return `₹${(val / 1000).toFixed(0)}k`;
-    return `₹${val}`;
+// Compact Number Formatter
+const formatCompactNumber = (number: number) => {
+    return Intl.NumberFormat('en-IN', {
+        notation: "compact",
+        maximumFractionDigits: 1
+    }).format(number);
 };
 
 export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClientProps) {
     const [timeRange, setTimeRange] = useState('30d');
-    const [visibleMetrics, setVisibleMetrics] = useState<Record<string, boolean>>({
-        'Total Revenue': false,
-        'Total Sales': false,
-        'Avg. Order Value': false,
-        'Active Customers': false,
-    });
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // --- Calculations ---
-
-    const metrics = useMemo(() => {
-        if (!invoices.length) return null;
-
+    // --- Data Processing ---
+    const {
+        metrics,
+        revenueChartData,
+        categoryData,
+        topProductsList,
+        recentTxList,
+        salesTrend
+    } = useMemo(() => {
         const now = new Date();
         const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
 
-        // Current period
         const currentPeriodStart = subDays(now, days);
         const currentPeriodEnd = now;
-
-        // Previous period (same duration)
         const previousPeriodStart = subDays(currentPeriodStart, days);
         const previousPeriodEnd = currentPeriodStart;
 
-        const paidInvoices = invoices.filter(inv => inv.status === 'paid');
+        const paidInvoices = invoices.filter(inv => inv.status === 'paid'); // Only consider PAID for analytics except recent list
 
         // Helper
         const inRange = (d: Date, start: Date, end: Date) => isWithinInterval(d, { start, end });
 
-        // Current Period
-        const currentPeriodPaid = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), currentPeriodStart, currentPeriodEnd));
-        const revenueCurrent = currentPeriodPaid.reduce((sum, inv) => sum + inv.grandTotal, 0);
-        const salesCountCurrent = currentPeriodPaid.length;
-        const newCustomersCurrent = new Set(currentPeriodPaid.map(inv => inv.customerSnapshot?.name)).size;
+        // Collections
+        const currentPeriodInvoices = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), currentPeriodStart, currentPeriodEnd));
+        const previousPeriodInvoices = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), previousPeriodStart, previousPeriodEnd));
 
-        // Previous Period
-        const previousPeriodPaid = paidInvoices.filter(inv => inRange(new Date(inv.invoiceDate), previousPeriodStart, previousPeriodEnd));
-        const revenuePrevious = previousPeriodPaid.reduce((sum, inv) => sum + inv.grandTotal, 0);
-        const salesCountPrevious = previousPeriodPaid.length;
-        const newCustomersPrevious = new Set(previousPeriodPaid.map(inv => inv.customerSnapshot?.name)).size;
-
-        // Growth Calcs
-        const calcGrowth = (current: number, previous: number) => {
-            if (previous === 0) return current > 0 ? 100 : 0;
-            return ((current - previous) / previous) * 100;
+        // Metrics Calculation
+        const calcMetric = (current: any[], previous: any[], getValue: (i: any) => number) => {
+            const currVal = current.reduce((sum, i) => sum + getValue(i), 0);
+            const prevVal = previous.reduce((sum, i) => sum + getValue(i), 0);
+            const growth = prevVal === 0 ? (currVal > 0 ? 100 : 0) : ((currVal - prevVal) / prevVal) * 100;
+            return { value: currVal, growth };
         };
 
-        const revenueGrowth = calcGrowth(revenueCurrent, revenuePrevious);
-        const salesGrowth = calcGrowth(salesCountCurrent, salesCountPrevious);
-        const customersGrowth = calcGrowth(newCustomersCurrent, newCustomersPrevious);
+        const revenue = calcMetric(currentPeriodInvoices, previousPeriodInvoices, i => i.grandTotal);
+        const sales = {
+            value: currentPeriodInvoices.length,
+            growth: previousPeriodInvoices.length === 0 ? (currentPeriodInvoices.length > 0 ? 100 : 0) : ((currentPeriodInvoices.length - previousPeriodInvoices.length) / previousPeriodInvoices.length) * 100
+        };
 
-        const avgOrderValue = salesCountCurrent > 0 ? revenueCurrent / salesCountCurrent : 0;
-        const avgOrderValueLast = salesCountPrevious > 0 ? revenuePrevious / salesCountPrevious : 0;
-        const aovGrowth = calcGrowth(avgOrderValue, avgOrderValueLast);
+        const avgOrder = {
+            value: sales.value > 0 ? revenue.value / sales.value : 0,
+            growth: 0 // Simplification
+        };
+        // Fix avg order growth properly
+        const prevAvgOrder = previousPeriodInvoices.length > 0 ? previousPeriodInvoices.reduce((a, b) => a + b.grandTotal, 0) / previousPeriodInvoices.length : 0;
+        avgOrder.growth = prevAvgOrder === 0 ? (avgOrder.value > 0 ? 100 : 0) : ((avgOrder.value - prevAvgOrder) / prevAvgOrder) * 100;
 
-        return [
-            {
-                title: 'Total Revenue',
-                value: formatCurrency(revenueCurrent),
-                change: `${revenueGrowth > 0 ? '+' : ''}${revenueGrowth.toFixed(1)}%`,
-                trend: revenueGrowth >= 0 ? 'up' : 'down',
-                icon: DollarSign,
-                color: 'text-emerald-400'
-            },
-            {
-                title: 'Total Sales',
-                value: salesCountCurrent.toString(),
-                change: `${salesGrowth > 0 ? '+' : ''}${salesGrowth.toFixed(1)}%`,
-                trend: salesGrowth >= 0 ? 'up' : 'down',
-                icon: ShoppingBag,
-                color: 'text-blue-400'
-            },
-            {
-                title: 'Avg. Order Value',
-                value: formatCurrency(avgOrderValue),
-                change: `${aovGrowth > 0 ? '+' : ''}${aovGrowth.toFixed(1)}%`,
-                trend: aovGrowth >= 0 ? 'up' : 'down',
-                icon: CreditCard,
-                color: 'text-purple-400'
-            },
-            {
-                title: 'Active Customers',
-                value: newCustomersCurrent.toString(),
-                change: `${customersGrowth > 0 ? '+' : ''}${customersGrowth.toFixed(1)}%`,
-                trend: customersGrowth >= 0 ? 'up' : 'down',
-                icon: Users,
-                color: 'text-pink-400'
-            },
-        ];
-    }, [invoices, timeRange]);
+        // Unique Customers
+        const currCustomers = new Set(currentPeriodInvoices.map(i => i.customerSnapshot?.phone || i.id)).size;
+        const prevCustomers = new Set(previousPeriodInvoices.map(i => i.customerSnapshot?.phone || i.id)).size;
+        const customerGrowth = prevCustomers === 0 ? (currCustomers > 0 ? 100 : 0) : ((currCustomers - prevCustomers) / prevCustomers) * 100;
 
-    const chartData = useMemo(() => {
-        if (!invoices.length) return [];
-
-        const now = new Date();
-        const paidInvoices = invoices.filter(inv => inv.status === 'paid');
-
-        // Determine the number of days based on timeRange
-        const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-
-        const data = [];
+        // Chart Data (Daily)
+        const chartData = [];
         for (let i = days - 1; i >= 0; i--) {
             const date = subDays(now, i);
             const dayStart = startOfDay(date);
-            const dayEnd = new Date(dayStart);
-            dayEnd.setHours(23, 59, 59, 999);
+            const dayEnd = new Date(dayStart); dayEnd.setHours(23, 59, 59, 999);
 
-            // Format label based on range
-            const label = days === 7
-                ? format(date, 'EEE')  // Mon, Tue, etc
-                : days === 30
-                    ? format(date, 'MMM d')  // Nov 1, Nov 2, etc
-                    : format(date, 'MMM d');  // Nov 1, Nov 2, etc
+            const dailyInvoices = paidInvoices.filter(inv => isWithinInterval(new Date(inv.invoiceDate), { start: dayStart, end: dayEnd }));
+            const dailyRev = dailyInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
 
-            const dailyRevenue = paidInvoices
-                .filter(inv => isWithinInterval(new Date(inv.invoiceDate), { start: dayStart, end: dayEnd }))
-                .reduce((sum, inv) => sum + inv.grandTotal, 0);
-
-            data.push({ name: label, value: dailyRevenue });
+            chartData.push({
+                date: format(date, 'MMM dd'),
+                fullDate: format(date, 'yyyy-MM-dd'),
+                revenue: dailyRev,
+                orders: dailyInvoices.length
+            });
         }
-        return data;
-    }, [invoices, timeRange]);
 
-    const categoryData = useMemo(() => {
-        if (!invoiceItems.length) return [];
-
-        const categories: Record<string, number> = {};
+        // Category Data
+        const catMap: Record<string, number> = {};
         invoiceItems.forEach(item => {
-            // Simple categorization logic based on description or purity
-            let cat = 'Other';
+            // Basic category logic
             const desc = (item.description || '').toLowerCase();
             const purity = (item.purity || '').toLowerCase();
+            const type = item.metal_type || 'other';
 
-            if (desc.includes('gold') || purity.includes('22k') || purity.includes('18k') || purity.includes('916')) cat = 'Gold';
-            else if (desc.includes('silver') || purity.includes('925') || purity.includes('silver')) cat = 'Silver';
-            else if (desc.includes('diamond')) cat = 'Diamond';
-            else if (desc.includes('platinum')) cat = 'Platinum';
+            let label = 'Other';
+            if (type === 'gold' || desc.includes('gold') || purity.includes('916')) label = 'Gold';
+            else if (type === 'silver' || desc.includes('silver') || purity.includes('925')) label = 'Silver';
+            else if (desc.includes('diamond')) label = 'Diamond';
+            else if (desc.includes('platinum')) label = 'Platinum';
 
-            categories[cat] = (categories[cat] || 0) + 1;
+            // Weighted by Revenue estimate (rate * weight + making)
+            const val = (Number(item.rate) * Number(item.net_weight)) + Number(item.making);
+            catMap[label] = (catMap[label] || 0) + val;
         });
+        const catData = Object.entries(catMap)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value);
 
-        const total = Object.values(categories).reduce((a, b) => a + b, 0);
-        const colors: Record<string, string> = {
-            'Gold': '#FFD700',
-            'Silver': '#C0C0C0',
-            'Diamond': '#00F0FF',
-            'Platinum': '#E5E4E2',
-            'Other': '#888888'
+        // Top Products
+        const prodMap: Record<string, { count: number, revenue: number }> = {};
+        invoiceItems.forEach(item => {
+            const name = item.description || 'Unknown';
+            if (!prodMap[name]) prodMap[name] = { count: 0, revenue: 0 };
+            prodMap[name].count += 1;
+            prodMap[name].revenue += (Number(item.rate) * Number(item.net_weight)) + Number(item.making);
+        });
+        const topProds = Object.entries(prodMap)
+            .map(([name, stats]) => ({ name, ...stats }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+
+        // Recent Invoices (All statuses)
+        const recent = invoices.slice(0, 6).map(inv => ({
+            id: inv.invoiceNumber,
+            customer: inv.customerSnapshot?.name || 'Walk-in Customer',
+            amount: inv.grandTotal,
+            status: inv.status,
+            date: inv.invoiceDate
+        }));
+
+        return {
+            metrics: [
+                {
+                    label: 'Total Revenue',
+                    value: formatCurrency(revenue.value),
+                    growth: revenue.growth,
+                    icon: DollarSign,
+                    color: 'text-emerald-500',
+                    bg: 'bg-emerald-500/10'
+                },
+                {
+                    label: 'Total Orders',
+                    value: sales.value,
+                    growth: sales.growth,
+                    icon: ShoppingBag,
+                    color: 'text-blue-500',
+                    bg: 'bg-blue-500/10'
+                },
+                {
+                    label: 'Avg. Order Value',
+                    value: formatCurrency(avgOrder.value),
+                    growth: avgOrder.growth,
+                    icon: CreditCard,
+                    color: 'text-violet-500',
+                    bg: 'bg-violet-500/10'
+                },
+                {
+                    label: 'Active Customers',
+                    value: currCustomers,
+                    growth: customerGrowth,
+                    icon: Users,
+                    color: 'text-amber-500',
+                    bg: 'bg-amber-500/10'
+                }
+            ],
+            revenueChartData: chartData,
+            categoryData: catData,
+            topProductsList: topProds,
+            recentTxList: recent,
+            salesTrend: revenue.growth >= 0 ? 'up' : 'down'
         };
 
-        return Object.entries(categories).map(([name, value]) => ({
-            name,
-            value: Math.round((value / total) * 100),
-            color: colors[name] || '#888888'
-        })).sort((a, b) => b.value - a.value);
-    }, [invoiceItems]);
+    }, [invoices, invoiceItems, timeRange]);
 
-    const topProductsList = useMemo(() => {
-        if (!invoiceItems.length) return [];
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        window.location.reload();
+    };
 
-        const productStats: Record<string, { sales: number, revenue: number }> = {};
-
-        invoiceItems.forEach(item => {
-            const name = item.description || 'Unknown Item';
-            if (!productStats[name]) productStats[name] = { sales: 0, revenue: 0 };
-
-            productStats[name].sales += 1;
-            // Estimate revenue from rate * weight + making (approximate as we don't have item-level total in this flattened view easily without join, using rate*netWeight for now)
-            const itemTotal = (Number(item.rate) * Number(item.net_weight)) + Number(item.making);
-            productStats[name].revenue += itemTotal;
-        });
-
-        return Object.entries(productStats)
-            .map(([name, stats]) => ({
-                name,
-                sales: stats.sales,
-                revenue: formatCurrency(stats.revenue),
-                growth: '+0%' // Placeholder as we don't have historical item data easily
-            }))
-            .sort((a, b) => b.sales - a.sales)
-            .slice(0, 4);
-    }, [invoiceItems]);
-
-    const recentTxList = useMemo(() => {
-        if (!invoices.length) return [];
-        return invoices.slice(0, 5).map(inv => ({
-            id: inv.invoiceNumber,
-            customer: inv.customerSnapshot?.name || 'Unknown',
-            amount: formatCurrency(inv.grandTotal),
-            status: inv.status === 'paid' ? 'Paid' : 'Pending', // Mapping 'due' to 'Pending' for UI
-            date: format(new Date(inv.invoiceDate), 'MMM dd, HH:mm')
-        }));
-    }, [invoices]);
+    const COLORS = ['#F59E0B', '#64748B', '#0EA5E9', '#A855F7', '#EF4444']; // Start with Gold (Amber)
 
     return (
         <LazyMotion features={domAnimation}>
-            <div className="p-4 md:p-6 space-y-6 min-h-screen pb-24 md:pb-6">
-                {/* Smart AI Insights - Premium glassmorphism component */}
-                <SmartAIInsights
-                    className="mb-2"
-                    shopId={shopId}
-                    onAskQuestion={(question) => {
-                        if (process.env.NODE_ENV === 'development') {
-                            console.log('[AI Insights] User asked:', question);
-                        }
-                    }}
-                />
+            <div className="min-h-screen pb-24">
 
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <p className="text-sm md:text-base text-muted-foreground mt-1">
-                            Overview of your shop's performance and growth.
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.location.reload()}
-                            className="border-border hover:bg-muted gap-2"
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            Refresh
-                        </Button>
-                        <div className="flex items-center gap-2 bg-muted p-1 rounded-lg border border-border w-full md:w-fit overflow-x-auto">
-                            {['7d', '30d', '90d'].map((range) => (
-                                <button
-                                    key={range}
-                                    onClick={() => setTimeRange(range)}
-                                    className={cn(
-                                        "flex-1 md:flex-none px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap",
-                                        timeRange === range
-                                            ? "bg-primary/20 text-primary shadow-[0_0_10px_rgba(0,240,255,0.2)]"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                                    )}
-                                >
-                                    {range}
-                                </button>
-                            ))}
+                {/* Header (Non-sticky, No Frame) */}
+                <div className="pt-2 pb-0 md:pt-6 md:pb-2">
+                    <div className="max-w-7xl mx-auto px-2 md:px-8">
+                        <div className="flex items-center gap-3 md:gap-4">
+                            {/* Segmented Control (Cleaner, no background frame) */}
+                            <div className="flex-1 md:flex-none flex gap-2">
+                                {['7d', '30d', '90d'].map((range) => (
+                                    <button
+                                        key={range}
+                                        onClick={() => setTimeRange(range)}
+                                        className={cn(
+                                            "flex-1 md:flex-none px-3 md:px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all border",
+                                            timeRange === range
+                                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                                : "bg-transparent border-slate-200 dark:border-border text-slate-600 dark:text-muted-foreground hover:border-slate-300 dark:hover:border-slate-700"
+                                        )}
+                                    >
+                                        {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '3 Months'}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Refresh Button */}
+                            <button
+                                onClick={handleRefresh}
+                                className={cn(
+                                    "p-2 rounded-lg border border-slate-200 dark:border-border text-slate-600 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-muted transition-all"
+                                )}
+                            >
+                                <RefreshCw className={cn("h-4 w-4 md:h-5 md:w-5", isRefreshing && "animate-spin")} />
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <m.div
-                    variants={container}
-                    initial="hidden"
-                    animate="show"
-                    className="grid gap-4 md:gap-6"
-                >
-                    {/* Key Metrics Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {metrics && metrics.map((metric, i) => (
-                            <m.div key={`${timeRange}-${i}`} variants={item}>
-                                <Card className="bg-card border-border shadow-sm hover:border-primary/30 transition-all duration-300 group">
-                                    <CardContent className="p-4 md:p-6">
-                                        <div className="flex justify-between items-start">
-                                            <div className={cn("p-2 rounded-lg bg-muted group-hover:bg-muted/80 transition-colors", metric.color)}>
-                                                <metric.icon className="h-5 w-5" />
+                <div className="p-2 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-4 md:space-y-8">
+                    {/* AI Insights Section */}
+                    <SmartAIInsights shopId={shopId} className="w-full" />
+
+                    <m.div
+                        variants={container}
+                        initial="hidden"
+                        animate="show"
+                        className="space-y-6 md:space-y-8"
+                    >
+                        {/* Key Metrics */}
+                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+                            {metrics.map((metric, i) => (
+                                <m.div key={i} variants={item}>
+                                    <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-200">
+                                        <CardContent className="p-4 md:p-6">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className={cn("p-2 rounded-lg", metric.bg, metric.color)}>
+                                                    <metric.icon className="w-4 h-4 md:w-5 md:h-5" />
+                                                </div>
+                                                {metric.growth !== 0 && (
+                                                    <div className={cn(
+                                                        "flex items-center gap-0.5 text-[10px] md:text-xs font-bold px-1.5 py-0.5 rounded-full",
+                                                        metric.growth > 0 ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" : "text-red-600 bg-red-50 dark:bg-red-900/20"
+                                                    )}>
+                                                        {metric.growth > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                                                        {Math.abs(metric.growth).toFixed(0)}%
+                                                    </div>
+                                                )}
                                             </div>
-                                            {/* Only show eye toggle for Total Revenue (amount) card */}
-                                            {(metric.title === 'Total Revenue' || metric.title === 'Avg.\u00A0Order\u00A0Value' || metric.title === 'Avg. Order Value') ? (
-                                                <button
-                                                    onClick={() => setVisibleMetrics(prev => ({
-                                                        ...prev,
-                                                        [metric.title]: !prev[metric.title as keyof typeof prev]
-                                                    }))}
-                                                    className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-border hover:bg-muted transition-all"
-                                                    aria-label={visibleMetrics[metric.title as keyof typeof visibleMetrics] ? 'Hide amount' : 'Show amount'}
-                                                >
-                                                    <m.span
-                                                        initial={{ opacity: 0, y: -4 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                        transition={{ duration: 0.18 }}
-                                                    >
-                                                        {visibleMetrics[metric.title as keyof typeof visibleMetrics] ? (
-                                                            <Eye className="h-3 w-3" />
-                                                        ) : (
-                                                            <EyeOff className="h-3 w-3" />
-                                                        )}
-                                                    </m.span>
-                                                </button>
+                                            <div>
+                                                <h3 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">{metric.value}</h3>
+                                                <p className="text-xs md:text-sm text-muted-foreground font-medium mt-0.5">{metric.label}</p>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </m.div>
+                            ))}
+                        </div>
+
+                        {/* Charts Row */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Revenue Chart */}
+                            <m.div variants={item} className="lg:col-span-2">
+                                <Card className="h-full border-border/60 shadow-sm">
+                                    <CardHeader className="pb-2">
+                                        <CardTitle className="text-base md:text-lg font-semibold flex items-center gap-2">
+                                            <TrendingUp className="w-4 h-4 text-primary" />
+                                            Revenue Trend
+                                        </CardTitle>
+                                        <CardDescription className="text-xs md:text-sm">
+                                            Compare daily revenue over current period.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="pl-0 pb-2">
+                                        <div className="h-[250px] md:h-[300px] w-full">
+                                            {revenueChartData.length > 0 ? (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <AreaChart data={revenueChartData} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
+                                                        <defs>
+                                                            <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                                                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                                                        <XAxis
+                                                            dataKey="date"
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                                                            dy={10}
+                                                            minTickGap={30}
+                                                        />
+                                                        <YAxis
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                                                            tickFormatter={formatCompactNumber}
+                                                        />
+                                                        <Tooltip
+                                                            contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                                                            itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="revenue"
+                                                            stroke="hsl(var(--primary))"
+                                                            strokeWidth={2}
+                                                            fillOpacity={1}
+                                                            fill="url(#colorRev)"
+                                                        />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
                                             ) : (
-                                                <div className="w-6" />
+                                                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No revenue data</div>
                                             )}
-                                        </div>
-                                        <div className="mt-4">
-                                            <h3 className="text-xl md:text-2xl font-bold tracking-tight">
-                                                {/* If this is the revenue card, respect visibility toggle. Other cards always show value. */}
-                                                {(
-                                                    metric.title === 'Total Revenue' ||
-                                                    metric.title === 'Avg.\u00A0Order\u00A0Value' ||
-                                                    metric.title === 'Avg. Order Value'
-                                                )
-                                                    ? (visibleMetrics[metric.title as keyof typeof visibleMetrics] ? metric.value : '••••')
-                                                    : metric.value
-                                                }
-                                            </h3>
-                                            <p className="text-sm text-muted-foreground mt-1">{metric.title}</p>
-                                        </div>
-                                        <div className={cn(
-                                            "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-border mt-3 w-fit",
-                                            metric.trend === 'up' ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                                        )}>
-                                            {metric.trend === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                                            {metric.change}
                                         </div>
                                     </CardContent>
                                 </Card>
                             </m.div>
-                        ))}
-                    </div>
 
-                    {/* Main Chart Section */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                        <m.div variants={item} className="lg:col-span-2">
-                            <Card className="bg-card border-border shadow-sm h-full">
-                                <CardHeader>
-                                    <CardTitle>Revenue Trend</CardTitle>
-                                    <CardDescription>Daily revenue performance ({timeRange === '7d' ? 'Last 7 Days' : timeRange === '30d' ? 'Last 30 Days' : 'Last 90 Days'})</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-[250px] md:h-[300px] w-full">
-                                        {chartData.length > 0 ? (
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={chartData}>
-                                                    <defs>
-                                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-                                                    <XAxis
-                                                        dataKey="name"
-                                                        stroke="#888888"
-                                                        fontSize={12}
-                                                        tickLine={false}
-                                                        axisLine={false}
-                                                    />
-                                                    <YAxis
-                                                        stroke="#888888"
-                                                        fontSize={12}
-                                                        tickLine={false}
-                                                        axisLine={false}
-                                                        tickFormatter={formatCompactNumber}
-                                                        width={45}
-                                                    />
-                                                    <Tooltip
-                                                        contentStyle={{
-                                                            backgroundColor: 'rgba(0,0,0,0.8)',
-                                                            backdropFilter: 'blur(10px)',
-                                                            border: '1px solid rgba(255,255,255,0.1)',
-                                                            borderRadius: '12px',
-                                                            color: '#fff'
-                                                        }}
-                                                        itemStyle={{ color: '#fff' }}
-                                                        wrapperStyle={{ zIndex: 100 }}
-                                                    />
-                                                    <Area
-                                                        type="monotone"
-                                                        dataKey="value"
-                                                        stroke="hsl(var(--primary))"
-                                                        strokeWidth={3}
-                                                        fillOpacity={1}
-                                                        fill="url(#colorRevenue)"
-                                                    />
-                                                </AreaChart>
-                                            </ResponsiveContainer>
-                                        ) : (
-                                            <div className="h-full flex items-center justify-center text-muted-foreground">
-                                                No revenue data available
-                                            </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </m.div>
-
-                        <m.div variants={item} className="lg:col-span-1">
-                            <Card className="bg-card border-border shadow-sm h-full">
-                                <CardHeader>
-                                    <CardTitle>Sales by Category</CardTitle>
-                                    <CardDescription>Distribution across product types</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-[200px] w-full relative">
-                                        {categoryData.length > 0 ? (
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <Pie
-                                                        data={categoryData}
-                                                        cx="50%"
-                                                        cy="50%"
-                                                        innerRadius={60}
-                                                        outerRadius={80}
-                                                        paddingAngle={5}
-                                                        dataKey="value"
-                                                    >
-                                                        {categoryData.map((entry, index) => (
-                                                            <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(0,0,0,0.5)" strokeWidth={2} />
-                                                        ))}
-                                                    </Pie>
-                                                    <Tooltip
-                                                        contentStyle={{
-                                                            backgroundColor: 'rgba(0,0,0,0.8)',
-                                                            backdropFilter: 'blur(10px)',
-                                                            border: '1px solid rgba(255,255,255,0.1)',
-                                                            borderRadius: '8px'
-                                                        }}
-                                                        wrapperStyle={{ zIndex: 100 }}
-                                                    />
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        ) : (
-                                            <div className="h-full flex items-center justify-center text-muted-foreground">
-                                                No category data
-                                            </div>
-                                        )}
-                                        {categoryData.length > 0 && (
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <div className="text-center">
-                                                    <span className="text-2xl font-bold">100%</span>
-                                                    <p className="text-xs text-muted-foreground">Total</p>
+                            {/* Category Pie */}
+                            <m.div variants={item} className="lg:col-span-1">
+                                <Card className="h-full border-border/60 shadow-sm">
+                                    <CardHeader className="pb-2">
+                                        <CardTitle className="text-base md:text-lg font-semibold">Sales Mix</CardTitle>
+                                        <CardDescription className="text-xs md:text-sm">Revenue by Category</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="h-[200px] md:h-[220px] w-full relative">
+                                            {categoryData.length > 0 ? (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={categoryData}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={55}
+                                                            outerRadius={75}
+                                                            paddingAngle={4}
+                                                            dataKey="value"
+                                                        >
+                                                            {categoryData.map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip
+                                                            formatter={(value: any) => formatCurrency(value)}
+                                                            contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                                                        />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            ) : (
+                                                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No category data</div>
+                                            )}
+                                            {/* Center Text */}
+                                            {categoryData.length > 0 && (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                                    <span className="text-xl md:text-2xl font-bold">{categoryData.length}</span>
+                                                    <span className="text-[10px] md:text-xs text-muted-foreground uppercase">Types</span>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="mt-6 space-y-3">
-                                        {categoryData.map((item, i) => (
-                                            <div key={i} className="flex items-center justify-between text-sm">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                                                    <span className="text-muted-foreground">{item.name}</span>
-                                                </div>
-                                                <span className="font-medium">{item.value}%</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </m.div>
-                    </div>
-
-                    {/* Bottom Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                        {/* Top Products */}
-                        <m.div variants={item}>
-                            <Card className="bg-card border-border shadow-sm h-full">
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <div>
-                                        <CardTitle>Top Products</CardTitle>
-                                        <CardDescription>Best selling items (by count)</CardDescription>
-                                    </div>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    {topProductsList.length > 0 ? topProductsList.map((product, i) => (
-                                        <div key={i} className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted transition-colors group">
-                                            <div className="h-10 w-10 min-w-[2.5rem] rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                                {i + 1}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between mb-1">
-                                                    <span className="font-medium truncate">{product.name}</span>
-                                                    <span className="font-bold">{product.revenue}</span>
-                                                </div>
-                                                <div className="flex justify-between text-xs text-muted-foreground">
-                                                    <span>{product.sales} sales</span>
-                                                </div>
-                                                <div className="h-1.5 w-full bg-muted rounded-full mt-2 overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-primary/50 rounded-full group-hover:bg-primary transition-colors duration-500"
-                                                        style={{ width: `${100 - (i * 15)}%` }}
-                                                    ></div>
-                                                </div>
-                                            </div>
+                                            )}
                                         </div>
-                                    )) : (
-                                        <div className="text-center py-8 text-muted-foreground">No product data available</div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </m.div>
+                                        <div className="mt-4 space-y-2">
+                                            {categoryData.slice(0, 4).map((entry, index) => {
+                                                const total = categoryData.reduce((a, b) => a + b.value, 0);
+                                                const percent = ((entry.value / total) * 100).toFixed(0);
+                                                return (
+                                                    <div key={index} className="flex items-center justify-between text-xs md:text-sm">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                                            <span className="text-muted-foreground">{entry.name}</span>
+                                                        </div>
+                                                        <div className="font-medium">{percent}%</div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </m.div>
+                        </div>
 
-                        {/* Recent Transactions */}
-                        <m.div variants={item}>
-                            <Card className="bg-card border-border shadow-sm h-full">
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <div>
-                                        <CardTitle>Recent Transactions</CardTitle>
-                                        <CardDescription>Latest invoices generated</CardDescription>
-                                    </div>
-                                    <Button variant="outline" size="sm" className="h-8 text-xs border-border hover:bg-muted">
-                                        View All
-                                    </Button>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        {recentTxList.length > 0 ? recentTxList.map((tx, i) => (
-                                            <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted transition-all">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center border border-border">
-                                                        <Package className="h-5 w-5 text-muted-foreground" />
+                        {/* Tables Row */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Top Products */}
+                            <m.div variants={item}>
+                                <Card className="h-full border-border/60 shadow-sm">
+                                    <CardHeader>
+                                        <CardTitle className="text-base md:text-lg font-semibold">Top Products</CardTitle>
+                                        <CardDescription className="text-xs md:text-sm">Best sellers by volume</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        <div className="space-y-0">
+                                            {topProductsList.map((product, i) => (
+                                                <div key={i} className="flex items-center p-3 md:p-4 hover:bg-muted/40 transition-colors border-b last:border-0 border-border/50">
+                                                    <div className="flex-shrink-0 w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-xs md:text-sm">
+                                                        {i + 1}
                                                     </div>
-                                                    <div>
-                                                        <p className="font-medium">{tx.customer}</p>
-                                                        <p className="text-xs text-muted-foreground">{tx.id} • {tx.date}</p>
+                                                    <div className="ml-3 md:ml-4 flex-1 min-w-0">
+                                                        <p className="text-xs md:text-sm font-medium truncate">{product.name}</p>
+                                                        <p className="text-[10px] md:text-xs text-muted-foreground">{product.count} orders</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-xs md:text-sm font-semibold">{formatCurrency(product.revenue)}</p>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="font-bold">{tx.amount}</p>
-                                                    <span className={cn(
-                                                        "text-[10px] px-2 py-0.5 rounded-full border",
-                                                        tx.status === 'Paid' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
-                                                            tx.status === 'Pending' ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
-                                                                "bg-red-500/10 border-red-500/20 text-red-400"
-                                                    )}>
-                                                        {tx.status}
-                                                    </span>
+                                            ))}
+                                            {topProductsList.length === 0 && (
+                                                <div className="p-8 text-center text-muted-foreground text-sm">No products found</div>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </m.div>
+
+                            {/* Recent Invoices */}
+                            <m.div variants={item}>
+                                <Card className="h-full border-border/60 shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <div>
+                                            <CardTitle className="text-base md:text-lg font-semibold">Recent Invoices</CardTitle>
+                                            <CardDescription className="text-xs md:text-sm">Latest transactions recorded</CardDescription>
+                                        </div>
+                                        <Button variant="outline" size="sm" className="h-7 text-[10px] md:text-xs">View All</Button>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        <div className="space-y-0">
+                                            {recentTxList.map((tx, i) => (
+                                                <div key={i} className="flex items-center p-3 md:p-4 hover:bg-muted/40 transition-colors border-b last:border-0 border-border/50">
+                                                    <div className="flex-shrink-0 w-6 h-6 md:w-8 md:h-8 rounded-full bg-muted flex items-center justify-center">
+                                                        <span className="text-[10px] md:text-xs font-semibold text-muted-foreground">
+                                                            {tx.customer.substring(0, 1)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="ml-3 md:ml-4 flex-1 min-w-0">
+                                                        <p className="text-xs md:text-sm font-medium truncate">{tx.customer}</p>
+                                                        <p className="text-[10px] md:text-xs text-muted-foreground flex gap-1">
+                                                            <span>{tx.id}</span>
+                                                            <span>•</span>
+                                                            <span>{format(new Date(tx.date), 'MMM dd')}</span>
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-xs md:text-sm font-bold">{formatCurrency(tx.amount)}</p>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn(
+                                                                "h-4 md:h-5 px-1 md:px-1.5 text-[10px] font-normal border-0 mt-0.5 md:mt-1",
+                                                                tx.status === 'paid' ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                                                                    tx.status === 'due' ? "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" :
+                                                                        "bg-slate-100 text-slate-600"
+                                                            )}
+                                                        >
+                                                            {tx.status}
+                                                        </Badge>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )) : (
-                                            <div className="text-center py-8 text-muted-foreground">No recent transactions</div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </m.div>
-                    </div>
-                </m.div>
+                                            ))}
+                                            {recentTxList.length === 0 && (
+                                                <div className="p-8 text-center text-muted-foreground text-sm">No transactions found</div>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </m.div>
+                        </div>
+                    </m.div>
+                </div>
             </div>
-        </LazyMotion>
+        </LazyMotion >
     );
 }

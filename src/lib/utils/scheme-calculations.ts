@@ -3,28 +3,21 @@ import { Scheme, SchemeEnrollment, SchemeTransaction } from '@/lib/scheme-types'
 /**
  * Calculates the maturity benefit based on scheme rules and total paid.
  */
+/**
+ * Calculates the maturity benefit based on scheme rules.
+ */
 export function calculateMaturityBenefit(
     scheme: Scheme,
     totalPaid: number,
-    installmentsPaid: number
 ): number {
-    const { rules } = scheme;
-
-    if (rules.benefit_type === 'LAST_FREE') {
-        // Assuming equal monthly installments for fixed amount
-        // If variable, this logic might need adjustment (e.g. average of last X months)
-        // For fixed: Benefit is 1 installment amount. 
-        // But if totalPaid is < expected, we need to be careful. 
-        // Simply: return 1 installment value if condition met.
-        return scheme.scheme_amount || (totalPaid / installmentsPaid);
+    if (scheme.scheme_type === 'FIXED_DURATION') {
+        // Benefit = Monthly Installment * Bonus Months
+        return (scheme.installment_amount || 0) * (scheme.bonus_months || 0);
     }
 
-    if (rules.benefit_type === 'BONUS_PERCENT') {
-        return (totalPaid * rules.benefit_value) / 100;
-    }
-
-    if (rules.benefit_type === 'FIXED_BONUS') {
-        return rules.benefit_value;
+    if (scheme.scheme_type === 'FLEXIBLE') {
+        // Benefit = Total Paid * Interest Rate / 100
+        return (totalPaid * (scheme.interest_rate || 0)) / 100;
     }
 
     return 0;
@@ -40,13 +33,29 @@ export function calculateGoldWeight(amount: number, ratePerGram: number): number
 }
 
 /**
- * Calculates the potential maturity value (Principal + Benefit).
+ * Calculates the projected maturity value.
+ * For fixed schemes, returns full projected value.
+ * For flexible schemes, returns current value + interest.
  */
-export function calculateMaturityValue(scheme: Scheme, totalPaid: number): number {
-    // This is an estimation for display
-    const installments = Math.floor(totalPaid / (scheme.scheme_amount || 1)); // Rough estimate
-    const benefit = calculateMaturityBenefit(scheme, totalPaid, installments || 1);
-    return totalPaid + benefit;
+export function calculateMaturityValue(scheme: Scheme, currentTotalPaid: number): number {
+    if (scheme.scheme_type === 'FIXED_DURATION') {
+        // Projected Principal = Monthly * Duration
+        const principal = (scheme.installment_amount || 0) * scheme.duration_months;
+        const benefit = calculateMaturityBenefit(scheme, projectedPrincipal(scheme, currentTotalPaid));
+        // Wait, benefit for fixed is fixed.
+        return principal + ((scheme.installment_amount || 0) * (scheme.bonus_months || 0));
+    }
+
+    // Flexible
+    const benefit = calculateMaturityBenefit(scheme, currentTotalPaid);
+    return currentTotalPaid + benefit;
+}
+
+function projectedPrincipal(scheme: Scheme, current: number): number {
+    if (scheme.scheme_type === 'FIXED_DURATION') {
+        return (scheme.installment_amount || 0) * scheme.duration_months;
+    }
+    return current;
 }
 
 /**

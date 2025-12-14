@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Play, Sparkles, Bot, Mic, ScanLine, Gift } from 'lucide-react';
 import { useCallback } from 'react';
+import { HeroDashboardPreview } from './hero-dashboard-preview';
 
 const floatingCards = [
     {
@@ -23,7 +24,7 @@ const floatingCards = [
         text: '"Add 22k Ring..."',
         bgColor: 'bg-purple-50',
         iconColor: 'text-purple-600',
-        position: 'bottom-1/3 right-4 md:right-10 lg:right-20',
+        position: 'top-1/3 right-4 md:right-10 lg:right-20',
         animation: { y: [0, 20, 0], rotate: [0, -5, 0] },
         duration: 7,
         delay: 1,
@@ -45,7 +46,7 @@ const floatingCards = [
         text: '+500 pts earned 🎁',
         bgColor: 'bg-rose-50',
         iconColor: 'text-rose-600',
-        position: 'bottom-[20%] right-4 md:right-8 lg:right-16',
+        position: 'top-[20%] right-10 md:right-16 lg:right-32',
         animation: { y: [0, 18, 0], rotate: [0, -4, 0], x: [0, -8, 0] },
         duration: 9,
         delay: 3,
@@ -77,11 +78,15 @@ export function HeroSection() {
         >
             {/* Background Elements - using CSS for better performance */}
             <div
-                className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-gold-100/40 via-white to-white"
+                className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gold-100/50 via-white to-white blur-3xl opacity-60"
                 aria-hidden="true"
             />
             <div
-                className="absolute top-0 left-0 w-full h-full bg-[url('/grid-pattern.svg')] opacity-[0.03]"
+                className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-gold-200/20 to-purple-200/20 blur-[100px] rounded-full mix-blend-multiply"
+                aria-hidden="true"
+            />
+            <div
+                className="absolute top-0 left-0 w-full h-full bg-[url('/grid-pattern.svg')] opacity-[0.02]"
                 aria-hidden="true"
             />
 
@@ -92,7 +97,7 @@ export function HeroSection() {
                         key={index}
                         animate={shouldReduceMotion ? {} : card.animation}
                         transition={shouldReduceMotion ? {} : { duration: card.duration, repeat: Infinity, ease: "easeInOut", delay: card.delay }}
-                        className={`absolute ${card.position} p-3 md:p-4 bg-white rounded-2xl shadow-xl border border-slate-200`}
+                        className={`absolute ${card.position} p-3 md:p-4 bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/50 ring-1 ring-black/5`}
                     >
                         <div className="flex items-center gap-3">
                             <div className={`p-2 ${card.bgColor} rounded-lg ${card.iconColor}`}>
@@ -178,6 +183,11 @@ export function HeroSection() {
                             See AI in Action
                         </Button>
                     </motion.div>
+                </div>
+
+                {/* Dashboard Preview */}
+                <div className="mt-16 md:mt-24 relative z-10">
+                    <HeroDashboardPreview />
                 </div>
             </div>
 

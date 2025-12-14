@@ -59,7 +59,7 @@ export function CustomerDetailsClient() {
                 // Fetch active enrollments for this customer
                 const { data: enrollData } = await supabase
                     .from('scheme_enrollments')
-                    .select('*, scheme:schemes(name, type, rules)')
+                    .select('*, scheme:schemes(name, scheme_type, duration_months, interest_rate, bonus_months, installment_amount)')
                     .eq('customer_id', custData.id)
                     .neq('status', 'CLOSED');
 

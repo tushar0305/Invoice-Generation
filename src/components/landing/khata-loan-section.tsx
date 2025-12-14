@@ -3,11 +3,9 @@
 import { motion } from 'framer-motion';
 import { BookOpen, Scale, ArrowRight, History, Calculator, Bell, FileText, TrendingDown, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { FinancialControlPreview } from '@/components/landing/financial-control-preview';
 
 export function KhataLoanSection() {
-    const [activeTab, setActiveTab] = useState<'khata' | 'loan'>('khata');
 
     return (
         <section className="py-32 relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-slate-100">
@@ -45,146 +43,7 @@ export function KhataLoanSection() {
                         viewport={{ once: true }}
                         className="relative"
                     >
-                        {/* Glow Effect */}
-                        <div className="absolute -inset-4 bg-gradient-to-r from-gold-400/20 to-blue-400/20 rounded-[2rem] blur-2xl opacity-50" />
-
-                        <div className="relative bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden backdrop-blur-sm">
-                            {/* Tabs */}
-                            <div className="flex border-b border-slate-100">
-                                <button
-                                    onClick={() => setActiveTab('khata')}
-                                    className={cn(
-                                        "flex-1 p-5 font-semibold text-sm transition-all flex items-center justify-center gap-2",
-                                        activeTab === 'khata'
-                                            ? "bg-gradient-to-r from-gold-50 to-amber-50 text-gold-700 border-b-2 border-gold-500"
-                                            : "text-slate-500 hover:bg-slate-50"
-                                    )}
-                                >
-                                    <BookOpen className="w-4 h-4" /> Udhaar Khata
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('loan')}
-                                    className={cn(
-                                        "flex-1 p-5 font-semibold text-sm transition-all flex items-center justify-center gap-2",
-                                        activeTab === 'loan'
-                                            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-b-2 border-blue-500"
-                                            : "text-slate-500 hover:bg-slate-50"
-                                    )}
-                                >
-                                    <Scale className="w-4 h-4" /> Gold Loans
-                                </button>
-                            </div>
-
-                            {/* Content */}
-                            <div className="p-6 md:p-8 min-h-[420px] bg-gradient-to-br from-slate-50/50 to-white">
-                                {activeTab === 'khata' ? (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        key="khata"
-                                        className="space-y-4"
-                                    >
-                                        {/* Stats Row */}
-                                        <div className="grid grid-cols-2 gap-4 mb-6">
-                                            <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
-                                                <TrendingDown className="w-5 h-5 text-red-500 mb-2" />
-                                                <p className="text-2xl font-bold text-red-600">₹1,25,000</p>
-                                                <p className="text-xs text-red-500">Total Receivable</p>
-                                            </div>
-                                            <div className="p-4 bg-green-50 rounded-2xl border border-green-100">
-                                                <Bell className="w-5 h-5 text-green-500 mb-2" />
-                                                <p className="text-2xl font-bold text-green-600">3</p>
-                                                <p className="text-xs text-green-500">Reminders Sent Today</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Customer Cards */}
-                                        <div className="space-y-3">
-                                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-center hover:shadow-md transition-shadow">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-400 to-rose-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">RK</div>
-                                                    <div>
-                                                        <p className="font-bold text-slate-900">Rahul Kumar</p>
-                                                        <p className="text-xs text-slate-500">2 days overdue</p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="font-bold text-red-600 text-lg">₹45,000</p>
-                                                    <button className="text-xs text-gold-600 font-semibold hover:underline">Send Reminder</button>
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-center hover:shadow-md transition-shadow">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">AS</div>
-                                                    <div>
-                                                        <p className="font-bold text-slate-900">Anita Singh</p>
-                                                        <p className="text-xs text-green-600">Paid just now</p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="font-bold text-green-600 text-lg">+₹12,000</p>
-                                                    <p className="text-xs text-slate-400">Settled</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                ) : (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        key="loan"
-                                        className="space-y-5"
-                                    >
-                                        {/* Loan Card */}
-                                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                            <div className="flex justify-between items-start mb-5">
-                                                <div>
-                                                    <p className="text-xs text-slate-500 font-mono">Loan #GL-2024-001</p>
-                                                    <h4 className="font-bold text-xl text-slate-900 mt-1">Gold Bangle Set (22k)</h4>
-                                                </div>
-                                                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Active</span>
-                                            </div>
-
-                                            <div className="grid grid-cols-3 gap-3 mb-5">
-                                                <div className="p-3 bg-slate-50 rounded-xl text-center">
-                                                    <p className="text-xs text-slate-500">Principal</p>
-                                                    <p className="font-bold text-slate-900">₹50,000</p>
-                                                </div>
-                                                <div className="p-3 bg-slate-50 rounded-xl text-center">
-                                                    <p className="text-xs text-slate-500">Interest</p>
-                                                    <p className="font-bold text-slate-900">1.5%</p>
-                                                </div>
-                                                <div className="p-3 bg-slate-50 rounded-xl text-center">
-                                                    <p className="text-xs text-slate-500">Due</p>
-                                                    <p className="font-bold text-slate-900">₹47,000</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                                                <div className="bg-gradient-to-r from-blue-500 to-indigo-500 w-[60%] h-full rounded-full" />
-                                            </div>
-                                            <div className="flex justify-between mt-2 text-xs text-slate-500">
-                                                <span>60% Collected</span>
-                                                <span>Due: 15 Dec 2024</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Info Cards */}
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                                                <Calculator className="w-5 h-5 text-blue-600" />
-                                                <p className="text-xs text-blue-800 font-medium">Auto Interest Calc</p>
-                                            </div>
-                                            <div className="flex items-center gap-3 p-4 bg-gold-50 rounded-xl border border-gold-100">
-                                                <FileText className="w-5 h-5 text-gold-600" />
-                                                <p className="text-xs text-gold-800 font-medium">Print Agreement</p>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </div>
-                        </div>
+                        <FinancialControlPreview />
                     </motion.div>
 
                     {/* Features Text */}

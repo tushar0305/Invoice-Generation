@@ -41,6 +41,7 @@ import {
     BookOpen,
     Crown,
     ChevronDown,
+    ChevronRight,
     CalendarDays,
     TrendingUp,
     FilePlus2,
@@ -357,6 +358,7 @@ function ShopLayoutInner({
                                 userEmail={userEmail}
                                 logoUrl={shopData.activeShop?.logoUrl}
                             />
+
                         </div>
                     </div>
                 )}
@@ -373,8 +375,7 @@ function ShopLayoutInner({
 
                                 {/* Centered Page Title with Breadcrumb */}
                                 <div className="flex-1 flex flex-col items-center mr-9">
-                                    <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[140px]">{shopData.activeShop?.shopName || 'Shop'}</span>
-                                    <h1 className="font-bold text-base tracking-tight text-gray-900 dark:text-white leading-none font-display">
+                                    <span className="font-bold text-base tracking-tight text-gray-900 dark:text-white leading-none font-display">
                                         {pathname === `/shop/${shopId}/dashboard` && 'Dashboard'}
                                         {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
                                         {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
@@ -385,7 +386,8 @@ function ShopLayoutInner({
                                         {pathname === `/shop/${shopId}/inventory/new` && 'Add Item'}
                                         {pathname.includes(`/shop/${shopId}/inventory/`) && !pathname.includes('/new') && 'Item Details'}
                                         {pathname === `/shop/${shopId}/schemes` && 'Schemes'}
-                                        {pathname.includes(`/shop/${shopId}/schemes/`) && 'Scheme Details'}
+                                        {pathname.includes(`/shop/${shopId}/schemes/`) && !pathname.includes('/create') && 'Scheme Details'}
+                                        {pathname.endsWith('/schemes/create') && 'Create Scheme'}
                                         {pathname === `/shop/${shopId}/staff` && 'Staff Management'}
                                         {pathname === `/shop/${shopId}/loans` && 'Loans & Girvi'}
                                         {pathname === `/shop/${shopId}/loans/new` && 'New Loan'}
@@ -399,7 +401,7 @@ function ShopLayoutInner({
                                         {pathname === `/shop/${shopId}/insights` && 'Business Insights'}
                                         {pathname === `/shop/${shopId}/templates` && 'Bill Templates'}
                                         {pathname === `/shop/${shopId}/settings` && 'Settings'}
-                                    </h1>
+                                    </span>
                                 </div>
                             </div>
 
@@ -441,7 +443,7 @@ function ShopLayoutInner({
             </SidebarInset>
 
             {/* Mobile Navigation */}
-            {isMobile && !pathname.endsWith('/new') && (
+            {isMobile && !pathname.endsWith('/new') && !pathname.endsWith('/create') && (
                 <>
                     <MobileBottomNav shopId={shopId} />
                 </>

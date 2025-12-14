@@ -14,6 +14,8 @@ export type InvoiceItem = {
   makingRate: number;  // per gram (renamed from 'making' to be specific, though we'll keep 'making' as legacy alias if needed)
   making: number;      // Legacy: This will now strictly represent (makingRate * netWeight) or fixed amount if older item
   amount?: number;     // Calculated field
+  tagId?: string;
+  stockId?: string;
 };
 
 export type Invoice = {

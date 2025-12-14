@@ -18,6 +18,7 @@ import {
     TableCell,
 } from '@/components/ui/table';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
+import { deleteInvoiceAction, updateInvoiceStatusAction } from '@/app/actions/invoice-actions';
 import { haptics, ImpactStyle, NotificationType } from '@/lib/haptics';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -59,6 +60,7 @@ import { InvoiceMobileCard } from '@/components/dashboard/invoice-mobile-card';
 import { useDebounce } from '@/hooks/use-debounce';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ExportDialog } from '@/components/shared/export-dialog';
 
 type InvoicesClientProps = {
     initialInvoices: Invoice[];
@@ -124,8 +126,9 @@ export function InvoicesClient({
 
         startDeleteTransition(async () => {
             try {
-                const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete);
-                if (error) throw error;
+                // Use Server Action
+                const result = await deleteInvoiceAction(invoiceToDelete, shopId);
+                if (!result.success) throw new Error(result.error);
 
                 // Optimistic UI update
                 addOptimisticInvoice({ type: 'DELETE', payload: { id: invoiceToDelete } });
@@ -137,7 +140,7 @@ export function InvoicesClient({
                     title: 'Invoice Deleted',
                     description: 'The invoice and its items have been successfully deleted.',
                 });
-            } catch (error) {
+            } catch (error: any) {
                 console.error(error);
                 toast({
                     variant: 'destructive',
@@ -354,9 +357,13 @@ export function InvoicesClient({
         startDeleteTransition(async () => {
             try {
                 const idsToDelete = Array.from(selectedInvoices);
-                const { error } = await supabase.from('invoices').delete().in('id', idsToDelete);
-                if (error) throw error;
 
+                // Use server action for each invoice to ensure inventory update logic runs
+                // ideally we should have a batchDeleteInvoiceAction
+                const results = await Promise.all(idsToDelete.map(id => deleteInvoiceAction(id, shopId)));
+
+                const errors = results.filter((r: { success: boolean; error?: string }) => !r.success);
+                if (errors.length > 0) throw new Error(errors[0].error || 'Failed to delete some invoices');
 
                 // Optimistic batch delete (approximation)
                 idsToDelete.forEach(id => addOptimisticInvoice({ type: 'DELETE', payload: { id } }));
@@ -367,12 +374,12 @@ export function InvoicesClient({
                     title: 'Batch Delete Successful',
                     description: `Successfully deleted ${idsToDelete.length} invoices.`,
                 });
-            } catch (error) {
+            } catch (error: any) {
                 console.error(error);
                 toast({
                     variant: 'destructive',
                     title: 'Error',
-                    description: 'Failed to delete selected invoices.',
+                    description: error.message || 'Failed to delete selected invoices.',
                 });
             } finally {
                 setBatchDeleteDialogOpen(false);
@@ -408,36 +415,7 @@ export function InvoicesClient({
         return 'All time';
     };
 
-    const exportInvoices = async (scope: 'filtered' | 'all') => {
-        if (!user) return;
-        setIsExporting(true);
-        try {
-            const dataToExport = scope === 'filtered' ? filteredInvoices : optimisticInvoices;
 
-            const dataRows = dataToExport.map(r => ({
-                Invoice: r.invoiceNumber,
-                Date: r.invoiceDate,
-                Customer: r.customerSnapshot?.name || 'Unknown',
-                Status: r.status,
-                Discount: r.discount || 0,
-                SGST: r.sgstAmount || 0,
-                CGST: r.cgstAmount || 0,
-                GrandTotal: r.grandTotal,
-            }));
-
-            const XLSX = await import('xlsx');
-            const ws = XLSX.utils.json_to_sheet(dataRows);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Invoices');
-            const filename = scope === 'filtered' ? 'invoices_filtered.xlsx' : 'invoices_all.xlsx';
-            XLSX.writeFile(wb, filename);
-        } catch (e) {
-            console.error(e);
-            toast({ variant: 'destructive', title: 'Export failed', description: 'Unable to generate Excel right now.' });
-        } finally {
-            setIsExporting(false);
-        }
-    };
 
     const handleDownloadPdf = async (invoiceId: string) => {
         try {
@@ -487,6 +465,8 @@ export function InvoicesClient({
                 rate: Number(r.rate) || 0,
                 makingRate: Number(r.making_rate) || 0,
                 making: Number(r.making) || 0,
+                tagId: r.tag_id,
+                hsnCode: r.hsn_code,
             }));
 
             const { data: shopDetails } = await supabase
@@ -584,6 +564,8 @@ export function InvoicesClient({
                 rate: Number(r.rate) || 0,
                 makingRate: Number(r.making_rate) || 0,
                 making: Number(r.making) || 0,
+                tagId: r.tag_id,
+                hsnCode: r.hsn_code,
             }));
 
             const { data: shopDetails } = await supabase
@@ -626,6 +608,51 @@ export function InvoicesClient({
         }
     };
 
+    const fetchExportData = async ({ dateRange, status }: { dateRange?: DateRange; status?: string }) => {
+        let query = supabase
+            .from('invoices')
+            .select('*')
+            .eq('shop_id', shopId)
+            .order('created_at', { ascending: false });
+
+        if (status && status !== 'all') {
+            query = query.eq('status', status);
+        }
+
+        if (dateRange?.from) {
+            query = query.gte('invoice_date', format(dateRange.from, 'yyyy-MM-dd'));
+            if (dateRange.to) {
+                query = query.lte('invoice_date', format(dateRange.to, 'yyyy-MM-dd'));
+            } else {
+                query = query.lte('invoice_date', format(dateRange.from, 'yyyy-MM-dd'));
+            }
+        }
+
+        const { data, error } = await query;
+        if (error) {
+            console.error(error);
+            return [];
+        }
+
+        return (data || []).map((r: any) => ({
+            'Invoice #': r.invoice_number,
+            'Date': r.invoice_date,
+            'Customer': r.customer_snapshot?.name || 'Unknown',
+            'Phone': r.customer_snapshot?.phone || '-',
+            'Status': r.status,
+            'Subtotal': r.subtotal || 0,
+            'Discount': r.discount || 0,
+            'SGST': r.sgst_amount || 0,
+            'CGST': r.cgst_amount || 0,
+            'Grand Total': r.grand_total || 0
+        }));
+    };
+
+    const exportStatusOptions = [
+        { label: 'Paid', value: 'paid' },
+        { label: 'Due', value: 'due' },
+    ];
+
     return (
         <MotionWrapper className="space-y-4 pb-24 pt-2 px-4 md:px-0">
             {/* Sticky Header Section for Mobile */}
@@ -657,30 +684,34 @@ export function InvoicesClient({
 
             {/* Search and Actions */}
             <div className="flex flex-col gap-3">
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
+                <div className="flex flex-col md:flex-row gap-3">
+                    {/* Search - Full Width on Mobile */}
+                    <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/50" />
                         <Input
                             placeholder="Search invoices..."
-                            className="pl-9 h-10 bg-white dark:bg-white/5 border-gray-400 dark:border-white/30 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm"
+                            className="pl-9 h-10 bg-white dark:bg-white/5 border-gray-400 dark:border-white/30 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm w-full"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Link href={`/shop/${shopId}/invoices/new`}>
-                        <Button
-                            className="h-10 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium shrink-0"
-                        >
-                            <FilePlus2 className="h-4 w-4" />
-                            <span className="hidden sm:inline">New Invoice</span>
-                        </Button>
-                    </Link>
-                    <div className="flex items-center gap-2">
+
+                    {/* Actions - Row on Mobile */}
+                    <div className="flex items-center gap-2 self-end md:self-auto w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                        <Link href={`/shop/${shopId}/invoices/new`}>
+                            <Button
+                                className="h-10 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium shrink-0"
+                            >
+                                <FilePlus2 className="h-4 w-4" />
+                                <span className="hidden sm:inline">New Invoice</span>
+                            </Button>
+                        </Link>
+
                         <Button
                             variant="outline"
                             size="icon"
                             onClick={handleRefresh}
-                            className="shrink-0 transition-all duration-300 hover:shadow-glow-sm interactive-scale bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10"
+                            className="shrink-0 h-10 w-10 transition-all duration-300 hover:shadow-glow-sm interactive-scale bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10"
                             title={lastRefreshed ? `Last updated: ${getRelativeTime(lastRefreshed)}` : 'Refresh'}
                         >
                             <RefreshCw className={cn(
@@ -688,68 +719,50 @@ export function InvoicesClient({
                                 isRefreshing && "animate-spin"
                             )} />
                         </Button>
-                        {lastRefreshed && (
-                            <span className="text-xs text-muted-foreground hidden sm:inline animate-in fade-in">
-                                Updated {getRelativeTime(lastRefreshed)}
-                            </span>
-                        )}
-                    </div>
-                </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10">
-                                <CalendarIcon className="h-3.5 w-3.5" />
-                                <span className="text-xs">{formatRangeLabel()}</span>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-3 bg-white/95 dark:bg-card/95 backdrop-blur-xl border-gray-200 dark:border-white/10" align="start">
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <div>
-                                    <div className="mb-2 text-xs font-medium text-muted-foreground">Quick ranges</div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => applyPreset('today')}>Today</Button>
-                                        <Button size="sm" variant="outline" onClick={() => applyPreset('week')}>This Week</Button>
-                                        <Button size="sm" variant="outline" onClick={() => applyPreset('month')}>This Month</Button>
-                                        <Button size="sm" variant="outline" onClick={() => applyPreset('year')}>This Year</Button>
-                                        <Button size="sm" variant="ghost" onClick={() => applyPreset('all')}>All Time</Button>
+                        {/* View Date Filter - Keeping this for list view filtering */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-10 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10">
+                                    <CalendarIcon className="h-3.5 w-3.5" />
+                                    <span className="text-xs hidden sm:inline">{formatRangeLabel()}</span>
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-3 bg-white/95 dark:bg-card/95 backdrop-blur-xl border-gray-200 dark:border-white/10" align="start">
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <div>
+                                        <div className="mb-2 text-xs font-medium text-muted-foreground">Quick ranges</div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
+                                            <Button size="sm" variant="outline" onClick={() => applyPreset('today')}>Today</Button>
+                                            <Button size="sm" variant="outline" onClick={() => applyPreset('week')}>This Week</Button>
+                                            <Button size="sm" variant="outline" onClick={() => applyPreset('month')}>This Month</Button>
+                                            <Button size="sm" variant="outline" onClick={() => applyPreset('year')}>This Year</Button>
+                                            <Button size="sm" variant="ghost" onClick={() => applyPreset('all')}>All Time</Button>
+                                        </div>
                                     </div>
+                                    <Calendar
+                                        mode="range"
+                                        selected={dateRange}
+                                        onSelect={setDateRange}
+                                        numberOfMonths={1}
+                                        defaultMonth={dateRange?.from}
+                                    />
                                 </div>
-                                <Calendar
-                                    mode="range"
-                                    selected={dateRange}
-                                    onSelect={setDateRange}
-                                    numberOfMonths={1}
-                                    defaultMonth={dateRange?.from}
-                                />
-                            </div>
-                        </PopoverContent>
-                    </Popover>
+                            </PopoverContent>
+                        </Popover>
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10" disabled={isExporting}>
-                                {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                                <span className="text-xs">Export</span>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white/95 dark:bg-card/95 backdrop-blur-xl border-gray-200 dark:border-white/10">
-                            <DropdownMenuItem onClick={() => exportInvoices('filtered')}>
-                                Export filtered as Excel
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => exportInvoices('all')}>
-                                Export all as Excel
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <Button asChild size="sm" className="h-9 gap-2 shrink-0 bg-primary hover:bg-primary/90 shadow-glow-sm">
-                        <Link href={`/shop/${shopId}/invoices/new`}>
-                            <FilePlus2 className="h-3.5 w-3.5" />
-                            <span className="text-xs">New</span>
-                        </Link>
-                    </Button>
+                        <ExportDialog
+                            onExport={fetchExportData}
+                            filename={`invoices-${new Date().toISOString().split('T')[0]}`}
+                            statusOptions={exportStatusOptions}
+                            trigger={
+                                <Button variant="outline" size="sm" className="h-10 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10">
+                                    <Download className="h-3.5 w-3.5" />
+                                    <span className="text-xs hidden sm:inline">Export</span>
+                                </Button>
+                            }
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -1003,17 +1016,17 @@ export function InvoicesClient({
             {pagination && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 pb-12 sm:pb-6 border-t border-border mt-4">
                     <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-                        Showing <span className="font-medium text-foreground">{(pagination.currentPage - 1) * pagination.limit + 1}</span> - <span className="font-medium text-foreground">{Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)}</span> of <span className="font-medium text-foreground">{pagination.totalCount}</span>
+                        Showing <span className="font-medium text-foreground">{(pagination?.currentPage - 1) * pagination?.limit + 1}</span> - <span className="font-medium text-foreground">{Math.min(pagination?.currentPage * pagination?.limit, pagination?.totalCount)}</span> of <span className="font-medium text-foreground">{pagination?.totalCount}</span>
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
                         <Button
                             variant="outline"
                             size="sm"
                             className="flex-1 sm:flex-none"
-                            disabled={pagination.currentPage <= 1}
+                            disabled={pagination?.currentPage <= 1}
                             onClick={() => {
                                 const params = new URLSearchParams(window.location.search);
-                                params.set('page', String(pagination.currentPage - 1));
+                                params.set('page', String((pagination?.currentPage || 1) - 1));
                                 router.push(`?${params.toString()}`);
                             }}
                         >
@@ -1023,10 +1036,10 @@ export function InvoicesClient({
                             variant="outline"
                             size="sm"
                             className="flex-1 sm:flex-none"
-                            disabled={pagination.currentPage >= pagination.totalPages}
+                            disabled={pagination?.currentPage >= pagination?.totalPages}
                             onClick={() => {
                                 const params = new URLSearchParams(window.location.search);
-                                params.set('page', String(pagination.currentPage + 1));
+                                params.set('page', String((pagination?.currentPage || 1) + 1));
                                 router.push(`?${params.toString()}`);
                             }}
                         >

@@ -157,32 +157,32 @@
 
   .dark {
     /* ==================== DEEP PREMIUM DARK MODE (Gold/Black Theme) ==================== */
-    /* Deep Warm Black Base */
-    --background: 20 14% 4%;
-    /* #0c0a09 - Stone 950ish */
-    --foreground: 60 9% 98%;
-    /* Soft White */
+    /* Deep Neutral Black Base */
+    --background: 240 10% 4%;
+    /* #0a0a0b - Slate 950ish */
+    --foreground: 0 0% 98%;
+    /* White */
 
-    /* Glassy Cards with Warmth */
-    --card: 24 10% 7%;
-    /* Deep Stone */
-    --card-foreground: 60 9% 98%;
+    /* Glassy Cards with Neutrality */
+    --card: 240 10% 6%;
+    /* Deep Slate */
+    --card-foreground: 0 0% 98%;
 
-    --popover: 24 10% 7%;
-    --popover-foreground: 60 9% 98%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
 
     /* Gold Accents */
     --primary: 42 75% 55%;
     /* Gold */
     --primary-foreground: 20 14% 4%;
 
-    /* Secondary - Muted Warm */
-    --secondary: 24 6% 14%;
-    --secondary-foreground: 60 9% 98%;
+    /* Secondary - Muted Neutral */
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
 
     /* Muted - Subtle backgrounds */
-    --muted: 24 6% 14%;
-    --muted-foreground: 24 5% 64%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
 
     /* Accent - Gold Glow */
     --accent: 42 75% 55%;

@@ -34,10 +34,17 @@ export async function createInvoiceAction(formData: {
     items: Array<{
         id: string;
         stockId?: string;
+        tagId?: string;
         description: string;
         purity: string;
+        hsnCode?: string;
+        metalType?: string;
         grossWeight: number;
         netWeight: number;
+        stoneWeight?: number;
+        stoneAmount?: number;
+        wastagePercent?: number;
+        makingRate?: number;
         rate: number;
         making: number;
     }>;
@@ -170,7 +177,11 @@ export async function createInvoiceAction(formData: {
                 state: formData.customerState || '',
                 pincode: formData.customerPincode || ''
             },
-            p_items: formData.items, // Now contains stoneWeight, makingRate etc which V2 expects
+            p_items: formData.items.map(item => ({
+                ...item,
+                stockId: item.stockId || undefined,
+                tagId: item.tagId || undefined
+            })),
             p_discount: formData.discount,
             p_notes: '',
             p_status: formData.status,
@@ -186,20 +197,8 @@ export async function createInvoiceAction(formData: {
             ? (invoiceId[0]?.invoice_id ?? invoiceId[0]?.id ?? (invoiceId[0] as any))
             : ((invoiceId as any)?.invoice_id ?? (invoiceId as any)?.id ?? (invoiceId as any));
 
-        // Update Inventory Items - Mark as SOLD instead of decrementing quantity
-        for (const item of formData.items) {
-            if (item.stockId) {
-                // In new inventory system, each item is unique - mark it as SOLD
-                await supabase
-                    .from('inventory_items')
-                    .update({
-                        status: 'SOLD',
-                        sold_invoice_id: normalizedInvoiceId,
-                        sold_at: new Date().toISOString()
-                    })
-                    .eq('id', item.stockId);
-            }
-        }
+        // 4. Inventory Updates handled by RPC Transaction (v2)
+        // No manual update loop needed here anymore.
 
         // Revalidate caches (paths for both server-side cache and client)
         revalidatePath(`/shop/${formData.shopId}/invoices`);
@@ -289,20 +288,39 @@ export async function updateInvoiceAction(
 
         // Handle items if provided - use server-side supabase
         if (formData.items) {
-            // Get existing items
+            // Get existing items with stock_id to handle inventory reversion
             const { data: existingItems, error: fetchError } = await supabase
                 .from('invoice_items')
-                .select('id')
+                .select('id, stock_id')
                 .eq('invoice_id', invoiceId);
 
             if (fetchError) throw fetchError;
 
-            const existingIds = new Set((existingItems || []).map((item) => item.id));
+            const existingMap = new Map((existingItems || []).map(item => [item.id, item]));
             const newIds = new Set(formData.items.map((item) => item.id).filter(Boolean));
 
-            // Prepare operations
-            const toDelete = [...existingIds].filter((id) => !newIds.has(id));
+            // Identify items to delete
+            const itemsToDelete = (existingItems || []).filter(item => !newIds.has(item.id));
+            const toDeleteIds = itemsToDelete.map(item => item.id);
 
+            // 1. Revert Inventory for deleted items
+            const stocksToRevert = itemsToDelete
+                .map(item => item.stock_id)
+                .filter(Boolean) as string[];
+
+            if (stocksToRevert.length > 0) {
+                await supabase
+                    .from('inventory_items')
+                    .update({ status: 'IN_STOCK', sold_invoice_id: null, sold_at: null })
+                    .in('id', stocksToRevert);
+            }
+
+            // 2. Delete removed invoice items
+            if (toDeleteIds.length > 0) {
+                await supabase.from('invoice_items').delete().in('id', toDeleteIds);
+            }
+
+            // 3. Upsert items (Include new fields!)
             const itemsToUpsert = formData.items.map((item) => {
                 const itemData: any = {
                     invoice_id: invoiceId,
@@ -310,32 +328,43 @@ export async function updateInvoiceAction(
                     purity: item.purity,
                     gross_weight: item.grossWeight,
                     net_weight: item.netWeight,
+                    stone_weight: (item as any).stoneWeight || 0,
+                    stone_amount: (item as any).stoneAmount || 0,
+                    wastage_percent: (item as any).wastagePercent || 0,
+                    making_rate: (item as any).makingRate || 0,
                     rate: item.rate,
                     making: item.making,
+                    metal_type: (item as any).metalType || null,
+                    hsn_code: (item as any).hsnCode, // Map from internal name
+                    tag_id: (item as any).tagId ? (item as any).tagId : null,
+                    stock_id: (item as any).stockId ? (item as any).stockId : null
                 };
                 if (item.id) itemData.id = item.id;
                 return itemData;
             });
 
-            // Execute operations in parallel
-            const promises = [];
-
-            if (toDelete.length > 0) {
-                promises.push(
-                    supabase.from('invoice_items').delete().in('id', toDelete)
-                );
-            }
-
             if (itemsToUpsert.length > 0) {
-                promises.push(
-                    supabase.from('invoice_items').upsert(itemsToUpsert, { onConflict: 'id' })
-                );
-            }
+                const { error: upsertError } = await supabase
+                    .from('invoice_items')
+                    .upsert(itemsToUpsert, { onConflict: 'id' });
+                if (upsertError) throw upsertError;
 
-            if (promises.length > 0) {
-                const results = await Promise.all(promises);
-                const errors = results.map(r => r.error).filter(Boolean);
-                if (errors.length > 0) throw errors[0];
+                // 4. Update Inventory Status for linked items (Mark as SOLD)
+                const stockIdsToSell = itemsToUpsert
+                    .map(item => item.stock_id)
+                    .filter(Boolean);
+
+                if (stockIdsToSell.length > 0) {
+                    await supabase
+                        .from('inventory_items')
+                        .update({
+                            status: 'SOLD',
+                            sold_invoice_id: invoiceId,
+                            sold_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        })
+                        .in('id', stockIdsToSell);
+                }
             }
         }
 
@@ -355,8 +384,26 @@ export async function updateInvoiceAction(
 }
 
 export async function deleteInvoiceAction(invoiceId: string, shopId: string) {
+    if (!invoiceId) return { success: false, error: "Invalid Invoice ID" };
     const supabase = await createClient();
     try {
+        // 1. Revert Inventory Items to IN_STOCK
+        // We do this first to avoid FK constraints and to ensure logical consistency
+        const { error: inventoryError } = await supabase
+            .from('inventory_items')
+            .update({
+                status: 'IN_STOCK',
+                sold_invoice_id: null,
+                sold_at: null
+            })
+            .eq('sold_invoice_id', invoiceId);
+
+        if (inventoryError) {
+            console.error('Error reverting inventory items:', inventoryError);
+            throw new Error('Failed to revert inventory items');
+        }
+
+        // 2. Delete Invoice
         const { error } = await supabase
             .from('invoices')
             .delete()

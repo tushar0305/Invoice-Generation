@@ -36,6 +36,9 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { ExportDialog } from '@/components/shared/export-dialog';
+import { DateRange } from 'react-day-picker';
+import { startOfDay, endOfDay } from 'date-fns';
 
 type CustomerStats = {
     totalPurchase: number;
@@ -142,18 +145,42 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
             .slice(0, 2);
     };
 
-    const handleExport = () => {
-        import('@/lib/export-excel').then(({ exportCustomersToExcel }) => {
-            const exportData = Object.entries(customerData).map(([name, stats]) => ({
-                name,
-                phone: '-',
-                email: '-',
-                invoiceCount: stats.invoiceCount,
-                totalSpent: stats.totalPurchase,
-                lastPurchase: stats.lastPurchase,
-            }));
-            exportCustomersToExcel(exportData, 'customers');
+
+    const handleExport = async ({ dateRange }: { dateRange?: DateRange }) => {
+        const filteredData = Object.entries(customerData).filter(([_, stats]) => {
+            if (!dateRange?.from) return true;
+
+            const lastPurchaseDate = new Date(stats.lastPurchase);
+            if (dateRange.from) {
+                const start = startOfDay(dateRange.from);
+                if (lastPurchaseDate < start) return false;
+            }
+            if (dateRange.to) {
+                const end = endOfDay(dateRange.to);
+                if (lastPurchaseDate > end) return false;
+            } else if (dateRange.from) {
+                // If only from is set, treat as single day? Or start -> infinity? 
+                // Usually range picker sets both or just from. 
+                // Let's assume if only from is set, we check >= from.
+                // Wait, logic above handles >= start. 
+                // If to is undefined, we usually don't limit end, or limit to end of 'from' day?
+                // Standard behavior: if only 'from' selected, it might just be 'after X'.
+                // But date-fns/react-day-picker usually allows selecting a range.
+                // Let's stick to: if 'to' is present, check <= to.
+            }
+            return true;
         });
+
+        const exportData = filteredData.map(([name, stats]) => ({
+            'Name': name,
+            'Phone': '-', // Phone not in stats currently?
+            'Email': '-',
+            'Total Invoices': stats.invoiceCount,
+            'Total Spent': stats.totalPurchase,
+            'Last Purchase': stats.lastPurchase ? new Date(stats.lastPurchase).toLocaleDateString() : '-',
+        }));
+
+        return exportData;
     };
 
     return (
@@ -188,14 +215,15 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                 {/* Search Header - Sticky on mobile for checks */}
                 <CardHeader className="pb-3 border-b sticky top-0 z-30 bg-background pt-4 md:pt-6">
                     <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                             <div className="md:block hidden">
                                 <CardTitle className="text-xl sm:text-2xl font-heading text-primary">Customers</CardTitle>
                                 <CardDescription className="text-xs sm:text-sm mt-1">
                                     Manage and view your customer base
                                 </CardDescription>
                             </div>
-                            <div className="flex items-center gap-2 w-full md:w-auto">
+
+                            <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
                                 <div className="relative flex-1 md:w-64 md:flex-none">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -205,87 +233,96 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
-                                <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button className="gap-2 shadow-lg shadow-primary/25 shrink-0">
-                                            <Plus className="h-4 w-4" />
-                                            <span className="hidden sm:inline">New Customer</span>
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Add New Customer</DialogTitle>
-                                            <DialogDescription>
-                                                Create a new customer profile.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="space-y-4 py-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="name">Name *</Label>
-                                                <Input
-                                                    id="name"
-                                                    value={newCustomer.name}
-                                                    onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                                                    placeholder="Customer Name"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="phone">Phone</Label>
-                                                <Input
-                                                    id="phone"
-                                                    value={newCustomer.phone}
-                                                    onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                                                    placeholder="Phone Number"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="email">Email</Label>
-                                                <Input
-                                                    id="email"
-                                                    type="email"
-                                                    value={newCustomer.email}
-                                                    onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                                                    placeholder="Email Address"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="address">Address</Label>
-                                                <Input
-                                                    id="address"
-                                                    value={newCustomer.address}
-                                                    onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                                                    placeholder="Address"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="gst">GST Number</Label>
-                                                <Input
-                                                    id="gst"
-                                                    value={newCustomer.gstNumber}
-                                                    onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value })}
-                                                    placeholder="GSTIN"
-                                                />
-                                            </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
-                                                Cancel
+
+                                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                                    <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button className="gap-2 shadow-lg shadow-primary/25 shrink-0">
+                                                <Plus className="h-4 w-4" />
+                                                <span className="hidden sm:inline">New Customer</span>
                                             </Button>
-                                            <Button onClick={handleAddCustomer} disabled={isPending}>
-                                                {isPending ? 'Creating...' : 'Create Customer'}
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Add New Customer</DialogTitle>
+                                                <DialogDescription>
+                                                    Create a new customer profile.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="space-y-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="name">Name *</Label>
+                                                    <Input
+                                                        id="name"
+                                                        value={newCustomer.name}
+                                                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                                                        placeholder="Customer Name"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="phone">Phone</Label>
+                                                    <Input
+                                                        id="phone"
+                                                        value={newCustomer.phone}
+                                                        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                                                        placeholder="Phone Number"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="email">Email</Label>
+                                                    <Input
+                                                        id="email"
+                                                        type="email"
+                                                        value={newCustomer.email}
+                                                        onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                                                        placeholder="Email Address"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="address">Address</Label>
+                                                    <Input
+                                                        id="address"
+                                                        value={newCustomer.address}
+                                                        onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                                                        placeholder="Address"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="gst">GST Number</Label>
+                                                    <Input
+                                                        id="gst"
+                                                        value={newCustomer.gstNumber}
+                                                        onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value })}
+                                                        placeholder="GSTIN"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
+                                                    Cancel
+                                                </Button>
+                                                <Button onClick={handleAddCustomer} disabled={isPending}>
+                                                    {isPending ? 'Creating...' : 'Create Customer'}
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+
+                                    <ExportDialog
+                                        onExport={handleExport}
+                                        filename={`customers-${new Date().toISOString().split('T')[0]}`}
+                                        trigger={
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-9 gap-2 shrink-0 bg-background"
+                                            >
+                                                <Download className="h-3.5 w-3.5" />
+                                                <span className="hidden sm:inline">Export</span>
                                             </Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-9 gap-2 shrink-0 hidden sm:flex"
-                                    onClick={handleExport}
-                                >
-                                    <Download className="h-3.5 w-3.5" />
-                                    <span className="hidden sm:inline">Export</span>
-                                </Button>
+                                        }
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

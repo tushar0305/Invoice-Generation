@@ -1,7 +1,22 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, Loader2, ArrowRight, Sparkles, Calendar, Gift, Scale } from 'lucide-react';
+import {
+    Plus,
+    Loader2,
+    ArrowRight,
+    Sparkles,
+    Calendar,
+    Gift,
+    Scale,
+    Search,
+    Filter,
+    Users,
+    TrendingUp,
+    ShieldCheck,
+    Briefcase
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,185 +24,263 @@ import { useActiveShop } from '@/hooks/use-active-shop';
 import { useSchemes } from '@/hooks/use-schemes';
 import { Switch } from '@/components/ui/switch';
 import { formatCurrency, cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/supabase/client';
+import { motion, AnimatePresence } from 'framer-motion';
+import { StatCard } from '@/components/schemes/stat-card';
+
+// --- Components ---
+
+
 
 export default function SchemesPage() {
     const { activeShop } = useActiveShop();
     const shopId = activeShop?.id;
     const { schemes, isLoading, toggleSchemeStatus } = useSchemes(shopId);
 
+    // Local State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showInactive, setShowInactive] = useState(false);
+    const [stats, setStats] = useState({ totalEnrollments: 0, totalValue: 0 });
+    const [loadingStats, setLoadingStats] = useState(true);
+
+    // Fetch extra stats
+    useEffect(() => {
+        if (!shopId) return;
+        const fetchStats = async () => {
+            try {
+                // Get count of all customer enrollments
+                const { count, error } = await supabase
+                    .from('customer_schemes')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('shop_id', shopId)
+                    .eq('status', 'active');
+
+                if (error) console.error('Error fetching stats:', error);
+
+                // For total value, we might need a more complex query, for now mocking purely based on schemes
+                // In a real app we'd sum (monthly_amount * duration) of all enrollments
+                // Let's use 0 for now or a placeholder if no data
+                setStats({ totalEnrollments: count || 0, totalValue: 0 });
+            } finally {
+                setLoadingStats(false);
+            }
+        };
+        fetchStats();
+    }, [shopId]);
+
+    // Computed
+    const filteredSchemes = useMemo(() => {
+        return schemes.filter(s => {
+            const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesStatus = showInactive ? true : s.is_active;
+            return matchesSearch && matchesStatus;
+        });
+    }, [schemes, searchQuery, showInactive]);
+
+    const activeSchemesCount = schemes.filter(s => s.is_active).length;
+
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-full min-h-[60vh]">
+            <div className="flex items-center justify-center h-[60vh]">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">Loading schemes...</p>
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Loading your schemes...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 pb-20 md:pb-6">
-            {/* Header Section */}
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div className="text-center sm:text-left">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                            Gold Schemes
-                        </h1>
-                        <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-                            Launch and manage customer saving plans
-                        </p>
-                    </div>
+        <div className="min-h-screen pb-20 md:pb-8 space-y-6 md:space-y-8 max-w-7xl mx-auto p-4 md:p-8">
 
-                    <Link href={`/shop/${shopId}/schemes/create`} className="w-full sm:w-auto">
-                        <Button
-                            className="w-full sm:w-auto h-10 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md rounded-xl font-medium"
-                        >
-                            <Plus className="h-4 w-4" />
-                            <span>Create New Scheme</span>
-                        </Button>
-                    </Link>
+            {/* Header with Breadcrumb and Actions */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Gold Schemes</h1>
+                    <p className="text-muted-foreground text-sm md:text-base mt-1">Manage your saving plans and portfolio.</p>
                 </div>
+                <Link href={`/shop/${shopId}/schemes/create`}>
+                    <Button className="w-full md:w-auto h-10 gap-2 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
+                        <Plus className="w-4 h-4" />
+                        New Scheme
+                    </Button>
+                </Link>
             </div>
+
+            {/* Financial Overview Cards */}
+            {schemes.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <StatCard
+                        title="Active Schemes"
+                        value={activeSchemesCount}
+                        subtext={`${schemes.length} total created`}
+                        icon={Briefcase}
+                        iconColor="text-blue-600 dark:text-blue-400"
+                        bgColor="bg-blue-50 dark:bg-blue-900/20"
+                    />
+                    <StatCard
+                        title="Active Enrollments"
+                        value={stats.totalEnrollments}
+                        subtext="Customers currently paying"
+                        icon={Users}
+                        iconColor="text-emerald-600 dark:text-emerald-400"
+                        bgColor="bg-emerald-50 dark:bg-emerald-900/20"
+                    />
+                    <StatCard
+                        title="Avg. Monthly Amount"
+                        value={formatCurrency(
+                            schemes.length > 0
+                                ? schemes.reduce((acc, curr) => acc + curr.installment_amount, 0) / schemes.length
+                                : 0
+                        )}
+                        subtext="Across all schemes"
+                        icon={TrendingUp}
+                        iconColor="text-amber-600 dark:text-amber-400"
+                        bgColor="bg-amber-50 dark:bg-amber-900/20"
+                    />
+                </div>
+            )}
 
             {/* Content Area */}
             {schemes.length === 0 ? (
-                <EmptyState shopId={shopId} />
+                // Hub-style Empty State
+                <div className="border border-dashed border-border rounded-2xl p-8 md:p-12 flex flex-col items-center justify-center text-center bg-slate-50/50 dark:bg-muted/10">
+                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20 flex items-center justify-center mb-4">
+                        <Sparkles className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-foreground mb-2">Launch your first Gold Scheme</h3>
+                    <p className="text-muted-foreground max-w-sm mb-6">Create attractive saving plans for your customers. Set terms, benefits, and start enrolling today.</p>
+                    <Link href={`/shop/${shopId}/schemes/create`}>
+                        <Button className="h-11 px-8 rounded-full gap-2 shadow-sm">
+                            <Plus className="w-4 h-4" />
+                            Create Scheme
+                        </Button>
+                    </Link>
+                </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                    {schemes.map((scheme, index) => (
-                        <Card
-                            key={scheme.id}
-                            className={cn(
-                                "group relative overflow-hidden",
-                                "bg-card border border-border",
-                                "transition-all duration-200",
-                                "hover:shadow-md hover:border-primary/30",
-                                "rounded-xl",
-                            )}
-                        >
-                            {/* Subtle gradient overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-transparent pointer-events-none" />
+                <div className="space-y-6">
+                    {/* Search & Filter Bar */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search schemes..."
+                                className="pl-9 h-10 rounded-xl bg-card border-border/80"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 bg-card p-1 rounded-xl border border-border/80 w-max self-start md:self-auto">
+                            <button
+                                onClick={() => setShowInactive(false)}
+                                className={cn(
+                                    "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
+                                    !showInactive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                                )}
+                            >
+                                Active
+                            </button>
+                            <button
+                                onClick={() => setShowInactive(true)}
+                                className={cn(
+                                    "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
+                                    showInactive ? "bg-slate-100 dark:bg-muted text-foreground" : "text-muted-foreground hover:bg-muted"
+                                )}
+                            >
+                                All Status
+                            </button>
+                        </div>
+                    </div>
 
-                            {/* Status Toggle */}
-                            <div className="absolute top-4 right-4 z-10">
-                                <Switch
-                                    checked={scheme.is_active}
-                                    onCheckedChange={() => toggleSchemeStatus(scheme.id, scheme.is_active)}
-                                    className="data-[state=checked]:bg-emerald-500 scale-105"
-                                />
+                    {/* Scheme Cards Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                        <AnimatePresence mode="popLayout">
+                            {filteredSchemes.map((scheme, index) => (
+                                <motion.div
+                                    key={scheme.id}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ duration: 0.2, delay: index * 0.05 }}
+                                >
+                                    <Link href={`/shop/${shopId}/schemes/${scheme.id}`} className="block h-full">
+                                        <Card className={cn(
+                                            "h-full group hover:border-primary/50 transition-all duration-300 hover:shadow-md overflow-hidden bg-card",
+                                            !scheme.is_active && "opacity-70 grayscale-[0.5]"
+                                        )}>
+                                            <CardHeader className="p-5 pb-2">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={cn(
+                                                            "rounded-md px-2 py-0 border-0 font-medium",
+                                                            scheme.is_active ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20" : "bg-slate-100 text-slate-500"
+                                                        )}
+                                                    >
+                                                        {scheme.is_active ? 'Active' : 'Paused'}
+                                                    </Badge>
+                                                    <div
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            // e.stopPropagation(); // Avoid navigation if we had a button, but toggle is visual here mostly
+                                                        }}
+                                                    >
+                                                        {/* Optional: Small text or icon, keeping it clean for now */}
+                                                    </div>
+                                                </div>
+                                                <CardTitle className="text-xl font-bold line-clamp-1 group-hover:text-primary transition-colors">
+                                                    {scheme.name}
+                                                </CardTitle>
+                                                <p className="text-xs text-muted-foreground line-clamp-2 mt-1 min-h-[2.5em]">
+                                                    {scheme.description || 'No description provided.'}
+                                                </p>
+                                            </CardHeader>
+
+                                            <CardContent className="p-5 pt-2">
+                                                {/* Financial Terms Grid */}
+                                                <div className="grid grid-cols-3 gap-2 mt-4 p-3 rounded-xl bg-muted/40 border border-border/50">
+                                                    <div className="text-center">
+                                                        <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Monthly</p>
+                                                        <p className="text-sm font-bold">{formatCurrency(scheme.installment_amount)}</p>
+                                                    </div>
+                                                    <div className="text-center border-l border-border/50">
+                                                        <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Duration</p>
+                                                        <p className="text-sm font-bold">{scheme.duration_months} Mo</p>
+                                                    </div>
+                                                    <div className="text-center border-l border-border/50">
+                                                        <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Benefit</p>
+                                                        <p className="text-sm font-bold text-emerald-600">
+                                                            {scheme.bonus_months > 0 ? `+${scheme.bonus_months} Mo` : 'Fixed'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+
+                                            <CardFooter className="p-5 pt-0 flex items-center justify-between text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                                                <span className="flex items-center gap-1.5 text-xs font-medium">
+                                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                                    Secure Plan
+                                                </span>
+                                                <div className="flex items-center gap-1 font-medium bg-primary/5 px-3 py-1.5 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                                                    View Details <ArrowRight className="w-3.5 h-3.5" />
+                                                </div>
+                                            </CardFooter>
+                                        </Card>
+                                    </Link>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+
+                        {filteredSchemes.length === 0 && (
+                            <div className="col-span-full py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+                                No schemes found matching your search.
                             </div>
-
-                            <CardHeader className="pb-3 relative">
-                                {/* Status Badge */}
-                                <div className="flex items-start gap-2 mb-3">
-                                    <Badge
-                                        variant={scheme.is_active ? 'default' : 'secondary'}
-                                        className={cn(
-                                            "text-xs font-medium px-2.5 py-0.5 rounded-full",
-                                            scheme.is_active
-                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                                                : 'bg-muted text-muted-foreground'
-                                        )}
-                                    >
-                                        <span className={cn(
-                                            "w-1.5 h-1.5 rounded-full mr-1.5",
-                                            scheme.is_active ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"
-                                        )} />
-                                        {scheme.is_active ? 'Active' : 'Paused'}
-                                    </Badge>
-                                </div>
-
-                                {/* Scheme Name */}
-                                <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1 pr-12">
-                                    {scheme.name}
-                                </CardTitle>
-
-                                {/* Amount & Duration */}
-                                <div className="flex items-baseline gap-2 mt-2">
-                                    {scheme.type === 'FIXED_AMOUNT' ? (
-                                        <span className="text-2xl font-bold text-primary">
-                                            {formatCurrency(scheme.scheme_amount || 0)}
-                                            <span className="text-sm font-normal text-muted-foreground ml-1">/month</span>
-                                        </span>
-                                    ) : (
-                                        <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                                            Flexible Amount
-                                        </span>
-                                    )}
-                                </div>
-                            </CardHeader>
-
-                            <CardContent className="pb-4 relative">
-                                {/* Quick Info Chips */}
-                                <div className="flex flex-wrap gap-2">
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/60 text-xs font-medium text-foreground border border-border/50">
-                                        <Calendar className="w-3.5 h-3.5 text-primary" />
-                                        {scheme.duration_months} Months
-                                    </div>
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-xs font-medium text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                                        <Scale className="w-3.5 h-3.5" />
-                                        {scheme.rules.gold_purity}
-                                    </div>
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-500/10 text-xs font-medium text-purple-700 dark:text-purple-400 border border-purple-500/20">
-                                        <Gift className="w-3.5 h-3.5" />
-                                        {scheme.rules.benefit_type === 'LAST_FREE' && '1 Month Free'}
-                                        {scheme.rules.benefit_type === 'BONUS_PERCENT' && `${scheme.rules.benefit_value}% Bonus`}
-                                        {scheme.rules.benefit_type === 'FIXED_BONUS' && `₹${scheme.rules.benefit_value} Bonus`}
-                                    </div>
-                                </div>
-                            </CardContent>
-
-                            <CardFooter className="pt-0 relative">
-                                <Link href={`/shop/${shopId}/schemes/${scheme.id}`} className="w-full">
-                                    <Button
-                                        className={cn(
-                                            "w-full h-10 gap-2 font-medium rounded-lg",
-                                            "bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground",
-                                            "border border-primary/20 hover:border-transparent",
-                                            "transition-colors duration-200"
-                                        )}
-                                        variant="ghost"
-                                    >
-                                        Manage Scheme
-                                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                                    </Button>
-                                </Link>
-                            </CardFooter>
-                        </Card>
-                    ))}
+                        )}
+                    </div>
                 </div>
             )}
         </div>
-    );
-}
-
-function EmptyState({ shopId }: { shopId: string | null | undefined }) {
-    return (
-        <Card className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-card border-2 border-dashed border-border rounded-xl">
-            <div className="relative mb-6">
-                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center">
-                    <Sparkles className="w-10 h-10 text-primary" />
-                </div>
-                <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Plus className="w-4 h-4 text-primary" />
-                </div>
-            </div>
-
-            <h3 className="text-xl font-semibold mb-2">Start Your First Gold Scheme</h3>
-            <p className="text-muted-foreground max-w-sm mb-6 text-sm">
-                Create a saving scheme to help customers accumulate gold with monthly payments and attractive benefits.
-            </p>
-
-            <Link href={`/shop/${shopId}/schemes/create`}>
-                <Button className="gap-2 h-10 px-6 bg-primary hover:bg-primary/90 rounded-xl font-medium">
-                    <Plus className="w-4 h-4" />
-                    Create Your First Scheme
-                </Button>
-            </Link>
-        </Card>
     );
 }

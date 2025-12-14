@@ -1,20 +1,3 @@
-/**
- * Multi-QR Scanner for Invoice Items
- * 
- * FEATURES:
- * 1. Manual QR/Tag ID entry via keyboard input
- * 2. Camera-based QR scanning for mobile webview
- * 3. Real-time feedback for each scan
- * 4. Duplicate prevention (session + invoice)
- * 5. Auto-add successful items to invoice
- * 
- * CAMERA SUPPORT:
- * - Uses getUserMedia API for mobile camera access
- * - Requests camera permission
- * - Shows live preview on mobile
- * - Fallback to manual entry if camera unavailable
- */
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -27,22 +10,23 @@ import { Check, X, QrCode, AlertCircle, Loader2, Camera, Keyboard } from 'lucide
 import { supabase } from '@/supabase/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import jsQR from 'jsqr';
 
 interface QRScannerProps {
     shopId: string;
-    onItemsAdded: (items: Array<{ 
-        id: string; 
-        tag_id: string; 
-        name: string; 
-        metal_type: string; 
-        purity: string; 
-        hsn_code?: string; 
-        category?: string; 
-        gross_weight: number; 
-        net_weight: number; 
-        stone_weight?: number; 
-        wastage_percent?: number; 
-        making_charge_value?: number; 
+    onItemsAdded: (items: Array<{
+        id: string;
+        tag_id: string;
+        name: string;
+        metal_type: string;
+        purity: string;
+        hsn_code?: string;
+        category?: string;
+        gross_weight: number;
+        net_weight: number;
+        stone_weight?: number;
+        wastage_percent?: number;
+        making_charge_value?: number;
     }>) => void;
     existingTagIds: string[];
     isOpen: boolean;
@@ -57,12 +41,12 @@ interface ScannedItem {
     timestamp: number;
 }
 
-export function MultiQRScanner({ 
-    shopId, 
-    onItemsAdded, 
-    existingTagIds, 
-    isOpen, 
-    onOpenChange 
+export function MultiQRScanner({
+    shopId,
+    onItemsAdded,
+    existingTagIds,
+    isOpen,
+    onOpenChange
 }: QRScannerProps) {
     const { toast } = useToast();
     const [qrInput, setQrInput] = useState('');
@@ -71,11 +55,12 @@ export function MultiQRScanner({
     const [scanMode, setScanMode] = useState<'manual' | 'camera'>('manual');
     const [cameraActive, setCameraActive] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
-    
+
     const inputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const requestRef = useRef<number>();
 
     // Focus input when dialog opens
     useEffect(() => {
@@ -87,53 +72,63 @@ export function MultiQRScanner({
     // Cleanup camera on unmount or mode change
     useEffect(() => {
         return () => {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
+            stopCamera();
         };
     }, []);
 
     const startCamera = async () => {
         try {
             setCameraError(null);
+
+            // Check if API exists
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('Camera not supported on this device/browser.');
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { 
-                    facingMode: 'environment', // Back camera on mobile
+                video: {
+                    facingMode: { ideal: 'environment' }, // Prefer back camera
                     width: { ideal: 1280 },
                     height: { ideal: 720 }
                 },
                 audio: false
             });
-            
+
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
+                // Required for iOS to play video inline
+                videoRef.current.setAttribute('playsinline', 'true');
                 streamRef.current = stream;
                 setCameraActive(true);
-                
+
                 // Start scanning after video is ready
                 videoRef.current.onloadedmetadata = () => {
+                    videoRef.current?.play().catch(e => console.error("Play error:", e));
                     captureAndDecode();
                 };
             }
         } catch (error: any) {
-            const errorMsg = error.name === 'NotAllowedError' 
-                ? 'Camera permission denied. Using manual mode instead.'
+            console.error("Camera Error:", error);
+            const errorMsg = error.name === 'NotAllowedError'
+                ? 'Camera permission denied. Please allow camera access.'
                 : error.name === 'NotFoundError'
-                ? 'No camera found on this device.'
-                : 'Failed to access camera. Using manual mode instead.';
-            
+                    ? 'No camera found on this device.'
+                    : 'Failed to access camera. Please check permissions.';
+
             setCameraError(errorMsg);
-            toast({ 
-                variant: 'destructive', 
-                title: 'Camera Error', 
-                description: errorMsg 
+            toast({
+                variant: 'destructive',
+                title: 'Camera Error',
+                description: errorMsg
             });
             setScanMode('manual');
         }
     };
 
     const stopCamera = () => {
+        if (requestRef.current) {
+            cancelAnimationFrame(requestRef.current);
+        }
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
@@ -141,25 +136,42 @@ export function MultiQRScanner({
         setCameraActive(false);
     };
 
-    const captureAndDecode = async () => {
+    const captureAndDecode = () => {
         if (!cameraActive || !videoRef.current || !canvasRef.current) return;
 
-        const context = canvasRef.current.getContext('2d');
-        if (!context) return;
+        // Check if video is actually playing and has data
+        if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+            const context = canvasRef.current.getContext('2d', { willReadFrequently: true });
+            if (!context) return;
 
-        // Draw video frame to canvas
-        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-        
-        // Get image data and try to decode QR (simplified - in production use a QR library)
-        const imageData = context.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
-        
-        // For now, we'll use a simpler approach with jsQR library or fallback to manual entry
-        // In production, integrate jsQR or similar: npm install jsqr
-        // For MVP, camera shows visual indicator and user can manually enter
-        
+            const height = videoRef.current.videoHeight;
+            const width = videoRef.current.videoWidth;
+
+            canvasRef.current.height = height;
+            canvasRef.current.width = width;
+
+            // Draw video frame to canvas
+            context.drawImage(videoRef.current, 0, 0, width, height);
+
+            try {
+                // Get image data and decode QR
+                const imageData = context.getImageData(0, 0, width, height);
+                const code = jsQR(imageData.data, width, height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code && code.data && code.data.length > 0) {
+                    // Found a QR code!
+                    handleQRScan(code.data);
+                }
+            } catch (e) {
+                console.error("Decoding error:", e);
+            }
+        }
+
         // Continue capturing
         if (cameraActive) {
-            requestAnimationFrame(captureAndDecode);
+            requestRef.current = requestAnimationFrame(captureAndDecode);
         }
     };
 
@@ -167,8 +179,18 @@ export function MultiQRScanner({
         const trimmedQR = qrCode.trim();
         if (!trimmedQR) return;
 
+        // Debounce: Check if we just scanned this item (last 2 seconds) 
+        // OR if it's already in the list to avoid rapid duplicate firing
+        const lastItem = scannedItems[scannedItems.length - 1];
+        if (lastItem && lastItem.tag_id === trimmedQR && (Date.now() - lastItem.timestamp < 2000)) {
+            return;
+        }
+
         // Check if already scanned in this session
         if (scannedItems.some(item => item.tag_id === trimmedQR)) {
+            // Just show a small toast or ignore to not spam user
+            // But we do add to list if user wants to see it? 
+            // Logic in original code added a duplicate entry. Let's keep that but maybe not spam fetch.
             setScannedItems(prev => [...prev, {
                 tag_id: trimmedQR,
                 status: 'duplicate',
@@ -208,6 +230,9 @@ export function MultiQRScanner({
                     timestamp: Date.now()
                 }]);
             } else {
+                // Play a beep sound on success (optional but nice)
+                // const audio = new Audio('/beep.mp3'); audio.play().catch(() => {});
+
                 setScannedItems(prev => [...prev, {
                     tag_id: trimmedQR,
                     status: 'success',
@@ -224,8 +249,10 @@ export function MultiQRScanner({
             }]);
         } finally {
             setIsProcessing(false);
-            setQrInput('');
-            inputRef.current?.focus();
+            if (scanMode === 'manual') {
+                setQrInput('');
+                inputRef.current?.focus();
+            }
         }
     };
 
@@ -316,11 +343,13 @@ export function MultiQRScanner({
                                             ref={videoRef}
                                             autoPlay
                                             playsInline
+                                            muted
                                             className="w-full h-full object-cover"
                                         />
                                         {/* Crosshair overlay */}
                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <div className="w-48 h-48 border-2 border-green-500/50 rounded-lg" />
+                                            <div className="w-48 h-48 border-2 border-green-500/50 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
+                                            <div className="absolute w-48 h-0.5 bg-red-500/50 animate-pulse top-1/2 -translate-y-1/2" />
                                         </div>
                                     </div>
                                     <p className="text-xs text-muted-foreground text-center">
@@ -367,8 +396,8 @@ export function MultiQRScanner({
                                     className="flex-1"
                                     autoComplete="off"
                                 />
-                                <Button 
-                                    type="submit" 
+                                <Button
+                                    type="submit"
                                     disabled={isProcessing || !qrInput.trim()}
                                     className="gap-2"
                                 >
@@ -387,8 +416,6 @@ export function MultiQRScanner({
                     <canvas
                         ref={canvasRef}
                         style={{ display: 'none' }}
-                        width={1280}
-                        height={720}
                     />
 
                     {/* Stats */}
@@ -418,7 +445,7 @@ export function MultiQRScanner({
                     {/* Scanned Items List */}
                     <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                         {scannedItems.map((scannedItem, idx) => (
-                            <Card 
+                            <Card
                                 key={idx}
                                 className={cn(
                                     'transition-colors',

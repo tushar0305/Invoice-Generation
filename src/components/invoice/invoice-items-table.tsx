@@ -52,7 +52,8 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                 .select('id, tag_id, name, metal_type, purity, hsn_code, category, gross_weight, net_weight, stone_weight, wastage_percent, making_charge_value')
                 .eq('shop_id', shopId)
                 .eq('status', 'IN_STOCK')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .limit(50);
 
             if (!error && data) {
                 setInventoryItems(data);
@@ -82,6 +83,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
             }
 
             form.setValue(`items.${index}.stockId`, selected.id);
+            form.setValue(`items.${index}.tagId`, selected.tag_id);
         }
     };
 
@@ -117,7 +119,22 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                         appendGuard.current = true;
                         setIsAdding(true);
                         append({
-                            id: crypto.randomUUID(), description: '', purity: '22K', grossWeight: 0, netWeight: 0, stoneWeight: 0, stoneAmount: 0, wastagePercent: 0, rate: 0, makingRate: 0, making: 0
+                            id: crypto.randomUUID(),
+                            description: '',
+                            purity: '22K',
+                            grossWeight: 0,
+                            netWeight: 0,
+                            stoneWeight: 0,
+                            stoneAmount: 0,
+                            wastagePercent: 0,
+                            rate: 0,
+                            makingRate: 0,
+                            making: 0,
+                            hsnCode: '',
+                            metalType: '',
+                            category: '',
+                            stockId: '',
+                            tagId: ''
                         });
                         setTimeout(() => { appendGuard.current = false; setIsAdding(false); }, 300);
                     }}
@@ -183,7 +200,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-xs uppercase text-muted-foreground">HSN Code</FormLabel>
-                                            <FormControl><Input {...field} placeholder="HSN" /></FormControl>
+                                            <FormControl><Input {...field} value={field.value || ''} placeholder="HSN" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}

@@ -148,8 +148,8 @@ export function EnrollmentModal({ isOpen, onClose, customerId, customerName, onS
                     {selectedSchemeId && (
                         <div className="bg-primary/5 p-3 rounded-md text-sm text-primary">
                             <strong>Summary:</strong> {customerName} will pay
-                            {schemes.find(s => s.id === selectedSchemeId)?.type === 'FIXED_AMOUNT'
-                                ? ` ₹${schemes.find(s => s.id === selectedSchemeId)?.scheme_amount}/month`
+                            {schemes.find(s => s.id === selectedSchemeId)?.scheme_type === 'FIXED_DURATION'
+                                ? ` ₹${schemes.find(s => s.id === selectedSchemeId)?.installment_amount}/month`
                                 : ' flexible amounts'}
                             {' '}for {schemes.find(s => s.id === selectedSchemeId)?.duration_months} months.
                         </div>

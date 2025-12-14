@@ -1,17 +1,29 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Search, QrCode, Package, Scale, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, QrCode, Package, X, ChevronLeft, ChevronRight, RefreshCw, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { cn, formatCurrency } from '@/lib/utils';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { cn } from '@/lib/utils';
 import type { InventoryItem } from '@/lib/inventory-types';
 import { STATUS_LABELS } from '@/lib/inventory-types';
 import { InventoryMobileCard } from '@/components/inventory/inventory-mobile-card';
+import { supabase } from '@/supabase/client';
+import { ExportDialog } from '@/components/shared/export-dialog';
+import { DateRange } from 'react-day-picker';
+import { startOfDay, endOfDay } from 'date-fns';
 
 interface InventoryClientProps {
     initialItems: InventoryItem[];
@@ -44,6 +56,7 @@ export function InventoryClient({
     const searchParams = useSearchParams();
     const [searchQuery, setSearchQuery] = useState(initialSearch);
     const [activeFilter, setActiveFilter] = useState(initialFilter);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const updateUrl = (params: Record<string, string | null>) => {
         const newParams = new URLSearchParams(searchParams.toString());
@@ -68,11 +81,68 @@ export function InventoryClient({
         updateUrl({ status: filter === 'all' ? null : filter });
     };
 
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        router.refresh();
+        setTimeout(() => setIsRefreshing(false), 1000); // Visual feedback
+    };
+
     const goToPage = (page: number) => {
         const newParams = new URLSearchParams(searchParams.toString());
         newParams.set('page', String(page));
         router.push(`/shop/${shopId}/inventory?${newParams.toString()}`);
     };
+
+    const fetchExportData = async ({ dateRange, status }: { dateRange?: DateRange; status?: string }) => {
+        let query = supabase
+            .from('inventory_items')
+            .select('*')
+            .eq('shop_id', shopId)
+            .order('created_at', { ascending: false });
+
+        // Apply filters passed from the dialog
+        if (status && status !== 'all') {
+            query = query.eq('status', status);
+        }
+
+        // Respect search query if present
+        if (searchQuery) {
+            query = query.or(`name.ilike.%${searchQuery}%,tag_id.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`);
+        }
+
+        if (dateRange?.from) {
+            query = query.gte('created_at', startOfDay(dateRange.from).toISOString());
+            if (dateRange.to) {
+                query = query.lte('created_at', endOfDay(dateRange.to).toISOString());
+            } else {
+                query = query.lte('created_at', endOfDay(dateRange.from).toISOString());
+            }
+        }
+
+        const { data, error } = await query;
+        if (error) {
+            console.error(error);
+            return [];
+        }
+
+        // Format for Excel
+        return (data || []).map((item: any) => ({
+            'Tag ID': item.tag_id,
+            'Name': item.name,
+            'Category': item.category || item.metal_type,
+            'Purity': item.purity,
+            'Weight (g)': item.net_weight,
+            'Status': item.status,
+            'Making Charge': item.making_charge_value,
+            'Created At': new Date(item.created_at).toLocaleDateString(),
+        }));
+    };
+
+    const statusOptions = [
+        { label: 'In Stock', value: 'IN_STOCK' },
+        { label: 'Reserved', value: 'RESERVED' },
+        { label: 'Sold', value: 'SOLD' },
+    ];
 
     const filters = [
         { key: 'all', label: 'All', count: counts.all },
@@ -85,14 +155,15 @@ export function InventoryClient({
         <div className="space-y-4 pb-20 md:pb-6 pt-2 md:pt-0">
             {/* Search & Filters */}
             <div className="flex flex-col gap-3">
-                <form onSubmit={handleSearch} className="flex gap-2">
-                    <div className="relative flex-1">
+                <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
+                    {/* Search - Full width on mobile */}
+                    <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/50" />
                         <Input
                             placeholder="Search by name or tag..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-11"
+                            className="pl-10 h-11 w-full"
                         />
                         {searchQuery && (
                             <Button
@@ -109,9 +180,28 @@ export function InventoryClient({
                             </Button>
                         )}
                     </div>
-                    <Button type="submit" variant="outline" className="h-11 px-4">
-                        <Filter className="h-4 w-4" />
-                    </Button>
+
+                    {/* Actions - Row on mobile */}
+                    <div className="flex items-center gap-2">
+                        <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={handleRefresh}>
+                            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                        </Button>
+
+                        <ExportDialog
+                            onExport={fetchExportData}
+                            filename={`inventory-${new Date().toISOString().split('T')[0]}`}
+                            statusOptions={statusOptions}
+                            trigger={
+                                <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0">
+                                    <Download className="h-4 w-4" />
+                                </Button>
+                            }
+                        />
+
+                        <Button type="submit" variant="default" className="h-11 px-6 grow md:grow-0">
+                            Search
+                        </Button>
+                    </div>
                 </form>
 
                 {/* Filter Tabs */}
@@ -156,64 +246,62 @@ export function InventoryClient({
                 </Card>
             ) : (
                 <>
-                    {/* Desktop Grid View */}
-                    <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {initialItems.map((item) => (
-                            <Link key={item.id} href={`/shop/${shopId}/inventory/${item.tag_id}`}>
-                                <Card className={cn(
-                                    "group h-full overflow-hidden transition-all",
-                                    "bg-card border border-border",
-                                    "hover:shadow-lg hover:-translate-y-1 active:scale-[0.98]",
-                                    "cursor-pointer touch-manipulation rounded-xl"
-                                )}>
-                                    <CardContent className="p-4 space-y-3">
-                                        {/* Tag & Status */}
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-xs font-mono bg-muted/50 px-2 py-1 rounded">
-                                                <QrCode className="w-3 h-3 text-primary" />
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tag ID</TableHead>
+                                    <TableHead>Product Name</TableHead>
+                                    <TableHead>Category / Type</TableHead>
+                                    <TableHead>Net Weight</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Price Info</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {initialItems.map((item) => (
+                                    <TableRow
+                                        key={item.id}
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => router.push(`/shop/${shopId}/inventory/${item.tag_id}`)}
+                                    >
+                                        <TableCell className="font-medium font-mono text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <QrCode className="h-3 w-3 text-muted-foreground" />
                                                 {item.tag_id}
                                             </div>
+                                        </TableCell>
+                                        <TableCell className="font-medium">{item.name}</TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col text-xs">
+                                                <span>{item.category || item.metal_type}</span>
+                                                <span className="text-muted-foreground">{item.purity}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{item.net_weight.toFixed(3)} g</TableCell>
+                                        <TableCell>
                                             <Badge
                                                 variant="secondary"
                                                 className={cn(
-                                                    "text-xs",
-                                                    item.status === 'IN_STOCK' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                                                    item.status === 'RESERVED' && "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-                                                    item.status === 'SOLD' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                                                    "text-xs font-normal",
+                                                    item.status === 'IN_STOCK' && "bg-emerald-500/10 text-emerald-600",
+                                                    item.status === 'RESERVED' && "bg-yellow-500/10 text-yellow-600",
+                                                    item.status === 'SOLD' && "bg-blue-500/10 text-blue-600",
                                                 )}
                                             >
                                                 {STATUS_LABELS[item.status]?.label || item.status}
                                             </Badge>
-                                        </div>
-
-                                        {/* Name */}
-                                        <h3 className="font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                                            {item.name}
-                                        </h3>
-
-                                        {/* Category & Purity */}
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <span>{item.category || item.metal_type}</span>
-                                            <span>•</span>
-                                            <span className="text-amber-600 dark:text-amber-400 font-medium">{item.purity}</span>
-                                        </div>
-
-                                        {/* Weight & Making Charge */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                                            <div className="flex items-center gap-1.5 text-sm">
-                                                <Scale className="w-3.5 h-3.5 text-muted-foreground" />
-                                                <span className="font-medium">{item.net_weight}g</span>
-                                            </div>
-                                            {item.making_charge_value > 0 && (
-                                                <span className="text-sm text-muted-foreground">
-                                                    ₹{item.making_charge_value}/g
-                                                </span>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
+                                        </TableCell>
+                                        <TableCell className="text-right text-xs">
+                                            {item.making_charge_value > 0 ? (
+                                                <span>₹{item.making_charge_value}/{item.making_charge_type === 'PER_GRAM' ? 'g' : ' flat'}</span>
+                                            ) : '-'}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
 
                     {/* Mobile Card View */}

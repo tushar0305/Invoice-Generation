@@ -148,6 +148,8 @@ export function ViewInvoiceClient() {
                 rate: Number(r.rate) || 0,
                 makingRate: Number(r.making_rate) || 0,
                 making: Number(r.making) || 0,
+                tagId: r.tag_id,
+                hsnCode: r.hsn_code,
             }));
             if (!cancelled) {
                 setInvoice(mappedInv);
@@ -339,7 +341,8 @@ export function ViewInvoiceClient() {
                             <Table className="table-modern">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-2/5 min-w-[200px]">Item Description</TableHead>
+                                        <TableHead className="w-[35%] min-w-[200px]">Item Description</TableHead>
+                                        <TableHead className="w-[10%] min-w-[80px]">HSN</TableHead>
                                         <TableHead className="text-center min-w-[80px]">Net Wt.</TableHead>
                                         <TableHead className="text-right min-w-[100px]">Rate</TableHead>
                                         <TableHead className="text-right min-w-[100px]">Making</TableHead>
@@ -352,11 +355,19 @@ export function ViewInvoiceClient() {
                                         const lineTotal = (item.netWeight * item.rate) + makingTotal + item.stoneAmount;
                                         return (
                                             <TableRow key={item.id}>
-                                                <TableCell className="font-medium">{item.description}</TableCell>
-                                                <TableCell className="text-center">{item.netWeight}g</TableCell>
-                                                <TableCell className="text-right">{formatCurrency(item.rate)}</TableCell>
-                                                <TableCell className="text-right">{formatCurrency(makingTotal)}</TableCell>
-                                                <TableCell className="text-right">{formatCurrency(lineTotal)}</TableCell>
+                                                <TableCell className="align-top">
+                                                    <div className="font-medium">{item.description}</div>
+                                                    {item.tagId && (
+                                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                                            Tag: <span className="font-mono">{item.tagId}</span>
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="align-top text-xs text-muted-foreground">{item.hsnCode || '-'}</TableCell>
+                                                <TableCell className="text-center align-top">{item.netWeight}g</TableCell>
+                                                <TableCell className="text-right align-top">{formatCurrency(item.rate)}</TableCell>
+                                                <TableCell className="text-right align-top">{formatCurrency(makingTotal)}</TableCell>
+                                                <TableCell className="text-right align-top">{formatCurrency(lineTotal)}</TableCell>
                                             </TableRow>
                                         );
                                     })}
@@ -434,8 +445,8 @@ export function ViewInvoiceClient() {
                             )}
                         </div>
                     </CardFooter>
-                </Card>
-            </div>
-        </div>
+                </Card >
+            </div >
+        </div >
     );
 }

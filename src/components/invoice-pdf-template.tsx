@@ -125,12 +125,12 @@ const ClassicTemplate = ({ invoice, items, settings, calculations, shopDetails }
         <thead>
           <tr>
             <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide" style={{ width: '5%' }}>#</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide" style={{ width: '25%' }}>Description</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide" style={{ width: '30%' }}>Description</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide" style={{ width: '10%' }}>HSN</th>
             <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-left text-[10px] font-bold uppercase tracking-wide" style={{ width: '10%' }}>Purity</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '12.5%' }}>Gross Wt</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '12.5%' }}>Net Wt</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '10%' }}>Gross Wt</th>
+            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '10%' }}>Net Wt</th>
             <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '10%' }}>Rate</th>
-            <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '10%' }}>Making</th>
             <th className="border border-gray-300 bg-gray-100 px-2 py-2 text-right text-[10px] font-bold uppercase tracking-wide" style={{ width: '15%' }}>Amount</th>
           </tr>
         </thead>
@@ -141,7 +141,11 @@ const ClassicTemplate = ({ invoice, items, settings, calculations, shopDetails }
             return (
               <tr key={item.id}>
                 <td className="border border-gray-300 px-2 py-2 align-top">{idx + 1}</td>
-                <td className="border border-gray-300 px-2 py-2 align-top">{item.description}</td>
+                <td className="border border-gray-300 px-2 py-2 align-top">
+                  <div className="font-semibold">{item.description}</div>
+                  {item.tagId && <div className="text-[8px] text-gray-500">Tag: {item.tagId}</div>}
+                </td>
+                <td className="border border-gray-300 px-2 py-2 align-top">{item.hsnCode || '-'}</td>
                 <td className="border border-gray-300 px-2 py-2 align-top">{item.purity}</td>
                 <td className="border border-gray-300 px-2 py-2 text-right align-top">{f2(item.grossWeight)}</td>
                 <td className="border border-gray-300 px-2 py-2 text-right align-top">{f2(item.netWeight)}</td>

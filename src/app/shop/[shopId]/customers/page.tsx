@@ -28,33 +28,26 @@ export default async function CustomersPage({
     const { shopId } = await params;
     const supabase = await createClient();
 
-    // ✅ Server-side data fetching
-    const { data } = await supabase
-        .from('invoices')
-        .select('id, invoice_number, invoice_date, customer_snapshot, grand_total, status')
-        .eq('shop_id', shopId);
+    // ✅ Server-side data fetching from CUSTOMERS table
+    const { data: customers, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('shop_id', shopId)
+        .order('created_at', { ascending: false });
 
     // ✅ Server-side aggregation of customer stats
     const customerData: Record<string, CustomerStats> = {};
 
-    for (const invoice of data || []) {
-        const customerName = invoice.customer_snapshot?.name || 'Unknown';
-        const grandTotal = Number(invoice.grand_total) || 0;
-        const invoiceDate = invoice.invoice_date;
-
-        if (!customerData[customerName]) {
-            customerData[customerName] = {
-                totalPurchase: 0,
-                invoiceCount: 0,
-                lastPurchase: invoiceDate,
-            };
-        }
-
-        customerData[customerName].totalPurchase += grandTotal;
-        customerData[customerName].invoiceCount++;
-
-        if (new Date(invoiceDate) > new Date(customerData[customerName].lastPurchase)) {
-            customerData[customerName].lastPurchase = invoiceDate;
+    if (customers) {
+        for (const customer of customers) {
+            customerData[customer.name] = {
+                totalPurchase: Number(customer.total_spent) || 0,
+                invoiceCount: 0, // We could do a join count if needed, or just leave as is for now
+                lastPurchase: customer.updated_at || new Date().toISOString(),
+                phone: customer.phone,
+                email: customer.email,
+                id: customer.id
+            } as any;
         }
     }
 
