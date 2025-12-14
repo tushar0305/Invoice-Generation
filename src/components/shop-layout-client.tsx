@@ -417,8 +417,8 @@ function ShopLayoutInner({
 
                 <main id="shop-main-content" className={cn(
                     "flex-1 overflow-x-hidden px-0 py-0 md:px-6 md:py-3 md:pb-6",
-                    // Use overflow-hidden for creation pages (they handle their own scrolling), overflow-y-auto for others
-                    pathname.endsWith('/new') ? "overflow-hidden" : "overflow-y-auto",
+                    // Allow scrolling on invoice creation page; other creation pages may manage their own scrolling
+                    pathname.endsWith('/new') && !pathname.includes('/invoices/new') ? "overflow-hidden" : "overflow-y-auto",
                     // Add bottom padding only if mobile nav is visible
                     isMobile && !pathname.endsWith('/new') ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : ""
                 )}>

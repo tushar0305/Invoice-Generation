@@ -33,25 +33,29 @@ const dummyInvoice: Invoice = {
 const dummyItems: InvoiceItem[] = [
     {
         id: '1',
-        // invoiceId removed
         description: 'Gold Ring',
         purity: '22K',
         grossWeight: 5.5,
         netWeight: 5.0,
+        stoneWeight: 0,
+        stoneAmount: 0,
+        wastagePercent: 0,
         rate: 5000,
+        makingRate: 0,
         making: 500,
-        // amount removed
     },
     {
         id: '2',
-        // invoiceId removed
         description: 'Silver Chain',
         purity: '92.5',
         grossWeight: 10.5,
         netWeight: 10.0,
+        stoneWeight: 0,
+        stoneAmount: 0,
+        wastagePercent: 0,
         rate: 70,
+        makingRate: 0,
         making: 20,
-        // amount removed
     }
 ];
 

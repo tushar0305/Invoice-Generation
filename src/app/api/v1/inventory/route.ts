@@ -93,7 +93,6 @@ export async function POST(request: Request) {
 
         // Validation
         if (!body.shop_id) return NextResponse.json({ error: 'shop_id is required' }, { status: 400 });
-        if (!body.name) return NextResponse.json({ error: 'name is required' }, { status: 400 });
         if (!body.metal_type) return NextResponse.json({ error: 'metal_type is required' }, { status: 400 });
         if (!body.purity) return NextResponse.json({ error: 'purity is required' }, { status: 400 });
         if (body.gross_weight === undefined || body.gross_weight <= 0) {
@@ -107,11 +106,10 @@ export async function POST(request: Request) {
             .from('inventory_items')
             .insert({
                 shop_id: body.shop_id,
-                name: body.name,
+                name: body.name || null,  // Trigger auto-generates if null
                 metal_type: body.metal_type,
                 purity: body.purity,
                 category: body.category || null,
-                subcategory: body.subcategory || null,
                 hsn_code: body.hsn_code || null,
                 gross_weight: body.gross_weight,
                 net_weight: body.net_weight,
@@ -120,15 +118,6 @@ export async function POST(request: Request) {
                 making_charge_type: body.making_charge_type || 'PER_GRAM',
                 making_charge_value: body.making_charge_value || 0,
                 stone_value: body.stone_value || 0,
-                purchase_cost: body.purchase_cost || null,
-                selling_price: body.selling_price || null,
-                location: body.location || 'SHOWCASE',
-                source_type: body.source_type || 'VENDOR_PURCHASE',
-                source_notes: body.source_notes || null,
-                vendor_name: body.vendor_name || null,
-                description: body.description || null,
-                internal_notes: body.internal_notes || null,
-                images: body.images || [],
                 created_by: user.id,
             })
             .select()

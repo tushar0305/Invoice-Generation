@@ -10,14 +10,13 @@ export type SourceType = 'VENDOR_PURCHASE' | 'CUSTOMER_EXCHANGE' | 'MELT_REMAKE'
 export interface InventoryItem {
     id: string;
     tag_id: string;
-    qr_data: string;
+    qr_data: string | null;
     shop_id: string;
 
     // Classification
     metal_type: MetalType;
     purity: Purity | string;
     category: string | null;
-    subcategory: string | null;
     hsn_code: string | null;
 
     // Physical Properties
@@ -30,32 +29,20 @@ export interface InventoryItem {
     making_charge_type: MakingChargeType;
     making_charge_value: number;
     stone_value: number;
-    purchase_cost: number | null;
-    selling_price: number | null;
 
     // Lifecycle
     status: ItemStatus;
-    location: LocationType | string;
-    reserved_for_customer_id: string | null;
-    reserved_until: string | null;
-
-    // Source
-    source_type: SourceType;
-    source_notes: string | null;
-    vendor_name: string | null;
 
     // Disposition
     sold_invoice_id: string | null;
     sold_at: string | null;
 
-    // Media
-    images: string[];
-    certification_info: Record<string, any> | null;
-
     // Description
-    name: string;
-    description: string | null;
-    internal_notes: string | null;
+    name: string | null;
+    description?: string | null;
+
+    // Storage location (e.g., showcase, vault)
+    location?: string | null;
 
     // Audit
     created_at: string;
@@ -80,11 +67,10 @@ export interface InventoryStatusHistory {
 
 export interface CreateInventoryItemPayload {
     shop_id: string;
-    name: string;
+    name?: string;  // Optional - auto-generated from category + tag_id
     metal_type: MetalType;
     purity: string;
     category?: string;
-    subcategory?: string;
     hsn_code?: string;
     gross_weight: number;
     net_weight: number;
@@ -93,21 +79,10 @@ export interface CreateInventoryItemPayload {
     making_charge_type?: MakingChargeType;
     making_charge_value?: number;
     stone_value?: number;
-    purchase_cost?: number;
-    selling_price?: number;
-    location?: string;
-    source_type?: SourceType;
-    source_notes?: string;
-    vendor_name?: string;
-    description?: string;
-    internal_notes?: string;
-    images?: string[];
 }
 
 export interface UpdateInventoryItemPayload extends Partial<CreateInventoryItemPayload> {
     status?: ItemStatus;
-    reserved_for_customer_id?: string | null;
-    reserved_until?: string | null;
 }
 
 // QR Code configuration

@@ -136,8 +136,8 @@ const ClassicTemplate = ({ invoice, items, settings, calculations, shopDetails }
         </thead>
         <tbody>
           {calculations.safeItems.map((item, idx) => {
-            const makingTotal = item.netWeight * item.making;
-            const lineTotal = item.netWeight * item.rate + makingTotal;
+            const makingTotal = (item.makingRate * item.netWeight) + item.making;
+            const lineTotal = (item.netWeight * item.rate) + makingTotal + item.stoneAmount;
             return (
               <tr key={item.id}>
                 <td className="border border-gray-300 px-2 py-2 align-top">{idx + 1}</td>
@@ -265,8 +265,8 @@ const ModernTemplate = ({ invoice, items, settings, calculations, shopDetails }:
         </thead>
         <tbody className="divide-y divide-slate-50">
           {calculations.safeItems.map((item) => {
-            const makingTotal = item.netWeight * item.making;
-            const lineTotal = item.netWeight * item.rate + makingTotal;
+            const makingTotal = (item.makingRate * item.netWeight) + item.making;
+            const lineTotal = (item.netWeight * item.rate) + makingTotal + item.stoneAmount;
             return (
               <tr key={item.id}>
                 <td className="py-3 text-slate-700">
@@ -361,8 +361,8 @@ const MinimalTemplate = ({ invoice, items, settings, calculations, shopDetails }
         </thead>
         <tbody>
           {calculations.safeItems.map((item) => {
-            const makingTotal = item.netWeight * item.making;
-            const lineTotal = item.netWeight * item.rate + makingTotal;
+            const makingTotal = (item.makingRate * item.netWeight) + item.making;
+            const lineTotal = (item.netWeight * item.rate) + makingTotal + item.stoneAmount;
             return (
               <tr key={item.id} className="border-b border-gray-100">
                 <td className="py-2">{item.description} <span className="text-[9px] text-gray-500">({item.purity})</span></td>
@@ -459,8 +459,8 @@ const ElegantTemplate = ({ invoice, items, settings, calculations, shopDetails }
           </thead>
           <tbody className="divide-y divide-gray-100">
             {calculations.safeItems.map((item) => {
-              const makingTotal = item.netWeight * item.making;
-              const lineTotal = item.netWeight * item.rate + makingTotal;
+              const makingTotal = (item.makingRate * item.netWeight) + item.making;
+              const lineTotal = (item.netWeight * item.rate) + makingTotal + item.stoneAmount;
               return (
                 <tr key={item.id}>
                   <td className="py-3">{item.description}</td>

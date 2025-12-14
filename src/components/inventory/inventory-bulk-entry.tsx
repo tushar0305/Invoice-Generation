@@ -26,8 +26,7 @@ interface BulkItemRow {
     stone_weight: number;
     wastage_percent: number;
     making_charge_value: number;
-    selling_price: number;
-    item_status: ItemStatus;
+    stone_value: number;
     status: 'pending' | 'saving' | 'saved' | 'error';
     error?: string;
 }
@@ -44,8 +43,7 @@ const createEmptyRow = (): BulkItemRow => ({
     stone_weight: 0,
     wastage_percent: 0,
     making_charge_value: 0,
-    selling_price: 0,
-    item_status: 'IN_STOCK',
+    stone_value: 0,
     status: 'pending',
 });
 
@@ -115,7 +113,7 @@ export function InventoryBulkEntry({ shopId, onClose }: InventoryBulkEntryProps)
             // Tab to next field or next row
             const currentRow = rows.find(r => r.id === rowId);
             const rowIndex = rows.findIndex(r => r.id === rowId);
-            const fields = ['name', 'metal_type', 'purity', 'hsn_code', 'category', 'gross_weight', 'net_weight', 'stone_weight', 'wastage_percent', 'making_charge_value', 'selling_price', 'item_status'];
+            const fields = ['name', 'metal_type', 'purity', 'hsn_code', 'category', 'gross_weight', 'net_weight', 'stone_weight', 'wastage_percent', 'making_charge_value', 'stone_value'];
             const fieldIndex = fields.indexOf(field);
 
             if (fieldIndex === fields.length - 1 && rowIndex === rows.length - 1) {
@@ -184,10 +182,7 @@ export function InventoryBulkEntry({ shopId, onClose }: InventoryBulkEntryProps)
                         wastage_percent: row.wastage_percent,
                         making_charge_type: 'PER_GRAM',
                         making_charge_value: row.making_charge_value,
-                        selling_price: row.selling_price || null,
-                        status: row.item_status,
-                        location: 'SHOWCASE',
-                        source_type: 'VENDOR_PURCHASE',
+                        stone_value: row.stone_value,
                     }),
                 });
 
@@ -269,8 +264,7 @@ export function InventoryBulkEntry({ shopId, onClose }: InventoryBulkEntryProps)
                                     <th className="text-left font-semibold py-3 px-2 w-[90px]">Stone (g)</th>
                                     <th className="text-left font-semibold py-3 px-2 w-[90px]">Wastage %</th>
                                     <th className="text-left font-semibold py-3 px-2 w-[100px]">Making (₹/g)</th>
-                                    <th className="text-left font-semibold py-3 px-2 w-[100px]">Rate (₹/g)</th>
-                                    <th className="text-left font-semibold py-3 px-2 w-[120px]">Item Status</th>
+                                    <th className="text-left font-semibold py-3 px-2 w-[100px]">Stone Value (₹)</th>
                                     <th className="text-center font-semibold py-3 px-2 w-[80px]">Progress</th>
                                     <th className="w-[50px]"></th>
                                 </tr>
@@ -418,30 +412,14 @@ export function InventoryBulkEntry({ shopId, onClose }: InventoryBulkEntryProps)
                                         </td>
                                         <td className="py-2 px-1">
                                             <Input
-                                                ref={el => { if (el) inputRefs.current.set(`${row.id}-selling_price`, el); }}
+                                                ref={el => { if (el) inputRefs.current.set(`${row.id}-stone_value`, el); }}
                                                 type="number"
-                                                value={row.selling_price || ''}
-                                                onChange={e => updateRow(row.id, 'selling_price', parseFloat(e.target.value) || 0)}
-                                                onKeyDown={e => handleKeyDown(e, row.id, 'selling_price')}
+                                                value={row.stone_value || ''}
+                                                onChange={e => updateRow(row.id, 'stone_value', parseFloat(e.target.value) || 0)}
+                                                onKeyDown={e => handleKeyDown(e, row.id, 'stone_value')}
                                                 className="h-9 border border-input bg-background focus:ring-1 focus:ring-primary min-w-[80px]"
                                                 disabled={row.status === 'saved'}
                                             />
-                                        </td>
-                                        <td className="py-2 px-1">
-                                            <Select
-                                                value={row.item_status}
-                                                onValueChange={v => updateRow(row.id, 'item_status', v)}
-                                                disabled={row.status === 'saved'}
-                                            >
-                                                <SelectTrigger className="h-9 border border-input bg-background focus:ring-1 focus:ring-primary min-w-[110px]">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                                                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
                                         </td>
                                         <td className="py-2 px-2 text-center">
                                             {row.status === 'saved' && (

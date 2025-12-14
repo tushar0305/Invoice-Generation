@@ -41,32 +41,93 @@ export default function InventoryItemDetailPage({ params }: { params: Promise<{ 
     }, [tagId, shopId, router, toast]);
 
     const handlePrintTag = () => {
-        // Open print dialog with QR code
-        const printWindow = window.open('', '_blank', 'width=400,height=400');
-        if (printWindow && item) {
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(item.tag_id)}`;
-            printWindow.document.write(`
-                <html>
-                <head><title>Tag: ${item.tag_id}</title>
+        if (!item) return;
+        
+        // Create a hidden iframe for printing
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(item.tag_id)}`;
+        
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Print Tag - ${item.tag_id}</title>
                 <style>
-                    body { font-family: sans-serif; text-align: center; padding: 20px; }
-                    .tag { border: 2px dashed #ccc; padding: 15px; display: inline-block; }
-                    .tag-id { font-size: 14px; font-weight: bold; margin-top: 10px; font-family: monospace; }
-                    .item-name { font-size: 12px; color: #666; margin-top: 5px; }
-                    .weight { font-size: 11px; color: #888; margin-top: 3px; }
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        padding: 20px;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        background: white;
+                    }
+                    .tag-container {
+                        border: 2px dashed #333;
+                        padding: 20px;
+                        text-align: center;
+                        width: fit-content;
+                        background: white;
+                    }
+                    .qr-code {
+                        width: 200px;
+                        height: 200px;
+                        margin-bottom: 10px;
+                    }
+                    .tag-id {
+                        font-size: 16px;
+                        font-weight: bold;
+                        font-family: 'Courier New', monospace;
+                        margin-bottom: 5px;
+                        letter-spacing: 1px;
+                    }
+                    .item-name {
+                        font-size: 12px;
+                        color: #555;
+                        margin-bottom: 3px;
+                    }
+                    .item-details {
+                        font-size: 11px;
+                        color: #777;
+                    }
+                    @media print {
+                        body {
+                            padding: 0;
+                            background: none;
+                        }
+                        .tag-container {
+                            border: 2px dashed #000;
+                        }
+                    }
                 </style>
-                </head>
-                <body>
-                    <div class="tag">
-                        <img src="${qrUrl}" alt="QR"/>
-                        <div class="tag-id">${item.tag_id}</div>
-                        <div class="item-name">${item.name}</div>
-                        <div class="weight">${item.purity} • ${item.net_weight}g</div>
-                    </div>
-                    <script>setTimeout(() => { window.print(); window.close(); }, 500);</script>
-                </body>
-                </html>
-            `);
+            </head>
+            <body>
+                <div class="tag-container">
+                    <img src="${qrUrl}" alt="QR Code" class="qr-code">
+                    <div class="tag-id">${item.tag_id}</div>
+                    <div class="item-name">${item.name || item.category}</div>
+                    <div class="item-details">${item.purity} • ${item.net_weight}g</div>
+                </div>
+            </body>
+            </html>
+        `;
+        
+        if (iframe.contentDocument) {
+            iframe.contentDocument.open();
+            iframe.contentDocument.write(htmlContent);
+            iframe.contentDocument.close();
+            
+            iframe.onload = () => {
+                iframe.contentWindow?.print();
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            };
         }
     };
 
@@ -177,20 +238,18 @@ export default function InventoryItemDetailPage({ params }: { params: Promise<{ 
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                             <IndianRupee className="h-4 w-4 text-green-500" />
-                            Pricing
+                            Charges
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2">
-                            {item.selling_price && (
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">MRP</span>
-                                    <span className="font-bold text-lg text-primary">{formatCurrency(item.selling_price)}</span>
-                                </div>
-                            )}
                             <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Making</span>
+                                <span className="text-muted-foreground">Making Charge</span>
                                 <span>₹{item.making_charge_value} {item.making_charge_type === 'PER_GRAM' ? '/g' : ''}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Stone Value</span>
+                                <span>₹{item.stone_value || '0'}</span>
                             </div>
                         </div>
                     </CardContent>
@@ -220,18 +279,8 @@ export default function InventoryItemDetailPage({ params }: { params: Promise<{ 
                             </div>
                             <div>
                                 <span className="text-muted-foreground block">Location</span>
-                                <span className="font-medium">{item.location}</span>
+                                <span className="font-medium">{item.location || '-'}</span>
                             </div>
-                            <div>
-                                <span className="text-muted-foreground block">Source</span>
-                                <span className="font-medium">{item.source_type.replace('_', ' ')}</span>
-                            </div>
-                            {item.vendor_name && (
-                                <div>
-                                    <span className="text-muted-foreground block">Vendor</span>
-                                    <span className="font-medium">{item.vendor_name}</span>
-                                </div>
-                            )}
                         </div>
                         {item.description && (
                             <div className="mt-4 pt-4 border-t border-border/50">

@@ -15,14 +15,37 @@ export async function GET(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Try to find by id first, then by tag_id
-        let query = supabase
+        // Try to find by tag_id first (most common), then by id
+        // Use separate queries to avoid UUID parsing issues
+        let data = null;
+        let error = null;
+
+        // First, try tag_id (more common - tag_ids are strings like "SA-G22-000002")
+        const tagQuery = await supabase
             .from('inventory_items')
-            .select('*, customer:reserved_for_customer_id(id, name, phone)')
-            .or(`id.eq.${itemId},tag_id.eq.${itemId}`)
+            .select('*')
+            .eq('tag_id', itemId)
             .single();
 
-        const { data, error } = await query;
+        if (tagQuery.data) {
+            data = tagQuery.data;
+        } else if (tagQuery.error?.code !== 'PGRST116') {
+            // Only try ID lookup if tag lookup failed for reasons other than "not found"
+            error = tagQuery.error;
+        } else {
+            // Try as UUID if tag_id not found
+            const idQuery = await supabase
+                .from('inventory_items')
+                .select('*')
+                .eq('id', itemId)
+                .single();
+            
+            if (idQuery.data) {
+                data = idQuery.data;
+            } else {
+                error = idQuery.error;
+            }
+        }
 
         if (error) {
             if (error.code === 'PGRST116') {
@@ -65,12 +88,10 @@ export async function PUT(
         const updateData: Record<string, any> = { updated_by: user.id };
 
         const allowedFields = [
-            'name', 'category', 'subcategory', 'hsn_code',
+            'name', 'category', 'hsn_code',
             'gross_weight', 'net_weight', 'stone_weight', 'wastage_percent',
             'making_charge_type', 'making_charge_value', 'stone_value',
-            'purchase_cost', 'selling_price', 'location',
-            'status', 'reserved_for_customer_id', 'reserved_until',
-            'description', 'internal_notes', 'images'
+            'status', 'location'
         ];
 
         for (const field of allowedFields) {
@@ -79,10 +100,25 @@ export async function PUT(
             }
         }
 
+        // First get the item to ensure it exists
+        const getQuery = await supabase
+            .from('inventory_items')
+            .select('id')
+            .eq('tag_id', itemId)
+            .single();
+
+        let itemUuid = null;
+        if (getQuery.data) {
+            itemUuid = getQuery.data.id;
+        } else {
+            // Try as UUID
+            itemUuid = itemId;
+        }
+
         const { data, error } = await supabase
             .from('inventory_items')
             .update(updateData)
-            .or(`id.eq.${itemId},tag_id.eq.${itemId}`)
+            .eq('id', itemUuid)
             .select()
             .single();
 
@@ -111,11 +147,26 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // First get the item to ensure it exists
+        const getQuery = await supabase
+            .from('inventory_items')
+            .select('id')
+            .eq('tag_id', itemId)
+            .single();
+
+        let itemUuid = null;
+        if (getQuery.data) {
+            itemUuid = getQuery.data.id;
+        } else {
+            // Try as UUID
+            itemUuid = itemId;
+        }
+
         // Soft delete - mark as MELTED (or could be a hard delete if needed)
         const { error } = await supabase
             .from('inventory_items')
             .update({ status: 'MELTED', updated_by: user.id })
-            .or(`id.eq.${itemId},tag_id.eq.${itemId}`);
+            .eq('id', itemUuid);
 
         if (error) {
             console.error('Error deleting inventory item:', error);

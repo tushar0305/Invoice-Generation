@@ -180,6 +180,12 @@ export async function createInvoiceAction(formData: {
 
         if (rpcError) throw rpcError;
 
+        // Normalize RPC result to a plain invoice UUID
+        // Function returns table(invoice_id uuid), so data is array of { invoice_id: uuid }
+        const normalizedInvoiceId: string = Array.isArray(invoiceId)
+            ? (invoiceId[0]?.invoice_id ?? invoiceId[0]?.id ?? (invoiceId[0] as any))
+            : ((invoiceId as any)?.invoice_id ?? (invoiceId as any)?.id ?? (invoiceId as any));
+
         // Update Inventory Items - Mark as SOLD instead of decrementing quantity
         for (const item of formData.items) {
             if (item.stockId) {
@@ -188,7 +194,7 @@ export async function createInvoiceAction(formData: {
                     .from('inventory_items')
                     .update({
                         status: 'SOLD',
-                        sold_invoice_id: invoiceId,
+                        sold_invoice_id: normalizedInvoiceId,
                         sold_at: new Date().toISOString()
                     })
                     .eq('id', item.stockId);
@@ -200,7 +206,7 @@ export async function createInvoiceAction(formData: {
         revalidatePath(`/shop/${formData.shopId}/dashboard`);
         revalidatePath(`/shop/${formData.shopId}/insights`);
 
-        return { success: true, invoiceId: (invoiceId as any)?.id };
+        return { success: true, invoiceId: normalizedInvoiceId };
     } catch (error: any) {
         console.error('createInvoiceAction error:', error);
         return { success: false, error: error.message || 'Failed to create invoice' };

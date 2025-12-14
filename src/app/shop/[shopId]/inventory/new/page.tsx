@@ -28,7 +28,7 @@ import { InventoryBulkEntry } from '@/components/inventory/inventory-bulk-entry'
 import { useMediaQuery } from '@/hooks/use-media-query';
 
 const inventoryItemSchema = z.object({
-    name: z.string().trim().min(1, 'Item name is required'),
+    name: z.string().trim().optional(),  // Optional - auto-generated from category + tag
     metal_type: z.enum(['GOLD', 'SILVER', 'DIAMOND', 'PLATINUM']),
     purity: z.string().min(1, 'Purity is required'),
     category: z.string().optional(),
@@ -39,12 +39,6 @@ const inventoryItemSchema = z.object({
     making_charge_type: z.enum(['PER_GRAM', 'FIXED', 'PERCENT']).default('PER_GRAM'),
     making_charge_value: z.coerce.number().min(0).default(0),
     stone_value: z.coerce.number().min(0).default(0),
-    purchase_cost: z.coerce.number().min(0).optional(),
-    selling_price: z.coerce.number().min(0).optional(),
-    location: z.string().default('SHOWCASE'),
-    source_type: z.enum(['VENDOR_PURCHASE', 'CUSTOMER_EXCHANGE', 'MELT_REMAKE', 'GIFT_RECEIVED']).default('VENDOR_PURCHASE'),
-    vendor_name: z.string().optional(),
-    description: z.string().optional(),
     hsn_code: z.string().optional(),
 });
 
@@ -76,10 +70,6 @@ export default function NewInventoryItemPage() {
             making_charge_type: 'PER_GRAM',
             making_charge_value: 0,
             stone_value: 0,
-            location: 'SHOWCASE',
-            source_type: 'VENDOR_PURCHASE',
-            vendor_name: '',
-            description: '',
             hsn_code: '',
         },
     });
@@ -164,10 +154,11 @@ export default function NewInventoryItemPage() {
                                     name="name"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Item Name *</FormLabel>
+                                            <FormLabel>Item Name (Optional)</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. Antique Temple Necklace" {...field} className="h-12" />
+                                                <Input placeholder="Auto-generated if left empty" {...field} className="h-12" />
                                             </FormControl>
+                                            <p className="text-xs text-muted-foreground">Leave empty to auto-generate from category and tag</p>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -333,29 +324,43 @@ export default function NewInventoryItemPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Pricing */}
+                        {/* Stone Details (Optional) */}
                         <Card className="bg-card border border-border rounded-xl shadow-sm">
                             <CardContent className="p-5 space-y-4">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <IndianRupee className="w-4 h-4 text-green-500" />
-                                    <h3 className="font-semibold text-sm">Pricing</h3>
+                                    <IndianRupee className="w-4 h-4 text-purple-500" />
+                                    <h3 className="font-semibold text-sm">Additional Charges</h3>
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="making_charge_value"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Making Charge (₹/g)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" step="0.01" {...field} className="h-12" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="making_charge_value"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Making Charge (₹/g)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" step="0.01" {...field} className="h-12" />
+                                            </FormControl>
+                                            <p className="text-xs text-muted-foreground">Making charges per gram</p>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="stone_value"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Stone Value (₹)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" step="0.01" {...field} className="h-12" />
+                                            </FormControl>
+                                            <p className="text-xs text-muted-foreground">Total value of stones/gems in this item</p>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
                             </CardContent>
                         </Card>

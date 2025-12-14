@@ -73,13 +73,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   const lastMonthRevenue = stats.totalPaidLastMonth;
   const changeAmount = stats.totalPaidThisMonth - lastMonthRevenue;
 
-  // Calculate pending payments
+  // Calculate pending payments (no overdue logic)
   const totalDue = stats.dueInvoices.reduce((sum: number, inv: any) => sum + Number(inv.grand_total), 0);
-  const overdueInvoices = stats.dueInvoices.filter((inv: any) => {
-    // Fallback to created_at + 30 days if due_date is missing
-    const dateToCompare = inv.due_date ? new Date(inv.due_date) : new Date(new Date(inv.created_at).getTime() + 30 * 24 * 60 * 60 * 1000);
-    return dateToCompare < new Date();
-  });
 
   // Customer insights
   const returningCustomers = Math.floor(totalUniqueCustomers * 0.3);
@@ -195,7 +190,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
           shopId={shopId}
           pendingCount={stats.dueInvoices.length}
           totalDue={totalDue}
-          overdueCount={overdueInvoices.length}
           recentDueInvoices={stats.dueInvoices.slice(0, 3)}
         />
 

@@ -142,7 +142,11 @@ export function ViewInvoiceClient() {
                 purity: r.purity,
                 grossWeight: Number(r.gross_weight) || 0,
                 netWeight: Number(r.net_weight) || 0,
+                stoneWeight: Number(r.stone_weight) || 0,
+                stoneAmount: Number(r.stone_amount) || 0,
+                wastagePercent: Number(r.wastage_percent) || 0,
                 rate: Number(r.rate) || 0,
+                makingRate: Number(r.making_rate) || 0,
                 making: Number(r.making) || 0,
             }));
             if (!cancelled) {
@@ -228,18 +232,6 @@ export function ViewInvoiceClient() {
     if (!invoice) {
         notFound();
     }
-
-    const { subtotal, sgstAmount, cgstAmount, taxAmount, grandTotal } = (() => {
-        const subtotal = (items || []).reduce((acc, item) => acc + (item.netWeight * item.rate) + (item.netWeight * item.making), 0);
-        const totalBeforeTax = subtotal - invoice.discount;
-        const sgstRate = settings?.sgstRate || 0; // Use settings for rates
-        const cgstRate = settings?.cgstRate || 0; // Use settings for rates
-        const sgstAmount = totalBeforeTax * (sgstRate / 100);
-        const cgstAmount = totalBeforeTax * (cgstRate / 100);
-        const taxAmount = sgstAmount + cgstAmount;
-        const grandTotal = invoice.grandTotal;
-        return { subtotal, sgstAmount, cgstAmount, taxAmount, grandTotal };
-    })();
 
     return (
         <div className="space-y-6 p-4 md:p-6 pb-24 md:pb-6">
@@ -355,74 +347,80 @@ export function ViewInvoiceClient() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {items && items.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell className="font-medium">{item.description}</TableCell>
-                                            <TableCell className="text-center">{item.netWeight}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(item.rate)}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(item.netWeight * item.making)}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency((item.netWeight * item.rate) + (item.netWeight * item.making))}</TableCell>
-                                        </TableRow>
-                                    ))}
+                                    {items && items.map(item => {
+                                        const makingTotal = (item.makingRate * item.netWeight) + item.making;
+                                        const lineTotal = (item.netWeight * item.rate) + makingTotal + item.stoneAmount;
+                                        return (
+                                            <TableRow key={item.id}>
+                                                <TableCell className="font-medium">{item.description}</TableCell>
+                                                <TableCell className="text-center">{item.netWeight}g</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(item.rate)}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(makingTotal)}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(lineTotal)}</TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         </div>
 
                         {/* Mobile Items View */}
                         <div className="md:hidden space-y-4">
-                            {items && items.map((item, i) => (
-                                <div key={item.id} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <span className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2">{item.description}</span>
-                                        <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
-                                            {formatCurrency((item.netWeight * item.rate) + (item.netWeight * item.making))}
-                                        </span>
+                            {items && items.map((item, i) => {
+                                const makingTotal = (item.makingRate * item.netWeight) + item.making;
+                                const lineTotal = (item.netWeight * item.rate) + makingTotal + item.stoneAmount;
+                                return (
+                                    <div key={item.id} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <span className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2">{item.description}</span>
+                                            <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
+                                                {formatCurrency(lineTotal)}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mt-2">
+                                            <div className="flex flex-col">
+                                                <span className="opacity-70">Weight</span>
+                                                <span className="font-medium text-gray-700 dark:text-gray-300">{item.netWeight}g</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="opacity-70">Rate</span>
+                                                <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(item.rate)}</span>
+                                            </div>
+                                            <div className="flex flex-col text-right">
+                                                <span className="opacity-70">Making</span>
+                                                <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(makingTotal)}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mt-2">
-                                        <div className="flex flex-col">
-                                            <span className="opacity-70">Weight</span>
-                                            <span className="font-medium text-gray-700 dark:text-gray-300">{item.netWeight}g</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="opacity-70">Rate</span>
-                                            <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(item.rate)}</span>
-                                        </div>
-                                        <div className="flex flex-col text-right">
-                                            <span className="opacity-70">Making</span>
-                                            <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(item.netWeight * item.making)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         <div className="mt-6 flex justify-end">
                             <div className="w-full max-w-sm space-y-3">
                                 <div className="flex justify-between">
                                     <span className="font-semibold text-muted-foreground">Subtotal:</span>
-                                    <span>{formatCurrency(subtotal)}</span>
+                                    <span>{formatCurrency(invoice.subtotal)}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="font-semibold text-muted-foreground">Discount:</span>
-                                    <span>- {formatCurrency(invoice.discount)}</span>
-                                </div>
+                                {invoice.discount > 0 && (
+                                    <div className="flex justify-between">
+                                        <span className="font-semibold text-muted-foreground">Discount:</span>
+                                        <span>- {formatCurrency(invoice.discount)}</span>
+                                    </div>
+                                )}
                                 <Separator />
                                 <div className="flex justify-between">
-                                    <span className="font-semibold text-muted-foreground">Total before Tax:</span>
-                                    <span>{formatCurrency(subtotal - invoice.discount)}</span>
+                                    <span className="font-semibold text-muted-foreground">SGST ({settings?.sgstRate || 1.5}%):</span>
+                                    <span>{formatCurrency(invoice.sgstAmount)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="font-semibold text-muted-foreground">SGST ({settings?.sgstRate || 0}%):</span>
-                                    <span>{formatCurrency(sgstAmount)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="font-semibold text-muted-foreground">CGST ({settings?.cgstRate || 0}%):</span>
-                                    <span>{formatCurrency(cgstAmount)}</span>
+                                    <span className="font-semibold text-muted-foreground">CGST ({settings?.cgstRate || 1.5}%):</span>
+                                    <span>{formatCurrency(invoice.cgstAmount)}</span>
                                 </div>
                                 <Separator />
                                 <div className="flex justify-between text-xl font-bold text-primary">
                                     <span>Grand Total:</span>
-                                    <span>{formatCurrency(grandTotal)}</span>
+                                    <span>{formatCurrency(invoice.grandTotal)}</span>
                                 </div>
                             </div>
                         </div>
@@ -430,7 +428,7 @@ export function ViewInvoiceClient() {
                     <CardFooter>
                         <div className="w-full text-sm text-muted-foreground">
                             <p className="font-semibold">Amount in words:</p>
-                            <p>{toWords(Math.round(grandTotal))} Rupees Only</p>
+                            <p>{toWords(Math.round(invoice.grandTotal))} Rupees Only</p>
                             {invoice.createdByName && (
                                 <p className="mt-2 text-xs text-muted-foreground">Created by: {invoice.createdByName}</p>
                             )}

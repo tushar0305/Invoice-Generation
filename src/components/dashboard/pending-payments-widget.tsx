@@ -11,8 +11,6 @@ interface PendingPaymentsWidgetProps {
     shopId: string;
     pendingCount: number;
     totalDue: number;
-    overdueCount: number;
-    overdueDays?: number;
     recentDueInvoices?: any[];
 }
 
@@ -20,11 +18,9 @@ export function PendingPaymentsWidget({
     shopId,
     pendingCount,
     totalDue,
-    overdueCount,
-    overdueDays = 0,
     recentDueInvoices = []
 }: PendingPaymentsWidgetProps) {
-    const hasUrgent = overdueCount > 0;
+    const hasUrgent = false;
 
     return (
         <Card className="h-full overflow-hidden bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300">
@@ -68,31 +64,7 @@ export function PendingPaymentsWidget({
                             </motion.p>
                         </motion.div>
 
-                        {/* Overdue Warning */}
-                        {overdueCount > 0 && (
-                            <motion.div
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="flex items-center gap-2 p-2 rounded-lg bg-destructive/5 border border-destructive/20"
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1] }}
-                                    transition={{ duration: 1, repeat: Infinity }}
-                                >
-                                    <AlertCircle className="h-4 w-4 text-destructive" />
-                                </motion.div>
-                                <div className="flex-1">
-                                    <p className="text-xs font-semibold text-destructive">
-                                        {overdueCount} overdue
-                                    </p>
-                                    {overdueDays > 0 && (
-                                        <p className="text-[10px] text-destructive/80">
-                                            Oldest: {overdueDays} days
-                                        </p>
-                                    )}
-                                </div>
-                            </motion.div>
-                        )}
+                        {/* Overdue Warning removed per requirement */}
 
                         {/* Recent Due Invoices List */}
                         {recentDueInvoices.length > 0 && (

@@ -140,15 +140,15 @@ export function InventoryMobileCard({ item, shopId, onDelete, onMarkSold }: Inve
                                 )}
                             </div>
                             <div className="text-right">
-                                {item.selling_price ? (
+                                {item.making_charge_value > 0 ? (
                                     <>
-                                        <div className="text-xs text-muted-foreground mb-0.5">Price</div>
+                                        <div className="text-xs text-muted-foreground mb-0.5">Making</div>
                                         <div className="font-serif text-xl font-bold text-primary">
-                                            {formatCurrency(item.selling_price)}
+                                            ₹{item.making_charge_value}/g
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="text-xs text-muted-foreground">No price set</div>
+                                    <div className="text-xs text-muted-foreground">No charge set</div>
                                 )}
                             </div>
                         </div>

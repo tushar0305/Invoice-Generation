@@ -45,10 +45,14 @@ export function EditInvoiceClient() {
             const mappedItems: InvoiceItem[] = (its ?? []).map((r: any) => ({
                 id: r.id,
                 description: r.description,
-                purity: r.purity.replace(/K/g, ''),
+                purity: r.purity?.replace(/K/g, '') ?? '',
                 grossWeight: Number(r.gross_weight) || 0,
                 netWeight: Number(r.net_weight) || 0,
+                stoneWeight: Number(r.stone_weight) || 0,
+                stoneAmount: Number(r.stone_amount) || 0,
+                wastagePercent: Number(r.wastage_percent) || 0,
                 rate: Number(r.rate) || 0,
+                makingRate: Number(r.making_rate) || 0,
                 making: Number(r.making) || 0,
             }));
             if (!cancelled) {

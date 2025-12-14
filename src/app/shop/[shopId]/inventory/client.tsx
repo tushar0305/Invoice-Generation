@@ -82,7 +82,7 @@ export function InventoryClient({
     ];
 
     return (
-        <div className="space-y-4 pb-20 md:pb-6">
+        <div className="space-y-4 pb-20 md:pb-6 pt-2 md:pt-0">
             {/* Search & Filters */}
             <div className="flex flex-col gap-3">
                 <form onSubmit={handleSearch} className="flex gap-2">
@@ -198,15 +198,15 @@ export function InventoryClient({
                                             <span className="text-amber-600 dark:text-amber-400 font-medium">{item.purity}</span>
                                         </div>
 
-                                        {/* Weight & Price */}
+                                        {/* Weight & Making Charge */}
                                         <div className="flex items-center justify-between pt-2 border-t border-border/50">
                                             <div className="flex items-center gap-1.5 text-sm">
                                                 <Scale className="w-3.5 h-3.5 text-muted-foreground" />
                                                 <span className="font-medium">{item.net_weight}g</span>
                                             </div>
-                                            {item.selling_price && (
-                                                <span className="font-bold text-primary">
-                                                    {formatCurrency(item.selling_price)}
+                                            {item.making_charge_value > 0 && (
+                                                <span className="text-sm text-muted-foreground">
+                                                    ₹{item.making_charge_value}/g
                                                 </span>
                                             )}
                                         </div>

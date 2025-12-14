@@ -8,7 +8,7 @@ import { FileText, Plus, Trash2 } from 'lucide-react';
 import { UseFormReturn, useFieldArray } from 'react-hook-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/supabase/client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface InventoryItem {
     id: string;
@@ -23,7 +23,6 @@ interface InventoryItem {
     stone_weight?: number;
     wastage_percent?: number;
     making_charge_value?: number;
-    selling_price?: number;
 }
 
 interface InvoiceItemsTableProps {
@@ -37,6 +36,9 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
         name: 'items',
     });
 
+    const appendGuard = useRef(false);
+    const [isAdding, setIsAdding] = useState(false);
+
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
 
     // Fetch inventory items from the new inventory_items table
@@ -47,7 +49,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
         const fetchInventory = async () => {
             const { data, error } = await supabase
                 .from('inventory_items')
-                .select('id, tag_id, name, metal_type, purity, hsn_code, category, gross_weight, net_weight, stone_weight, wastage_percent, making_charge_value, selling_price')
+                .select('id, tag_id, name, metal_type, purity, hsn_code, category, gross_weight, net_weight, stone_weight, wastage_percent, making_charge_value')
                 .eq('shop_id', shopId)
                 .eq('status', 'IN_STOCK')
                 .order('created_at', { ascending: false });
@@ -74,15 +76,9 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
             form.setValue(`items.${index}.netWeight`, selected.net_weight || 0);
             form.setValue(`items.${index}.wastagePercent`, selected.wastage_percent || 0);
 
-            // Important: Mapping making_charge_value (which is Rate ₹/g in Inventory) to makingRate
+            // Map making_charge_value to makingRate
             if (selected.making_charge_value) {
                 form.setValue(`items.${index}.makingRate`, selected.making_charge_value);
-            }
-
-            // Map selling_price to rate if available
-            if (selected.selling_price && selected.net_weight > 0) {
-                // Inventory 'selling_price' is actually the rate/g as per recent changes
-                form.setValue(`items.${index}.rate`, selected.selling_price);
             }
 
             form.setValue(`items.${index}.stockId`, selected.id);
@@ -112,9 +108,20 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                 <CardTitle className="flex items-center gap-2 text-lg">
                     <FileText className="h-5 w-5 text-primary" /> Items
                 </CardTitle>
-                <Button type="button" size="sm" onClick={() => append({
-                    id: crypto.randomUUID(), description: '', purity: '22K', grossWeight: 0, netWeight: 0, stoneWeight: 0, stoneAmount: 0, wastagePercent: 0, rate: 0, makingRate: 0, making: 0
-                })}>
+                <Button
+                    type="button"
+                    size="sm"
+                    disabled={isAdding}
+                    onClick={() => {
+                        if (appendGuard.current) return;
+                        appendGuard.current = true;
+                        setIsAdding(true);
+                        append({
+                            id: crypto.randomUUID(), description: '', purity: '22K', grossWeight: 0, netWeight: 0, stoneWeight: 0, stoneAmount: 0, wastagePercent: 0, rate: 0, makingRate: 0, making: 0
+                        });
+                        setTimeout(() => { appendGuard.current = false; setIsAdding(false); }, 300);
+                    }}
+                >
                     <Plus className="h-4 w-4 mr-1" /> Add Item
                 </Button>
             </CardHeader>
@@ -125,16 +132,18 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                     </div>
                 )}
                 {fields.map((field, index) => (
-                    <div key={field.id} className="p-4 border rounded-lg bg-card relative group">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-2 top-2 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => remove(index)}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                    <div key={field.id} className="p-4 border rounded-lg bg-card">
+                        <div className="flex justify-end mb-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive"
+                                onClick={() => remove(index)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
 
                         <div className="mb-4">
                             <FormLabel className="text-xs uppercase text-muted-foreground mb-1.5 block">Select from Inventory (Optional)</FormLabel>
@@ -208,6 +217,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                             <Input
                                                 type="number"
                                                 {...field}
+                                                value={field.value ?? ''}
                                                 onChange={(e) => handleGrossChange(index, e.target.value)}
                                             />
                                         </FormControl>
@@ -227,6 +237,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                             <Input
                                                 type="number"
                                                 {...field}
+                                                value={field.value ?? ''}
                                                 onChange={(e) => handleStoneChange(index, e.target.value)}
                                             />
                                         </FormControl>
@@ -235,14 +246,20 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                 )}
                             />
 
-                            {/* Net Weight (Read Only / Calculated) */}
+                            {/* Net Weight (Editable) */}
                             <FormField
                                 control={form.control}
                                 name={`items.${index}.netWeight`}
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-xs uppercase text-muted-foreground font-bold text-primary">Net (g)</FormLabel>
-                                        <FormControl><Input type="number" {...field} readOnly className="bg-muted font-bold" /></FormControl>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                value={field.value ?? ''}
+                                                onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -255,7 +272,14 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-xs uppercase text-muted-foreground">Rate (₹/g)</FormLabel>
-                                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.value)} /></FormControl>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                {...field}
+                                                value={field.value ?? ''}
+                                                onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -268,7 +292,14 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-xs uppercase text-muted-foreground">Making (₹/g)</FormLabel>
-                                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.value)} /></FormControl>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                {...field}
+                                                value={field.value ?? ''}
+                                                onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -281,7 +312,14 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-xs uppercase text-muted-foreground">Stone Val (₹)</FormLabel>
-                                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(e.target.value)} /></FormControl>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                {...field}
+                                                value={field.value ?? ''}
+                                                onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}

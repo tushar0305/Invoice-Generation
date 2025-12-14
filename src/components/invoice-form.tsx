@@ -40,6 +40,8 @@ const LiveInvoicePreview = dynamic(() => import('@/components/invoice-preview').
 // Sub-components
 import { CustomerDetailsCard } from '@/components/invoice/customer-details-card';
 import { InvoiceItemsTable } from '@/components/invoice/invoice-items-table';
+import { MultiQRScanner } from '@/components/inventory/multi-qr-scanner';
+import { QrCode } from 'lucide-react';
 
 // --- 1. Robust Schema Definition ---
 const invoiceItemSchema = z.object({
@@ -47,6 +49,8 @@ const invoiceItemSchema = z.object({
   stockId: z.string().optional(),
   description: z.string().min(1, 'Description is required'),
   hsnCode: z.string().optional(),
+  metalType: z.string().optional(),
+  category: z.string().optional(),
   purity: z.string().default('22K'),
 
   // Weights (Standardized to numeric)
@@ -73,6 +77,8 @@ const invoiceSchema = z.object({
     z.string().email().or(z.literal('')).optional()
   ),
   invoiceDate: z.date(),
+  // Global current rate (₹/g) to apply when item rate is not set
+  currentRate: z.coerce.number().min(0).default(0),
   items: z.array(invoiceItemSchema).min(1, 'At least one item is required'),
   discount: z.coerce.number().min(0).default(0),
   status: z.enum(['paid', 'due']),
@@ -100,6 +106,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const [customerPoints, setCustomerPoints] = useState<number>(0);
   const [showPreview, setShowPreview] = useState(false);
   const [showMobileDetails, setShowMobileDetails] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // --- 3. Form Initialization ---
   const form = useForm<InvoiceFormValues>({
@@ -128,6 +135,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         making: Number(item.making || 0),
         stoneAmount: Number(item.stoneAmount || 0),
       })) || [],
+      currentRate: 0,
       discount: invoice?.discount || 0,
       status: (invoice?.status as 'paid' | 'due') || 'paid',
       redeemPoints: false,
@@ -142,6 +150,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const watchedRedeemPoints = useWatch({ control: form.control, name: 'redeemPoints' });
   const watchedPointsToRedeem = useWatch({ control: form.control, name: 'pointsToRedeem' });
   const watchedCustomerPhone = useWatch({ control: form.control, name: 'customerPhone' });
+  const watchedCurrentRate = useWatch({ control: form.control, name: 'currentRate' });
 
   // --- 4. Data Loading Effects ---
   useEffect(() => {
@@ -195,7 +204,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const totals = useMemo(() => {
     const subtotal = watchedItems?.reduce((acc, item) => {
       const netWeight = Number(item.netWeight) || 0;
-      const rate = Number(item.rate) || 0;
+      // Use item rate if set, else fallback to global currentRate
+      const rate = (Number(item.rate) || Number(watchedCurrentRate) || 0);
       // Legacy vs New Making Logic:
       // If makingRate > 0, use Rate * Wt. Else if makingAmount > 0 (fallback in future ui), use that.
       // For now, we rely on Making Rate as primary input.
@@ -240,7 +250,40 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       grandTotal,
       pointsToEarn
     };
-  }, [watchedItems, watchedDiscount, watchedRedeemPoints, watchedPointsToRedeem, loyaltySettings, settings]);
+  }, [watchedItems, watchedDiscount, watchedRedeemPoints, watchedPointsToRedeem, loyaltySettings, settings, watchedCurrentRate]);
+
+  // --- 5.5. QR Scanner Handler ---
+  const handleItemsFromQR = (items: any[]) => {
+    items.forEach(item => {
+      form.setValue(`items.${watchedItems.length}`, {
+        description: item.name,
+        metalType: item.metal_type,
+        purity: item.purity || '22K',
+        hsnCode: item.hsn_code || '',
+        category: item.category || '',
+        grossWeight: item.gross_weight || 0,
+        netWeight: item.net_weight || 0,
+        stoneWeight: item.stone_weight || 0,
+        wastagePercent: item.wastage_percent || 0,
+        makingRate: item.making_charge_value || 0,
+        making: 0,
+        rate: 0,
+        stoneAmount: item.stone_value || 0,
+        stockId: item.id,
+      });
+    });
+    
+    toast({
+      title: 'Success',
+      description: `Added ${items.length} item${items.length > 1 ? 's' : ''} from QR scan`
+    });
+  };
+
+  const getExistingTagIds = () => {
+    return watchedItems
+      ?.map((item: any) => item.stockId)
+      .filter(Boolean) || [];
+  };
 
   // --- 6. Submission Handler ---
   const onSubmit = async (data: InvoiceFormValues) => {
@@ -298,7 +341,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   if (shopLoading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <MotionWrapper className="lg:h-auto lg:block flex flex-col h-full overflow-hidden">
+    <MotionWrapper className="min-h-screen flex flex-col lg:block">
 
       {/* 1. Fixed Header (Mobile) / Regular Header (Desktop) */}
       <div className="flex-none p-4 py-3 bg-background border-b z-20 sticky top-0 lg:static lg:p-0 lg:border-none lg:mb-4 lg:bg-transparent">
@@ -312,20 +355,20 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         </div>
       </div>
 
-      <div className="flex-1 lg:flex-none flex flex-col lg:block overflow-hidden lg:overflow-visible container mx-auto px-0 lg:px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr,400px] gap-6 h-full lg:h-auto">
+      <div className="flex-1 flex flex-col lg:flex-none lg:block">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr,400px] gap-6">
 
           {/* LEFT COLUMN: FORM */}
-          <div className="flex-1 flex flex-col h-full lg:h-auto overflow-hidden lg:block lg:overflow-visible">
+          <div className="flex flex-col">
             <Form {...form}>
               <form
                 id="invoice-form"
                 onSubmit={form.handleSubmit(onSubmit)}
-                className="flex flex-col h-full lg:block lg:space-y-4"
+                className="flex flex-col"
               >
 
-                {/* Scrollable Content Area (Mobile) */}
-                <div className="flex-1 overflow-y-auto px-4 py-4 lg:p-0 space-y-4 pb-0 custom-scrollbar">
+                {/* Scrollable Content Area */}
+                <div className="px-4 py-4 lg:p-0 space-y-4 lg:space-y-4">
 
                   {/* 1. Customer Details */}
                   <CustomerDetailsCard
@@ -382,11 +425,85 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                           </FormItem>
                         )}
                       />
+                      {/* Global Current Rate (₹/g) */}
+                      <FormField
+                        control={form.control}
+                        name="currentRate"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Current Rate (₹/g)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                value={field.value}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                placeholder="Enter gold/silver rate per gram"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </CardContent>
                   </Card>
 
-                  {/* 3. Items Table */}
-                  <InvoiceItemsTable form={form} shopId={activeShop?.id} />
+                  {/* 3. Items Summary Preview */}
+                  {watchedItems.length > 0 && (
+                    <Card className="border-2 shadow-sm bg-blue-50/50 border-blue-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600" /> Items Added ({watchedItems.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                          {watchedItems.map((item, idx) => (
+                            <div key={idx} className="p-3 bg-white rounded-lg border-l-4 border-blue-400">
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-sm truncate">{item.description || `Item ${idx + 1}`}</p>
+                                  <p className="text-xs text-muted-foreground">{item.purity} | {item.metalType || 'Metal'}</p>
+                                </div>
+                                <div className="text-right text-sm">
+                                  <p className="font-semibold">{Number(item.netWeight).toFixed(2)}g</p>
+                                  <p className="text-xs text-muted-foreground">@₹{Number(item.rate).toFixed(0)}/g</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+
+                  {/* 4. Items Table with Scan Option */}
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        onClick={() => setIsScannerOpen(true)}
+                        className="gap-2 w-full sm:w-auto"
+                      >
+                        <QrCode className="h-4 w-4" />
+                        Scan QR Codes
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full sm:w-auto"
+                        onClick={() => {
+                          const items = form.getValues('items') || [];
+                          const rate = Number(form.getValues('currentRate')) || 0;
+                          items.forEach((_: any, idx: number) => form.setValue(`items.${idx}.rate`, rate));
+                        }}
+                      >
+                        Apply Current Rate to All Items
+                      </Button>
+                    </div>
+                    <InvoiceItemsTable form={form} shopId={activeShop?.id} />
+                  </div>
 
                   {/* 4. Loyalty Section */}
                   {loyaltySettings && watchedCustomerPhone && watchedCustomerPhone.length >= 10 && (
@@ -517,7 +634,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           </div>
 
           {/* RIGHT COLUMN: SUMMARY (Desktop) */}
-          <div className="hidden lg:block space-y-6 sticky top-10 self-start">
+          <div className="hidden lg:flex flex-col space-y-6 sticky top-0 h-fit">
             <CompactTotalsSummary
               subtotal={totals.subtotal}
               discount={Number(watchedDiscount) || 0}
@@ -552,6 +669,15 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           </div>
         </div>
       )}
+
+      {/* Multi-QR Scanner */}
+      <MultiQRScanner
+        shopId={activeShop?.id || ''}
+        onItemsAdded={handleItemsFromQR}
+        existingTagIds={getExistingTagIds()}
+        isOpen={isScannerOpen}
+        onOpenChange={setIsScannerOpen}
+      />
     </MotionWrapper>
   );
 }
