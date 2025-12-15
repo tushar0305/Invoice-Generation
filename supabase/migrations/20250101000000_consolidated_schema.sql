@@ -511,7 +511,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     razorpay_subscription_id text UNIQUE,
     razorpay_customer_id text,
     razorpay_plan_id text,
-    plan_id subscription_plan NOT NULL DEFAULT 'free',\
+    plan_id subscription_plan NOT NULL DEFAULT 'free',
     status subscription_status NOT NULL DEFAULT 'active',
     current_period_start TIMESTAMPTZ,
     current_period_end TIMESTAMPTZ,

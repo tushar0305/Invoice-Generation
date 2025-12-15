@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RecentInvoicesEmptyState, PendingActionsEmptyState } from '@/components/dashboard/empty-states';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 
 import { CompactStatsRow } from '@/components/dashboard/compact-stats-row';
 import { PendingPaymentsWidget } from '@/components/dashboard/pending-payments-widget';
@@ -43,6 +44,8 @@ function generateSparkline(invoices: any[], days: number) {
   }
   return data;
 }
+
+import { GoldRateTicker } from '@/components/dashboard/gold-rate-ticker';
 
 export default async function DashboardPage({ params }: { params: Promise<{ shopId: string }> }) {
   const { shopId } = await params;
@@ -123,8 +126,68 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
         />
       </Suspense>
 
-      {/* KPI Cards Grid - 4 columns (responsive) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* KPI Cards - Carousel on Mobile, Grid on Desktop */}
+      <div className="block md:hidden -mx-4 px-4">
+        <Carousel opts={{ align: "start", loop: false }} className="w-full">
+          <CarouselContent className="-ml-2">
+            <CarouselItem className="pl-2 basis-[85%]">
+              <Suspense fallback={<KPICardSkeleton index={0} />}>
+                <KPICard
+                  title="This Month"
+                  value={formatCurrency(stats.totalPaidThisMonth)}
+                  change={stats.revenueMoM}
+                  changeLabel="vs last month"
+                  sparklineData={monthSparkline.slice(-7)}
+                  href={`/shop/${shopId}/invoices`}
+                  index={0}
+                />
+              </Suspense>
+            </CarouselItem>
+            <CarouselItem className="pl-2 basis-[85%]">
+              <Suspense fallback={<KPICardSkeleton index={1} />}>
+                <KPICard
+                  title="This Week"
+                  value={formatCurrency(stats.totalPaidThisWeek)}
+                  change={stats.totalPaidThisWeek > 0 ?
+                    ((stats.totalPaidThisWeek - (stats.totalPaidThisMonth / 4)) / (stats.totalPaidThisMonth / 4)) * 100 : 0}
+                  changeLabel="vs weekly avg"
+                  sparklineData={weekSparkline}
+                  href={`/shop/${shopId}/invoices`}
+                  index={1}
+                />
+              </Suspense>
+            </CarouselItem>
+            <CarouselItem className="pl-2 basis-[85%]">
+              <Suspense fallback={<KPICardSkeleton index={2} />}>
+                <KPICard
+                  title="Today"
+                  value={formatCurrency(stats.totalPaidToday)}
+                  change={stats.totalPaidToday > 0 && stats.totalPaidThisWeek > 0 ?
+                    ((stats.totalPaidToday - (stats.totalPaidThisWeek / 7)) / (stats.totalPaidThisWeek / 7)) * 100 : 0}
+                  changeLabel="vs daily avg"
+                  sparklineData={weekSparkline.slice(-3)}
+                  index={2}
+                />
+              </Suspense>
+            </CarouselItem>
+            <CarouselItem className="pl-2 basis-[85%]">
+              <Suspense fallback={<KPICardSkeleton index={3} />}>
+                <KPICard
+                  title="Customers"
+                  value={totalUniqueCustomers.toString()}
+                  changeLabel="total customers"
+                  sparklineData={additionalStats.customerSparkline || [0, 0, 0, 0, 0, 0, 0]}
+                  href={`/shop/${shopId}/customers`}
+                  index={3}
+                />
+              </Suspense>
+            </CarouselItem>
+          </CarouselContent>
+        </Carousel>
+      </div>
+
+      {/* KPI Cards Grid - Desktop Only */}
+      <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Suspense fallback={<KPICardSkeleton index={0} />}>
           <KPICard
             title="This Month"

@@ -37,10 +37,12 @@ export default async function InvoicesPage({
     const to = from + limit - 1;
 
     // ✅ Server-side data fetching with filters and pagination
+    // UX-002: Exclude soft-deleted invoices
     let query = supabase
         .from('invoices')
         .select('*', { count: 'exact' })
         .eq('shop_id', shopId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .range(from, to);
 

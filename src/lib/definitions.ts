@@ -52,21 +52,7 @@ export type Invoice = {
   updatedAt?: string;
 };
 
-export type StockItem = {
-  id: string;
-  shopId: string;
-  name: string;
-  description?: string;
-  purity: string;
-  basePrice: number;
-  makingChargePerGram: number;
-  quantity: number;
-  unit: string;
-  category?: string;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-};
+
 
 // ============================================
 // Unified Customer & Ledger Types

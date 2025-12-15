@@ -2,56 +2,9 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Play, Sparkles, Bot, Mic, ScanLine, Gift } from 'lucide-react';
+import { ArrowRight, Play, Sparkles, Star } from 'lucide-react';
 import { useCallback } from 'react';
 import { HeroDashboardPreview } from './hero-dashboard-preview';
-
-const floatingCards = [
-    {
-        icon: Bot,
-        label: 'AI Assistant',
-        text: '"Gold rate is up 2%"',
-        bgColor: 'bg-blue-50',
-        iconColor: 'text-blue-600',
-        position: 'top-1/4 left-4 md:left-10 lg:left-20',
-        animation: { y: [0, -20, 0], rotate: [0, 5, 0] },
-        duration: 6,
-        delay: 0,
-    },
-    {
-        icon: Mic,
-        label: 'Voice Invoice',
-        text: '"Add 22k Ring..."',
-        bgColor: 'bg-purple-50',
-        iconColor: 'text-purple-600',
-        position: 'top-1/3 right-4 md:right-10 lg:right-20',
-        animation: { y: [0, 20, 0], rotate: [0, -5, 0] },
-        duration: 7,
-        delay: 1,
-    },
-    {
-        icon: ScanLine,
-        label: 'Smart Scan',
-        text: 'Paper → Digital ✨',
-        bgColor: 'bg-emerald-50',
-        iconColor: 'text-emerald-600',
-        position: 'top-[45%] left-4 md:left-8 lg:left-16',
-        animation: { y: [0, -15, 0], rotate: [0, 3, 0], x: [0, 10, 0] },
-        duration: 8,
-        delay: 2,
-    },
-    {
-        icon: Gift,
-        label: 'Loyalty Rewards',
-        text: '+500 pts earned 🎁',
-        bgColor: 'bg-rose-50',
-        iconColor: 'text-rose-600',
-        position: 'top-[20%] right-10 md:right-16 lg:right-32',
-        animation: { y: [0, 18, 0], rotate: [0, -4, 0], x: [0, -8, 0] },
-        duration: 9,
-        delay: 3,
-    },
-];
 
 export function HeroSection() {
     const shouldReduceMotion = useReducedMotion();
@@ -76,41 +29,21 @@ export function HeroSection() {
             className="relative min-h-screen flex items-center justify-center pt-20 md:pt-24 pb-12 overflow-hidden bg-white"
             aria-labelledby="hero-heading"
         >
-            {/* Background Elements - using CSS for better performance */}
+            {/* Shining Ring Background Effect */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] opacity-30 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-b from-gold-300/40 to-transparent rounded-[100%] blur-[80px] mix-blend-multiply" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold-200/50 to-transparent w-full h-px top-0 blur-sm" />
+            </div>
+
+            {/* Background Elements */}
             <div
-                className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gold-100/50 via-white to-white blur-3xl opacity-60"
-                aria-hidden="true"
-            />
-            <div
-                className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-gold-200/20 to-purple-200/20 blur-[100px] rounded-full mix-blend-multiply"
+                className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gold-50/50 via-white to-white blur-3xl opacity-60"
                 aria-hidden="true"
             />
             <div
                 className="absolute top-0 left-0 w-full h-full bg-[url('/grid-pattern.svg')] opacity-[0.02]"
                 aria-hidden="true"
             />
-
-            {/* Animated Floating Elements - Hidden on mobile for performance */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none hidden lg:block" aria-hidden="true">
-                {floatingCards.map((card, index) => (
-                    <motion.div
-                        key={index}
-                        animate={shouldReduceMotion ? {} : card.animation}
-                        transition={shouldReduceMotion ? {} : { duration: card.duration, repeat: Infinity, ease: "easeInOut", delay: card.delay }}
-                        className={`absolute ${card.position} p-3 md:p-4 bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/50 ring-1 ring-black/5`}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 ${card.bgColor} rounded-lg ${card.iconColor}`}>
-                                <card.icon className="h-5 w-5 md:h-6 md:w-6" aria-hidden="true" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500">{card.label}</p>
-                                <p className="text-sm font-bold text-slate-900">{card.text}</p>
-                            </div>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
 
             <div className="container px-4 md:px-6 relative z-10">
                 <div className="flex flex-col items-center text-center space-y-6 md:space-y-8 max-w-5xl mx-auto">
@@ -183,6 +116,47 @@ export function HeroSection() {
                             See AI in Action
                         </Button>
                     </motion.div>
+
+                    {/* Trust Signal */}
+                    <motion.div
+                        {...fadeInUp}
+                        transition={{ duration: 0.6, delay: 0.4 }}
+                        className="flex items-center gap-4 pt-2"
+                    >
+                        <div className="flex -space-x-3">
+                            {[
+                                "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=faces",
+                                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=32&h=32&fit=crop&crop=faces",
+                                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=32&h=32&fit=crop&crop=faces",
+                                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=32&h=32&fit=crop&crop=faces"
+                            ].map((src, i) => (
+                                <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
+                                    <img src={src} alt="" className="w-full h-full object-cover" />
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex flex-col items-start">
+                            <div className="flex items-center gap-1">
+                                <div className="flex">
+                                    {[1, 2, 3, 4, 5].map((i) => (
+                                        <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                                    ))}
+                                </div>
+                                <span className="text-xs font-bold text-slate-900">5.0</span>
+                            </div>
+                            <p className="text-xs text-slate-600 font-medium">Trusted by <span className="text-slate-900 font-bold">500+ Jewellers</span></p>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* Mobile Sticky CTA */}
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200 md:hidden z-50 safe-area-bottom">
+                    <a href="#pricing" onClick={(e) => handleSmoothScroll(e, '#pricing')}>
+                        <Button size="lg" className="w-full bg-slate-900 text-white hover:bg-slate-800 shadow-lg rounded-xl h-12 text-base font-semibold">
+                            Get Started Free
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </a>
                 </div>
 
                 {/* Dashboard Preview */}

@@ -6,12 +6,18 @@ import { format } from 'date-fns';
  * Service layer for invoice-related database operations
  */
 
-export async function getInvoicesByShop(shopId: string): Promise<Invoice[]> {
+export async function getInvoicesByShop(
+    shopId: string,
+    limit: number = 50,
+    offset: number = 0
+): Promise<Invoice[]> {
     const { data, error } = await supabase
         .from('invoices')
         .select('*')
         .eq('shop_id', shopId)
-        .order('created_at', { ascending: false });
+        .is('deleted_at', null) // UX-002: Filter out soft-deleted invoices
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
     if (error) throw error;
 
     return (data || []).map((r) => ({
@@ -169,13 +175,31 @@ export async function updateInvoice(
     if (error) throw error;
 }
 
+// UX-002: Soft delete instead of hard delete
 export async function deleteInvoice(invoiceId: string) {
-    const { error } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', invoiceId);
+    const { data, error } = await supabase
+        .rpc('soft_delete_invoice', { p_invoice_id: invoiceId });
 
     if (error) throw error;
+    return data;
+}
+
+// UX-002: Restore a soft-deleted invoice
+export async function restoreInvoice(invoiceId: string) {
+    const { data, error } = await supabase
+        .rpc('restore_invoice', { p_invoice_id: invoiceId });
+
+    if (error) throw error;
+    return data;
+}
+
+// UX-002: Get deleted invoices for trash view
+export async function getDeletedInvoices(shopId: string) {
+    const { data, error } = await supabase
+        .rpc('get_deleted_invoices', { p_shop_id: shopId });
+
+    if (error) throw error;
+    return data || [];
 }
 
 // Invoice Items operations

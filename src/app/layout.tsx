@@ -97,6 +97,8 @@ export const viewport: Viewport = {
   ],
 };
 
+import { SmoothScroll } from '@/components/smooth-scroll';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -111,87 +113,89 @@ export default function RootLayout({
         <link rel="preload" href="/fonts/PlayfairDisplay-Italic.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body className="font-body antialiased bg-mesh min-h-screen" suppressHydrationWarning>
-        <SupabaseProvider>
-          <QueryProvider>
-            <AuthWrapper>
-              <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-                {/* Global listeners: analytics + heatmap */}
-                <AppListeners />
-                {children}
-                <InstallPrompt />
-                <UpdatePrompt />
-                {/* Service worker registration */}
-                <script dangerouslySetInnerHTML={{
-                  __html: `
-                  if ('serviceWorker' in navigator) {
-                    window.addEventListener('load', function() {
-                      if ('${process.env.NODE_ENV}' === 'production') {
-                        navigator.serviceWorker.register('/sw.js').catch(function(e){console.debug('SW reg failed', e)});
-                      } else {
-                        // Unregister in dev to prevent caching issues
-                        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                          for(let registration of registrations) {
-                            registration.unregister();
-                            console.debug('SW unregistered in dev');
-                          }
-                        });
-                      }
-                    });
-                  }
-                `}} />
-                {/* Structured Data for Google Rich Results */}
-                <script
-                  type="application/ld+json"
-                  dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                      '@context': 'https://schema.org',
-                      '@graph': [
-                        {
-                          '@type': 'Organization',
-                          '@id': 'https://swarnavyapar.in/#organization',
-                          name: 'SwarnaVyapar',
-                          url: 'https://swarnavyapar.in',
-                          logo: {
-                            '@type': 'ImageObject',
-                            url: 'https://swarnavyapar.in/logo/logo.png',
-                            width: 512,
-                            height: 512,
-                            caption: 'SwarnaVyapar'
-                          },
-                          image: {
-                            '@id': 'https://swarnavyapar.in/#logo',
-                            url: 'https://swarnavyapar.in/logo/logo.png'
-                          },
-                          sameAs: [
-                            'https://twitter.com/swarnavyapar',
-                            // Add other social profiles here if available
-                          ],
-                          contactPoint: {
-                            '@type': 'ContactPoint',
-                            contactType: 'customer support',
-                            // telephone: '+91-XXXXXXXXXX', // Add if available
-                            email: 'support@swarnavyapar.in'
-                          }
-                        },
-                        {
-                          '@type': 'WebSite',
-                          '@id': 'https://swarnavyapar.in/#website',
-                          url: 'https://swarnavyapar.in',
-                          name: 'SwarnaVyapar',
-                          publisher: {
-                            '@id': 'https://swarnavyapar.in/#organization'
-                          },
-                          inLanguage: 'en-IN'
+        <SmoothScroll>
+          <SupabaseProvider>
+            <QueryProvider>
+              <AuthWrapper>
+                <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+                  {/* Global listeners: analytics + heatmap */}
+                  <AppListeners />
+                  {children}
+                  <InstallPrompt />
+                  <UpdatePrompt />
+                  {/* Service worker registration */}
+                  <script dangerouslySetInnerHTML={{
+                    __html: `
+                    if ('serviceWorker' in navigator) {
+                      window.addEventListener('load', function() {
+                        if ('${process.env.NODE_ENV}' === 'production') {
+                          navigator.serviceWorker.register('/sw.js').catch(function(e){console.debug('SW reg failed', e)});
+                        } else {
+                          // Unregister in dev to prevent caching issues
+                          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                            for(let registration of registrations) {
+                              registration.unregister();
+                              console.debug('SW unregistered in dev');
+                            }
+                          });
                         }
-                      ]
-                    }),
-                  }}
-                />
-              </ThemeProvider>
-            </AuthWrapper>
-            <Toaster />
-          </QueryProvider>
-        </SupabaseProvider>
+                      });
+                    }
+                  `}} />
+                  {/* Structured Data for Google Rich Results */}
+                  <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                      __html: JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@graph': [
+                          {
+                            '@type': 'Organization',
+                            '@id': 'https://swarnavyapar.in/#organization',
+                            name: 'SwarnaVyapar',
+                            url: 'https://swarnavyapar.in',
+                            logo: {
+                              '@type': 'ImageObject',
+                              url: 'https://swarnavyapar.in/logo/logo.png',
+                              width: 512,
+                              height: 512,
+                              caption: 'SwarnaVyapar'
+                            },
+                            image: {
+                              '@id': 'https://swarnavyapar.in/#logo',
+                              url: 'https://swarnavyapar.in/logo/logo.png'
+                            },
+                            sameAs: [
+                              'https://twitter.com/swarnavyapar',
+                              // Add other social profiles here if available
+                            ],
+                            contactPoint: {
+                              '@type': 'ContactPoint',
+                              contactType: 'customer support',
+                              // telephone: '+91-XXXXXXXXXX', // Add if available
+                              email: 'support@swarnavyapar.in'
+                            }
+                          },
+                          {
+                            '@type': 'WebSite',
+                            '@id': 'https://swarnavyapar.in/#website',
+                            url: 'https://swarnavyapar.in',
+                            name: 'SwarnaVyapar',
+                            publisher: {
+                              '@id': 'https://swarnavyapar.in/#organization'
+                            },
+                            inLanguage: 'en-IN'
+                          }
+                        ]
+                      }),
+                    }}
+                  />
+                </ThemeProvider>
+              </AuthWrapper>
+              <Toaster />
+            </QueryProvider>
+          </SupabaseProvider>
+        </SmoothScroll>
       </body>
     </html>
   );

@@ -39,22 +39,19 @@ export function QuickActions({ shopId }: QuickActionsProps) {
     ];
 
     return (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:flex-wrap gap-2 scrollbar-hide snap-x">
             {actions.map((action) => (
-                <Link key={action.href} href={action.href}>
+                <Link key={action.href} href={action.href} className="snap-start shrink-0">
                     <Button
                         className={cn(
-                            "h-9 gap-2 rounded-lg font-medium transition-all",
+                            "h-10 sm:h-9 gap-2 rounded-full sm:rounded-lg font-medium transition-all px-4 sm:px-3",
                             action.primary ? "shadow-md" : "",
                             action.color
                         )}
                         variant={action.primary ? "default" : "ghost"}
                     >
                         <action.icon className="h-4 w-4" />
-                        <span className="hidden sm:inline">{action.label}</span>
-                        <span className="sm:hidden">
-                            {action.label.split(' ')[0]}
-                        </span>
+                        <span className="whitespace-nowrap">{action.label}</span>
                     </Button>
                 </Link>
             ))}

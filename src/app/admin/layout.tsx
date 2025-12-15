@@ -72,7 +72,7 @@ export default function AdminLayout({
     const { theme } = useTheme();
 
     // Calculate logo based on theme
-    const logoSrc = theme === 'dark' ? '/logo/swarnavyapar_dark.webp' : '/logo/swarnavyapar.webp';
+    const logoSrc = theme === 'dark' ? '/logo/swarnavyapar_dark.png' : '/logo/swarnavyapar_light.png';
 
     const handleSignOut = async () => {
         await auth.signOut();

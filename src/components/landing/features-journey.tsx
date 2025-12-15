@@ -15,6 +15,7 @@ import {
     Rocket
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 
 interface Feature {
     icon: LucideIcon;
@@ -157,8 +158,23 @@ export function FeaturesJourney() {
                     </p>
                 </motion.div>
 
-                {/* Features Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+                {/* Features Carousel - Mobile */}
+                <div className="block md:hidden -mx-4 px-4">
+                    <Carousel opts={{ align: "start", loop: false }} className="w-full">
+                        <CarouselContent className="-ml-4">
+                            {features.map((feature, index) => (
+                                <CarouselItem key={index} className="pl-4 basis-[85%] h-full">
+                                    <div className="h-full">
+                                        <FeatureCard feature={feature} index={index} />
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                    </Carousel>
+                </div>
+
+                {/* Features Grid - Desktop */}
+                <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
                     {features.map((feature, index) => (
                         <FeatureCard key={index} feature={feature} index={index} />
                     ))}
@@ -209,7 +225,7 @@ function FeatureCard({ feature, index }: FeatureCardProps) {
                 rotateX: 5,
                 rotateY: 5
             }}
-            className="relative group perspective-1000"
+            className="relative group perspective-1000 h-full"
         >
             <div className="relative p-8 rounded-3xl bg-white border-2 border-slate-100 shadow-lg hover:shadow-2xl transition-all duration-300 h-full overflow-hidden">
                 {/* Gradient Background on Hover */}

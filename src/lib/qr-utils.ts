@@ -1,13 +1,7 @@
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
-interface InventoryItem {
-    tag_id: string;
-    name: string;
-    net_weight: number;
-    purity: string;
-    metal_type?: string;
-}
+import { InventoryItem } from './inventory-types';
 
 export async function generateBulkQRPdf(items: InventoryItem[], shopName: string) {
     const doc = new jsPDF();
@@ -72,7 +66,8 @@ export async function generateBulkQRPdf(items: InventoryItem[], shopName: string
 
             // Name (Truncate if too long)
             doc.setFont("helvetica", "normal");
-            const name = item.name.length > 20 ? item.name.substring(0, 18) + '...' : item.name;
+            const itemName = item.name || '';
+            const name = itemName.length > 20 ? itemName.substring(0, 18) + '...' : itemName;
             doc.text(name, x + cellWidth / 2, y + qrSize + 10, { align: 'center' });
 
             // Weight & Purity

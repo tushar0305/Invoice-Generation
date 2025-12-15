@@ -263,53 +263,106 @@ export function CustomerDetailsClient() {
                 </CardHeader>
                 <CardContent>
                     <div className="rounded-md border border-gray-200 dark:border-white/10 overflow-hidden">
-                        <Table>
-                            <TableHeader className="bg-muted/50">
-                                <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
-                                    <TableHead className="text-primary">Invoice #</TableHead>
-                                    <TableHead className="text-primary">Date</TableHead>
-                                    <TableHead className="text-primary">Status</TableHead>
-                                    <TableHead className="text-right text-primary">Amount</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
+                        <div className="relative">
+                            {/* Mobile View - Cards */}
+                            <div className="md:hidden space-y-3 p-4">
                                 {isLoading ? (
                                     Array.from({ length: 3 }).map((_, i) => (
-                                        <TableRow key={i} className="border-b-gray-100 dark:border-b-white/5">
-                                            <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                            <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
-                                        </TableRow>
+                                        <div key={i} className="bg-card border border-border rounded-xl p-4 space-y-3">
+                                            <div className="flex justify-between">
+                                                <Skeleton className="h-5 w-20" />
+                                                <Skeleton className="h-5 w-16" />
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <Skeleton className="h-4 w-24" />
+                                                <Skeleton className="h-5 w-20" />
+                                            </div>
+                                        </div>
                                     ))
                                 ) : invoices && invoices.length > 0 ? (
                                     invoices.map((inv) => (
-                                        <TableRow
+                                        <div
                                             key={inv.id}
-                                            className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
+                                            className="bg-card border border-border rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
                                             onClick={() => router.push(`/dashboard/invoices/view?id=${inv.id}`)}
                                         >
-                                            <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                                            <TableCell>{format(new Date(inv.invoiceDate), 'dd MMM, yyyy')}</TableCell>
-                                            <TableCell>
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <div className="font-bold text-foreground">{inv.invoiceNumber}</div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {format(new Date(inv.invoiceDate), 'dd MMM, yyyy')}
+                                                    </div>
+                                                </div>
                                                 <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'} className={inv.status === 'paid' ? 'bg-green-600/80' : ''}>
                                                     {inv.status}
                                                 </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium text-amber-600 dark:text-gold-400">
-                                                {formatCurrency(inv.grandTotal)}
-                                            </TableCell>
-                                        </TableRow>
+                                            </div>
+                                            <div className="flex justify-between items-end border-t border-border pt-2 mt-2">
+                                                <div className="text-xs text-muted-foreground">Total Amount</div>
+                                                <div className="font-bold text-lg text-amber-600 dark:text-gold-400">
+                                                    {formatCurrency(inv.grandTotal)}
+                                                </div>
+                                            </div>
+                                        </div>
                                     ))
                                 ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                            No invoices found.
-                                        </TableCell>
-                                    </TableRow>
+                                    <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+                                        No invoices found.
+                                    </div>
                                 )}
-                            </TableBody>
-                        </Table>
+                            </div>
+
+                            {/* Desktop View - Table */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <Table>
+                                    <TableHeader className="bg-muted/50">
+                                        <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
+                                            <TableHead className="text-primary">Invoice #</TableHead>
+                                            <TableHead className="text-primary">Date</TableHead>
+                                            <TableHead className="text-primary">Status</TableHead>
+                                            <TableHead className="text-right text-primary">Amount</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {isLoading ? (
+                                            Array.from({ length: 3 }).map((_, i) => (
+                                                <TableRow key={i} className="border-b-gray-100 dark:border-b-white/5">
+                                                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                                    <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : invoices && invoices.length > 0 ? (
+                                            invoices.map((inv) => (
+                                                <TableRow
+                                                    key={inv.id}
+                                                    className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
+                                                    onClick={() => router.push(`/dashboard/invoices/view?id=${inv.id}`)}
+                                                >
+                                                    <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                                                    <TableCell>{format(new Date(inv.invoiceDate), 'dd MMM, yyyy')}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'} className={inv.status === 'paid' ? 'bg-green-600/80' : ''}>
+                                                            {inv.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-medium text-amber-600 dark:text-gold-400">
+                                                        {formatCurrency(inv.grandTotal)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                                    No invoices found.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -323,52 +376,100 @@ export function CustomerDetailsClient() {
                     </CardHeader>
                     <CardContent>
                         <div className="rounded-md border border-gray-200 dark:border-white/10 overflow-hidden">
-                            <Table>
-                                <TableHeader className="bg-muted/50">
-                                    <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
-                                        <TableHead className="text-primary">Scheme Name</TableHead>
-                                        <TableHead className="text-primary">Account #</TableHead>
-                                        <TableHead className="text-primary hidden md:table-cell">Start Date</TableHead>
-                                        <TableHead className="text-primary hidden md:table-cell">Maturity</TableHead>
-                                        <TableHead className="text-primary text-right">Total Paid</TableHead>
-                                        <TableHead className="text-primary text-right">Gold Acc.</TableHead>
-                                        <TableHead className="text-primary text-center">Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
+                            <div className="relative">
+                                {/* Mobile View - Cards */}
+                                <div className="md:hidden space-y-3 p-4">
                                     {enrollments.map((enrollment) => (
-                                        <TableRow
+                                        <div
                                             key={enrollment.id}
-                                            className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
+                                            className="bg-card border border-border rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
                                             onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
                                         >
-                                            <TableCell className="font-medium">
-                                                <div className="flex flex-col">
-                                                    <span>{enrollment.scheme?.name}</span>
-                                                    <span className="text-xs text-muted-foreground md:hidden">{format(new Date(enrollment.start_date), 'MMM yyyy')}</span>
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <div className="font-bold text-foreground">{enrollment.scheme?.name}</div>
+                                                    <div className="text-xs text-muted-foreground font-mono">
+                                                        #{enrollment.account_number}
+                                                    </div>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell className="font-mono text-sm text-muted-foreground">{enrollment.account_number}</TableCell>
-                                            <TableCell className="hidden md:table-cell">{format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</TableCell>
-                                            <TableCell className="hidden md:table-cell">{enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</TableCell>
-                                            <TableCell className="text-right font-bold text-green-600">
-                                                {formatCurrency(enrollment.total_paid)}
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium text-amber-600">
-                                                {enrollment.total_gold_weight_accumulated > 0
-                                                    ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
-                                                    : '-'
-                                                }
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80 hover:bg-green-600/70' : ''}>
+                                                <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80' : ''}>
                                                     {enrollment.status}
                                                 </Badge>
-                                            </TableCell>
-                                        </TableRow>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 pt-3 mt-2 border-t border-border">
+                                                <div>
+                                                    <div className="text-xs text-muted-foreground mb-0.5">Total Paid</div>
+                                                    <div className="font-bold text-green-600">{formatCurrency(enrollment.total_paid)}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-muted-foreground mb-0.5">Gold Accumulated</div>
+                                                    <div className="font-bold text-amber-600">
+                                                        {enrollment.total_gold_weight_accumulated > 0
+                                                            ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
+                                                            : '-'
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground bg-muted/30 p-2 rounded-lg">
+                                                <span>Started: {format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</span>
+                                                <span>Maturity: {enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</span>
+                                            </div>
+                                        </div>
                                     ))}
-                                </TableBody>
-                            </Table>
+                                </div>
+
+                                {/* Desktop View - Table */}
+                                <div className="hidden md:block overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
+                                                <TableHead className="text-primary">Scheme Name</TableHead>
+                                                <TableHead className="text-primary">Account #</TableHead>
+                                                <TableHead className="text-primary hidden md:table-cell">Start Date</TableHead>
+                                                <TableHead className="text-primary hidden md:table-cell">Maturity</TableHead>
+                                                <TableHead className="text-primary text-right">Total Paid</TableHead>
+                                                <TableHead className="text-primary text-right">Gold Acc.</TableHead>
+                                                <TableHead className="text-primary text-center">Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {enrollments.map((enrollment) => (
+                                                <TableRow
+                                                    key={enrollment.id}
+                                                    className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
+                                                    onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
+                                                >
+                                                    <TableCell className="font-medium">
+                                                        <div className="flex flex-col">
+                                                            <span>{enrollment.scheme?.name}</span>
+                                                            <span className="text-xs text-muted-foreground md:hidden">{format(new Date(enrollment.start_date), 'MMM yyyy')}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-sm text-muted-foreground">{enrollment.account_number}</TableCell>
+                                                    <TableCell className="hidden md:table-cell">{format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</TableCell>
+                                                    <TableCell className="hidden md:table-cell">{enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</TableCell>
+                                                    <TableCell className="text-right font-bold text-green-600">
+                                                        {formatCurrency(enrollment.total_paid)}
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-medium text-amber-600">
+                                                        {enrollment.total_gold_weight_accumulated > 0
+                                                            ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
+                                                            : '-'
+                                                        }
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80 hover:bg-green-600/70' : ''}>
+                                                            {enrollment.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

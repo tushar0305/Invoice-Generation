@@ -121,11 +121,11 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
         // Write the content
         doc.open();
         doc.write('<!DOCTYPE html><html><head><title>Loan Agreement</title>');
-        
+
         // Add Tailwind CDN for styling in the iframe (simplest way for dynamic content)
         doc.write('<script src="https://cdn.tailwindcss.com"></script>');
         doc.write('<style>@media print { body { -webkit-print-color-adjust: exact; } }</style>');
-        
+
         doc.write('</head><body><div id="print-root"></div></body></html>');
         doc.close();
 
@@ -164,17 +164,17 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
 
     const generateEMISchedule = () => {
         if (loan.repayment_type !== 'emi' || !loan.emi_amount || !loan.tenure_months) return [];
-        
+
         const schedule = [];
         let balance = loan.principal_amount;
         let currentDate = new Date(loan.start_date);
-        
+
         for (let i = 1; i <= loan.tenure_months; i++) {
             currentDate = addMonths(currentDate, 1);
             const interest = (balance * loan.interest_rate) / 100;
             const principalComponent = loan.emi_amount - interest;
             balance -= principalComponent;
-            
+
             schedule.push({
                 installmentNo: i,
                 dueDate: new Date(currentDate),
@@ -642,7 +642,38 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                     </CardHeader>
                                     <CardContent>
                                         <div className="rounded-md border">
-                                            <table className="w-full text-sm text-left">
+                                            {/* Mobile View - Cards */}
+                                            <div className="md:hidden space-y-3 p-4">
+                                                {generateEMISchedule().map((row) => (
+                                                    <div key={row.installmentNo} className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <Badge variant="outline" className="font-mono">
+                                                                #{row.installmentNo}
+                                                            </Badge>
+                                                            <span className="text-sm font-medium text-muted-foreground">
+                                                                Due: {format(row.dueDate, 'dd MMM yyyy')}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-end border-t border-border pt-2 mt-2">
+                                                            <div>
+                                                                <div className="text-xs text-muted-foreground">EMI Amount</div>
+                                                                <div className="font-bold text-lg text-primary">{formatCurrency(row.total)}</div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="text-xs text-muted-foreground">Balance</div>
+                                                                <div className="font-medium text-orange-600">{formatCurrency(row.balance)}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+                                                            <div>Prin: {formatCurrency(row.principal)}</div>
+                                                            <div className="text-right">Int: {formatCurrency(row.interest)}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Desktop View - Table */}
+                                            <table className="hidden md:table w-full text-sm text-left">
                                                 <thead className="bg-muted/50 text-muted-foreground font-medium">
                                                     <tr>
                                                         <th className="px-4 py-3">#</th>
@@ -745,7 +776,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                                             {tx.type === 'upcoming' ? <span className="italic text-amber-600">Expected</span> : tx.method?.replace('_', ' ')}
                                                         </td>
                                                         <td className={`px-4 py-3 text-right font-bold ${tx.type === 'disbursement' ? 'text-red-600' :
-                                                                (tx.type === 'upcoming' ? 'text-amber-600' : 'text-green-600')
+                                                            (tx.type === 'upcoming' ? 'text-amber-600' : 'text-green-600')
                                                             }`}>
                                                             {tx.type === 'disbursement' ? '-' : (tx.type === 'upcoming' ? '~' : '+')} {formatCurrency(tx.amount)}
                                                         </td>
@@ -767,10 +798,10 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                                         <Badge
                                                             variant="outline"
                                                             className={`text-[10px] h-5 px-1.5 ${tx.type === 'disbursement'
-                                                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                                                    : (tx.type === 'upcoming'
-                                                                        ? 'bg-amber-50 text-amber-700 border-amber-200 border-dashed'
-                                                                        : 'bg-green-50 text-green-700 border-green-200')
+                                                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                                : (tx.type === 'upcoming'
+                                                                    ? 'bg-amber-50 text-amber-700 border-amber-200 border-dashed'
+                                                                    : 'bg-green-50 text-green-700 border-green-200')
                                                                 }`}
                                                         >
                                                             {tx.id === 'disbursement' ? 'OUT' : (tx.type === 'upcoming' ? 'DUE' : 'IN')}
@@ -784,7 +815,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                                     </p>
                                                 </div>
                                                 <div className={`text-right font-bold ${tx.type === 'disbursement' ? 'text-red-600' :
-                                                        (tx.type === 'upcoming' ? 'text-amber-600' : 'text-green-600')
+                                                    (tx.type === 'upcoming' ? 'text-amber-600' : 'text-green-600')
                                                     }`}>
                                                     <div className="text-base">
                                                         {tx.type === 'disbursement' ? '-' : (tx.type === 'upcoming' ? '~' : '+')} {formatCurrency(tx.amount)}

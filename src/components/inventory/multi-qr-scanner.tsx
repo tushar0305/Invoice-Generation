@@ -230,8 +230,10 @@ export function MultiQRScanner({
                     timestamp: Date.now()
                 }]);
             } else {
-                // Play a beep sound on success (optional but nice)
-                // const audio = new Audio('/beep.mp3'); audio.play().catch(() => {});
+                // UX-003: Haptic feedback on successful scan
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([50, 30, 50]); // Success pattern
+                }
 
                 setScannedItems(prev => [...prev, {
                     tag_id: trimmedQR,
@@ -470,8 +472,11 @@ export function MultiQRScanner({
                                                 <span className="font-mono font-bold">{scannedItem.tag_id}</span>
                                             </div>
                                             {scannedItem.item && (
-                                                <div className="text-sm text-muted-foreground mt-1">
-                                                    {scannedItem.item.name} • {scannedItem.item.net_weight}g
+                                                <div className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+                                                    <span>{scannedItem.item.name} • {scannedItem.item.net_weight}g</span>
+                                                    <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-300">
+                                                        In Stock
+                                                    </Badge>
                                                 </div>
                                             )}
                                             {scannedItem.error && (

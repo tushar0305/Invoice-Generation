@@ -144,7 +144,7 @@ export const getDashboardData = fetchDashboardDataCached;
 // Market rates don't need cookies - can use simple caching
 // Using a simple in-memory cache with timestamp
 let marketRatesCache: { data: any; timestamp: number } | null = null;
-const MARKET_RATES_TTL = 5 * 60 * 1000; // 5 minutes
+const MARKET_RATES_TTL = 60 * 60 * 1000; // 1 hour (PERF-003: rates change daily, not per-minute)
 
 export async function getMarketRates() {
     const now = Date.now();
@@ -192,145 +192,58 @@ export async function getMarketRates() {
 const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const supabase = await createClient();
 
-    // Execute all queries in parallel
-    const [customerResult, productResult, invoiceResult, dueInvoicesResult, loyaltyResult, loansResult, lowStockResult, topCustomerResult, customerDatesResult, schemesResult, enrollmentsResult] = await Promise.all([
-        // 1. Total Customers (Count only)
-        supabase
-            .from('customers')
-            .select('*', { count: 'exact', head: true })
-            .eq('shop_id', shopId),
+    // Call the consolidated RPC
+    const { data: stats, error } = await supabase.rpc('get_dashboard_stats', { p_shop_id: shopId });
 
-        // 2. Total Products/Stock (Now using inventory_items)
-        supabase
-            .from('inventory_items')
-            .select('*', { count: 'exact', head: true })
-            .eq('shop_id', shopId)
-            .eq('status', 'IN_STOCK'),
-
-        // 3. Total Invoices
-        supabase
-            .from('invoices')
-            .select('*', { count: 'exact', head: true })
-            .eq('shop_id', shopId),
-
-        // 4. Khata Balance (Total Due)
-        supabase
-            .from('invoices')
-            .select('grand_total')
-            .eq('shop_id', shopId)
-            .neq('status', 'paid')
-            .neq('status', 'cancelled'),
-
-        // 5. Total Loyalty Points
-        supabase
-            .from('customers')
-            .select('name, loyalty_points')
-            .eq('shop_id', shopId)
-            .gt('loyalty_points', 0)
-            .order('loyalty_points', { ascending: false }),
-
-        // 6. Active Loans (New)
-        supabase
-            .from('loans')
-            .select('*', { count: 'exact', head: true })
-            .eq('shop_id', shopId)
-            .eq('status', 'active'),
-
-        // 7. Low Stock Items (Now using inventory_items - items marked as DAMAGED or low value items)
-        supabase
-            .from('inventory_items')
-            .select('id, name, gross_weight, metal_type')
-            .eq('shop_id', shopId)
-            .eq('status', 'IN_STOCK')
-            .order('created_at', { ascending: false })
-            .limit(5),
-
-        // 8. Top Customer (All Time by Spend)
-        supabase
-            .from('customers')
-            .select('name, total_spent, phone') // Using total_spent if available
-            .eq('shop_id', shopId)
-            .order('total_spent', { ascending: false })
-            .limit(1)
-            .single(),
-
-        // 9. Customer Dates for Sparkline
-        supabase
-            .from('customers')
-            .select('created_at')
-            .eq('shop_id', shopId),
-
-        // 10. Total Schemes
-        supabase
-            .from('schemes')
-            .select('*', { count: 'exact', head: true })
-            .eq('shop_id', shopId)
-            .eq('is_active', true),
-
-        // 11. Active Enrollments (with sums)
-        supabase
-            .from('scheme_enrollments')
-            .select('total_paid, total_gold_weight_accumulated, created_at')
-            .eq('shop_id', shopId)
-            .eq('status', 'ACTIVE')
-    ]);
-
-    const khataBalance = (dueInvoicesResult.data || []).reduce((sum, inv) => sum + (Number(inv.grand_total) || 0), 0);
-    const totalLoyaltyPoints = (loyaltyResult.data || []).reduce((sum, customer) => sum + (Number(customer.loyalty_points) || 0), 0);
-
-    // Scheme Metrics
-    const totalSchemes = schemesResult.count || 0;
-    const activeEnrollments = (enrollmentsResult.data || []).length;
-    const totalSchemeCollected = (enrollmentsResult.data || []).reduce((sum, en) => sum + (Number(en.total_paid) || 0), 0);
-    const totalGoldAccumulated = (enrollmentsResult.data || []).reduce((sum, en) => sum + (Number(en.total_gold_weight_accumulated) || 0), 0);
-
-    // Generate Customer Sparkline (Last 7 Days Cumulative)
-    const customerDates = customerDatesResult.data || [];
-    const customerSparkline: number[] = [];
-    const now = new Date();
-
-    for (let i = 6; i >= 0; i--) {
-        const dateLimit = new Date(now);
-        dateLimit.setDate(now.getDate() - i);
-        dateLimit.setHours(23, 59, 59, 999);
-
-        // Count customers created on or before this date
-        const count = customerDates.filter((c: any) => new Date(c.created_at) <= dateLimit).length;
-        customerSparkline.push(count);
+    if (error || !stats) {
+        console.error('Error fetching dashboard stats:', error);
+        // Return zeros/empty if RPC fails
+        return {
+            customerCount: 0,
+            productCount: 0,
+            totalInvoices: 0,
+            activeLoans: 0,
+            khataBalance: 0,
+            totalLoyaltyPoints: 0,
+            lowStockItems: [],
+            loyaltyMembers: 0,
+            customerSparkline: [],
+            topLoyaltyCustomer: null,
+            topCustomerAllTime: null,
+            totalSchemes: 0,
+            activeEnrollments: 0,
+            totalSchemeCollected: 0,
+            totalGoldAccumulated: 0
+        };
     }
 
-    // Calculate active loyalty members (customers with > 0 points)
-    const loyaltyMembers = (loyaltyResult.data || []).length;
-    const topLoyaltyCustomer = (loyaltyResult.data || [])[0] || null;
-
-    // Map low stock items (now inventory items)
-    const lowStockItems = (lowStockResult.data || []).map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        weight: Number(item.gross_weight),
-        metalType: item.metal_type
-    }));
-
+    // Map RPC result to UI expected format
     return {
-        customerCount: customerResult.count || 0,
-        productCount: productResult.count || 0,
-        totalInvoices: invoiceResult.count || 0,
-        activeLoans: loansResult.count || 0,
-        khataBalance: khataBalance,
-        totalLoyaltyPoints: totalLoyaltyPoints,
-        lowStockItems: lowStockItems,
-        loyaltyMembers: loyaltyMembers,
-        customerSparkline: customerSparkline,
-        topLoyaltyCustomer: topLoyaltyCustomer ? { name: topLoyaltyCustomer.name, points: topLoyaltyCustomer.loyalty_points } : null,
-        topCustomerAllTime: topCustomerResult.data ? {
-            name: topCustomerResult.data.name,
-            totalSpent: topCustomerResult.data.total_spent || 0
-        } : null,
+        customerCount: stats.customer_count || 0,
+        productCount: stats.product_count || 0,
+        totalInvoices: stats.invoice_count || 0,
+        activeLoans: stats.active_loans_count || 0,
+        khataBalance: stats.khata_balance || 0,
+        totalLoyaltyPoints: stats.total_loyalty_points || 0,
+
+        lowStockItems: (stats.low_stock_items || []).map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            weight: Number(item.gross_weight),
+            metalType: item.metal_type
+        })),
+
+        loyaltyMembers: stats.loyalty_members_count || 0,
+        customerSparkline: stats.customer_sparkline || [],
+
+        topLoyaltyCustomer: stats.top_loyalty_customer || null,
+        topCustomerAllTime: stats.top_customer_by_spend || null,
+
         // Scheme Stats
-        totalSchemes,
-        activeEnrollments,
-        totalSchemeCollected,
-        totalGoldAccumulated
+        totalSchemes: stats.scheme_count || 0,
+        activeEnrollments: stats.active_enrollments_count || 0,
+        totalSchemeCollected: stats.total_scheme_collected || 0,
+        totalGoldAccumulated: 0 // Not yet tracked
     };
 
 });

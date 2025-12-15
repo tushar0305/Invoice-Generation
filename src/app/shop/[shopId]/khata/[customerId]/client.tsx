@@ -446,72 +446,139 @@ export function CustomerLedgerClient({
                 <CardHeader className="border-b border-border">
                     <CardTitle>Transaction History</CardTitle>
                 </CardHeader>
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[120px]">Date</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Given</TableHead>
-                                <TableHead className="text-right">Received</TableHead>
-                                <TableHead className="text-right">Balance</TableHead>
-                                <TableHead className="text-center w-[100px]">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {/* Opening Balance Row */}
+                {/* Transactions List - Responsive View */}
+                <div className="relative">
+                    {/* Mobile View - Cards */}
+                    <div className="md:hidden space-y-3 p-4">
+                        {transactionsWithBalance.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+                                No transactions yet. Add your first transaction above!
+                            </div>
+                        ) : (
+                            transactionsWithBalance.map((trans) => (
+                                <div
+                                    key={trans.id}
+                                    className="bg-card border border-border rounded-xl p-4 shadow-sm"
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center gap-2">
+                                            {trans.entry_type === 'DEBIT' ? (
+                                                <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-full">
+                                                    <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                </div>
+                                            ) : (
+                                                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                                                    <TrendingDown className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                                </div>
+                                            )}
+                                            <div>
+                                                <div className="font-medium text-sm">
+                                                    {format(new Date(trans.transaction_date), 'dd MMM yyyy')}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground line-clamp-1">
+                                                    {trans.description || 'No description'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className={cn(
+                                                "font-bold",
+                                                trans.entry_type === 'DEBIT' ? "text-green-600 dark:text-green-400" : "text-blue-600 dark:text-blue-400"
+                                            )}>
+                                                {trans.entry_type === 'DEBIT' ? '+' : '-'}
+                                                {formatCurrency(trans.amount)}
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                                                Bal: {formatCurrency(Math.abs(trans.balance_after))}
+                                                {trans.balance_after > 0 ? ' Dr' : trans.balance_after < 0 ? ' Cr' : ''}
+                                            </div>
+                                        </div>
+                                    </div>
 
+                                    <div className="flex justify-end pt-2 mt-2 border-t border-border border-dashed">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 px-2"
+                                            onClick={() => handleDeleteTransaction(trans.id, trans.amount, trans.entry_type)}
+                                        >
+                                            <Trash2 className="h-3 w-3 mr-1.5" />
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
 
-                            {transactionsWithBalance.length === 0 ? (
+                    {/* Desktop View - Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                                        No transactions yet. Add your first transaction above!
-                                    </TableCell>
+                                    <TableHead className="w-[120px]">Date</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead className="text-right">Given</TableHead>
+                                    <TableHead className="text-right">Received</TableHead>
+                                    <TableHead className="text-right">Balance</TableHead>
+                                    <TableHead className="text-center w-[100px]">Actions</TableHead>
                                 </TableRow>
-                            ) : (
-                                transactionsWithBalance.map((trans) => (
-                                    <TableRow key={trans.id}>
-                                        <TableCell className="font-medium">
-                                            {format(new Date(trans.transaction_date), 'dd MMM yyyy')}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                {trans.entry_type === 'DEBIT' ? (
-                                                    <TrendingUp className="h-4 w-4 text-green-600" />
-                                                ) : (
-                                                    <TrendingDown className="h-4 w-4 text-blue-600" />
-                                                )}
-                                                <span>{trans.description || '-'}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right text-green-600 font-medium">
-                                            {trans.entry_type === 'DEBIT' ? `₹${formatCurrency(trans.amount)}` : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-right text-blue-600 font-medium">
-                                            {trans.entry_type === 'CREDIT' ? `₹${formatCurrency(trans.amount)}` : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-right font-bold">
-                                            ₹{formatCurrency(Math.abs(trans.balance_after))}
-                                            {trans.balance_after > 0 && ' Dr'}
-                                            {trans.balance_after < 0 && ' Cr'}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center justify-center">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                                    onClick={() => handleDeleteTransaction(trans.id, trans.amount, trans.entry_type)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
+                            </TableHeader>
+                            <TableBody>
+                                {/* Opening Balance Row */}
+
+
+                                {transactionsWithBalance.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                                            No transactions yet. Add your first transaction above!
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : (
+                                    transactionsWithBalance.map((trans) => (
+                                        <TableRow key={trans.id}>
+                                            <TableCell className="font-medium">
+                                                {format(new Date(trans.transaction_date), 'dd MMM yyyy')}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    {trans.entry_type === 'DEBIT' ? (
+                                                        <TrendingUp className="h-4 w-4 text-green-600" />
+                                                    ) : (
+                                                        <TrendingDown className="h-4 w-4 text-blue-600" />
+                                                    )}
+                                                    <span>{trans.description || '-'}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right text-green-600 font-medium">
+                                                {trans.entry_type === 'DEBIT' ? `₹${formatCurrency(trans.amount)}` : '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right text-blue-600 font-medium">
+                                                {trans.entry_type === 'CREDIT' ? `₹${formatCurrency(trans.amount)}` : '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right font-bold">
+                                                ₹{formatCurrency(Math.abs(trans.balance_after))}
+                                                {trans.balance_after > 0 && ' Dr'}
+                                                {trans.balance_after < 0 && ' Cr'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center justify-center">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                                        onClick={() => handleDeleteTransaction(trans.id, trans.amount, trans.entry_type)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
             </Card>
         </div>

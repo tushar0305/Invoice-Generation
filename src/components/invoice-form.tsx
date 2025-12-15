@@ -20,6 +20,16 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useUser } from '@/supabase/provider';
 import { useActiveShop } from '@/hooks/use-active-shop';
 import { updateInvoiceAction, createInvoiceAction } from '@/app/actions/invoice-actions';
@@ -30,6 +40,7 @@ import type { Invoice } from '@/lib/definitions';
 import type { LoyaltySettings } from '@/lib/loyalty-types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
+import { useInvoiceCalculations } from '@/hooks/use-invoice-calculations';
 import dynamic from 'next/dynamic';
 
 const LiveInvoicePreview = dynamic(() => import('@/components/invoice-preview').then(mod => mod.LiveInvoicePreview), {
@@ -108,6 +119,9 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [showMobileDetails, setShowMobileDetails] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false); // UX-001: Confirmation modal
+
+
 
   // --- 3. Form Initialization ---
   const form = useForm<InvoiceFormValues>({
@@ -144,6 +158,46 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     },
     mode: 'onChange',
   });
+
+  // --- UX-006: Offline Drafts ---
+  const DRAFT_KEY = useMemo(() => activeShop ? `INVOICE_DRAFT_${activeShop.id}` : null, [activeShop]);
+
+  // Save draft on form change
+  useEffect(() => {
+    if (!DRAFT_KEY || invoice) return; // Don't save drafts for edit mode
+
+    const subscription = form.watch((value) => {
+      // Debounce save to avoid performance hit
+      const handler = setTimeout(() => {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(value));
+      }, 1000);
+      return () => clearTimeout(handler);
+    });
+    return () => subscription.unsubscribe();
+  }, [form, DRAFT_KEY, invoice]);
+
+  // Restore draft on mount
+  useEffect(() => {
+    if (!DRAFT_KEY || invoice) return; // Don't restore for edit mode
+
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Check if draft has meaningful data (e.g. items or customer)
+        if (parsed.items?.length > 0 || parsed.customerName) {
+          form.reset(parsed);
+          toast({
+            title: "Draft Restored",
+            description: "We restored your unsaved invoice.",
+            duration: 3000
+          });
+        }
+      } catch (e) {
+        console.error("Failed to parse draft", e);
+      }
+    }
+  }, [DRAFT_KEY, invoice, form, toast]);
 
   // Watch values for calculations
   const watchedItems = useWatch({ control: form.control, name: 'items' });
@@ -202,56 +256,16 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   }, [activeShop?.id, watchedCustomerPhone]);
 
   // --- 5. Calculations ---
-  const totals = useMemo(() => {
-    const subtotal = watchedItems?.reduce((acc, item) => {
-      const netWeight = Number(item.netWeight) || 0;
-      // Use item rate if set, else fallback to global currentRate
-      const rate = (Number(item.rate) || Number(watchedCurrentRate) || 0);
-      // Legacy vs New Making Logic:
-      // If makingRate > 0, use Rate * Wt. Else if makingAmount > 0 (fallback in future ui), use that.
-      // For now, we rely on Making Rate as primary input.
-      const makingRate = Number(item.makingRate) || 0;
-      const makingAmount = makingRate * netWeight;
-
-      const stoneAmount = Number(item.stoneAmount) || 0;
-
-      // Total = (Net * Rate) + Making + Stone
-      return acc + (netWeight * rate) + makingAmount + stoneAmount;
-    }, 0) || 0;
-
-    let loyaltyDiscount = 0;
-    if (watchedRedeemPoints && watchedPointsToRedeem && loyaltySettings) {
-      loyaltyDiscount = watchedPointsToRedeem * loyaltySettings.redemption_conversion_rate;
-    }
-
-    const totalDiscount = (Number(watchedDiscount) || 0) + loyaltyDiscount;
-    const taxableAmount = Math.max(0, subtotal - totalDiscount);
-
-    const sgstRate = settings?.sgstRate || 1.5;
-    const cgstRate = settings?.cgstRate || 1.5;
-
-    const sgstAmount = taxableAmount * (sgstRate / 100);
-    const cgstAmount = taxableAmount * (cgstRate / 100);
-    const grandTotal = taxableAmount + sgstAmount + cgstAmount;
-
-    // Points to Earn
-    let pointsToEarn = 0;
-    if (loyaltySettings?.earning_type === 'flat' && loyaltySettings.flat_points_ratio) {
-      pointsToEarn = Math.floor(grandTotal * loyaltySettings.flat_points_ratio);
-    } else if (loyaltySettings?.earning_type === 'percentage' && loyaltySettings.percentage_back) {
-      pointsToEarn = Math.floor(grandTotal * (loyaltySettings.percentage_back / 100));
-    }
-
-    return {
-      subtotal,
-      loyaltyDiscount,
-      totalDiscount,
-      sgstAmount,
-      cgstAmount,
-      grandTotal,
-      pointsToEarn
-    };
-  }, [watchedItems, watchedDiscount, watchedRedeemPoints, watchedPointsToRedeem, loyaltySettings, settings, watchedCurrentRate]);
+  const totals = useInvoiceCalculations({
+    items: watchedItems as any[],
+    discount: watchedDiscount,
+    redeemPoints: watchedRedeemPoints,
+    pointsToRedeem: watchedPointsToRedeem,
+    loyaltySettings,
+    sgstRate: settings?.sgstRate || 1.5,
+    cgstRate: settings?.cgstRate || 1.5,
+    currentRate: watchedCurrentRate
+  });
 
   // --- 5.5. QR Scanner Handler ---
   const handleItemsFromQR = (items: any[]) => {
@@ -275,9 +289,14 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       });
     });
 
+    // UX-004: Haptic feedback on successful scan
+    if ('vibrate' in navigator) {
+      navigator.vibrate([50, 30, 50]); // Short success pattern
+    }
+
     toast({
-      title: 'Success',
-      description: `Added ${items.length} item${items.length > 1 ? 's' : ''} from QR scan`
+      title: '✓ Items Added',
+      description: `Added ${items.length} item${items.length > 1 ? 's' : ''} from QR scan`,
     });
   };
 
@@ -288,6 +307,11 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   };
 
   // --- 6. Submission Handler ---
+  const handleConfirmSubmit = () => {
+    setShowConfirmation(false);
+    form.handleSubmit(onSubmit)();
+  };
+
   const onSubmit = async (data: InvoiceFormValues) => {
     if (!activeShop?.id || !user?.uid) {
       toast({ title: 'Error', description: 'Session missing', variant: 'destructive' });
@@ -327,6 +351,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         }
 
         if (result.success) {
+          // Clear draft on success
+          if (DRAFT_KEY) localStorage.removeItem(DRAFT_KEY);
           router.push(`/shop/${activeShop.id}/invoices`);
         }
       } catch (error: any) {
@@ -625,7 +651,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                       </div>
                     </div>
 
-                    <Button type="submit" className="w-full h-11 text-base shadow-sm font-semibold" disabled={isPending}>
+                    <Button
+                      type="button"
+                      onClick={() => setShowConfirmation(true)}
+                      className="w-full h-11 text-base shadow-sm font-semibold"
+                      disabled={isPending || watchedItems.length === 0}
+                    >
                       {isPending ? <Loader2 className="animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save Invoice</>}
                     </Button>
                   </div>
@@ -650,7 +681,11 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             />
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => router.back()} className="flex-1 h-12">Cancel</Button>
-              <Button onClick={form.handleSubmit(onSubmit)} disabled={isPending} className="flex-1 h-12 shadow-lg">
+              <Button
+                onClick={() => setShowConfirmation(true)}
+                disabled={isPending || watchedItems.length === 0}
+                className="flex-1 h-12 shadow-lg"
+              >
                 {isPending ? <Loader2 className="animate-spin" /> : 'Save Invoice'}
               </Button>
             </div>
@@ -680,6 +715,33 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         isOpen={isScannerOpen}
         onOpenChange={setIsScannerOpen}
       />
+
+      {/* UX-001: Invoice Confirmation Modal */}
+      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Invoice</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>You are about to create an invoice with the following details:</p>
+              <div className="bg-muted p-3 rounded-lg text-sm space-y-1 mt-2">
+                <p><strong>Customer:</strong> {form.getValues('customerName') || 'Walk-in'}</p>
+                <p><strong>Items:</strong> {watchedItems.length} item(s)</p>
+                <p><strong>Total:</strong> {formatCurrency(totals.grandTotal)}</p>
+                <p><strong>Status:</strong> <span className={form.getValues('status') === 'paid' ? 'text-emerald-600' : 'text-amber-600'}>{form.getValues('status')?.toUpperCase()}</span></p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                This action will create an official invoice and update inventory records.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Review Again</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSubmit}>
+              Confirm & Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MotionWrapper>
   );
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -68,37 +69,59 @@ function generateRequestId(): string {
 // RATE LIMITING (In-memory for Edge Function - resets on cold start)
 // For production, use Redis or Supabase table
 // ============================================================================
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
-
-function checkRateLimit(userId: string): { allowed: boolean; remaining: number; resetAt: number } {
+async function checkRateLimit(userId: string, supabase: SupabaseClient): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
     const now = Date.now()
     const key = `rate_${userId}`
-    const existing = rateLimitStore.get(key)
 
-    // Clean up expired entries
-    if (existing && existing.resetAt < now) {
-        rateLimitStore.delete(key)
+    // 1. Get current limit from DB
+    const { data: current, error } = await supabase
+        .from('rate_limits')
+        .select('*')
+        .eq('key', key)
+        .single()
+
+    // Handle first request or expired window
+    if (!current || current.reset_at < now) {
+        const resetAt = now + CONFIG.RATE_LIMIT_WINDOW_MS
+
+        // Upsert new window
+        const { error: upsertError } = await supabase
+            .from('rate_limits')
+            .upsert({
+                key,
+                count: 1,
+                reset_at: resetAt
+            })
+
+        if (upsertError) {
+            console.error('Rate limit upsert error:', upsertError)
+            // Fail open if DB error
+            return { allowed: true, remaining: CONFIG.RATE_LIMIT_MAX_REQUESTS - 1, resetAt }
+        }
+
+        return { allowed: true, remaining: CONFIG.RATE_LIMIT_MAX_REQUESTS - 1, resetAt }
     }
 
-    const current = rateLimitStore.get(key)
-
-    if (!current) {
-        // First request in window
-        rateLimitStore.set(key, {
-            count: 1,
-            resetAt: now + CONFIG.RATE_LIMIT_WINDOW_MS,
-        })
-        return { allowed: true, remaining: CONFIG.RATE_LIMIT_MAX_REQUESTS - 1, resetAt: now + CONFIG.RATE_LIMIT_WINDOW_MS }
-    }
-
+    // Check limit
     if (current.count >= CONFIG.RATE_LIMIT_MAX_REQUESTS) {
-        // Rate limit exceeded
-        return { allowed: false, remaining: 0, resetAt: current.resetAt }
+        return { allowed: false, remaining: 0, resetAt: Number(current.reset_at) }
     }
 
     // Increment counter
-    current.count++
-    return { allowed: true, remaining: CONFIG.RATE_LIMIT_MAX_REQUESTS - current.count, resetAt: current.resetAt }
+    const { error: updateError } = await supabase
+        .from('rate_limits')
+        .update({ count: current.count + 1 })
+        .eq('key', key)
+
+    if (updateError) {
+        console.error('Rate limit update error:', updateError)
+    }
+
+    return {
+        allowed: true,
+        remaining: CONFIG.RATE_LIMIT_MAX_REQUESTS - (current.count + 1),
+        resetAt: Number(current.reset_at)
+    }
 }
 
 // ============================================================================
@@ -224,7 +247,7 @@ serve(async (req) => {
         // ================================================================
         // STEP 3: Rate Limiting Check
         // ================================================================
-        const rateLimit = checkRateLimit(user.id)
+        const rateLimit = await checkRateLimit(user.id, supabase)
 
         if (!rateLimit.allowed) {
             const resetIn = Math.ceil((rateLimit.resetAt - Date.now()) / 1000 / 60) // minutes
@@ -302,43 +325,49 @@ serve(async (req) => {
         log('DEBUG', 'Fetching business data', { requestId, action: 'data_fetch_start' })
 
         const [salesRes, stockRes, customersRes, khataRes, loansRes, loyaltyRes] = await Promise.all([
-            // Sales data (last 30 days)
+            // Sales data (last 30 days) - PERF-004: limit results
             supabase
                 .from('invoices')
                 .select('grand_total, invoice_date, status, customer_snapshot')
                 .eq('shop_id', shopId)
-                .gte('invoice_date', thirtyDaysAgo.split('T')[0]),
+                .gte('invoice_date', thirtyDaysAgo.split('T')[0])
+                .limit(500),
 
-            // Stock data
+            // Stock data - BUG-003: Use inventory_items instead of deprecated stock_items
             supabase
-                .from('stock_items')
-                .select('name, quantity, low_stock_threshold, purchase_price')
-                .eq('shop_id', shopId),
+                .from('inventory_items')
+                .select('name, status, gross_weight, metal_type, selling_price')
+                .eq('shop_id', shopId)
+                .limit(500),
 
-            // Customer stats (from invoices)
+            // Customer stats (from invoices) - PERF-004: limit results
             supabase
                 .from('invoices')
                 .select('customer_snapshot, grand_total')
                 .eq('shop_id', shopId)
-                .gte('invoice_date', thirtyDaysAgo.split('T')[0]),
+                .gte('invoice_date', thirtyDaysAgo.split('T')[0])
+                .limit(500),
 
-            // Khatabook data
+            // Khatabook data - PERF-004: limit results
             supabase
                 .from('ledger_transactions')
                 .select('amount, entry_type, transaction_type')
-                .eq('shop_id', shopId),
+                .eq('shop_id', shopId)
+                .limit(500),
 
             // Loans data
             supabase
                 .from('loans')
                 .select('principal_amount, status, total_interest_accrued')
-                .eq('shop_id', shopId),
+                .eq('shop_id', shopId)
+                .limit(100),
 
-            // Loyalty data
+            // Loyalty data - BUG-002: Use 'reason' column instead of 'transaction_type' (which doesn't exist)
             supabase
                 .from('customer_loyalty_logs')
-                .select('points_change, transaction_type')
-                .eq('shop_id', shopId),
+                .select('points_change, reason')
+                .eq('shop_id', shopId)
+                .limit(500),
         ])
 
         const dataFetchDuration = Date.now() - dataFetchStart
@@ -375,13 +404,14 @@ serve(async (req) => {
                 : 0,
         }
 
-        // Stock data
+        // Stock data - BUG-003: Updated to use inventory_items schema
         const stockData = {
             totalItems: stockRes.data?.length || 0,
-            lowStockItems: stockRes.data?.filter(s => s.quantity <= (s.low_stock_threshold || 5)).length || 0,
-            outOfStock: stockRes.data?.filter(s => s.quantity === 0).length || 0,
-            totalValue: stockRes.data?.reduce((s, i) => s + (Number(i.quantity || 0) * Number(i.purchase_price || 0)), 0) || 0,
-            lowStockItemNames: stockRes.data?.filter(s => s.quantity <= (s.low_stock_threshold || 5)).slice(0, 5).map(s => s.name) || [],
+            inStockItems: stockRes.data?.filter((s: any) => s.status === 'IN_STOCK').length || 0,
+            soldItems: stockRes.data?.filter((s: any) => s.status === 'SOLD').length || 0,
+            reservedItems: stockRes.data?.filter((s: any) => s.status === 'RESERVED').length || 0,
+            totalValue: stockRes.data?.reduce((s: number, i: any) => s + (Number(i.selling_price || 0)), 0) || 0,
+            recentItemNames: stockRes.data?.filter((s: any) => s.status === 'IN_STOCK').slice(0, 5).map((s: any) => s.name) || [],
         }
 
         // Customer data (top 5, masked)
@@ -412,10 +442,11 @@ serve(async (req) => {
             interestEarned: loansRes.data?.reduce((s, l) => s + Number(l.total_interest_accrued || 0), 0) || 0,
         }
 
-        // Loyalty data
+        // Loyalty data - BUG-002: Parse reason field for transaction type (column doesn't exist)
         const loyaltyData = {
-            totalEarned: loyaltyRes.data?.filter(l => l.transaction_type === 'earn').reduce((s, l) => s + (l.points_change || 0), 0) || 0,
-            totalRedeemed: loyaltyRes.data?.filter(l => l.transaction_type === 'redeem').reduce((s, l) => s + Math.abs(l.points_change || 0), 0) || 0,
+            // Positive points_change = earned, negative = redeemed
+            totalEarned: loyaltyRes.data?.filter((l: any) => l.points_change > 0).reduce((s: number, l: any) => s + (l.points_change || 0), 0) || 0,
+            totalRedeemed: loyaltyRes.data?.filter((l: any) => l.points_change < 0).reduce((s: number, l: any) => s + Math.abs(l.points_change || 0), 0) || 0,
             activePoints: 0,
         }
         loyaltyData.activePoints = loyaltyData.totalEarned - loyaltyData.totalRedeemed

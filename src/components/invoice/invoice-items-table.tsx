@@ -7,23 +7,10 @@ import { Input } from '@/components/ui/input';
 import { FileText, Plus, Trash2 } from 'lucide-react';
 import { UseFormReturn, useFieldArray } from 'react-hook-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/supabase/client';
+import { getInventoryItems } from '@/services/inventory';
 import { useEffect, useState, useRef } from 'react';
-
-interface InventoryItem {
-    id: string;
-    tag_id: string;
-    name: string;
-    metal_type: string;
-    purity: string;
-    hsn_code?: string;
-    category?: string;
-    gross_weight: number;
-    net_weight: number;
-    stone_weight?: number;
-    wastage_percent?: number;
-    making_charge_value?: number;
-}
+import { InventoryItem, STATUS_LABELS } from '@/lib/inventory-types';
+import { Badge } from '@/components/ui/badge';
 
 interface InvoiceItemsTableProps {
     form: UseFormReturn<any>;
@@ -41,23 +28,13 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
 
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
 
-    // Fetch inventory items from the new inventory_items table
+    // Fetch inventory items using service
     useEffect(() => {
         if (!shopId) return;
 
-        // Fetch expanded details for proper mapping
         const fetchInventory = async () => {
-            const { data, error } = await supabase
-                .from('inventory_items')
-                .select('id, tag_id, name, metal_type, purity, hsn_code, category, gross_weight, net_weight, stone_weight, wastage_percent, making_charge_value')
-                .eq('shop_id', shopId)
-                .eq('status', 'IN_STOCK')
-                .order('created_at', { ascending: false })
-                .limit(50);
-
-            if (!error && data) {
-                setInventoryItems(data);
-            }
+            const items = await getInventoryItems(shopId);
+            setInventoryItems(items);
         };
 
         fetchInventory();
@@ -66,7 +43,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
     const handleInventorySelect = (index: number, itemId: string) => {
         const selected = inventoryItems.find(s => s.id === itemId);
         if (selected) {
-            form.setValue(`items.${index}.description`, selected.name);
+            form.setValue(`items.${index}.description`, selected.name || '');
             form.setValue(`items.${index}.metalType`, selected.metal_type);
             form.setValue(`items.${index}.purity`, selected.purity || '22K');
             form.setValue(`items.${index}.hsnCode`, selected.hsn_code || '');
@@ -169,11 +146,28 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                     <SelectValue placeholder="Choose an inventory item..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {inventoryItems.map((item) => (
-                                        <SelectItem key={item.id} value={item.id}>
-                                            {item.name} - {item.tag_id} ({item.purity})
-                                        </SelectItem>
-                                    ))}
+                                    {inventoryItems.map((item) => {
+                                        const isAvailable = item.status === 'IN_STOCK';
+                                        const statusConfig = STATUS_LABELS[item.status] || { label: item.status, color: 'gray' };
+
+                                        return (
+                                            <SelectItem
+                                                key={item.id}
+                                                value={item.id}
+                                                disabled={!isAvailable}
+                                                className="flex items-center justify-between w-full"
+                                            >
+                                                <div className="flex items-center justify-between w-full gap-2">
+                                                    <span>{item.name} - {item.tag_id} ({item.purity})</span>
+                                                    {!isAvailable && (
+                                                        <Badge variant="outline" className={`ml-2 text-xs px-1 py-0 border-${statusConfig.color}-500 text-${statusConfig.color}-600 bg-${statusConfig.color}-50`}>
+                                                            {statusConfig.label}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </SelectItem>
+                                        );
+                                    })}
                                 </SelectContent>
                             </Select>
                         </div>

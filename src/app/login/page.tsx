@@ -354,7 +354,7 @@ export default function LoginPage() {
                 alt="SwarnaVyapar Logo"
                 fill
                 className="object-contain"
-                priority
+                priority // Preload critical image
               />
             </div>
           </div>

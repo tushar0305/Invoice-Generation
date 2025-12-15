@@ -133,51 +133,7 @@ export const InvoiceSchema = z.object({
 
 export type InvoiceInput = z.infer<typeof InvoiceSchema>;
 
-// ========================================
-// STOCK ITEM VALIDATION
-// ========================================
 
-export const StockItemSchema = z.object({
-    name: z
-        .string()
-        .min(1, 'Item name is required')
-        .max(255, 'Name is too long')
-        .transform(sanitizeString),
-
-    category: z
-        .enum(['gold', 'silver', 'diamond', 'platinum', 'other'])
-        .default('gold'),
-
-    weight: z
-        .number()
-        .positive('Weight must be positive')
-        .max(100000, 'Weight is too large'),
-
-    purity: z
-        .number()
-        .min(0, 'Purity cannot be negative')
-        .max(100, 'Purity cannot exceed 100'),
-
-    quantity: z
-        .number()
-        .int('Quantity must be a whole number')
-        .nonnegative('Quantity cannot be negative')
-        .max(10000, 'Quantity is too large'),
-
-    price: z
-        .number()
-        .nonnegative('Price cannot be negative')
-        .max(100000000, 'Price is too large'),
-
-    description: z
-        .string()
-        .max(500, 'Description is too long')
-        .optional()
-        .or(z.literal(''))
-        .transform((val) => val ? sanitizeString(val) : val),
-});
-
-export type StockItemInput = z.infer<typeof StockItemSchema>;
 
 // ========================================
 // SHOP VALIDATION

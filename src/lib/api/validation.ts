@@ -137,23 +137,3 @@ export const CreateCustomerSchema = z.object({
 });
 
 export const UpdateCustomerSchema = CreateCustomerSchema.partial().omit({ shopId: true });
-
-// ============================================
-// Stock-specific Schemas
-// ============================================
-
-export const StockItemSchema = z.object({
-    shopId: UUIDSchema,
-    name: z.string().min(1),
-    description: z.string().optional(),
-    purity: z.string().min(1),
-    basePrice: z.number().nonnegative(),
-    baseWeight: z.number().nonnegative().optional(),
-    makingChargePerGram: z.number().nonnegative(),
-    quantity: z.number().nonnegative(),
-    unit: z.string().min(1),
-    category: z.string().optional(),
-    isActive: z.boolean().default(true),
-});
-
-export const UpdateStockItemSchema = StockItemSchema.partial().omit({ shopId: true });

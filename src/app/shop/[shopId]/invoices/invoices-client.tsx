@@ -35,7 +35,8 @@ import {
     Share2,
     Banknote,
     Undo2,
-    Printer
+    Printer,
+    FileSpreadsheet
 } from 'lucide-react';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +62,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/shared/export-dialog';
+import { GstExportDialog } from '@/components/reports/gst-export-dialog';
 
 type InvoicesClientProps = {
     initialInvoices: Invoice[];
@@ -720,6 +722,18 @@ export function InvoicesClient({
                             )} />
                         </Button>
 
+                        {/* Trash Link */}
+                        <Link href={`/shop/${shopId}/invoices/trash`}>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0 h-10 w-10 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10"
+                                title="View deleted invoices"
+                            >
+                                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                        </Link>
+
                         {/* View Date Filter - Keeping this for list view filtering */}
                         <Popover>
                             <PopoverTrigger asChild>
@@ -759,6 +773,16 @@ export function InvoicesClient({
                                 <Button variant="outline" size="sm" className="h-10 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10">
                                     <Download className="h-3.5 w-3.5" />
                                     <span className="text-xs hidden sm:inline">Export</span>
+                                </Button>
+                            }
+                        />
+
+                        <GstExportDialog
+                            shopId={shopId}
+                            trigger={
+                                <Button variant="outline" size="sm" className="h-10 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10">
+                                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                                    <span className="text-xs hidden sm:inline">GST Report</span>
                                 </Button>
                             }
                         />

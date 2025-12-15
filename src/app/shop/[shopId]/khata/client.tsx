@@ -444,76 +444,133 @@ export function KhataClient({
                     </div>
                 </div>
 
-                {/* Customer Table */}
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader className="bg-muted/50 border-b border-border">
-                            <TableRow className="hover:bg-transparent border-gray-200 dark:border-white/10">
-                                <TableHead className="text-primary glow-text-sm">Customer</TableHead>
-                                <TableHead className="text-primary glow-text-sm">Contact</TableHead>
-                                <TableHead className="text-right text-primary glow-text-sm">Given</TableHead>
-                                <TableHead className="text-right text-primary glow-text-sm">Received</TableHead>
-                                <TableHead className="text-right text-primary glow-text-sm">Balance</TableHead>
-                                <TableHead className="text-center text-primary glow-text-sm">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {customers.length === 0 ? (
-                                <TableRow className="border-gray-100 dark:border-white/5 hover:bg-transparent">
-                                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground dark:text-gray-500">
-                                        {searchTerm || currentFilter !== 'all'
-                                            ? 'No customers found matching your filters'
-                                            : 'No customers yet. Add your first customer to get started!'}
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                customers.map((customer) => (
-                                    <TableRow key={customer.id} className="hover:bg-muted/50 border-b border-border transition-colors">
-                                        <TableCell className="font-medium text-foreground dark:text-white">{customer.name}</TableCell>
-                                        <TableCell className="text-sm text-muted-foreground dark:text-gray-400">
-                                            {customer.phone || '-'}
-                                        </TableCell>
-                                        <TableCell className="text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                                            {formatCurrency(customer.total_spent)}
-                                        </TableCell>
-                                        <TableCell className="text-right text-blue-600 dark:text-blue-400 font-medium">
-                                            {formatCurrency(customer.total_paid)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <StatusBadge
-                                                status={customer.current_balance > 0 ? 'receivable' : customer.current_balance < 0 ? 'payable' : 'settled'}
-                                                className="font-mono"
-                                            />
-                                            <span className="ml-2 text-xs text-muted-foreground font-mono">
+                {/* Customer List - Responsive View */}
+                <div className="relative">
+                    {/* Mobile View - Cards */}
+                    <div className="md:hidden space-y-3 p-4">
+                        {customers.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground dark:text-gray-500 bg-muted/20 rounded-xl border border-dashed border-border">
+                                {searchTerm || currentFilter !== 'all'
+                                    ? 'No customers found matching your filters'
+                                    : 'No customers yet. Add your first customer to get started!'}
+                            </div>
+                        ) : (
+                            customers.map((customer) => (
+                                <div
+                                    key={customer.id}
+                                    onClick={() => router.push(`/shop/${shopId}/khata/${customer.id}`)}
+                                    className="bg-card border border-border rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
+                                >
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <h3 className="font-bold text-lg text-foreground">{customer.name}</h3>
+                                            <div className="text-sm text-muted-foreground">{customer.phone || 'No phone'}</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className={cn(
+                                                "font-bold text-lg",
+                                                customer.current_balance > 0 ? "text-emerald-600" :
+                                                    customer.current_balance < 0 ? "text-red-600" : "text-muted-foreground"
+                                            )}>
                                                 {formatCurrency(Math.abs(customer.current_balance))}
-                                                {customer.current_balance > 0 ? ' Dr' : customer.current_balance < 0 ? ' Cr' : ''}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center justify-center gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10"
-                                                    onClick={() => router.push(`/shop/${shopId}/khata/${customer.id}`)}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-500/10"
-                                                    onClick={() => setCustomerToDelete({ id: customer.id, name: customer.name })}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
                                             </div>
+                                            <Badge variant="outline" className={cn(
+                                                "text-[10px] h-5 px-1.5 font-mono",
+                                                customer.current_balance > 0 ? "text-emerald-600 border-emerald-200 bg-emerald-50" :
+                                                    customer.current_balance < 0 ? "text-red-600 border-red-200 bg-red-50" : "text-gray-500"
+                                            )}>
+                                                {customer.current_balance > 0 ? 'RECEIVABLE' :
+                                                    customer.current_balance < 0 ? 'PAYABLE' : 'SETTLED'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                                        <div>
+                                            <div className="text-xs text-muted-foreground mb-0.5">Total Given</div>
+                                            <div className="font-medium text-emerald-600">{formatCurrency(customer.total_spent)}</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-xs text-muted-foreground mb-0.5">Total Received</div>
+                                            <div className="font-medium text-blue-600">{formatCurrency(customer.total_paid)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Desktop View - Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-muted/50 border-b border-border">
+                                <TableRow className="hover:bg-transparent border-gray-200 dark:border-white/10">
+                                    <TableHead className="text-primary glow-text-sm">Customer</TableHead>
+                                    <TableHead className="text-primary glow-text-sm">Contact</TableHead>
+                                    <TableHead className="text-right text-primary glow-text-sm">Given</TableHead>
+                                    <TableHead className="text-right text-primary glow-text-sm">Received</TableHead>
+                                    <TableHead className="text-right text-primary glow-text-sm">Balance</TableHead>
+                                    <TableHead className="text-center text-primary glow-text-sm">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {customers.length === 0 ? (
+                                    <TableRow className="border-gray-100 dark:border-white/5 hover:bg-transparent">
+                                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground dark:text-gray-500">
+                                            {searchTerm || currentFilter !== 'all'
+                                                ? 'No customers found matching your filters'
+                                                : 'No customers yet. Add your first customer to get started!'}
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : (
+                                    customers.map((customer) => (
+                                        <TableRow key={customer.id} className="hover:bg-muted/50 border-b border-border transition-colors">
+                                            <TableCell className="font-medium text-foreground dark:text-white">{customer.name}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground dark:text-gray-400">
+                                                {customer.phone || '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right text-emerald-600 dark:text-emerald-400 font-medium">
+                                                {formatCurrency(customer.total_spent)}
+                                            </TableCell>
+                                            <TableCell className="text-right text-blue-600 dark:text-blue-400 font-medium">
+                                                {formatCurrency(customer.total_paid)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <StatusBadge
+                                                    status={customer.current_balance > 0 ? 'receivable' : customer.current_balance < 0 ? 'payable' : 'settled'}
+                                                    className="font-mono"
+                                                />
+                                                <span className="ml-2 text-xs text-muted-foreground font-mono">
+                                                    {formatCurrency(Math.abs(customer.current_balance))}
+                                                    {customer.current_balance > 0 ? ' Dr' : customer.current_balance < 0 ? ' Cr' : ''}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10"
+                                                        onClick={() => router.push(`/shop/${shopId}/khata/${customer.id}`)}
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-500/10"
+                                                        onClick={() => setCustomerToDelete({ id: customer.id, name: customer.name })}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
 
                 {/* Pagination Controls */}
