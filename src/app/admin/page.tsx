@@ -181,7 +181,8 @@ export default function AdminDashboardPage() {
                     <BusinessHealthWidget
                         totalRevenue={stats.thisMonthRevenue}
                         totalOrders={stats.thisMonthOrders}
-                        previousRevenue={stats.lastMonthRevenue}
+                        revenueGrowth={stats.lastMonthRevenue > 0 ? ((stats.thisMonthRevenue - stats.lastMonthRevenue) / stats.lastMonthRevenue) * 100 : 0}
+                        returningRate={30} // Placeholder for global aggregate, as we don't have this data easily available per shop in this view yet
                     />
                 </div>
 

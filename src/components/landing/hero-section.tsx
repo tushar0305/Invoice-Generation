@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Play, Sparkles, Star } from 'lucide-react';
 import { useCallback } from 'react';
 import { HeroDashboardPreview } from './hero-dashboard-preview';
+import { HeroBackground } from './hero-background';
 
 export function HeroSection() {
     const shouldReduceMotion = useReducedMotion();
@@ -26,24 +27,11 @@ export function HeroSection() {
 
     return (
         <section
-            className="relative min-h-screen flex items-center justify-center pt-20 md:pt-24 pb-12 overflow-hidden bg-white"
+            className="relative z-0 min-h-screen flex items-center justify-center pt-20 md:pt-24 pb-12 overflow-hidden"
             aria-labelledby="hero-heading"
         >
-            {/* Shining Ring Background Effect */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] opacity-30 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-b from-gold-300/40 to-transparent rounded-[100%] blur-[80px] mix-blend-multiply" />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold-200/50 to-transparent w-full h-px top-0 blur-sm" />
-            </div>
-
-            {/* Background Elements */}
-            <div
-                className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gold-50/50 via-white to-white blur-3xl opacity-60"
-                aria-hidden="true"
-            />
-            <div
-                className="absolute top-0 left-0 w-full h-full bg-[url('/grid-pattern.svg')] opacity-[0.02]"
-                aria-hidden="true"
-            />
+            {/* Animated Background */}
+            <HeroBackground />
 
             <div className="container px-4 md:px-6 relative z-10">
                 <div className="flex flex-col items-center text-center space-y-6 md:space-y-8 max-w-5xl mx-auto">

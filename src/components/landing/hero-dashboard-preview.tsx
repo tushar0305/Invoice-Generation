@@ -10,37 +10,64 @@ export function HeroDashboardPreview() {
     const cursorControls = useAnimation();
 
     // Sequence for cursor animation
+    // Sequence for cursor animation
     useEffect(() => {
+        let isMounted = true;
+
         const sequence = async () => {
-            while (true) {
-                // Initial Position outside
-                await cursorControls.start({ x: 0, y: 0, opacity: 0, transition: { duration: 0 } });
+            // Wait for component to fully mount and Framer Motion to attach controls
+            await new Promise(r => setTimeout(r, 1000));
 
-                // Move to first card
-                await cursorControls.start({ opacity: 1, transition: { duration: 0.5 } });
-                await cursorControls.start({ x: 220, y: 160, transition: { duration: 1.5, ease: "easeInOut" } });
-                setHoveredCard(0); // Revenue Card
-                await new Promise(r => setTimeout(r, 600));
+            while (isMounted) {
+                try {
+                    // Initial Position outside
+                    if (!isMounted) break;
+                    await cursorControls.start({ x: 0, y: 0, opacity: 0, transition: { duration: 0 } });
 
-                // Move to "Top Selling" item
-                setHoveredCard(null);
-                await cursorControls.start({ x: 800, y: 250, transition: { duration: 1.2, ease: "easeInOut" } });
-                // Simulate hover effect on list item (handled by CSS group-hover usually, but here we just pause)
-                await new Promise(r => setTimeout(r, 600));
+                    // Move to first card
+                    if (!isMounted) break;
+                    await cursorControls.start({ opacity: 1, transition: { duration: 0.5 } });
 
-                // Move to Chart bar
-                await cursorControls.start({ x: 400, y: 400, transition: { duration: 1, ease: "easeInOut" } });
-                // Simulate interaction
-                await cursorControls.start({ scale: 0.9, transition: { duration: 0.1 } });
-                await cursorControls.start({ scale: 1, transition: { duration: 0.1 } });
+                    if (!isMounted) break;
+                    await cursorControls.start({ x: 220, y: 160, transition: { duration: 1.5, ease: "easeInOut" } });
+                    if (isMounted) setHoveredCard(0); // Revenue Card
+                    await new Promise(r => setTimeout(r, 600));
 
-                // Move away
-                await cursorControls.start({ x: 900, y: 600, opacity: 0, transition: { duration: 1.5 } });
-                await new Promise(r => setTimeout(r, 1500));
+                    // Move to "Top Selling" item
+                    if (isMounted) setHoveredCard(null);
+
+                    if (!isMounted) break;
+                    await cursorControls.start({ x: 800, y: 250, transition: { duration: 1.2, ease: "easeInOut" } });
+                    // Simulate hover effect
+                    await new Promise(r => setTimeout(r, 600));
+
+                    // Move to Chart bar
+                    if (!isMounted) break;
+                    await cursorControls.start({ x: 400, y: 400, transition: { duration: 1, ease: "easeInOut" } });
+
+                    // Simulate interaction
+                    if (!isMounted) break;
+                    await cursorControls.start({ scale: 0.9, transition: { duration: 0.1 } });
+                    await cursorControls.start({ scale: 1, transition: { duration: 0.1 } });
+
+                    // Move away
+                    if (!isMounted) break;
+                    await cursorControls.start({ x: 900, y: 600, opacity: 0, transition: { duration: 1.5 } });
+                    await new Promise(r => setTimeout(r, 1500));
+                } catch (error) {
+                    // Ignore errors resulting from unmounting during animation
+                    if (!isMounted) break;
+                    console.error("Animation sequence error:", error);
+                    break;
+                }
             }
         };
 
         sequence();
+
+        return () => {
+            isMounted = false;
+        };
     }, [cursorControls]);
 
     return (

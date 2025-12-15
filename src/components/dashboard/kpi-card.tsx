@@ -15,6 +15,40 @@ interface KPICardProps {
     index?: number;
 }
 
+// Helper to generate smooth SVG path (Catmull-Rom spline)
+function getSmoothPath(data: number[], width: number, height: number): string {
+    if (data.length === 0) return "";
+    if (data.length === 1) return `M0,${height / 2} L${width},${height / 2}`;
+
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+
+    // Map points to coordinates
+    const points = data.map((val, i) => {
+        const x = (i / (data.length - 1)) * width;
+        const y = height - ((val - min) / range) * height; // Invert Y because SVG y=0 is top
+        return [x, y];
+    });
+
+    // Generate path command
+    return points.reduce((acc, point, i, a) => {
+        if (i === 0) return `M ${point[0]},${point[1]}`;
+
+        // Simple bezier control points logic (smoothing)
+        const [p0x, p0y] = a[i - 1];
+        const [p1x, p1y] = point;
+
+        // Midpoint for quadratic curve approximation
+        const cp1x = (p0x + p1x) / 2;
+        const cp1y = p0y;
+        const cp2x = (p0x + p1x) / 2;
+        const cp2y = p1y;
+
+        return `${acc} C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p1x},${p1y}`;
+    }, "");
+}
+
 export function KPICard({
     title,
     value,
@@ -26,20 +60,13 @@ export function KPICard({
 
     // Sparkline Logic
     const hasSparkline = sparklineData.length > 1;
-    let sparklinePoints = '';
+    let pathD = '';
+    let fillPathD = '';
 
     if (hasSparkline) {
-        const min = Math.min(...sparklineData);
-        const max = Math.max(...sparklineData);
-        const range = max - min || 1;
-        const width = 100;
-        const height = 30;
-
-        sparklinePoints = sparklineData.map((val, i) => {
-            const x = (i / (sparklineData.length - 1)) * width;
-            const y = height - ((val - min) / range) * height; // Invert Y
-            return `${x},${y}`;
-        }).join(' ');
+        pathD = getSmoothPath(sparklineData, 100, 30);
+        // Create a closed loop for the fill gradient: Start at bottom-left, go to start of line, follow line, go to bottom-right, close.
+        fillPathD = `${pathD} L 100,30 L 0,30 Z`;
     }
 
     return (
@@ -56,56 +83,65 @@ export function KPICard({
                     href ? "cursor-pointer" : "cursor-default"
                 )}
             >
-                {/* Card Container - Gold Theme */}
-                <div className="relative overflow-hidden rounded-xl bg-card border border-border shadow-sm
-          hover:shadow-md transition-all duration-300 ease-out
-          p-5 h-full
-          group-hover:-translate-y-0.5">
+                {/* Card Container - Gold Premium Theme */}
+                <div className="relative overflow-hidden rounded-xl bg-card/60 backdrop-blur-md border border-border/50 shadow-sm
+          hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20
+          transition-all duration-300 ease-out
+          p-5 h-full flex flex-col justify-between
+          group-hover:-translate-y-1">
 
                     {/* Ambient Glow */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                    {/* Header: Title + View More */}
-                    <div className="relative z-10 flex items-start justify-between mb-4">
-                        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
-                            {title}
-                        </h3>
-                        {href && (
-                            <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                        )}
-                    </div>
-
-                    <div className="relative z-10 flex flex-col justify-between min-h-[60px]">
-                        <div className="text-2xl font-bold tracking-tight mb-2 text-foreground truncate" title={value}>
-                            {value}
+                    {/* Top Section */}
+                    <div className="relative z-10 w-full">
+                        <div className="flex items-start justify-between mb-3">
+                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                                {title}
+                            </h3>
+                            {href && (
+                                <div className="p-1 rounded-full bg-primary/5 text-primary/50 group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+                                    <ArrowUpRight className="w-3 h-3" />
+                                </div>
+                            )}
                         </div>
 
-                        {/* Trend Line (Sparkline) only - No Percentage Text */}
+                        <div className="text-2xl md:text-3xl font-heading font-bold tracking-tight text-foreground truncate" title={value}>
+                            {value}
+                        </div>
+                    </div>
+
+                    {/* Bottom Section: Trend Line */}
+                    <div className="relative z-10 w-full mt-4 h-12">
                         {hasSparkline ? (
-                            <div className="h-8 w-full mt-auto opacity-70 group-hover:opacity-100 transition-opacity">
-                                <svg width="100%" height="100%" viewBox="0 0 100 30" preserveAspectRatio="none">
-                                    <polyline
-                                        points={sparklinePoints}
+                            <div className="h-full w-full opacity-70 group-hover:opacity-100 transition-opacity duration-300">
+                                <svg width="100%" height="100%" viewBox="0 0 100 30" preserveAspectRatio="none" className="overflow-visible">
+                                    <defs>
+                                        <linearGradient id={`grad-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
+                                            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+                                        </linearGradient>
+                                    </defs>
+                                    {/* Fill Area */}
+                                    <path
+                                        d={fillPathD}
+                                        fill={`url(#grad-${index})`}
+                                        stroke="none"
+                                    />
+                                    {/* Stroke Line */}
+                                    <path
+                                        d={pathD}
                                         fill="none"
                                         stroke="hsl(var(--primary))"
-                                        strokeWidth="2"
+                                        strokeWidth="2.5"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
                                         vectorEffect="non-scaling-stroke"
-                                        strokeOpacity="0.8"
-                                    />
-                                    <linearGradient id={`grad-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
-                                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
-                                    </linearGradient>
-                                    <polygon
-                                        points={`${0},30 ${sparklinePoints} ${100},30`}
-                                        fill={`url(#grad-${index})`}
-                                        opacity="0.5"
                                     />
                                 </svg>
                             </div>
                         ) : (
-                            // Fallback if no data, maybe show a flat line or nothing
-                            <div className="h-0.5 w-full bg-primary/10 mt-auto rounded-full" />
+                            <div className="h-1 w-12 bg-primary/10 rounded-full mt-auto" />
                         )}
                     </div>
                 </div>
