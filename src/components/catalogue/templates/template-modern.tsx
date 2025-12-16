@@ -110,20 +110,20 @@ export function TemplateModern({ shop, initialProducts, categories }: StoreClien
                     </div>
                 </div>
 
-                {/* Floating Chips */}
-                <div className={`max-w-7xl mx-auto px-6 mt-4 overflow-x-auto scrollbar-hide pb-2 transition-all duration-500 ${scrolled ? 'opacity-0 h-0 mt-0 pointer-events-none' : 'opacity-100 h-auto'}`}>
-                    <div className="flex gap-3">
+                {/* Category Pills - Enhanced Design */}
+                <div className={`max-w-7xl mx-auto px-6 mt-6 overflow-x-auto scrollbar-hide pb-3 transition-all duration-500 ${scrolled ? 'opacity-0 h-0 mt-0 pointer-events-none' : 'opacity-100 h-auto'}`}>
+                    <div className="flex gap-4">
                         <button
                             onClick={() => setSelectedCategory('all')}
-                            className={`px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 ${selectedCategory === 'all' ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20 scale-105' : 'bg-white text-slate-600 shadow-sm hover:bg-white hover:shadow-md'}`}
+                            className={`px-8 py-3 rounded-3xl text-sm font-bold transition-all duration-300 whitespace-nowrap ${selectedCategory === 'all' ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/30 scale-[1.05]' : 'bg-white/90 backdrop-blur-sm text-slate-700 shadow-md hover:bg-white hover:shadow-xl hover:scale-[1.02]'}`}
                         >
-                            All Collection
+                            ✨ All Collection
                         </button>
                         {categories.map(cat => (
                             <button
                                 key={cat.id}
                                 onClick={() => setSelectedCategory(cat.id)}
-                                className={`px-6 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-300 ${selectedCategory === cat.id ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20 scale-105' : 'bg-white text-slate-600 shadow-sm hover:bg-white hover:shadow-md'}`}
+                                className={`px-8 py-3 rounded-3xl text-sm font-bold whitespace-nowrap transition-all duration-300 ${selectedCategory === cat.id ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/30 scale-[1.05]' : 'bg-white/90 backdrop-blur-sm text-slate-700 shadow-md hover:bg-white hover:shadow-xl hover:scale-[1.02]'}`}
                             >
                                 {cat.name}
                             </button>
@@ -138,9 +138,15 @@ export function TemplateModern({ shop, initialProducts, categories }: StoreClien
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="mb-12 max-w-2xl text-lg text-slate-600 leading-relaxed"
+                        className="mb-16 max-w-2xl p-8 rounded-3xl bg-white/80 backdrop-blur-sm shadow-lg border border-slate-100"
                     >
-                        {shop.about_text}
+                        <div className="flex items-start gap-3 mb-4">
+                            <Sparkles className="h-6 w-6 text-indigo-500 flex-shrink-0 mt-1" />
+                            <h3 className="text-xl font-bold text-slate-900">Our Story</h3>
+                        </div>
+                        <p className="text-base text-slate-600 leading-relaxed pl-9">
+                            {shop.about_text}
+                        </p>
                     </motion.div>
                 )}
 
@@ -154,7 +160,7 @@ export function TemplateModern({ shop, initialProducts, categories }: StoreClien
                         variants={container}
                         initial="hidden"
                         animate="show"
-                        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8"
+                        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8"
                     >
                         {filteredProducts.map((product) => (
                             <motion.div
@@ -163,9 +169,9 @@ export function TemplateModern({ shop, initialProducts, categories }: StoreClien
                                     hidden: { opacity: 0, y: 30 },
                                     show: { opacity: 1, y: 0 }
                                 }}
-                                whileHover={{ y: -8 }}
+                                whileHover={{ y: -12 }}
                                 onClick={() => handleProductClick(product)}
-                                className="bg-white rounded-[2rem] p-3 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 cursor-pointer group flex flex-col h-full"
+                                className="bg-white rounded-3xl p-4 shadow-lg hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-500 cursor-pointer group flex flex-col h-full"
                             >
                                 <div className="aspect-[3/4] bg-slate-50 rounded-[1.5rem] overflow-hidden relative mb-4">
                                     {product.images && product.images[0] ? (
@@ -193,13 +199,15 @@ export function TemplateModern({ shop, initialProducts, categories }: StoreClien
                                     </div>
                                 </div>
 
-                                <div className="px-2 pb-2">
-                                    <h3 className="font-semibold text-slate-900 text-base leading-snug line-clamp-2 mb-1 group-hover:text-indigo-600 transition-colors">
+                                <div className="px-3 pb-3 space-y-2">
+                                    <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2 min-h-[3rem] group-hover:text-indigo-600 transition-colors">
                                         {product.name}
                                     </h3>
-                                    <div className="flex items-center gap-2 text-xs font-medium text-slate-400 mt-auto">
-                                        {product.purity && <span>{product.purity}</span>}
-                                        {product.weight_g && <span>• {product.weight_g}g</span>}
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+                                            {product.purity && <span className="bg-slate-50 px-2 py-1 rounded-full">{product.purity}</span>}
+                                            {product.weight_g && <span className="bg-slate-50 px-2 py-1 rounded-full">{product.weight_g}g</span>}
+                                        </div>
                                     </div>
                                 </div>
                             </motion.div>

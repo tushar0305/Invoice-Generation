@@ -12,36 +12,46 @@ import { UpdatePrompt } from '@/components/update-prompt';
 export const metadata: Metadata = {
   metadataBase: new URL('https://swarnavyapar.in'),
   title: {
-    default: 'SwarnaVyapar - Premium Jewellery Management Software',
-    template: '%s | SwarnaVyapar',
+    default: 'SwarnaVyapar - AI-Powered Jewellery Management & Billing Software | GST Compliant',
+    template: '%s | SwarnaVyapar - Jewellery Management Software',
   },
   description:
-    'India\'s most premium jewellery management suite. Create professional invoices, track stock, and manage customers with elegance. Designed for modern jewellers.',
+    'Leading jewellery management software in India. AI voice invoicing, GST-compliant billing, inventory tracking, customer loyalty & hallmarking. Trusted by 500+ jewellers. Free trial available.',
   keywords: [
-    'jewellery software',
+    'jewellery software india',
     'jewellery billing software',
     'gold invoice generator',
     'jewellery inventory management',
+    'jewellery erp software',
     'hallmarking software',
     'gst billing software for jewellers',
+    'jewellery pos system',
+    'gold shop management software',
+    'jewellery accounting software',
+    'ai voice invoicing',
+    'jewellery store management',
     'swarnavyapar',
   ],
   authors: [{ name: 'SwarnaVyapar Team' }],
   creator: 'SwarnaVyapar',
+  publisher: 'SwarnaVyapar',
+  category: 'Business Software',
+  classification: 'Jewellery Management Software',
   openGraph: {
     type: 'website',
     locale: 'en_IN',
     url: 'https://swarnavyapar.in',
-    title: 'SwarnaVyapar - Premium Jewellery Management Software',
+    title: 'SwarnaVyapar - AI-Powered Jewellery Management Software',
     description:
-      'Transform your jewellery business with SwarnaVyapar. Elegant invoicing, smart inventory tracking, and seamless customer management.',
+      'Transform your jewellery business with AI voice invoicing, GST-compliant billing, smart inventory tracking, and customer loyalty management. Join 500+ jewellers across India.',
     siteName: 'SwarnaVyapar',
     images: [
       {
-        url: process.env.NEXT_PUBLIC_LOGO_URL || '/logo/logo.png',
+        url: 'https://swarnavyapar.in/logo/swarnavyapar_light.png',
         width: 1200,
         height: 630,
-        alt: 'SwarnaVyapar Logo',
+        alt: 'SwarnaVyapar - Jewellery Management Software',
+        type: 'image/png',
       },
     ],
   },
@@ -58,11 +68,12 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SwarnaVyapar - Premium Jewellery Management Software',
+    title: 'SwarnaVyapar - AI-Powered Jewellery Management Software',
     description:
-      'Transform your jewellery business with SwarnaVyapar. Elegant invoicing, smart inventory tracking, and seamless customer management.',
+      'Leading jewellery management software with AI voice invoicing, GST compliance, inventory tracking & loyalty management. Trusted by 500+ jewellers.',
     creator: '@swarnavyapar',
-    images: ['https://swarnavyapar.in/logo/browser.webp'],
+    images: ['https://swarnavyapar.in/logo/swarnavyapar_light.png'],
+    site: '@swarnavyapar',
   },
   robots: {
     index: true,
@@ -77,6 +88,12 @@ export const metadata: Metadata = {
   },
   verification: {
     google: 'Y0oXQR9Ayb5-D7vGVucdwsA7-Y5tYUD_deNB5wVbNe0',
+  },
+  alternates: {
+    canonical: 'https://swarnavyapar.in',
+  },
+  other: {
+    'google-site-verification': 'Y0oXQR9Ayb5-D7vGVucdwsA7-Y5tYUD_deNB5wVbNe0',
   },
   appleWebApp: {
     capable: true,

@@ -19,12 +19,6 @@ export function QuickActions({ shopId }: QuickActionsProps) {
             primary: true,
         },
         {
-            href: `/shop/${shopId}/customers?action=add`,
-            label: 'Add Customer',
-            icon: Users,
-            color: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20',
-        },
-        {
             href: `/shop/${shopId}/inventory/new`,
             label: 'Add Item',
             icon: QrCode,
@@ -39,19 +33,19 @@ export function QuickActions({ shopId }: QuickActionsProps) {
     ];
 
     return (
-        <div className="flex overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:flex-wrap gap-2 scrollbar-hide snap-x">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
             {actions.map((action) => (
-                <Link key={action.href} href={action.href} className="snap-start shrink-0">
+                <Link key={action.href} href={action.href} className="w-full sm:w-auto">
                     <Button
                         className={cn(
-                            "h-10 sm:h-9 gap-2 rounded-full sm:rounded-lg font-medium transition-all px-4 sm:px-3",
+                            "w-full h-9 sm:h-10 gap-1.5 sm:gap-2 rounded-lg font-medium transition-all px-2 sm:px-4 text-xs sm:text-sm",
                             action.primary ? "shadow-md" : "",
                             action.color
                         )}
                         variant={action.primary ? "default" : "ghost"}
                     >
-                        <action.icon className="h-4 w-4" />
-                        <span className="whitespace-nowrap">{action.label}</span>
+                        <action.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <span className="whitespace-nowrap truncate">{action.label}</span>
                     </Button>
                 </Link>
             ))}

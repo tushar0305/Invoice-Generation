@@ -1,13 +1,15 @@
 'use client';
 
-import { motion, useAnimation } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { motion, useAnimation, useInView } from 'framer-motion';
+import { useEffect, useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { BarChart3, TrendingUp, Users, DollarSign, MousePointer2, Bell, Search, Menu, Home, Package, FileText, Settings, ShoppingBag, ArrowUpRight } from 'lucide-react';
 
 export function HeroDashboardPreview() {
     const [hoveredCard, setHoveredCard] = useState<number | null>(null);
     const cursorControls = useAnimation();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isInView = useInView(containerRef, { once: false, amount: 0.3 });
 
     // Sequence for cursor animation
     // Sequence for cursor animation
@@ -71,17 +73,175 @@ export function HeroDashboardPreview() {
     }, [cursorControls]);
 
     return (
-        <div className="relative w-full max-w-7xl mx-auto pt-10 px-2 sm:px-6 lg:px-8 perspective-1000">
+        <div ref={containerRef} className="relative w-full max-w-7xl mx-auto pt-10 px-2 sm:px-6 lg:px-8 perspective-1000">
             {/* Background Glow */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-radial from-gold-500/15 to-transparent blur-[120px] pointer-events-none" />
 
-            {/* Desktop Mac Frame */}
+            {/* Mobile iPhone Mockup - Only visible on mobile */}
             <motion.div
                 initial={{ rotateX: 20, opacity: 0, y: 100 }}
                 animate={{ rotateX: 0, opacity: 1, y: 0 }}
                 transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                className="relative bg-background rounded-xl border border-border shadow-2xl overflow-hidden backdrop-blur-sm"
+                className="md:hidden relative mx-auto"
+                style={{ maxWidth: '375px' }}
             >
+                {/* Golden Glow Effect - Lighter and animated on scroll */}
+                <motion.div 
+                    className="absolute -inset-1 bg-gradient-to-r from-gold-400/40 via-amber-500/40 to-gold-600/40 rounded-[3.2rem] blur-lg"
+                    animate={{ 
+                        opacity: isInView ? [0.3, 0.5, 0.3] : 0.2,
+                        scale: isInView ? [1, 1.02, 1] : 0.98
+                    }}
+                    transition={{ 
+                        duration: 3, 
+                        repeat: Infinity, 
+                        ease: "easeInOut" 
+                    }}
+                    aria-hidden="true" 
+                />
+                <motion.div 
+                    className="absolute -inset-0.5 bg-gradient-to-r from-gold-300/25 via-gold-400/25 to-amber-400/25 rounded-[3.1rem] bg-[length:200%_100%]"
+                    animate={{ 
+                        opacity: isInView ? 0.4 : 0.2,
+                        backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+                    }}
+                    transition={{ 
+                        opacity: { duration: 0.5 },
+                        backgroundPosition: { duration: 4, repeat: Infinity, ease: "linear" }
+                    }}
+                    aria-hidden="true" 
+                />
+                
+                {/* iPhone Frame */}
+                <div className="relative bg-slate-900 rounded-[3rem] p-3 shadow-2xl ring-1 ring-gold-400/20">
+                    {/* Notch */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-slate-900 rounded-b-3xl z-20" />
+                    
+                    {/* Screen */}
+                    <div className="relative bg-background rounded-[2.5rem] overflow-hidden" style={{ aspectRatio: '9/19.5' }}>
+                        {/* Status Bar */}
+                        <div className="absolute top-0 left-0 right-0 h-12 bg-background/95 backdrop-blur-md z-10 flex items-center justify-between px-8 pt-2">
+                            <span className="text-xs font-semibold">9:41</span>
+                            <div className="flex items-center gap-1">
+                                <div className="w-4 h-3 border border-current rounded-sm relative">
+                                    <div className="absolute inset-0.5 bg-current rounded-[1px]" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Dashboard Content */}
+                        <div className="h-full overflow-y-auto pt-12 pb-20 bg-muted/10">
+                            {/* Header */}
+                            <div className="px-6 py-4 bg-background/50 backdrop-blur-sm">
+                                <h2 className="text-lg font-bold">Overview</h2>
+                                <p className="text-xs text-muted-foreground">Welcome back</p>
+                            </div>
+
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-2 gap-3 px-4 py-4">
+                                {[
+                                    { label: 'Revenue', value: '₹4.5L', icon: DollarSign, color: 'text-emerald-500' },
+                                    { label: 'Orders', value: '24', icon: ShoppingBag, color: 'text-blue-500' },
+                                    { label: 'Gold Rate', value: '₹6,240/g', icon: TrendingUp, color: 'text-amber-500' },
+                                    { label: 'Customers', value: '18', icon: Users, color: 'text-purple-500' },
+                                ].map((stat, i) => (
+                                    <div key={i} className="p-3 rounded-xl border border-border bg-card shadow-sm">
+                                        <stat.icon className={cn("w-4 h-4 mb-2", stat.color)} />
+                                        <div className="text-xs text-muted-foreground">{stat.label}</div>
+                                        <div className="text-lg font-bold">{stat.value}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Chart */}
+                            <div className="mx-4 my-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+                                <h3 className="text-sm font-semibold mb-3">Weekly Sales</h3>
+                                <div className="flex items-end justify-between gap-1 h-32">
+                                    {[35, 55, 45, 70, 60, 75, 50].map((h, i) => (
+                                        <div key={i} className="w-full bg-primary/20 rounded-t-sm" style={{ height: `${h}%` }} />
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Recent Transactions */}
+                            <div className="mx-4 my-4 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+                                <div className="px-4 py-3 border-b border-border bg-muted/20">
+                                    <h3 className="text-sm font-semibold">Recent Orders</h3>
+                                </div>
+                                <div className="divide-y divide-border">
+                                    {[
+                                        { name: 'Rahul M.', amount: '₹24,500', status: 'Paid' },
+                                        { name: 'Sneha P.', amount: '₹1,20,000', status: 'Pending' },
+                                        { name: 'Amit K.', amount: '₹8,450', status: 'Paid' },
+                                    ].map((tx, i) => (
+                                        <div key={i} className="px-4 py-3 flex items-center justify-between text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary">
+                                                    {tx.name.charAt(0)}
+                                                </div>
+                                                <span className="font-medium">{tx.name}</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="font-medium">{tx.amount}</div>
+                                                <div className={cn("text-[10px]", tx.status === 'Paid' ? 'text-emerald-600' : 'text-amber-600')}>
+                                                    {tx.status}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Bottom Navigation */}
+                        <div className="absolute bottom-0 left-0 right-0 h-16 bg-background/95 backdrop-blur-md border-t border-border flex items-center justify-around px-4 pb-2">
+                            {[Home, ShoppingBag, BarChart3, Settings].map((Icon, i) => (
+                                <Icon key={i} className={cn("w-5 h-5", i === 0 ? "text-primary" : "text-muted-foreground")} />
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Home Indicator */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/30 rounded-full" />
+                </div>
+            </motion.div>
+
+            {/* Desktop Mac Frame - Hidden on mobile */}
+            <motion.div
+                initial={{ rotateX: 20, opacity: 0, y: 100 }}
+                animate={{ rotateX: 0, opacity: 1, y: 0 }}
+                transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                className="hidden md:block relative"
+            >
+                {/* Golden Border Glow Effect - Lighter and animated on scroll */}
+                <motion.div 
+                    className="absolute -inset-1 bg-gradient-to-r from-gold-400/35 via-amber-500/35 to-gold-600/35 rounded-2xl blur-xl"
+                    animate={{ 
+                        opacity: isInView ? [0.25, 0.45, 0.25] : 0.15,
+                        scale: isInView ? [1, 1.01, 1] : 0.99
+                    }}
+                    transition={{ 
+                        duration: 3.5, 
+                        repeat: Infinity, 
+                        ease: "easeInOut" 
+                    }}
+                    aria-hidden="true" 
+                />
+                <motion.div 
+                    className="absolute -inset-0.5 bg-gradient-to-r from-gold-300/20 via-gold-400/20 to-amber-400/20 rounded-2xl bg-[length:200%_100%]"
+                    animate={{ 
+                        opacity: isInView ? 0.35 : 0.15,
+                        backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+                    }}
+                    transition={{ 
+                        opacity: { duration: 0.5 },
+                        backgroundPosition: { duration: 5, repeat: Infinity, ease: "linear" }
+                    }}
+                    aria-hidden="true" 
+                />
+                
+                {/* Mac Frame */}
+                <div className="relative bg-background rounded-xl border border-gold-400/25 shadow-2xl overflow-hidden backdrop-blur-sm ring-1 ring-gold-300/15">
                 {/* Mac Header */}
                 <div className="h-9 bg-muted/40 border-b border-border flex items-center px-4 gap-2 sticky top-0 z-20 backdrop-blur-md">
                     <div className="flex gap-2">
@@ -281,6 +441,7 @@ export function HeroDashboardPreview() {
                 >
                     <MousePointer2 className="h-6 w-6 text-black fill-white drop-shadow-md transform -rotate-12" />
                 </motion.div>
+                </div>
             </motion.div>
         </div>
     );

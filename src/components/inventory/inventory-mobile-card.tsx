@@ -58,10 +58,10 @@ export function InventoryMobileCard({ item, shopId, onDelete, onMarkSold }: Inve
     const config = statusConfig[item.status] || statusConfig['IN_STOCK'];
 
     return (
-        <div className="relative mb-3 overflow-hidden rounded-xl select-none touch-pan-y">
+        <div className="relative mb-3 overflow-hidden rounded-2xl select-none touch-pan-y">
             {/* Background Color Overlay */}
             <motion.div
-                className="absolute inset-0 rounded-xl"
+                className="absolute inset-0 rounded-2xl"
                 style={{
                     backgroundColor: x.get() > 0 ? bgRight : bgLeft
                 }}
@@ -95,8 +95,8 @@ export function InventoryMobileCard({ item, shopId, onDelete, onMarkSold }: Inve
                 dragElastic={0.2}
                 onDragStart={() => setIsDragging(true)}
                 onDragEnd={handleDragEnd}
-                style={{ x, touchAction: 'none', background: 'hsl(var(--card))' }}
-                className="relative z-10 overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow active:shadow-md"
+                style={{ x, touchAction: 'none', background: 'hsl(var(--card))', WebkitTapHighlightColor: 'transparent' }}
+                className="relative z-10 overflow-hidden rounded-2xl border-2 border-gray-300 dark:border-white/20 bg-card shadow-lg transition-shadow active:shadow-xl touch-manipulation"
                 whileTap={{ scale: 0.98 }}
             >
                 <Link

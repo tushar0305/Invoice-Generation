@@ -104,37 +104,6 @@ export function HeroSection() {
                             See AI in Action
                         </Button>
                     </motion.div>
-
-                    {/* Trust Signal */}
-                    <motion.div
-                        {...fadeInUp}
-                        transition={{ duration: 0.6, delay: 0.4 }}
-                        className="flex items-center gap-4 pt-2"
-                    >
-                        <div className="flex -space-x-3">
-                            {[
-                                "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=faces",
-                                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=32&h=32&fit=crop&crop=faces",
-                                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=32&h=32&fit=crop&crop=faces",
-                                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=32&h=32&fit=crop&crop=faces"
-                            ].map((src, i) => (
-                                <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
-                                    <img src={src} alt="" className="w-full h-full object-cover" />
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex flex-col items-start">
-                            <div className="flex items-center gap-1">
-                                <div className="flex">
-                                    {[1, 2, 3, 4, 5].map((i) => (
-                                        <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                                    ))}
-                                </div>
-                                <span className="text-xs font-bold text-slate-900">5.0</span>
-                            </div>
-                            <p className="text-xs text-slate-600 font-medium">Trusted by <span className="text-slate-900 font-bold">500+ Jewellers</span></p>
-                        </div>
-                    </motion.div>
                 </div>
 
                 {/* Mobile Sticky CTA */}

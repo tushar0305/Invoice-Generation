@@ -57,26 +57,26 @@ export function FinelessHero({
                 <Gem className="w-24 h-24 text-primary rotate-12" />
             </div>
 
-            <div className="relative z-10 p-6 md:p-8 grid md:grid-cols-2 gap-8 items-center">
+            <div className="relative z-10 p-4 md:p-8 grid md:grid-cols-2 gap-4 md:gap-8 items-center">
                 {/* Left: Revenue (Main) */}
-                <div className="flex flex-col justify-center space-y-5">
+                <div className="flex flex-col justify-center space-y-3 md:space-y-5">
                     <div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <span className="p-2 rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
-                                <TrendingUp className="w-4 h-4" />
+                        <div className="flex items-center gap-2 mb-2 md:mb-3">
+                            <span className="p-1.5 md:p-2 rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+                                <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
                             </span>
-                            <span className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{title}</span>
+                            <span className="text-xs md:text-sm font-bold text-muted-foreground uppercase tracking-widest">{title}</span>
                         </div>
                         <div className="flex items-baseline gap-2">
-                            <motion.h2 className="text-5xl md:text-6xl font-heading font-bold tracking-tight text-foreground bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+                            <motion.h2 className="text-3xl md:text-5xl lg:text-6xl font-heading font-bold tracking-tight text-foreground bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
                                 {displayValue}
                             </motion.h2>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 text-sm font-medium">
+                    <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm font-medium">
                         <span className={cn(
-                            "flex items-center gap-1 px-2.5 py-1 rounded-full border",
+                            "flex items-center gap-1 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full border text-xs",
                             isPositive 
                                 ? "text-emerald-600 bg-emerald-500/10 border-emerald-500/20" 
                                 : "text-rose-600 bg-rose-500/10 border-rose-500/20"
@@ -90,41 +90,41 @@ export function FinelessHero({
 
                 {/* Right: Digital Stats (Catalogue) */}
                 {catalogueStats && (
-                    <div className="flex flex-col justify-center space-y-5 relative">
+                    <div className="flex flex-col justify-center space-y-3 md:space-y-5 relative">
                         {/* Divider for mobile */}
-                        <div className="md:hidden w-full h-px bg-border/50 my-2" />
+                        <div className="md:hidden w-full h-px bg-border/50 my-1" />
                         
                         {/* Vertical Divider for desktop */}
                         <div className="hidden md:block absolute left-0 top-2 bottom-2 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
-                        <div className="md:pl-8 space-y-4">
+                        <div className="md:pl-8 space-y-3 md:space-y-4">
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-primary" />
-                                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Storefront Stats</h3>
+                                <div className="flex items-center gap-1.5 md:gap-2">
+                                    <Sparkles className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                                    <h3 className="text-xs md:text-sm font-semibold text-foreground uppercase tracking-wider">Storefront Stats</h3>
                                 </div>
                                 <Link 
                                     href="/shop/dashboard/catalogue" 
-                                    className="group/link text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1 z-20 relative transition-colors"
+                                    className="group/link text-[10px] md:text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-0.5 md:gap-1 z-20 relative transition-colors"
                                 >
-                                    View Analytics <ArrowRight className="w-3 h-3 group-hover/link:translate-x-0.5 transition-transform" />
+                                    View Analytics <ArrowRight className="w-2.5 h-2.5 md:w-3 md:h-3 group-hover/link:translate-x-0.5 transition-transform" />
                                 </Link>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl bg-white/50 dark:bg-black/20 border border-primary/5 hover:border-primary/20 transition-colors backdrop-blur-sm">
-                                    <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium mb-1.5 uppercase tracking-wide">
-                                        <Eye className="w-3 h-3" /> Views
+                            <div className="grid grid-cols-2 gap-2 md:gap-4">
+                                <div className="p-2.5 md:p-4 rounded-lg md:rounded-xl bg-white/50 dark:bg-black/20 border border-primary/5 hover:border-primary/20 transition-colors backdrop-blur-sm">
+                                    <div className="flex items-center gap-1 md:gap-2 text-muted-foreground text-[10px] md:text-xs font-medium mb-1 md:mb-1.5 uppercase tracking-wide">
+                                        <Eye className="w-2.5 h-2.5 md:w-3 md:h-3" /> Views
                                     </div>
-                                    <p className="text-2xl font-bold font-heading text-foreground">
+                                    <p className="text-lg md:text-2xl font-bold font-heading text-foreground">
                                         {(catalogueStats.page_views + catalogueStats.product_views).toLocaleString()}
                                     </p>
                                 </div>
-                                <div className="p-4 rounded-xl bg-white/50 dark:bg-black/20 border border-primary/5 hover:border-primary/20 transition-colors backdrop-blur-sm">
-                                    <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium mb-1.5 uppercase tracking-wide">
-                                        <MessageCircle className="w-3 h-3" /> Leads
+                                <div className="p-2.5 md:p-4 rounded-lg md:rounded-xl bg-white/50 dark:bg-black/20 border border-primary/5 hover:border-primary/20 transition-colors backdrop-blur-sm">
+                                    <div className="flex items-center gap-1 md:gap-2 text-muted-foreground text-[10px] md:text-xs font-medium mb-1 md:mb-1.5 uppercase tracking-wide">
+                                        <MessageCircle className="w-2.5 h-2.5 md:w-3 md:h-3" /> Leads
                                     </div>
-                                    <p className="text-2xl font-bold font-heading text-foreground">
+                                    <p className="text-lg md:text-2xl font-bold font-heading text-foreground">
                                         {catalogueStats.leads.toLocaleString()}
                                     </p>
                                 </div>

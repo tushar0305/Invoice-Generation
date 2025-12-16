@@ -184,11 +184,11 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
     };
 
     return (
-        <MotionWrapper className="space-y-4 px-4 md:px-6 pb-24 md:pb-6 max-w-[1800px] mx-auto pt-2 md:pt-6">
-            {/* Top Customer Card */}
+        <MotionWrapper className="pb-24 md:pb-6 max-w-[1800px] mx-auto pt-2 px-4 md:px-0">
+            {/* Top Customer Card - Above sticky header */}
             {topCustomer && (
                 <FadeIn>
-                    <Card className="border border-border shadow-sm">
+                    <Card className="border-2 border-gray-300 dark:border-white/20 shadow-lg rounded-2xl mb-3">
                         <CardContent className="p-4 md:p-6 flex items-center justify-between">
                             <div className="flex items-center gap-3 md:gap-4">
                                 <div className="p-2 md:p-3 bg-primary/10 rounded-full">
@@ -211,134 +211,126 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                 </FadeIn>
             )}
 
-            <Card className="border border-border shadow-sm">
-                {/* Search Header - Sticky on mobile for checks */}
-                <CardHeader className="pb-3 border-b sticky top-0 z-30 bg-background pt-4 md:pt-6">
-                    <div className="flex flex-col gap-3">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                            <div className="md:block hidden">
-                                <CardTitle className="text-xl sm:text-2xl font-heading text-primary">Customers</CardTitle>
-                                <CardDescription className="text-xs sm:text-sm mt-1">
-                                    Manage and view your customer base
-                                </CardDescription>
-                            </div>
-
-                            <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                                <div className="relative flex-1 md:w-64 md:flex-none">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        placeholder="Search customers..."
-                                        className="pl-10 bg-background/50"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-                                    <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button className="gap-2 shadow-lg shadow-primary/25 shrink-0">
-                                                <Plus className="h-4 w-4" />
-                                                <span className="hidden sm:inline">New Customer</span>
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader>
-                                                <DialogTitle>Add New Customer</DialogTitle>
-                                                <DialogDescription>
-                                                    Create a new customer profile.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="space-y-4 py-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="name">Name *</Label>
-                                                    <Input
-                                                        id="name"
-                                                        value={newCustomer.name}
-                                                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                                                        placeholder="Customer Name"
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="phone">Phone</Label>
-                                                    <Input
-                                                        id="phone"
-                                                        value={newCustomer.phone}
-                                                        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                                                        placeholder="Phone Number"
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="email">Email</Label>
-                                                    <Input
-                                                        id="email"
-                                                        type="email"
-                                                        value={newCustomer.email}
-                                                        onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                                                        placeholder="Email Address"
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="address">Address</Label>
-                                                    <Input
-                                                        id="address"
-                                                        value={newCustomer.address}
-                                                        onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                                                        placeholder="Address"
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="gst">GST Number</Label>
-                                                    <Input
-                                                        id="gst"
-                                                        value={newCustomer.gstNumber}
-                                                        onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value })}
-                                                        placeholder="GSTIN"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <DialogFooter>
-                                                <Button variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
-                                                    Cancel
-                                                </Button>
-                                                <Button onClick={handleAddCustomer} disabled={isPending}>
-                                                    {isPending ? 'Creating...' : 'Create Customer'}
-                                                </Button>
-                                            </DialogFooter>
-                                        </DialogContent>
-                                    </Dialog>
-
-                                    <ExportDialog
-                                        onExport={handleExport}
-                                        filename={`customers-${new Date().toISOString().split('T')[0]}`}
-                                        trigger={
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-9 gap-2 shrink-0 bg-background"
-                                            >
-                                                <Download className="h-3.5 w-3.5" />
-                                                <span className="hidden sm:inline">Export</span>
-                                            </Button>
-                                        }
-                                    />
-                                </div>
-                            </div>
-                        </div>
+            {/* Sticky Header Section */}
+            <div className="sticky top-0 z-20 bg-background pb-3 space-y-3 -mx-4 px-4 md:mx-0 md:px-0">
+                {/* Search Bar */}
+                <div className="flex items-center gap-2 pt-0">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+                        <Input
+                            placeholder="Search customers by name..."
+                            className="pl-9 h-11 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm w-full"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                </CardHeader>
-                <CardContent className="pt-6">
-                    <div className="hidden md:block rounded-xl border border-border overflow-hidden">
-                        <Table className="table-modern">
-                            <TableHeader className="bg-muted/50">
-                                <TableRow className="hover:bg-transparent">
-                                    <TableHead className="w-[300px]">Customer</TableHead>
-                                    <TableHead className="text-center">Invoices</TableHead>
-                                    <TableHead>Last Purchase</TableHead>
-                                    <TableHead className="text-right">Total Spent</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                    <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="flex-1 sm:flex-initial h-11 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium">
+                                <Plus className="h-4 w-4" />
+                                <span>New Customer</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add New Customer</DialogTitle>
+                                <DialogDescription>
+                                    Create a new customer profile.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Name *</Label>
+                                    <Input
+                                        id="name"
+                                        value={newCustomer.name}
+                                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                                        placeholder="Customer Name"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="phone">Phone</Label>
+                                    <Input
+                                        id="phone"
+                                        value={newCustomer.phone}
+                                        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                                        placeholder="Phone Number"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={newCustomer.email}
+                                        onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                                        placeholder="Email Address"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="address">Address</Label>
+                                    <Input
+                                        id="address"
+                                        value={newCustomer.address}
+                                        onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                                        placeholder="Address"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="gst">GST Number</Label>
+                                    <Input
+                                        id="gst"
+                                        value={newCustomer.gstNumber}
+                                        onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value })}
+                                        placeholder="GSTIN"
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button onClick={handleAddCustomer} disabled={isPending}>
+                                    {isPending ? 'Creating...' : 'Create Customer'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <ExportDialog
+                        onExport={handleExport}
+                        filename={`customers-${new Date().toISOString().split('T')[0]}`}
+                        trigger={
+                            <Button variant="outline" className="flex-1 sm:flex-initial h-11 gap-2 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary rounded-xl">
+                                <Download className="h-4 w-4" />
+                                <span>Export</span>
+                            </Button>
+                        }
+                    />
+                </div>
+            </div>
+
+            {/* Customers Table/List - Scrollable Container */}
+            <div className="space-y-3">
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                    <Card className="border-2 border-gray-300 dark:border-white/20 shadow-lg rounded-2xl overflow-hidden">
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <Table className="table-modern">
+                                    <TableHeader className="bg-muted/50 border-b-2 border-gray-300 dark:border-white/20 sticky top-0 z-10">
+                                        <TableRow className="hover:bg-transparent">
+                                            <TableHead className="w-[300px] text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Customer</TableHead>
+                                            <TableHead className="text-center text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Invoices</TableHead>
+                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Last Purchase</TableHead>
+                                            <TableHead className="text-right text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Total Spent</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
                                 {paginatedCustomers.length > 0 ? (
                                     paginatedCustomers
                                         .map(([name, stats]) => (
@@ -401,8 +393,38 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                         </Table>
                     </div>
 
-                    {/* Mobile View */}
-                    <div className="md:hidden space-y-3">
+                    {/* Pagination Controls for Desktop */}
+                    {filteredCustomers.length > itemsPerPage && (
+                        <div className="flex items-center justify-between border-t-2 border-gray-300 dark:border-white/20 pt-4 px-4 pb-4">
+                            <div className="text-sm text-muted-foreground">
+                                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} customers
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    Previous
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+
+        {/* Mobile View - Separate scrollable cards */}
+        <div className="md:hidden space-y-3">
                         {paginatedCustomers.length > 0 ? (
                             paginatedCustomers
                                 .map(([name, stats]) => (
@@ -412,7 +434,8 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                             haptics.selection();
                                             router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(name)}`);
                                         }}
-                                        className="flex flex-col gap-3 p-5 border border-border/60 rounded-xl bg-card shadow-sm active:scale-[0.98] transition-all"
+                                        className="flex flex-col gap-3 p-5 border-2 border-gray-300 dark:border-white/20 rounded-2xl bg-card shadow-lg active:shadow-xl active:scale-[0.98] transition-all touch-manipulation"
+                                        style={{ WebkitTapHighlightColor: 'transparent' }}
                                     >
                                         <div className="flex justify-between items-start w-full">
                                             <div className="flex-1 min-w-0 pr-4">
@@ -457,36 +480,35 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                 />
                             </div>
                         )}
-                    </div>
+                </div>
 
-                    {/* Pagination Controls */}
-                    {filteredCustomers.length > itemsPerPage && (
-                        <div className="flex items-center justify-between border-t pt-4 mt-4">
-                            <div className="text-sm text-muted-foreground">
-                                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} customers
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                >
-                                    Previous
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                >
-                                    Next
-                                </Button>
-                            </div>
+                {/* Pagination Controls for Mobile */}
+                {filteredCustomers.length > itemsPerPage && (
+                    <div className="flex items-center justify-between pt-4">
+                        <div className="text-sm text-muted-foreground">
+                            {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length}
                         </div>
-                    )}
-                </CardContent>
-            </Card>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                            >
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </MotionWrapper>
     );
 }

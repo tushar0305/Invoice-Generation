@@ -74,10 +74,10 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
     };
 
     return (
-        <div className="relative mb-3 overflow-hidden rounded-lg select-none touch-pan-y">
+        <div className="relative mb-3 overflow-hidden rounded-2xl select-none touch-pan-y">
             {/* Background Color Overlay */}
             <motion.div
-                className="absolute inset-0 rounded-xl"
+                className="absolute inset-0 rounded-2xl"
                 style={{
                     backgroundColor: x.get() > 0 ? bgRight : bgLeft
                 }}
@@ -119,7 +119,7 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
                 onDragStart={() => setIsDragging(true)}
                 onDragEnd={handleDragEnd}
                 style={{ x, touchAction: 'none', background: 'hsl(var(--card))' }}
-                className="relative z-10 overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow active:shadow-md"
+                className="relative z-10 overflow-hidden rounded-2xl border-2 border-gray-300 dark:border-white/20 bg-card shadow-lg transition-shadow active:shadow-xl"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 onTouchMove={handleTouchEnd} // Cancel long press on move

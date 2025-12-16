@@ -148,20 +148,22 @@ export function TemplatePremium({ shop, initialProducts, categories }: StoreClie
             <main className="max-w-[1600px] mx-auto px-6 py-20 relative z-10 transition-all duration-500">
 
                 {/* Elegant Category Filter */}
-                <div className="flex flex-wrap justify-center gap-8 mb-24">
+                <div className="flex flex-wrap justify-center gap-12 mb-32">
                     <button
                         onClick={() => setSelectedCategory('all')}
-                        className={`text-lg md:text-xl italic font-light transition-all duration-500 ${selectedCategory === 'all' ? 'text-[#C6A87C] border-b border-[#C6A87C]' : 'text-[#444] hover:text-[#AA987C]'}`}
+                        className={`group text-xl md:text-2xl font-light transition-all duration-500 pb-2 ${selectedCategory === 'all' ? 'text-[#C6A87C]' : 'text-[#444] hover:text-[#AA987C]'}`}
                     >
-                        View All
+                        <span className="italic">View All</span>
+                        <div className={`h-[2px] mt-2 transition-all duration-500 ${selectedCategory === 'all' ? 'bg-gradient-to-r from-transparent via-[#C6A87C] to-transparent w-full' : 'bg-[#222] w-0 group-hover:w-full'}`}></div>
                     </button>
                     {categories.map(cat => (
                         <button
                             key={cat.id}
                             onClick={() => setSelectedCategory(cat.id)}
-                            className={`text-lg md:text-xl italic font-light transition-all duration-500 ${selectedCategory === cat.id ? 'text-[#C6A87C] border-b border-[#C6A87C]' : 'text-[#444] hover:text-[#AA987C]'}`}
+                            className={`group text-xl md:text-2xl font-light transition-all duration-500 pb-2 ${selectedCategory === cat.id ? 'text-[#C6A87C]' : 'text-[#444] hover:text-[#AA987C]'}`}
                         >
-                            {cat.name}
+                            <span className="italic">{cat.name}</span>
+                            <div className={`h-[2px] mt-2 transition-all duration-500 ${selectedCategory === cat.id ? 'bg-gradient-to-r from-transparent via-[#C6A87C] to-transparent w-full' : 'bg-[#222] w-0 group-hover:w-full'}`}></div>
                         </button>
                     ))}
                 </div>
@@ -172,7 +174,7 @@ export function TemplatePremium({ shop, initialProducts, categories }: StoreClie
                         <p className="text-xl font-light text-[#444] italic">This collection is currently reserved.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12 md:gap-16">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-16 md:gap-20">
                         {filteredProducts.map((product, index) => (
                             <motion.div
                                 key={product.id}
@@ -213,17 +215,23 @@ export function TemplatePremium({ shop, initialProducts, categories }: StoreClie
                                     </div>
                                 </div>
 
-                                <div className="mt-8 text-center space-y-3 px-4">
-                                    <h3 className="text-xl font-light text-[#E5D5C0] group-hover:text-[#C6A87C] transition-colors duration-500 font-serif leading-tight">
+                                <div className="mt-10 text-center space-y-4 px-4">
+                                    <h3 className="text-xl md:text-2xl font-light text-[#E5D5C0] group-hover:text-[#C6A87C] transition-colors duration-500 font-serif leading-tight min-h-[3.5rem] flex items-center justify-center">
                                         {product.name}
                                     </h3>
-                                    <div className="flex items-center justify-center gap-2">
-                                        <span className="w-8 h-[1px] bg-[#222] group-hover:bg-[#C6A87C]/50 transition-colors duration-500"></span>
-                                        <p className="text-[#888] font-sans font-light text-sm tracking-widest uppercase group-hover:text-white transition-colors duration-500">
+                                    <div className="flex items-center justify-center gap-3">
+                                        <span className="w-12 h-[1px] bg-[#222] group-hover:bg-[#C6A87C]/50 transition-colors duration-500"></span>
+                                        <p className="text-[#888] font-sans font-light text-sm tracking-[0.3em] uppercase group-hover:text-white transition-colors duration-500">
                                             INR {product.price.toLocaleString('en-IN')}
                                         </p>
-                                        <span className="w-8 h-[1px] bg-[#222] group-hover:bg-[#C6A87C]/50 transition-colors duration-500"></span>
+                                        <span className="w-12 h-[1px] bg-[#222] group-hover:bg-[#C6A87C]/50 transition-colors duration-500"></span>
                                     </div>
+                                    {(product.purity || product.weight_g) && (
+                                        <div className="flex items-center justify-center gap-3 text-xs text-[#444] font-sans tracking-wider">
+                                            {product.purity && <span className="border border-[#222] px-3 py-1 rounded-full group-hover:border-[#C6A87C]/30 transition-colors duration-500">{product.purity}</span>}
+                                            {product.weight_g && <span className="border border-[#222] px-3 py-1 rounded-full group-hover:border-[#C6A87C]/30 transition-colors duration-500">{product.weight_g}g</span>}
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         ))}

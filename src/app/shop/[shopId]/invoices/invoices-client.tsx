@@ -35,8 +35,7 @@ import {
     Share2,
     Banknote,
     Undo2,
-    Printer,
-    FileSpreadsheet
+    Printer
 } from 'lucide-react';
 import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
@@ -62,7 +61,6 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/shared/export-dialog';
-import { GstExportDialog } from '@/components/reports/gst-export-dialog';
 
 type InvoicesClientProps = {
     initialInvoices: Invoice[];
@@ -656,137 +654,145 @@ export function InvoicesClient({
     ];
 
     return (
-        <MotionWrapper className="space-y-4 pb-24 pt-2 px-4 md:px-0">
-            {/* Sticky Header Section for Mobile */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 px-4 md:mx-0 md:px-0 pb-3 md:static md:bg-transparent md:backdrop-blur-none">
-                {/* Quick Filters - Enhanced */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    {['all', 'paid', 'due'].map((status) => (
-                        <Button
-                            key={status}
-                            variant={statusFilter === status ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => {
-                                haptics.impact(ImpactStyle.Light);
-                                setStatusFilter(status);
-                                router.push(`/shop/${shopId}/invoices?status=${status}`);
-                            }}
-                            className={cn(
-                                "capitalize rounded-full h-9 px-5 text-xs font-semibold border transition-all",
-                                statusFilter === status
-                                    ? "bg-primary text-primary-foreground border-primary shadow-glow-sm"
-                                    : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50 text-muted-foreground"
-                            )}
-                        >
-                            {status}
-                        </Button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Search and Actions */}
-            <div className="flex flex-col gap-3">
-                <div className="flex flex-col md:flex-row gap-3">
-                    {/* Search - Full Width on Mobile */}
-                    <div className="relative flex-1 w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/50" />
+        <MotionWrapper className="pb-24 pt-2 px-4 md:px-0">
+            {/* Sticky Header Section */}
+            <div className="sticky top-0 z-20 bg-background pb-4 space-y-3 -mx-4 px-4 md:mx-0 md:px-0">
+                {/* Top Bar: Search + Refresh */}
+                <div className="flex items-center gap-2 pt-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
                         <Input
-                            placeholder="Search invoices..."
-                            className="pl-9 h-10 bg-white dark:bg-white/5 border-gray-400 dark:border-white/30 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm w-full"
+                            placeholder="Search by invoice number or customer name..."
+                            className="pl-9 h-11 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm w-full"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleRefresh}
+                        className="shrink-0 h-11 w-11 transition-all duration-300 hover:shadow-glow-sm interactive-scale bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary"
+                        title={lastRefreshed ? `Last updated: ${getRelativeTime(lastRefreshed)}` : 'Refresh'}
+                    >
+                        <RefreshCw className={cn(
+                            "h-4 w-4 transition-transform duration-500",
+                            isRefreshing && "animate-spin"
+                        )} />
+                    </Button>
+                </div>
 
-                    {/* Actions - Row on Mobile */}
-                    <div className="flex items-center gap-2 self-end md:self-auto w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
-                        <Link href={`/shop/${shopId}/invoices/new`}>
-                            <Button
-                                className="h-10 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium shrink-0"
-                            >
-                                <FilePlus2 className="h-4 w-4" />
-                                <span className="hidden sm:inline">New Invoice</span>
-                            </Button>
-                        </Link>
-
+                {/* Action Buttons: New Invoice, Export, Filter */}
+                <div className="flex items-center gap-2">
+                    <Link href={`/shop/${shopId}/invoices/new`} className="flex-1 sm:flex-initial">
                         <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={handleRefresh}
-                            className="shrink-0 h-10 w-10 transition-all duration-300 hover:shadow-glow-sm interactive-scale bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10"
-                            title={lastRefreshed ? `Last updated: ${getRelativeTime(lastRefreshed)}` : 'Refresh'}
+                            className="w-full sm:w-auto h-11 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium"
                         >
-                            <RefreshCw className={cn(
-                                "h-4 w-4 transition-transform duration-500",
-                                isRefreshing && "animate-spin"
-                            )} />
+                            <FilePlus2 className="h-4 w-4" />
+                            <span>New Invoice</span>
                         </Button>
+                    </Link>
 
-                        {/* Trash Link */}
-                        <Link href={`/shop/${shopId}/invoices/trash`}>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="shrink-0 h-10 w-10 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10"
-                                title="View deleted invoices"
-                            >
-                                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    <ExportDialog
+                        onExport={fetchExportData}
+                        filename={`invoices-${new Date().toISOString().split('T')[0]}`}
+                        statusOptions={exportStatusOptions}
+                        trigger={
+                            <Button variant="outline" className="flex-1 sm:flex-initial h-11 gap-2 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary rounded-xl">
+                                <Download className="h-4 w-4" />
+                                <span>Export</span>
                             </Button>
-                        </Link>
+                        }
+                    />
 
-                        {/* View Date Filter - Keeping this for list view filtering */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-10 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10">
-                                    <CalendarIcon className="h-3.5 w-3.5" />
-                                    <span className="text-xs hidden sm:inline">{formatRangeLabel()}</span>
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-3 bg-white/95 dark:bg-card/95 backdrop-blur-xl border-gray-200 dark:border-white/10" align="start">
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                    <div>
-                                        <div className="mb-2 text-xs font-medium text-muted-foreground">Quick ranges</div>
-                                        <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
-                                            <Button size="sm" variant="outline" onClick={() => applyPreset('today')}>Today</Button>
-                                            <Button size="sm" variant="outline" onClick={() => applyPreset('week')}>This Week</Button>
-                                            <Button size="sm" variant="outline" onClick={() => applyPreset('month')}>This Month</Button>
-                                            <Button size="sm" variant="outline" onClick={() => applyPreset('year')}>This Year</Button>
-                                            <Button size="sm" variant="ghost" onClick={() => applyPreset('all')}>All Time</Button>
-                                        </div>
-                                    </div>
-                                    <Calendar
-                                        mode="range"
-                                        selected={dateRange}
-                                        onSelect={setDateRange}
-                                        numberOfMonths={1}
-                                        defaultMonth={dateRange?.from}
-                                    />
+                    {/* Combined Filter Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="flex-1 sm:flex-initial h-11 gap-2 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary rounded-xl">
+                                <CalendarIcon className="h-4 w-4" />
+                                <span>Filter</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-card border-gray-200 dark:border-white/10">
+                            <div className="px-2 py-2">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Status</div>
+                                <div className="space-y-1">
+                                    {['all', 'paid', 'due'].map((status) => (
+                                        <DropdownMenuItem
+                                            key={status}
+                                            onClick={() => {
+                                                haptics.impact(ImpactStyle.Light);
+                                                setStatusFilter(status);
+                                                router.push(`/shop/${shopId}/invoices?status=${status}`);
+                                            }}
+                                            className={cn(
+                                                "capitalize cursor-pointer rounded-lg",
+                                                statusFilter === status && "bg-primary/10 text-primary font-medium"
+                                            )}
+                                        >
+                                            {status}
+                                        </DropdownMenuItem>
+                                    ))}
                                 </div>
-                            </PopoverContent>
-                        </Popover>
-
-                        <ExportDialog
-                            onExport={fetchExportData}
-                            filename={`invoices-${new Date().toISOString().split('T')[0]}`}
-                            statusOptions={exportStatusOptions}
-                            trigger={
-                                <Button variant="outline" size="sm" className="h-10 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10">
-                                    <Download className="h-3.5 w-3.5" />
-                                    <span className="text-xs hidden sm:inline">Export</span>
-                                </Button>
-                            }
-                        />
-
-                        <GstExportDialog
-                            shopId={shopId}
-                            trigger={
-                                <Button variant="outline" size="sm" className="h-10 gap-2 shrink-0 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10">
-                                    <FileSpreadsheet className="h-3.5 w-3.5" />
-                                    <span className="text-xs hidden sm:inline">GST Report</span>
-                                </Button>
-                            }
-                        />
-                    </div>
+                            </div>
+                            <div className="border-t border-gray-200 dark:border-white/10 my-1"></div>
+                            <div className="px-2 py-2">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Date Range</div>
+                                <div className="space-y-1">
+                                    <DropdownMenuItem onClick={() => applyPreset('today')} className="cursor-pointer rounded-lg">
+                                        Today
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => applyPreset('week')} className="cursor-pointer rounded-lg">
+                                        This Week
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => applyPreset('month')} className="cursor-pointer rounded-lg">
+                                        This Month
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => applyPreset('year')} className="cursor-pointer rounded-lg">
+                                        This Year
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => applyPreset('all')} className="cursor-pointer rounded-lg">
+                                        All Time
+                                    </DropdownMenuItem>
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-200 dark:border-white/10 my-1"></div>
+                            <div className="px-2 py-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="w-full justify-start text-sm">
+                                            <CalendarIcon className="h-3.5 w-3.5 mr-2" />
+                                            Custom Range
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-3 bg-white/95 dark:bg-card/95 backdrop-blur-xl border-gray-200 dark:border-white/10" align="start" side="left">
+                                        <Calendar
+                                            mode="range"
+                                            selected={dateRange}
+                                            onSelect={setDateRange}
+                                            numberOfMonths={1}
+                                            defaultMonth={dateRange?.from}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                            {dateRange?.from && (
+                                <>
+                                    <div className="border-t border-gray-200 dark:border-white/10 my-1"></div>
+                                    <div className="px-2 py-2">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="w-full text-xs text-muted-foreground hover:text-foreground"
+                                            onClick={() => setDateRange(undefined)}
+                                        >
+                                            Clear Date Filter
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
 
@@ -823,10 +829,9 @@ export function InvoicesClient({
             {/* Content */}
             <div className="space-y-4">
                 {/* Desktop/Tablet Table View */}
-                {/* Desktop/Tablet Table View */}
-                <div className="rounded-xl border border-border overflow-x-auto hidden md:block bg-card shadow-sm">
+                <div className="rounded-2xl border-2 border-gray-300 dark:border-white/20 overflow-hidden hidden md:block bg-card shadow-lg">
                     <Table className="table-modern min-w-[600px]">
-                        <TableHeader className="bg-muted/50 border-b border-border sticky top-0 z-10">
+                        <TableHeader className="bg-muted/50 border-b-2 border-gray-300 dark:border-white/20 sticky top-0 z-10">
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="w-[40px] px-4 h-12">
                                     <Checkbox

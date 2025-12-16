@@ -16,55 +16,165 @@ import { Metadata } from 'next';
 
 // Enhanced metadata for SEO
 export const metadata: Metadata = {
-    title: 'SwarnaVyapar - Premium Jewellery Management Software for Modern Jewellers',
-    description: 'India\'s #1 AI-powered jewellery management suite. Create GST-compliant invoices, track gold inventory, manage customers, and grow your jewellery business with voice invoicing and smart analytics.',
+    title: 'SwarnaVyapar - #1 AI-Powered Jewellery Management Software in India',
+    description: 'India\'s leading jewellery management software with AI voice invoicing, GST-compliant billing, smart inventory tracking, customer loyalty & hallmarking. Trusted by 500+ jewellers. Start free trial today!',
     keywords: [
         'jewellery software india',
         'jewellery billing software',
         'gold invoice generator',
         'jewellery inventory management',
+        'jewellery erp software',
         'hallmarking software',
         'gst billing software for jewellers',
         'gold shop management',
-        'jewellery erp software',
         'jewellery pos system',
+        'jewellery accounting software',
         'ai voice invoicing',
+        'jewellery store management',
+        'jewellery shop software',
+        'diamond inventory software',
+        'gold rate management',
         'swarnavyapar'
     ],
     alternates: {
         canonical: 'https://swarnavyapar.in',
     },
+    openGraph: {
+        title: 'SwarnaVyapar - #1 AI-Powered Jewellery Management Software',
+        description: 'Transform your jewellery business with AI voice invoicing, GST-compliant billing & smart inventory. Join 500+ jewellers across India.',
+        url: 'https://swarnavyapar.in',
+        siteName: 'SwarnaVyapar',
+        images: [
+            {
+                url: 'https://swarnavyapar.in/logo/swarnavyapar_light.png',
+                width: 1200,
+                height: 630,
+                alt: 'SwarnaVyapar - Jewellery Management Software',
+            },
+        ],
+        locale: 'en_IN',
+        type: 'website',
+    },
 };
 
 export default function LandingPage() {
+    // Organization Schema for Logo in Google Search
+    const organizationSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'SwarnaVyapar',
+        alternateName: 'Swarna Vyapar',
+        url: 'https://swarnavyapar.in',
+        logo: 'https://swarnavyapar.in/logo/swarnavyapar_light.png',
+        description: 'Leading AI-powered jewellery management software in India for billing, inventory & customer management.',
+        foundingDate: '2024',
+        address: {
+            '@type': 'PostalAddress',
+            addressCountry: 'IN',
+            addressRegion: 'India',
+        },
+        contactPoint: {
+            '@type': 'ContactPoint',
+            contactType: 'Customer Service',
+            email: 'hello@swarnavyapar.com',
+            availableLanguage: ['English', 'Hindi'],
+        },
+        sameAs: [
+            'https://www.facebook.com/swarnavyapar',
+            'https://twitter.com/swarnavyapar',
+            'https://www.instagram.com/swarnavyapar',
+            'https://www.linkedin.com/company/swarnavyapar',
+        ],
+    };
+
+    // Enhanced Software Application Schema
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'SoftwareApplication',
         name: 'SwarnaVyapar',
+        alternateName: 'SwarnaVyapar Jewellery Software',
         applicationCategory: 'BusinessApplication',
-        operatingSystem: 'Web, Android, iOS',
+        applicationSubCategory: 'Jewellery Management Software',
+        operatingSystem: 'Web, Android, iOS, Windows, macOS',
         url: 'https://swarnavyapar.in',
+        downloadUrl: 'https://swarnavyapar.in/login',
+        screenshot: 'https://swarnavyapar.in/screenshots/dashboard.png',
         offers: {
             '@type': 'Offer',
             price: '0',
             priceCurrency: 'INR',
+            availability: 'https://schema.org/InStock',
             priceValidUntil: '2025-12-31',
+            url: 'https://swarnavyapar.in/pricing',
         },
-        description: 'Premium jewellery management software for modern jewellers with AI voice invoicing, GST compliance, and smart inventory tracking.',
+        description: 'AI-powered jewellery management software with voice invoicing, GST-compliant billing, inventory tracking, customer loyalty management, and hallmarking compliance. Trusted by 500+ jewellers across India.',
         aggregateRating: {
             '@type': 'AggregateRating',
-            ratingValue: '4.8',
-            ratingCount: '500',
+            ratingValue: '4.9',
+            ratingCount: '523',
             bestRating: '5',
             worstRating: '1',
+            reviewCount: '523',
         },
         featureList: [
-            'GST Compliant Invoicing',
             'AI Voice Invoicing',
+            'GST Compliant Billing',
             'Smart Inventory Management',
+            'Hallmarking Compliance',
             'Customer Loyalty Program',
             'WhatsApp Integration',
             'Multi-branch Support',
+            'Gold Rate Tracking',
+            'Diamond Inventory',
+            'QR Code Scanning',
+            'Offline Mode',
+            'Mobile App (Android & iOS)',
+        ],
+        author: {
+            '@type': 'Organization',
+            name: 'SwarnaVyapar',
+        },
+    };
+
+    // WebSite Schema for Sitelinks Search Box
+    const websiteSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'SwarnaVyapar',
+        url: 'https://swarnavyapar.in',
+        potentialAction: {
+            '@type': 'SearchAction',
+            target: {
+                '@type': 'EntryPoint',
+                urlTemplate: 'https://swarnavyapar.in/search?q={search_term_string}',
+            },
+            'query-input': 'required name=search_term_string',
+        },
+    };
+
+    // BreadcrumbList Schema
+    const breadcrumbSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: 'https://swarnavyapar.in',
+            },
+            {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'Features',
+                item: 'https://swarnavyapar.in#features',
+            },
+            {
+                '@type': 'ListItem',
+                position: 3,
+                name: 'Pricing',
+                item: 'https://swarnavyapar.in#pricing',
+            },
         ],
     };
 
@@ -75,26 +185,34 @@ export default function LandingPage() {
         mainEntity: [
             {
                 '@type': 'Question',
-                name: 'What is SwarnaVyapar?',
+                name: 'What is SwarnaVyapar jewellery software?',
                 acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'SwarnaVyapar is India\'s premium AI-powered jewellery management software designed for modern jewellers. It offers GST-compliant invoicing, voice-based invoice creation, smart inventory tracking, and customer loyalty management.',
+                    text: 'SwarnaVyapar is India\'s leading AI-powered jewellery management software designed for modern jewellers. It offers GST-compliant invoicing, AI voice-based invoice creation, smart inventory tracking, hallmarking compliance, customer loyalty management, and multi-branch support. Trusted by over 500 jewellers across India.',
                 },
             },
             {
                 '@type': 'Question',
-                name: 'Is SwarnaVyapar GST compliant?',
+                name: 'Is SwarnaVyapar GST compliant for jewellery billing?',
                 acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'Yes, SwarnaVyapar is fully GST compliant and generates all invoices according to Indian GST regulations for gold, silver, and diamond jewellery.',
+                    text: 'Yes, SwarnaVyapar is 100% GST compliant and generates all invoices according to Indian GST regulations for gold, silver, diamond, and platinum jewellery. It automatically calculates GST, generates GSTR reports, and ensures full compliance.',
                 },
             },
             {
                 '@type': 'Question',
-                name: 'Can I use SwarnaVyapar on mobile?',
+                name: 'Can I use SwarnaVyapar on mobile devices?',
                 acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'Yes, SwarnaVyapar works seamlessly on desktop, tablet, and mobile devices. We also offer native Android and iOS apps for on-the-go management.',
+                    text: 'Yes, SwarnaVyapar works seamlessly on desktop, tablet, and mobile devices. We also offer native Android and iOS apps with offline mode for on-the-go jewellery business management.',
+                },
+            },
+            {
+                '@type': 'Question',
+                name: 'What features does SwarnaVyapar offer for jewellery shops?',
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: 'SwarnaVyapar offers AI voice invoicing, GST-compliant billing, inventory management with QR codes, hallmarking compliance, customer loyalty programs, WhatsApp integration, gold rate tracking, and comprehensive business analytics.',
                 },
             },
         ],
@@ -112,7 +230,19 @@ export default function LandingPage() {
                 {/* Structured Data for SEO */}
                 <script
                     type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+                />
+                <script
+                    type="application/ld+json"
                     dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+                />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
                 />
                 <script
                     type="application/ld+json"

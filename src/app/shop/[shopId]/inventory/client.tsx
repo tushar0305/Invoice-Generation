@@ -152,25 +152,36 @@ export function InventoryClient({
     ];
 
     return (
-        <div className="space-y-4 pb-20 md:pb-6 pt-2 md:pt-0">
-            {/* Search & Filters */}
-            <div className="flex flex-col gap-3">
-                <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
-                    {/* Search - Full width on mobile */}
-                    <div className="relative flex-1 w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/50" />
+        <div className="pb-20 md:pb-6 pt-2 px-4 md:px-0">
+            {/* Sticky Header Section */}
+            <div className="sticky top-0 z-20 bg-background pb-3 space-y-3 -mx-4 px-4 md:mx-0 md:px-0">
+                {/* Search Bar */}
+                <div className="flex items-center gap-2 pt-0">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
                         <Input
                             placeholder="Search by name or tag..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-11 w-full"
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                if (e.target.value === '') {
+                                    updateUrl({ q: null });
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    updateUrl({ q: searchQuery });
+                                }
+                            }}
+                            className="pl-9 h-11 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm w-full"
                         />
                         {searchQuery && (
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 z-10"
                                 onClick={() => {
                                     setSearchQuery('');
                                     updateUrl({ q: null });
@@ -180,86 +191,99 @@ export function InventoryClient({
                             </Button>
                         )}
                     </div>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleRefresh}
+                        className="shrink-0 h-11 w-11 transition-all duration-300 hover:shadow-glow-sm interactive-scale bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary"
+                        title="Refresh inventory"
+                    >
+                        <RefreshCw className={cn("h-4 w-4 transition-transform duration-500", isRefreshing && "animate-spin")} />
+                    </Button>
+                </div>
 
-                    {/* Actions - Row on mobile */}
-                    <div className="flex items-center gap-2">
-                        <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" onClick={handleRefresh}>
-                            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                    <Link href={`/shop/${shopId}/inventory/new`} className="flex-1 sm:flex-initial">
+                        <Button className="w-full sm:w-auto h-11 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium">
+                            <Plus className="h-4 w-4" />
+                            <span>Add Item</span>
                         </Button>
+                    </Link>
 
-                        <ExportDialog
-                            onExport={fetchExportData}
-                            filename={`inventory-${new Date().toISOString().split('T')[0]}`}
-                            statusOptions={statusOptions}
-                            trigger={
-                                <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0">
-                                    <Download className="h-4 w-4" />
-                                </Button>
-                            }
-                        />
-
-                        <Button type="submit" variant="default" className="h-11 px-6 grow md:grow-0">
-                            Search
-                        </Button>
-                    </div>
-                </form>
-
-                {/* Filter Tabs */}
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    {filters.map((filter) => (
-                        <Button
-                            key={filter.key}
-                            variant={activeFilter === filter.key ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => handleFilterChange(filter.key)}
-                            className={cn(
-                                "shrink-0 gap-2",
-                                activeFilter === filter.key && "bg-primary"
-                            )}
-                        >
-                            {filter.label}
-                            <Badge variant="secondary" className={cn(
-                                "h-5 px-1.5 text-xs",
-                                activeFilter === filter.key ? "bg-primary-foreground/20 text-primary-foreground" : ""
-                            )}>
-                                {filter.count}
-                            </Badge>
-                        </Button>
-                    ))}
+                    <ExportDialog
+                        onExport={fetchExportData}
+                        filename={`inventory-${new Date().toISOString().split('T')[0]}`}
+                        statusOptions={statusOptions}
+                        trigger={
+                            <Button variant="outline" className="flex-1 sm:flex-initial h-11 gap-2 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary rounded-xl">
+                                <Download className="h-4 w-4" />
+                                <span>Export</span>
+                            </Button>
+                        }
+                    />
                 </div>
             </div>
 
+            {/* Filter Tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide mb-4 -mx-4 px-4 md:mx-0 md:px-0">
+                {filters.map((filter) => (
+                    <Button
+                        key={filter.key}
+                        variant={activeFilter === filter.key ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleFilterChange(filter.key)}
+                        className={cn(
+                            "shrink-0 gap-2 h-9 rounded-full transition-all",
+                            activeFilter === filter.key 
+                                ? "bg-primary text-primary-foreground shadow-glow-sm" 
+                                : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10"
+                        )}
+                    >
+                        {filter.label}
+                        <Badge variant="secondary" className={cn(
+                            "h-5 px-1.5 text-xs",
+                            activeFilter === filter.key ? "bg-primary-foreground/20 text-primary-foreground" : ""
+                        )}>
+                            {filter.count}
+                        </Badge>
+                    </Button>
+                ))}
+            </div>
+
             {/* Items Grid */}
-            {initialItems.length === 0 ? (
-                <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-2 border-border rounded-xl">
-                    <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                    <h3 className="font-semibold text-lg mb-2">No items found</h3>
-                    <p className="text-muted-foreground mb-4 max-w-sm">
-                        {initialSearch ? 'Try adjusting your search' : 'Add your first inventory item to get started'}
-                    </p>
-                    <Link href={`/shop/${shopId}/inventory/new`}>
-                        <Button className="gap-2">
-                            <Plus className="h-4 w-4" />
-                            Add First Item
-                        </Button>
-                    </Link>
-                </Card>
-            ) : (
-                <>
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Tag ID</TableHead>
-                                    <TableHead>Product Name</TableHead>
-                                    <TableHead>Category / Type</TableHead>
-                                    <TableHead>Net Weight</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Price Info</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
+            <div className="space-y-3">
+                {initialItems.length === 0 ? (
+                    <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-2 border-gray-300 dark:border-white/20 rounded-2xl">
+                        <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                        <h3 className="font-semibold text-lg mb-2">No items found</h3>
+                        <p className="text-muted-foreground mb-4 max-w-sm">
+                            {initialSearch ? 'Try adjusting your search' : 'Add your first inventory item to get started'}
+                        </p>
+                        <Link href={`/shop/${shopId}/inventory/new`}>
+                            <Button className="gap-2">
+                                <Plus className="h-4 w-4" />
+                                Add First Item
+                            </Button>
+                        </Link>
+                    </Card>
+                ) : (
+                    <>
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block">
+                            <Card className="border-2 border-gray-300 dark:border-white/20 shadow-lg rounded-2xl overflow-hidden">
+                                <Table>
+                                    <TableHeader className="bg-muted/50 border-b-2 border-gray-300 dark:border-white/20">
+                                        <TableRow className="hover:bg-transparent">
+                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Tag ID</TableHead>
+                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Product Name</TableHead>
+                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Category / Type</TableHead>
+                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Net Weight</TableHead>
+                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Status</TableHead>
+                                            <TableHead className="text-right text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Price Info</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
                                 {initialItems.map((item) => (
                                     <TableRow
                                         key={item.id}
@@ -298,14 +322,15 @@ export function InventoryClient({
                                                 <span>₹{item.making_charge_value}/{item.making_charge_type === 'PER_GRAM' ? 'g' : ' flat'}</span>
                                             ) : '-'}
                                         </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </Card>
                     </div>
 
                     {/* Mobile Card View */}
-                    <div className="md:hidden space-y-1">
+                    <div className="md:hidden space-y-3">
                         {initialItems.map((item) => (
                             <InventoryMobileCard
                                 key={item.id}
@@ -316,8 +341,7 @@ export function InventoryClient({
                     </div>
                 </>
             )}
-
-            {/* Pagination */}
+        </div>            {/* Pagination */}
             {pagination.totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 pt-4">
                     <Button

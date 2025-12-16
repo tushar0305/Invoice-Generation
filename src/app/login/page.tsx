@@ -354,7 +354,8 @@ export default function LoginPage() {
                 alt="SwarnaVyapar Logo"
                 fill
                 className="object-contain"
-                priority // Preload critical image
+                priority
+                sizes="(max-width: 768px) 100vw, 224px"
               />
             </div>
           </div>

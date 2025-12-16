@@ -106,24 +106,28 @@ export function TemplateBasic({ shop, initialProducts, categories }: StoreClient
                     </div>
                 </div>
 
-                {/* Scrollable Categories */}
-                <div className="border-t border-gray-100 overflow-x-auto scrollbar-hide py-2">
-                    <div className="flex px-4 gap-6 min-w-max">
-                        <button
-                            onClick={() => setSelectedCategory('all')}
-                            className={`text-sm font-medium pb-2 -mb-2.5 border-b-2 transition-colors ${selectedCategory === 'all' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500'}`}
-                        >
-                            All
-                        </button>
-                        {categories.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setSelectedCategory(cat.id)}
-                                className={`text-sm font-medium pb-2 -mb-2.5 border-b-2 transition-colors ${selectedCategory === cat.id ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500'}`}
-                            >
-                                {cat.name}
-                            </button>
-                        ))}
+                {/* Category Cards Section */}
+                <div className="bg-gray-50 border-t border-gray-100 py-4">
+                    <div className="max-w-md mx-auto px-4">
+                        <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+                            <div className="flex gap-3 min-w-max pb-1">
+                                <button
+                                    onClick={() => setSelectedCategory('all')}
+                                    className={`flex-shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${selectedCategory === 'all' ? 'bg-gray-900 text-white shadow-lg scale-105' : 'bg-white text-gray-600 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'}`}
+                                >
+                                    All Items
+                                </button>
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setSelectedCategory(cat.id)}
+                                        className={`flex-shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${selectedCategory === cat.id ? 'bg-gray-900 text-white shadow-lg scale-105' : 'bg-white text-gray-600 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'}`}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -131,10 +135,14 @@ export function TemplateBasic({ shop, initialProducts, categories }: StoreClient
             {/* 2. Main Content */}
             <main className="max-w-md mx-auto px-4 py-6 pb-24">
 
-                {/* About Section (Simple Text) */}
+                {/* About Section */}
                 {shop.about_text && selectedCategory === 'all' && !searchTerm && (
-                    <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                        <p className="text-sm text-gray-600 leading-relaxed">
+                    <div className="mb-8 p-6 bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-gray-100 shadow-sm">
+                        <div className="flex items-start gap-3 mb-3">
+                            <ShoppingBag className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                            <h3 className="font-semibold text-gray-900 text-base">About Our Store</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 leading-relaxed pl-8">
                             {shop.about_text}
                         </p>
                     </div>
@@ -160,12 +168,12 @@ export function TemplateBasic({ shop, initialProducts, categories }: StoreClient
                         <p className="text-sm">No products found</p>
                     </div>
                 ) : (
-                    <div className={viewMode === 'grid' ? "grid grid-cols-2 gap-4" : "flex flex-col gap-4"}>
+                    <div className={viewMode === 'grid' ? "grid grid-cols-2 gap-5" : "flex flex-col gap-4"}>
                         {filteredProducts.map((product) => (
                             <div
                                 key={product.id}
                                 onClick={() => handleProductClick(product)}
-                                className={`group cursor-pointer border border-gray-100 rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow ${viewMode === 'list' ? 'flex items-center' : ''}`}
+                                className={`group cursor-pointer border-2 border-gray-100 rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-xl hover:border-gray-300 transition-all duration-300 hover:-translate-y-1 ${viewMode === 'list' ? 'flex items-center' : ''}`}
                             >
                                 {/* Image Container - Fixed Aspect Ratio */}
                                 <div className={`bg-gray-100 relative ${viewMode === 'grid' ? 'aspect-square w-full' : 'h-24 w-24 flex-shrink-0'}`}>
@@ -183,16 +191,16 @@ export function TemplateBasic({ shop, initialProducts, categories }: StoreClient
                                 </div>
 
                                 {/* Content */}
-                                <div className="p-3 flex-1 min-w-0">
-                                    <h3 className="font-semibold text-gray-900 text-sm truncate leading-tight mb-1">
+                                <div className="p-4 flex-1 min-w-0 space-y-2">
+                                    <h3 className="font-semibold text-gray-900 text-sm leading-tight line-clamp-2 min-h-[2.5rem]">
                                         {product.name}
                                     </h3>
-                                    <p className="text-gray-900 font-bold text-sm">
+                                    <p className="text-gray-900 font-bold text-base">
                                         ₹{product.price.toLocaleString('en-IN')}
                                     </p>
-                                    <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
-                                        {product.purity && <span className="bg-gray-100 px-1.5 py-0.5 rounded">{product.purity}</span>}
-                                        {product.weight_g && <span>{product.weight_g}g</span>}
+                                    <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
+                                        {product.purity && <span className="bg-gray-100 px-2 py-1 rounded-lg font-medium">{product.purity}</span>}
+                                        {product.weight_g && <span className="bg-gray-100 px-2 py-1 rounded-lg font-medium">{product.weight_g}g</span>}
                                     </div>
                                 </div>
                             </div>
