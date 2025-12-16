@@ -363,48 +363,107 @@ function ShopLayoutInner({
                     </div>
                 )}
 
-                {/* Mobile Header - Dashboard Only */}
-                {isMobile && pathname === `/shop/${shopId}/dashboard` && (
+                {/* Mobile Header - Adaptive Design */}
+                {isMobile && (
                     <header className="sticky top-0 z-50 flex flex-col w-full">
-                        <div className="relative overflow-hidden">
-                            {/* Gradient Background */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-[#0a0a0b] dark:via-[#0f0f10] dark:to-[#0a0a0b]" />
-                            
-                            {/* Status Bar Safe Area */}
-                            <div className="h-[env(safe-area-inset-top,0px)] bg-gradient-to-br from-slate-50/95 to-white/95 dark:from-[#0a0a0b]/95 dark:to-[#0f0f10]/95 backdrop-blur-md" />
-                            
+                        {pathname === `/shop/${shopId}/dashboard` ? (
+                            /* 1. Dashboard Header - Immersive & Welcoming */
+                            <div className="relative overflow-hidden">
+                                {/* Background with subtle mesh gradient */}
+                                <div className="absolute inset-0 bg-slate-50/90 dark:bg-[#0a0a0b]/90 backdrop-blur-xl" />
+                                <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-transparent dark:from-white/5 dark:to-transparent" />
+                                
+                                {/* Status Bar Safe Area */}
+                                <div className="h-[env(safe-area-inset-top,0px)]" />
+                                
+                                <div className="relative px-4 pb-3 pt-2">
+                                    {/* Top Row: Controls */}
+                                    <div className="flex items-center justify-between mb-4">
+                                        <SidebarTrigger className="h-10 w-10 rounded-full bg-white/80 dark:bg-white/10 border border-gray-200/50 dark:border-white/10 shadow-sm hover:bg-white dark:hover:bg-white/20 transition-all text-gray-700 dark:text-gray-200">
+                                            <Menu className="h-5 w-5" />
+                                        </SidebarTrigger>
+
+                                        <Button 
+                                            size="icon" 
+                                            variant="ghost"
+                                            className="h-10 w-10 rounded-full bg-white/80 dark:bg-white/10 border border-gray-200/50 dark:border-white/10 shadow-sm hover:bg-white dark:hover:bg-white/20 text-gray-700 dark:text-gray-200 relative"
+                                        >
+                                            <Bell className="h-5 w-5" />
+                                            <span className="absolute top-2 right-2.5 h-2 w-2 bg-red-500 rounded-full border-2 border-white dark:border-gray-900" />
+                                        </Button>
+                                    </div>
+
+                                    {/* Large Title Area */}
+                                    <div className="space-y-1">
+                                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight font-display">
+                                            Dashboard
+                                        </h1>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                                            Overview
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Subtle separator */}
+                                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-800 to-transparent opacity-50" />
+                            </div>
+                        ) : (
+                            /* 2. Inner Pages Header - Minimal & Contextual */
                             <div className="relative">
-                                {/* Top Row: Drawer & Notification */}
-                                <div className="flex h-16 items-center justify-between px-4">
-                                    <SidebarTrigger className="h-10 w-10 border-2 border-gray-200 dark:border-gray-700 shadow-lg rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 active:scale-95 transition-all text-gray-700 dark:text-gray-200 backdrop-blur-sm bg-white/60 dark:bg-gray-900/60">
+                                {/* Glass Background */}
+                                <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-b border-border/50" />
+                                
+                                {/* Status Bar Safe Area - match app background */}
+                                <div className="h-[env(safe-area-inset-top,0px)] bg-background/80 backdrop-blur-xl" />
+                                
+                                <div className="relative h-[52px] flex items-center justify-between px-4">
+                                    {/* Left: Menu/Back */}
+                                    <SidebarTrigger className="h-9 w-9 -ml-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300">
                                         <Menu className="h-5 w-5" />
                                     </SidebarTrigger>
 
+                                    {/* Center: Page Title */}
+                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[60%]">
+                                        <span className="block text-[17px] font-semibold text-gray-900 dark:text-white truncate text-center leading-tight">
+                                            {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
+                                            {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
+                                            {pathname === `/shop/${shopId}/invoices/edit` && 'Edit Invoice'}
+                                            {pathname === `/shop/${shopId}/customers` && 'Customers'}
+                                            {pathname === `/shop/${shopId}/customers/view` && 'Customer Details'}
+                                            {pathname === `/shop/${shopId}/inventory` && 'Inventory'}
+                                            {pathname === `/shop/${shopId}/inventory/new` && 'Add Item'}
+                                            {pathname.includes(`/shop/${shopId}/inventory/`) && !pathname.includes('/new') && 'Item Details'}
+                                            {pathname === `/shop/${shopId}/schemes` && 'Schemes'}
+                                            {pathname.includes(`/shop/${shopId}/schemes/`) && !pathname.includes('/create') && 'Scheme Details'}
+                                            {pathname.endsWith('/schemes/create') && 'Create Scheme'}
+                                            {pathname === `/shop/${shopId}/staff` && 'Staff'}
+                                            {pathname === `/shop/${shopId}/loans` && 'Loans & Girvi'}
+                                            {pathname === `/shop/${shopId}/loans/new` && 'New Loan'}
+                                            {pathname.includes(`/shop/${shopId}/loans/`) && !pathname.includes('/new') && 'Loan Details'}
+                                            {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
+                                            {pathname.includes(`/shop/${shopId}/khata/`) && !pathname.includes('/new') && 'Transaction'}
+                                            {pathname === `/shop/${shopId}/loyalty` && 'Loyalty'}
+                                            {pathname === `/shop/${shopId}/marketing` && 'Marketing'}
+                                            {pathname.startsWith(`/shop/${shopId}/marketing/`) && 'Marketing'}
+                                            {pathname === `/shop/${shopId}/catalogue` && 'Catalogue'}
+                                            {pathname === `/shop/${shopId}/insights` && 'Insights'}
+                                            {pathname === `/shop/${shopId}/templates` && 'Templates'}
+                                            {pathname === `/shop/${shopId}/settings` && 'Settings'}
+                                        </span>
+                                    </div>
+
+                                    {/* Right: Notification */}
                                     <Button 
                                         size="icon" 
-                                        className="h-10 w-10 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700 shadow-lg rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 text-gray-700 dark:text-gray-200 relative"
+                                        variant="ghost"
+                                        className="h-9 w-9 -mr-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 relative"
                                     >
                                         <Bell className="h-5 w-5" />
-                                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-br from-red-500 to-red-600 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-[10px] font-bold text-white shadow-lg">
-                                            3
-                                        </span>
+                                        <span className="absolute top-2.5 right-2.5 h-1.5 w-1.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-black" />
                                     </Button>
                                 </div>
-
-                                {/* Dashboard Title */}
-                                <div className="px-4 pb-4">
-                                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-                                        Dashboard
-                                    </h1>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                                        Welcome back! Here's your business overview
-                                    </p>
-                                </div>
                             </div>
-
-                            {/* Bottom gradient fade */}
-                            <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
-                        </div>
+                        )}
                     </header>
                 )}
 

@@ -76,101 +76,197 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
 
     return (
         <div className={cn(
-            "fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#0c0a09]/80 backdrop-blur-xl border-t border-[#D4AF37]/20 pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-in-out",
+            "fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)] transition-all duration-500 ease-out",
             isVisible ? "translate-y-0" : "translate-y-full"
         )}>
-            <nav className="flex items-center justify-between px-2 h-16 relative">
-
-                {/* Left Tabs */}
-                <div className="flex flex-1 justify-around">
-                    <Link
-                        href={`/shop/${shopId}/dashboard`}
-                        onClick={() => vibrate('light')}
-                        className="flex flex-col items-center gap-0.5 p-1 group"
-                    >
-                        <LayoutDashboard className={cn("w-6 h-6 transition-colors", isActive(`/shop/${shopId}/dashboard`) ? "text-[#D4AF37] fill-current" : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500")} strokeWidth={1.5} />
-                        <span className={cn("text-[10px] font-medium transition-colors", isActive(`/shop/${shopId}/dashboard`) ? "text-[#D4AF37]" : "text-gray-400")}>Home</span>
-                    </Link>
-                    <Link
-                        href={`/shop/${shopId}/invoices`}
-                        onClick={() => vibrate('light')}
-                        className="flex flex-col items-center gap-0.5 p-1 group"
-                    >
-                        <FileText className={cn("w-6 h-6 transition-colors", isActive(`/shop/${shopId}/invoices`, true) ? "text-[#D4AF37] fill-current" : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500")} strokeWidth={1.5} />
-                        <span className={cn("text-[10px] font-medium transition-colors", isActive(`/shop/${shopId}/invoices`, true) ? "text-[#D4AF37]" : "text-gray-400")}>Invoices</span>
-                    </Link>
-                </div>
-
-                {/* Center FAB (New Invoice) */}
-                <div className="-mt-8 mx-2 relative z-10">
-                    <Link
-                        href={`/shop/${shopId}/invoices/new`}
-                        onClick={() => vibrate('medium')}
-                        className="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-[#D4AF37] to-amber-600 shadow-[0_4px_14px_0_rgba(212,175,55,0.39)] hover:scale-105 active:scale-95 transition-transform border-4 border-white dark:border-[#0c0a09]"
-                    >
-                        <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
-                    </Link>
-                </div>
-
-                {/* Right Tabs */}
-                <div className="flex flex-1 justify-around">
-                    <Link
-                        href={`/shop/${shopId}/inventory`}
-                        onClick={() => vibrate('light')}
-                        className="flex flex-col items-center gap-0.5 p-1 group"
-                    >
-                        <QrCode className={cn("w-6 h-6 transition-colors", isActive(`/shop/${shopId}/inventory`, true) ? "text-[#D4AF37] fill-current" : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500")} strokeWidth={1.5} />
-                        <span className={cn("text-[10px] font-medium transition-colors", isActive(`/shop/${shopId}/inventory`, true) ? "text-[#D4AF37]" : "text-gray-400")}>Inventory</span>
-                    </Link>
-
-                    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                        <SheetTrigger asChild>
-                            <button
+            {/* iPhone 17 Style Navigation Bar */}
+            <div className="mx-3 mb-2">
+                <div className="relative overflow-hidden rounded-[28px] shadow-[0_8px_32px_0_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
+                    {/* Glass Background with Gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-white/70 dark:from-gray-900/90 dark:via-gray-900/80 dark:to-gray-900/70 backdrop-blur-2xl" />
+                    
+                    {/* Subtle Top Border Glow */}
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/20 to-transparent" />
+                    
+                    <nav className="relative flex items-center justify-between px-4 h-[72px]">
+                        {/* Left Tabs */}
+                        <div className="flex flex-1 justify-around items-center">
+                            <Link
+                                href={`/shop/${shopId}/dashboard`}
                                 onClick={() => vibrate('light')}
-                                className="flex flex-col items-center gap-0.5 p-1 group"
+                                className="flex flex-col items-center gap-1 p-2 group relative"
                             >
-                                <div className={cn("relative transition-colors", (isMoreActive || isOpen) ? "text-[#D4AF37]" : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500")}>
-                                    <MoreHorizontal className="w-6 h-6" strokeWidth={1.5} />
+                                {isActive(`/shop/${shopId}/dashboard`) && (
+                                    <div className="absolute inset-0 bg-gradient-to-b from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl scale-110 blur-sm" />
+                                )}
+                                <div className={cn(
+                                    "relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300",
+                                    isActive(`/shop/${shopId}/dashboard`)
+                                        ? "bg-gradient-to-br from-[#D4AF37]/20 to-amber-600/20 shadow-lg shadow-[#D4AF37]/20"
+                                        : "group-hover:bg-gray-100/50 dark:group-hover:bg-gray-800/50"
+                                )}>
+                                    <LayoutDashboard className={cn(
+                                        "w-5 h-5 transition-all duration-300",
+                                        isActive(`/shop/${shopId}/dashboard`)
+                                            ? "text-[#D4AF37] drop-shadow-sm"
+                                            : "text-gray-500 dark:text-gray-400"
+                                    )} strokeWidth={2} />
                                 </div>
-                                <span className={cn("text-[10px] font-medium transition-colors", (isMoreActive || isOpen) ? "text-[#D4AF37]" : "text-gray-400")}>More</span>
-                            </button>
-                        </SheetTrigger>
-                        <SheetContent side="bottom" className="rounded-t-[20px] p-0 bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-xl border-t border-[#D4AF37]/20">
-                            <SheetHeader className="p-4 border-b border-gray-100 dark:border-white/5">
-                                <SheetTitle className="text-center text-sm font-medium text-muted-foreground">Menu</SheetTitle>
-                            </SheetHeader>
-                            <div className="grid grid-cols-4 gap-4 p-6">
-                                {moreItems.map((item) => (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        onClick={() => {
-                                            vibrate('light');
-                                            setIsOpen(false);
-                                        }}
-                                        className="flex flex-col items-center gap-2"
+                                <span className={cn(
+                                    "text-[10px] font-semibold transition-all duration-300",
+                                    isActive(`/shop/${shopId}/dashboard`)
+                                        ? "text-[#D4AF37]"
+                                        : "text-gray-500 dark:text-gray-400"
+                                )}>Home</span>
+                            </Link>
+
+                            <Link
+                                href={`/shop/${shopId}/invoices`}
+                                onClick={() => vibrate('light')}
+                                className="flex flex-col items-center gap-1 p-2 group relative"
+                            >
+                                {isActive(`/shop/${shopId}/invoices`, true) && (
+                                    <div className="absolute inset-0 bg-gradient-to-b from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl scale-110 blur-sm" />
+                                )}
+                                <div className={cn(
+                                    "relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300",
+                                    isActive(`/shop/${shopId}/invoices`, true)
+                                        ? "bg-gradient-to-br from-[#D4AF37]/20 to-amber-600/20 shadow-lg shadow-[#D4AF37]/20"
+                                        : "group-hover:bg-gray-100/50 dark:group-hover:bg-gray-800/50"
+                                )}>
+                                    <FileText className={cn(
+                                        "w-5 h-5 transition-all duration-300",
+                                        isActive(`/shop/${shopId}/invoices`, true)
+                                            ? "text-[#D4AF37] drop-shadow-sm"
+                                            : "text-gray-500 dark:text-gray-400"
+                                    )} strokeWidth={2} />
+                                </div>
+                                <span className={cn(
+                                    "text-[10px] font-semibold transition-all duration-300",
+                                    isActive(`/shop/${shopId}/invoices`, true)
+                                        ? "text-[#D4AF37]"
+                                        : "text-gray-500 dark:text-gray-400"
+                                )}>Invoices</span>
+                            </Link>
+                        </div>
+
+                        {/* Center FAB - Floating Action Button */}
+                        <div className="mx-3 relative">
+                            <Link
+                                href={`/shop/${shopId}/invoices/new`}
+                                onClick={() => vibrate('medium')}
+                                className="relative group"
+                            >
+                                {/* Glow Effect */}
+                                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#D4AF37] to-amber-600 blur-xl opacity-40 group-hover:opacity-60 transition-opacity" />
+                                
+                                {/* Button */}
+                                <div className="relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-[#D4AF37] via-amber-500 to-amber-600 shadow-2xl shadow-[#D4AF37]/40 group-hover:scale-105 group-active:scale-95 transition-all duration-300 border-[3px] border-white/30 dark:border-white/20">
+                                    <Plus className="w-7 h-7 text-white drop-shadow-md" strokeWidth={3} />
+                                </div>
+                            </Link>
+                        </div>
+
+                        {/* Right Tabs */}
+                        <div className="flex flex-1 justify-around items-center">
+                            <Link
+                                href={`/shop/${shopId}/inventory`}
+                                onClick={() => vibrate('light')}
+                                className="flex flex-col items-center gap-1 p-2 group relative"
+                            >
+                                {isActive(`/shop/${shopId}/inventory`, true) && (
+                                    <div className="absolute inset-0 bg-gradient-to-b from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl scale-110 blur-sm" />
+                                )}
+                                <div className={cn(
+                                    "relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300",
+                                    isActive(`/shop/${shopId}/inventory`, true)
+                                        ? "bg-gradient-to-br from-[#D4AF37]/20 to-amber-600/20 shadow-lg shadow-[#D4AF37]/20"
+                                        : "group-hover:bg-gray-100/50 dark:group-hover:bg-gray-800/50"
+                                )}>
+                                    <QrCode className={cn(
+                                        "w-5 h-5 transition-all duration-300",
+                                        isActive(`/shop/${shopId}/inventory`, true)
+                                            ? "text-[#D4AF37] drop-shadow-sm"
+                                            : "text-gray-500 dark:text-gray-400"
+                                    )} strokeWidth={2} />
+                                </div>
+                                <span className={cn(
+                                    "text-[10px] font-semibold transition-all duration-300",
+                                    isActive(`/shop/${shopId}/inventory`, true)
+                                        ? "text-[#D4AF37]"
+                                        : "text-gray-500 dark:text-gray-400"
+                                )}>Inventory</span>
+                            </Link>
+
+                            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                                <SheetTrigger asChild>
+                                    <button
+                                        onClick={() => vibrate('light')}
+                                        className="flex flex-col items-center gap-1 p-2 group relative"
                                     >
+                                        {(isMoreActive || isOpen) && (
+                                            <div className="absolute inset-0 bg-gradient-to-b from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl scale-110 blur-sm" />
+                                        )}
                                         <div className={cn(
-                                            "flex items-center justify-center w-12 h-12 rounded-2xl transition-all",
-                                            isActive(item.href, true)
-                                                ? "bg-[#D4AF37]/10 text-[#D4AF37]"
-                                                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                            "relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300",
+                                            (isMoreActive || isOpen)
+                                                ? "bg-gradient-to-br from-[#D4AF37]/20 to-amber-600/20 shadow-lg shadow-[#D4AF37]/20"
+                                                : "group-hover:bg-gray-100/50 dark:group-hover:bg-gray-800/50"
                                         )}>
-                                            <item.icon className="w-6 h-6" strokeWidth={1.5} />
+                                            <MoreHorizontal className={cn(
+                                                "w-5 h-5 transition-all duration-300",
+                                                (isMoreActive || isOpen)
+                                                    ? "text-[#D4AF37] drop-shadow-sm"
+                                                    : "text-gray-500 dark:text-gray-400"
+                                            )} strokeWidth={2} />
                                         </div>
                                         <span className={cn(
-                                            "text-xs font-medium text-center",
-                                            isActive(item.href, true) ? "text-[#D4AF37]" : "text-gray-600 dark:text-gray-400"
-                                        )}>
-                                            {item.label}
-                                        </span>
-                                    </Link>
-                                ))}
-                            </div>
-                        </SheetContent>
-                    </Sheet>
+                                            "text-[10px] font-semibold transition-all duration-300",
+                                            (isMoreActive || isOpen)
+                                                ? "text-[#D4AF37]"
+                                                : "text-gray-500 dark:text-gray-400"
+                                        )}>More</span>
+                                    </button>
+                                </SheetTrigger>
+                                <SheetContent side="bottom" className="rounded-t-[32px] p-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl border-t border-gray-200/50 dark:border-gray-700/50 shadow-2xl">
+                                    <SheetHeader className="p-6 border-b border-gray-100 dark:border-gray-800">
+                                        <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4" />
+                                        <SheetTitle className="text-center text-base font-bold text-gray-900 dark:text-white">Quick Menu</SheetTitle>
+                                    </SheetHeader>
+                                    <div className="grid grid-cols-4 gap-4 p-6 pb-8">
+                                        {moreItems.map((item) => (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={() => {
+                                                    vibrate('light');
+                                                    setIsOpen(false);
+                                                }}
+                                                className="flex flex-col items-center gap-2.5 group"
+                                            >
+                                                <div className={cn(
+                                                    "flex items-center justify-center w-14 h-14 rounded-3xl transition-all duration-300 shadow-lg",
+                                                    isActive(item.href, true)
+                                                        ? "bg-gradient-to-br from-[#D4AF37] to-amber-600 text-white shadow-[#D4AF37]/30"
+                                                        : "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 text-gray-600 dark:text-gray-300 group-hover:scale-105"
+                                                )}>
+                                                    <item.icon className="w-6 h-6" strokeWidth={2} />
+                                                </div>
+                                                <span className={cn(
+                                                    "text-[11px] font-semibold text-center leading-tight",
+                                                    isActive(item.href, true) ? "text-[#D4AF37]" : "text-gray-700 dark:text-gray-300"
+                                                )}>
+                                                    {item.label}
+                                                </span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </SheetContent>
+                            </Sheet>
+                        </div>
+                    </nav>
                 </div>
-            </nav>
+            </div>
         </div>
     );
 }

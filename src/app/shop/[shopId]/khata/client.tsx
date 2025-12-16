@@ -228,8 +228,8 @@ export function KhataClient({
 
     return (
         <div className="space-y-4 pb-24 px-4 md:px-0 pt-6">
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card className="shadow-sm hover:shadow-md transition-shadow border border-border bg-card">
+            <div className="grid gap-3 md:gap-4 md:grid-cols-4">
+                <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Total Customers</CardTitle>
                         <Users className="h-4 w-4 text-primary" />
@@ -242,7 +242,7 @@ export function KhataClient({
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-sm hover:shadow-md transition-shadow border border-slate-300 dark:border-slate-700">
+                <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-emerald-600">Receivable</CardTitle>
                         <TrendingUp className="h-4 w-4 text-emerald-600" />
@@ -255,7 +255,7 @@ export function KhataClient({
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-sm hover:shadow-md transition-shadow border border-slate-300 dark:border-slate-700">
+                <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-red-600">Payable</CardTitle>
                         <TrendingDown className="h-4 w-4 text-red-600" />
@@ -268,7 +268,7 @@ export function KhataClient({
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-sm hover:shadow-md transition-shadow border border-slate-300 dark:border-slate-700">
+                <Card className="rounded-2xl shadow-md hover:shadow-lg transition-all border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-primary">Net Balance</CardTitle>
                         <Wallet className="h-4 w-4 text-primary" />
@@ -285,9 +285,9 @@ export function KhataClient({
             </div>
 
             {/* Main Content Card */}
-            <Card className="shadow-sm border border-border bg-card">
+            <Card className="rounded-2xl shadow-lg border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl">
                 {/* Header */}
-                <CardHeader className="border-b">
+                <CardHeader className="border-b border-white/40 dark:border-white/10">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
                             <CardTitle className="text-2xl font-bold text-foreground">Customer Ledger</CardTitle>
@@ -368,7 +368,7 @@ export function KhataClient({
                 </CardHeader>
 
                 {/* Filters */}
-                <div className="p-6 space-y-4 border-b border-border bg-muted/30">
+                <div className="p-4 md:p-6 space-y-4 border-b border-white/40 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-xl rounded-b-none rounded-t-2xl md:rounded-t-2xl">
                     <div className="flex flex-col md:flex-row gap-4 justify-between">
                         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
                             <button
@@ -377,7 +377,7 @@ export function KhataClient({
                                     "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
                                     currentFilter === 'all'
                                         ? 'bg-primary/20 text-primary border border-primary/50 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
-                                        : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
+                                        : 'bg-white/70 dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-white/40 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:border-primary/50 backdrop-blur'
                                 )}
                             >
                                 All
@@ -388,7 +388,7 @@ export function KhataClient({
                                     "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
                                     currentFilter === 'receivable'
                                         ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                                        : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
+                                        : 'bg-white/70 dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-white/40 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:border-primary/50 backdrop-blur'
                                 )}
                             >
                                 Receivable
@@ -399,7 +399,7 @@ export function KhataClient({
                                     "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
                                     currentFilter === 'payable'
                                         ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-                                        : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
+                                        : 'bg-white/70 dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-white/40 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:border-primary/50 backdrop-blur'
                                 )}
                             >
                                 Payable
@@ -410,7 +410,7 @@ export function KhataClient({
                                     "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
                                     currentFilter === 'settled'
                                         ? 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border border-gray-500/50 shadow-[0_0_15px_rgba(107,114,128,0.3)]'
-                                        : 'bg-white dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary/50'
+                                        : 'bg-white/70 dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-white/40 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:border-primary/50 backdrop-blur'
                                 )}
                             >
                                 Settled
@@ -449,7 +449,7 @@ export function KhataClient({
                     {/* Mobile View - Cards */}
                     <div className="md:hidden space-y-3 p-4">
                         {customers.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground dark:text-gray-500 bg-muted/20 rounded-xl border border-dashed border-border">
+                            <div className="text-center py-12 text-muted-foreground dark:text-gray-500 bg-white/50 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-dashed border-white/30 dark:border-white/10">
                                 {searchTerm || currentFilter !== 'all'
                                     ? 'No customers found matching your filters'
                                     : 'No customers yet. Add your first customer to get started!'}
@@ -459,39 +459,42 @@ export function KhataClient({
                                 <div
                                     key={customer.id}
                                     onClick={() => router.push(`/shop/${shopId}/khata/${customer.id}`)}
-                                    className="bg-card border border-border rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
+                                    className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl p-4 shadow-md active:scale-[0.99] transition-transform"
                                 >
-                                    <div className="flex justify-between items-start mb-3">
+                                    <div className="flex justify-between items-start mb-2">
                                         <div>
-                                            <h3 className="font-bold text-lg text-foreground">{customer.name}</h3>
-                                            <div className="text-sm text-muted-foreground">{customer.phone || 'No phone'}</div>
+                                            <h3 className="font-semibold text-base text-foreground">{customer.name}</h3>
+                                            <div className="text-xs text-muted-foreground">{customer.phone || 'No phone'}</div>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-right min-w-[96px]">
                                             <div className={cn(
-                                                "font-bold text-lg",
+                                                "font-bold text-base",
                                                 customer.current_balance > 0 ? "text-emerald-600" :
                                                     customer.current_balance < 0 ? "text-red-600" : "text-muted-foreground"
                                             )}>
                                                 {formatCurrency(Math.abs(customer.current_balance))}
                                             </div>
-                                            <Badge variant="outline" className={cn(
-                                                "text-[10px] h-5 px-1.5 font-mono",
-                                                customer.current_balance > 0 ? "text-emerald-600 border-emerald-200 bg-emerald-50" :
-                                                    customer.current_balance < 0 ? "text-red-600 border-red-200 bg-red-50" : "text-gray-500"
-                                            )}>
-                                                {customer.current_balance > 0 ? 'RECEIVABLE' :
-                                                    customer.current_balance < 0 ? 'PAYABLE' : 'SETTLED'}
-                                            </Badge>
+                                            <div className="flex items-center justify-end gap-1 mt-1">
+                                                <Badge variant="outline" className={cn(
+                                                    "text-[10px] h-5 px-1.5 font-mono rounded-full",
+                                                    customer.current_balance > 0 ? "text-emerald-700 border-emerald-300/60 bg-emerald-100/50" :
+                                                        customer.current_balance < 0 ? "text-red-700 border-red-300/60 bg-red-100/50" : "text-gray-600 border-gray-300/60 bg-gray-100/50"
+                                                )}>
+                                                    {customer.current_balance > 0 ? 'RECEIVABLE' :
+                                                        customer.current_balance < 0 ? 'PAYABLE' : 'SETTLED'}
+                                                </Badge>
+                                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/40 dark:border-white/10">
                                         <div>
-                                            <div className="text-xs text-muted-foreground mb-0.5">Total Given</div>
+                                            <div className="text-[11px] text-muted-foreground mb-0.5">Total Given</div>
                                             <div className="font-medium text-emerald-600">{formatCurrency(customer.total_spent)}</div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-xs text-muted-foreground mb-0.5">Total Received</div>
+                                            <div className="text-[11px] text-muted-foreground mb-0.5">Total Received</div>
                                             <div className="font-medium text-blue-600">{formatCurrency(customer.total_paid)}</div>
                                         </div>
                                     </div>
