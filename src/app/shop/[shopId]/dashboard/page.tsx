@@ -100,12 +100,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-[#0a0a0b] pb-20">
-      <div className="max-w-[1600px] mx-auto pt-1 px-4 md:px-6 lg:px-8 space-y-3 animate-in fade-in duration-500">
+      <div className="max-w-[1600px] mx-auto pt-1 md:pt-1 px-4 md:px-6 lg:px-8 space-y-3 animate-in fade-in duration-500">
 
         {/* Floating AI Assistant */}
         <FloatingStoreAssistant shopId={shopId} />
 
-        {/* Ticker Section - Full Width, No Header Title */}
+        {/* Ticker Section - Full Width, below floating buttons on mobile */}
         <div className="w-full pb-1">
           <GoldSilverTicker initialData={marketRates} />
         </div>

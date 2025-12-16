@@ -363,56 +363,47 @@ function ShopLayoutInner({
                     </div>
                 )}
 
-                {/* Mobile Header - Show on all pages */}
-                {isMobile && (
+                {/* Mobile Header - Dashboard Only */}
+                {isMobile && pathname === `/shop/${shopId}/dashboard` && (
                     <header className="sticky top-0 z-50 flex flex-col w-full">
-                        {/* Gold Gradient Line */}
-                        <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-80" />
+                        <div className="relative overflow-hidden">
+                            {/* Gradient Background */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-[#0a0a0b] dark:via-[#0f0f10] dark:to-[#0a0a0b]" />
+                            
+                            {/* Status Bar Safe Area */}
+                            <div className="h-[env(safe-area-inset-top,0px)] bg-gradient-to-br from-slate-50/95 to-white/95 dark:from-[#0a0a0b]/95 dark:to-[#0f0f10]/95 backdrop-blur-md" />
+                            
+                            <div className="relative">
+                                {/* Top Row: Drawer & Notification */}
+                                <div className="flex h-16 items-center justify-between px-4">
+                                    <SidebarTrigger className="h-10 w-10 border-2 border-gray-200 dark:border-gray-700 shadow-lg rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 active:scale-95 transition-all text-gray-700 dark:text-gray-200 backdrop-blur-sm bg-white/60 dark:bg-gray-900/60">
+                                        <Menu className="h-5 w-5" />
+                                    </SidebarTrigger>
 
-                        <div className="flex h-14 items-center justify-between border-b border-gray-100/50 dark:border-white/5 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl px-4 shadow-sm">
-                            <div className="flex items-center gap-3 flex-1">
-                                <SidebarTrigger className="h-9 w-9 border border-gray-200 dark:border-white/10 shadow-sm rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/20 active:scale-95 transition-all text-gray-700 dark:text-gray-200" />
+                                    <Button 
+                                        size="icon" 
+                                        className="h-10 w-10 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700 shadow-lg rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 text-gray-700 dark:text-gray-200 relative"
+                                    >
+                                        <Bell className="h-5 w-5" />
+                                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-br from-red-500 to-red-600 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-[10px] font-bold text-white shadow-lg">
+                                            3
+                                        </span>
+                                    </Button>
+                                </div>
 
-                                {/* Centered Page Title with Breadcrumb */}
-                                <div className="flex-1 flex flex-col items-center mr-9">
-                                    <span className="font-bold text-base tracking-tight text-gray-900 dark:text-white leading-none font-display">
-                                        {pathname === `/shop/${shopId}/dashboard` && 'Dashboard'}
-                                        {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
-                                        {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
-                                        {pathname === `/shop/${shopId}/invoices/edit` && 'Edit Invoice'}
-                                        {pathname === `/shop/${shopId}/customers` && 'Customers'}
-                                        {pathname === `/shop/${shopId}/customers/view` && 'Customer Details'}
-                                        {pathname === `/shop/${shopId}/inventory` && 'Inventory'}
-                                        {pathname === `/shop/${shopId}/inventory/new` && 'Add Item'}
-                                        {pathname.includes(`/shop/${shopId}/inventory/`) && !pathname.includes('/new') && 'Item Details'}
-                                        {pathname === `/shop/${shopId}/schemes` && 'Schemes'}
-                                        {pathname.includes(`/shop/${shopId}/schemes/`) && !pathname.includes('/create') && 'Scheme Details'}
-                                        {pathname.endsWith('/schemes/create') && 'Create Scheme'}
-                                        {pathname === `/shop/${shopId}/staff` && 'Staff Management'}
-                                        {pathname === `/shop/${shopId}/loans` && 'Loans & Girvi'}
-                                        {pathname === `/shop/${shopId}/loans/new` && 'New Loan'}
-                                        {pathname.includes(`/shop/${shopId}/loans/`) && !pathname.includes('/new') && 'Loan Details'}
-                                        {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
-                                        {pathname.includes(`/shop/${shopId}/khata/`) && !pathname.includes('/new') && 'Transaction'}
-                                        {pathname === `/shop/${shopId}/loyalty` && 'Loyalty Program'}
-                                        {pathname === `/shop/${shopId}/marketing` && 'Marketing'}
-                                        {pathname.startsWith(`/shop/${shopId}/marketing/`) && 'Marketing'}
-                                        {pathname === `/shop/${shopId}/catalogue` && 'Digital Catalogue'}
-                                        {pathname === `/shop/${shopId}/insights` && 'Business Insights'}
-                                        {pathname === `/shop/${shopId}/templates` && 'Bill Templates'}
-                                        {pathname === `/shop/${shopId}/settings` && 'Settings'}
-                                    </span>
+                                {/* Dashboard Title */}
+                                <div className="px-4 pb-4">
+                                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+                                        Dashboard
+                                    </h1>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                                        Welcome back! Here's your business overview
+                                    </p>
                                 </div>
                             </div>
 
-
-                            {/* Right Side Actions - Notifications */}
-                            <div className="flex items-center gap-2">
-                                <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full hover:bg-amber-50 dark:hover:bg-amber-900/20 text-muted-foreground relative">
-                                    <Bell className="h-5 w-5" />
-                                    <span className="absolute top-2 right-2.5 h-2 w-2 bg-red-500 rounded-full border border-white dark:border-black" />
-                                </Button>
-                            </div>
+                            {/* Bottom gradient fade */}
+                            <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
                         </div>
                     </header>
                 )}
