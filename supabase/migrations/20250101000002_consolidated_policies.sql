@@ -31,6 +31,8 @@ ALTER TABLE loan_collateral ENABLE ROW LEVEL SECURITY;
 ALTER TABLE loan_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
 -- New Inventory Tables
 ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory_tag_sequences ENABLE ROW LEVEL SECURITY;
@@ -65,8 +67,22 @@ CREATE POLICY "Users can manage their own preferences" ON public.user_preference
 -- INVENTORY (Core Module)
 -- ----------------------------------------------------------
 DROP POLICY IF EXISTS "inventory_items_shop_access" ON inventory_items;
-CREATE POLICY "inventory_items_shop_access" ON inventory_items
-  FOR ALL USING (public.is_shop_member(shop_id));
+-- View Policy: Shop members can view active items (not deleted)
+CREATE POLICY "inventory_items_view" ON inventory_items
+    FOR SELECT
+    USING (public.is_shop_member(shop_id) AND deleted_at IS NULL);
+
+-- Modify Policy: Only Owner/Admin or Creator can modify
+CREATE POLICY "inventory_items_modify" ON inventory_items
+    FOR ALL
+    USING (
+        public.is_shop_member(shop_id) AND 
+        (
+            public.is_shop_admin(shop_id) OR
+            auth.uid() = created_by OR
+            auth.uid() IN (SELECT created_by FROM shops WHERE id = shop_id)
+        )
+    );
 
 DROP POLICY IF EXISTS "inventory_tag_sequences_shop_access" ON inventory_tag_sequences;
 CREATE POLICY "inventory_tag_sequences_shop_access" ON inventory_tag_sequences
@@ -192,10 +208,29 @@ CREATE POLICY "System can insert audit logs" ON audit_logs FOR INSERT WITH CHECK
 -- GOLD SCHEMES
 -- ----------------------------------------------------------
 CREATE POLICY "Shop users can manage schemes" ON public.schemes
-    USING (shop_id IN (SELECT shop_id FROM user_shop_roles WHERE user_id = auth.uid()));
+    USING (is_shop_member(shop_id));
 
 CREATE POLICY "Shop users can manage enrollments" ON public.customer_schemes
-    USING (shop_id IN (SELECT shop_id FROM user_shop_roles WHERE user_id = auth.uid()));
+    USING (is_shop_member(shop_id));
 
 CREATE POLICY "Shop users can manage payments" ON public.scheme_payments
-    USING (shop_id IN (SELECT shop_id FROM user_shop_roles WHERE user_id = auth.uid()));
+    USING (is_shop_member(shop_id));
+
+-- ----------------------------------------------------------
+-- NOTIFICATIONS
+-- ----------------------------------------------------------
+create policy "Users can view notifications for their shop"
+    on notifications for select
+    using (
+        is_shop_member(shop_id)
+    );
+
+create policy "Users can update (mark read) notifications for their shop"
+    on notifications for update
+    using (
+        is_shop_member(shop_id)
+    );
+
+create policy "Server can insert notifications"
+    on notifications for insert
+    with check (true);

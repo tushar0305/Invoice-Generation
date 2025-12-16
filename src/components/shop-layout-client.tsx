@@ -73,6 +73,7 @@ import { CommandPalette } from '@/components/command-palette';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { PageTransition } from '@/components/page-transition';
 import { PremiumHeader } from '@/components/premium-header';
+import { NotificationCenter } from '@/components/notifications/notification-center';
 import type { Shop, UserShopRole, Permission } from '@/lib/definitions';
 
 type ShopLayoutClientProps = {
@@ -372,50 +373,30 @@ function ShopLayoutInner({
                                 {/* Background with subtle mesh gradient */}
                                 <div className="absolute inset-0 bg-slate-50/90 dark:bg-[#0a0a0b]/90 backdrop-blur-xl" />
                                 <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-transparent dark:from-white/5 dark:to-transparent" />
-                                
+
                                 {/* Status Bar Safe Area */}
                                 <div className="h-[env(safe-area-inset-top,0px)]" />
-                                
-                                <div className="relative px-4 pb-3 pt-2">
+
+                                <div className="relative px-4 pb-2 pt-2">
                                     {/* Top Row: Controls */}
-                                    <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center justify-between">
                                         <SidebarTrigger className="h-10 w-10 rounded-full bg-white/80 dark:bg-white/10 border border-gray-200/50 dark:border-white/10 shadow-sm hover:bg-white dark:hover:bg-white/20 transition-all text-gray-700 dark:text-gray-200">
                                             <Menu className="h-5 w-5" />
                                         </SidebarTrigger>
 
-                                        <Button 
-                                            size="icon" 
-                                            variant="ghost"
-                                            className="h-10 w-10 rounded-full bg-white/80 dark:bg-white/10 border border-gray-200/50 dark:border-white/10 shadow-sm hover:bg-white dark:hover:bg-white/20 text-gray-700 dark:text-gray-200 relative"
-                                        >
-                                            <Bell className="h-5 w-5" />
-                                            <span className="absolute top-2 right-2.5 h-2 w-2 bg-red-500 rounded-full border-2 border-white dark:border-gray-900" />
-                                        </Button>
-                                    </div>
-
-                                    {/* Large Title Area */}
-                                    <div className="space-y-1">
-                                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight font-display">
-                                            Dashboard
-                                        </h1>
-                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                            Overview
-                                        </p>
+                                        <NotificationCenter shopId={shopId} userId={userId} />
                                     </div>
                                 </div>
-
-                                {/* Subtle separator */}
-                                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-800 to-transparent opacity-50" />
                             </div>
                         ) : (
                             /* 2. Inner Pages Header - Minimal & Contextual */
                             <div className="relative">
                                 {/* Glass Background */}
                                 <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-b border-border/50" />
-                                
+
                                 {/* Status Bar Safe Area - match app background */}
                                 <div className="h-[env(safe-area-inset-top,0px)] bg-background/80 backdrop-blur-xl" />
-                                
+
                                 <div className="relative h-[52px] flex items-center justify-between px-4">
                                     {/* Left: Menu/Back */}
                                     <SidebarTrigger className="h-9 w-9 -ml-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300">
@@ -453,14 +434,7 @@ function ShopLayoutInner({
                                     </div>
 
                                     {/* Right: Notification */}
-                                    <Button 
-                                        size="icon" 
-                                        variant="ghost"
-                                        className="h-9 w-9 -mr-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 relative"
-                                    >
-                                        <Bell className="h-5 w-5" />
-                                        <span className="absolute top-2.5 right-2.5 h-1.5 w-1.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-black" />
-                                    </Button>
+                                    <NotificationCenter shopId={shopId} userId={userId} />
                                 </div>
                             </div>
                         )}

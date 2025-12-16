@@ -179,8 +179,9 @@ export async function createInvoiceAction(formData: {
             },
             p_items: formData.items.map(item => ({
                 ...item,
-                stockId: item.stockId || undefined,
-                tagId: item.tagId || undefined
+                // FIX: Convert empty string to undefined to avoid "invalid input syntax for type uuid" error
+                stockId: (item.stockId && item.stockId.trim() !== '') ? item.stockId : undefined,
+                tagId: (item.tagId && item.tagId.trim() !== '') ? item.tagId : undefined
             })),
             p_discount: formData.discount,
             p_notes: '',
@@ -226,7 +227,7 @@ export async function updateInvoiceAction(
         discount?: number;
         sgst?: number;
         cgst?: number;
-        status?: 'paid' | 'due';
+        status?: 'paid' | 'due' | 'cancelled';
         grandTotal?: number;
         subtotal?: number;
         sgstAmount?: number;
@@ -237,12 +238,16 @@ export async function updateInvoiceAction(
             purity: string;
             grossWeight: number;
             netWeight: number;
+            stoneWeight?: number;
+            stoneAmount?: number;
+            wastagePercent?: number;
             rate: number;
             making: number;
+            total: number;
+            stockId?: string;
         }>;
     }
 ) {
-    // Use server-side Supabase to bypass RLS
     const supabase = await createClient();
 
     try {
@@ -267,7 +272,6 @@ export async function updateInvoiceAction(
 
         const updateData: any = {
             customer_snapshot: newSnapshot,
-            updated_at: new Date().toISOString()
         };
 
         if (formData.invoiceDate !== undefined) updateData.invoice_date = formData.invoiceDate.toISOString().split('T')[0];
@@ -278,103 +282,35 @@ export async function updateInvoiceAction(
         if (formData.sgstAmount !== undefined) updateData.sgst_amount = formData.sgstAmount;
         if (formData.cgstAmount !== undefined) updateData.cgst_amount = formData.cgstAmount;
 
-        // Update invoice using server-side supabase
-        const { error: updateError } = await supabase
-            .from('invoices')
-            .update(updateData)
-            .eq('id', invoiceId);
+        // Prepare Items payload for RPC
+        const itemsPayload = (formData.items || []).map(item => ({
+            id: item.id,
+            stockId: item.stockId,
+            description: item.description,
+            purity: item.purity,
+            grossWeight: item.grossWeight,
+            netWeight: item.netWeight,
+            wastage: item.wastagePercent || 0,
+            rate: item.rate,
+            making: item.making,
+            total: item.total,
+            stoneWeight: item.stoneWeight || 0,
+            stoneAmount: item.stoneAmount || 0
+        }));
 
-        if (updateError) throw updateError;
+        const { data, error: rpcError } = await supabase.rpc('update_invoice_v2', {
+            p_invoice_id: invoiceId,
+            p_shop_id: shopId,
+            p_update_data: updateData,
+            p_items: itemsPayload
+        });
 
-        // Handle items if provided - use server-side supabase
-        if (formData.items) {
-            // Get existing items with stock_id to handle inventory reversion
-            const { data: existingItems, error: fetchError } = await supabase
-                .from('invoice_items')
-                .select('id, stock_id')
-                .eq('invoice_id', invoiceId);
+        if (rpcError) throw rpcError;
+        if (data && !data.success) throw new Error(data.error || 'Failed to update invoice');
 
-            if (fetchError) throw fetchError;
-
-            const existingMap = new Map((existingItems || []).map(item => [item.id, item]));
-            const newIds = new Set(formData.items.map((item) => item.id).filter(Boolean));
-
-            // Identify items to delete
-            const itemsToDelete = (existingItems || []).filter(item => !newIds.has(item.id));
-            const toDeleteIds = itemsToDelete.map(item => item.id);
-
-            // 1. Revert Inventory for deleted items
-            const stocksToRevert = itemsToDelete
-                .map(item => item.stock_id)
-                .filter(Boolean) as string[];
-
-            if (stocksToRevert.length > 0) {
-                await supabase
-                    .from('inventory_items')
-                    .update({ status: 'IN_STOCK', sold_invoice_id: null, sold_at: null })
-                    .in('id', stocksToRevert);
-            }
-
-            // 2. Delete removed invoice items
-            if (toDeleteIds.length > 0) {
-                await supabase.from('invoice_items').delete().in('id', toDeleteIds);
-            }
-
-            // 3. Upsert items (Include new fields!)
-            const itemsToUpsert = formData.items.map((item) => {
-                const itemData: any = {
-                    invoice_id: invoiceId,
-                    description: item.description,
-                    purity: item.purity,
-                    gross_weight: item.grossWeight,
-                    net_weight: item.netWeight,
-                    stone_weight: (item as any).stoneWeight || 0,
-                    stone_amount: (item as any).stoneAmount || 0,
-                    wastage_percent: (item as any).wastagePercent || 0,
-                    making_rate: (item as any).makingRate || 0,
-                    rate: item.rate,
-                    making: item.making,
-                    metal_type: (item as any).metalType || null,
-                    hsn_code: (item as any).hsnCode, // Map from internal name
-                    tag_id: (item as any).tagId ? (item as any).tagId : null,
-                    stock_id: (item as any).stockId ? (item as any).stockId : null
-                };
-                if (item.id) itemData.id = item.id;
-                return itemData;
-            });
-
-            if (itemsToUpsert.length > 0) {
-                const { error: upsertError } = await supabase
-                    .from('invoice_items')
-                    .upsert(itemsToUpsert, { onConflict: 'id' });
-                if (upsertError) throw upsertError;
-
-                // 4. Update Inventory Status for linked items (Mark as SOLD)
-                const stockIdsToSell = itemsToUpsert
-                    .map(item => item.stock_id)
-                    .filter(Boolean);
-
-                if (stockIdsToSell.length > 0) {
-                    await supabase
-                        .from('inventory_items')
-                        .update({
-                            status: 'SOLD',
-                            sold_invoice_id: invoiceId,
-                            sold_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
-                        })
-                        .in('id', stockIdsToSell);
-                }
-            }
-        }
-
-        // Revalidate relevant paths
-        // Use Promise.allSettled to ensure revalidation doesn't block response if it fails (though it shouldn't)
-        // But revalidatePath is sync-ish in Next.js logic, so we just call them.
         revalidatePath(`/shop/${shopId}/invoices`);
         revalidatePath(`/shop/${shopId}/dashboard`);
-        revalidatePath(`/shop/${shopId}/insights`);
-        revalidatePath(`/shop/${shopId}/invoices/${invoiceId}`);
+        // revalidatePath(`/shop/${shopId}/invoices/${invoiceId}`); // Optional specific page revalidation
 
         return { success: true };
     } catch (error: any) {
@@ -387,8 +323,43 @@ export async function deleteInvoiceAction(invoiceId: string, shopId: string) {
     if (!invoiceId) return { success: false, error: "Invalid Invoice ID" };
     const supabase = await createClient();
     try {
-        // 1. Revert Inventory Items to IN_STOCK
-        // We do this first to avoid FK constraints and to ensure logical consistency
+        // 1. Fetch Invoice Details for Loyalty Reversion
+        const { data: invoice } = await supabase
+            .from('invoices')
+            .select('customer_id, loyalty_points_earned, loyalty_points_redeemed, invoice_number')
+            .eq('id', invoiceId)
+            .single();
+
+        // 2. Revert Loyalty Points (Atomic)
+        if (invoice && invoice.customer_id) {
+            // A. Remove Earned Points (If they were earned)
+            // Note: If invoice was 'due', points_earned might be stored but not applied.
+            // However, our new RPC only apples if PAID. But we don't know the status history perfectly here without checking status.
+            // Let's assume if points_earned > 0 in DB and we delete, we should revert ONLY if status was PAID.
+            // Better: The RPC stores 'loyalty_points_earned' regardless? NO, the RPC stores it. 
+            // BUT we only applied it if PAID.
+            // Conservative Approach: Check Status.
+
+            const { data: statusCheck } = await supabase.from('invoices').select('status').eq('id', invoiceId).single();
+            const wasPaid = statusCheck?.status === 'paid';
+
+            if (wasPaid && (invoice.loyalty_points_earned || 0) > 0) {
+                await supabase.rpc('decrement_loyalty_points', {
+                    p_customer_id: invoice.customer_id,
+                    p_points: invoice.loyalty_points_earned
+                });
+            }
+
+            // B. Refund Redeemed Points (Always)
+            if ((invoice.loyalty_points_redeemed || 0) > 0) {
+                await supabase.rpc('increment_loyalty_points', {
+                    p_customer_id: invoice.customer_id,
+                    p_points: invoice.loyalty_points_redeemed
+                });
+            }
+        }
+
+        // 3. Revert Inventory Items to IN_STOCK
         const { error: inventoryError } = await supabase
             .from('inventory_items')
             .update({
@@ -403,7 +374,7 @@ export async function deleteInvoiceAction(invoiceId: string, shopId: string) {
             throw new Error('Failed to revert inventory items');
         }
 
-        // 2. Delete Invoice
+        // 4. Delete Invoice
         const { error } = await supabase
             .from('invoices')
             .delete()
@@ -423,11 +394,23 @@ export async function deleteInvoiceAction(invoiceId: string, shopId: string) {
     }
 }
 
-export async function updateInvoiceStatusAction(invoiceId: string, shopId: string, newStatus: 'paid' | 'due') {
+export async function updateInvoiceStatusAction(invoiceId: string, shopId: string, newStatus: 'paid' | 'due' | 'cancelled') {
     const supabase = await createClient();
     try {
-        // 1. Fetch Invoice to get details + loyalty points earned (assuming column exists or we calc)
-        // We need customer_id and current status (though we have newStatus)
+        if (newStatus === 'cancelled') {
+            const { data, error } = await supabase.rpc('cancel_invoice', {
+                p_invoice_id: invoiceId,
+                p_shop_id: shopId
+            });
+            if (error) throw error;
+            if (data && !data.success) throw new Error(data.error || 'Failed to cancel invoice');
+
+            revalidatePath(`/shop/${shopId}/invoices`);
+            revalidatePath(`/shop/${shopId}/dashboard`);
+            return { success: true };
+        }
+
+        // Existing logic for toggle (Paid/Due)
         const { data: invoice, error: fetchError } = await supabase
             .from('invoices')
             .select('id, customer_id, status, grand_total, loyalty_points_earned')
@@ -439,45 +422,20 @@ export async function updateInvoiceStatusAction(invoiceId: string, shopId: strin
         const pointsEarned = invoice.loyalty_points_earned || 0;
         const customerId = invoice.customer_id;
 
-        // 2. Loyalty Logic
-        // Only adjust if there are points and a customer
         if (customerId && pointsEarned > 0) {
             if (newStatus === 'due' && invoice.status === 'paid') {
-                // Changing Paid -> Due: Deduct points
-                // We use RPC or raw SQL to decrement safely
-                const { error: deductError } = await supabase.rpc('decrement_loyalty_points', {
+                await supabase.rpc('decrement_loyalty_points', {
                     p_customer_id: customerId,
                     p_points: pointsEarned
                 });
-
-                // Fallback to manual update if RPC missing (less safe but works for now)
-                if (deductError) {
-                    const { data: cust } = await supabase.from('customers').select('loyalty_points').eq('id', customerId).single();
-                    if (cust) {
-                        await supabase.from('customers')
-                            .update({ loyalty_points: Math.max(0, (cust.loyalty_points || 0) - pointsEarned) })
-                            .eq('id', customerId);
-                    }
-                }
-
             } else if (newStatus === 'paid' && invoice.status === 'due') {
-                // Changing Due -> Paid: Add points
-                const { error: addError } = await supabase.rpc('increment_loyalty_points', {
+                await supabase.rpc('increment_loyalty_points', {
                     p_customer_id: customerId,
                     p_points: pointsEarned
                 });
-                if (addError) {
-                    const { data: cust } = await supabase.from('customers').select('loyalty_points').eq('id', customerId).single();
-                    if (cust) {
-                        await supabase.from('customers')
-                            .update({ loyalty_points: (cust.loyalty_points || 0) + pointsEarned })
-                            .eq('id', customerId);
-                    }
-                }
             }
         }
 
-        // 3. Update Status
         const { error: updateError } = await supabase
             .from('invoices')
             .update({ status: newStatus })
@@ -495,3 +453,8 @@ export async function updateInvoiceStatusAction(invoiceId: string, shopId: strin
         return { success: false, error: error.message || 'Failed to update status' };
     }
 }
+
+export async function cancelInvoiceAction(invoiceId: string, shopId: string) {
+    return updateInvoiceStatusAction(invoiceId, shopId, 'cancelled');
+}
+

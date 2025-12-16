@@ -333,10 +333,22 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           cgst: settings?.cgstRate || 1.5,
           loyaltyPointsRedeemed: data.pointsToRedeem,
           loyaltyDiscountAmount: totals.loyaltyDiscount,
-          items: data.items.map(item => ({
-            ...item,
-            id: item.id || crypto.randomUUID()
-          }))
+          items: data.items.map(item => {
+            // FIX: Ensure making amount is sent if not explicitly set (Legacy/Simple Mode)
+            // If item.making is 0 but we have a makingRate, calculate it.
+            const makingRate = Number(item.makingRate) || 0;
+            const netWeight = Number(item.netWeight) || 0;
+            const calculatedMaking = makingRate * netWeight;
+
+            return {
+              ...item,
+              id: item.id || crypto.randomUUID(),
+              // Use explicit 'making' if > 0, else use calculated. 
+              // This fixes the bug where 'rate' based making was ignored by backend.
+              making: Number(item.making) > 0 ? Number(item.making) : calculatedMaking,
+              total: (netWeight * Number(item.rate)) + (Number(item.making) > 0 ? Number(item.making) : calculatedMaking) + (Number(item.stoneAmount) || 0)
+            };
+          })
         };
 
         let result;

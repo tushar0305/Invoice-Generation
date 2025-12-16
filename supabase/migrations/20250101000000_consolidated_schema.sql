@@ -20,6 +20,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'subscription_plan') THEN
         CREATE TYPE subscription_plan AS ENUM ('free', 'pro', 'enterprise');
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'notification_type') THEN
+        CREATE TYPE notification_type AS ENUM ('info', 'success', 'warning', 'error', 'order', 'payment');
+    END IF;
 END$$;
 
 -- 3. CORE TABLES
@@ -111,6 +114,8 @@ CREATE TABLE IF NOT EXISTS public.invoices (
     notes TEXT,
     created_by_name TEXT,
     created_by UUID REFERENCES auth.users(id),
+    loyalty_points_earned INTEGER DEFAULT 0,
+    loyalty_points_redeemed INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
     deleted_at TIMESTAMPTZ,
@@ -120,17 +125,22 @@ CREATE TABLE IF NOT EXISTS public.invoices (
 
 CREATE TABLE IF NOT EXISTS public.invoice_items (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
-    invoice_id UUID NOT NULL REFERENCES public.invoices(id),
+    invoice_id UUID NOT NULL REFERENCES public.invoices(id) ON DELETE CASCADE,
     description TEXT NOT NULL,
     purity TEXT,
     gross_weight NUMERIC(10,3) DEFAULT 0,
     net_weight NUMERIC(10,3) DEFAULT 0,
     rate NUMERIC(15,2) DEFAULT 0,
     making NUMERIC(15,2) DEFAULT 0,
+    making_rate NUMERIC(15,2) DEFAULT 0,
+    stone_weight NUMERIC(10,3) DEFAULT 0,
+    stone_amount NUMERIC(15,2) DEFAULT 0,
+    wastage_percent NUMERIC(5,2) DEFAULT 0,
+    metal_type TEXT,
     hsn_code TEXT,
     tag_id TEXT,
-    stock_id UUID REFERENCES inventory_items(id) ON DELETE SET NULL,
-    amount NUMERIC GENERATED ALWAYS AS ((net_weight * rate) + (net_weight * making)) STORED,
+    stock_id UUID, -- Circular ref resolved later or loose coupling
+    amount NUMERIC GENERATED ALWAYS AS ((net_weight * rate) + making + stone_amount) STORED,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -160,7 +170,6 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   purchase_cost DECIMAL(10,2),
   selling_price DECIMAL(10,2),
   status TEXT NOT NULL DEFAULT 'IN_STOCK' CHECK (status IN ('IN_STOCK', 'RESERVED', 'SOLD', 'EXCHANGED', 'LOANED', 'MELTED', 'DAMAGED')),
-  location TEXT DEFAULT 'SHOWCASE',
   reserved_for_customer_id UUID REFERENCES customers(id),
   reserved_until TIMESTAMPTZ,
   source_type TEXT NOT NULL DEFAULT 'VENDOR_PURCHASE' CHECK (source_type IN ('VENDOR_PURCHASE', 'CUSTOMER_EXCHANGE', 'MELT_REMAKE', 'GIFT_RECEIVED')),
@@ -174,6 +183,9 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   description TEXT,
   metadata JSONB DEFAULT '{}'::jsonb,
   internal_notes TEXT,
+  
+  deleted_at TIMESTAMPTZ DEFAULT NULL,
+
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   created_by UUID REFERENCES auth.users(id),
@@ -202,7 +214,7 @@ CREATE TABLE IF NOT EXISTS inventory_status_history (
   created_by UUID REFERENCES auth.users(id)
 );
 
--- Old Stock Table (Deprecated)
+-- Old Stock Table (Deprecated but kept for safety if needed, can likely be removed)
 CREATE TABLE IF NOT EXISTS public.stock_items (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     shop_id UUID NOT NULL REFERENCES public.shops(id),
@@ -294,13 +306,6 @@ CREATE TABLE IF NOT EXISTS public.market_rates (
 );
 
 -- 9. OTHER MODULES (Loyalty, Catalogue, WhatsApp, Loans, Subscriptions, Audit)
--- (Truncated for clean separation, but assume full schema is here)
--- Including tables: shop_loyalty_settings, customer_loyalty_logs, catalogue_settings, catalogue_analytics, catalogue_categories, catalogue_products
--- whatsapp_configs, whatsapp_templates, whatsapp_messages
--- loan_customers, loans, loan_collateral, loan_payments
--- subscriptions, audit_logs
-
--- [Placeholder for these tables - reusing same structure as provided in consolidated_schema.sql]
 
 CREATE TABLE IF NOT EXISTS public.shop_loyalty_settings (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -342,6 +347,18 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
     ip_address text,
     user_agent text,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- Notifications
+CREATE TABLE IF NOT EXISTS notifications (
+    id uuid default gen_random_uuid() primary key,
+    shop_id uuid references shops(id) on delete cascade not null,
+    type notification_type not null,
+    title text not null,
+    message text not null,
+    link text, -- Optional URL to redirect to
+    read boolean default false,
+    created_at timestamptz default now()
 );
 
 -- Catalogue Tables

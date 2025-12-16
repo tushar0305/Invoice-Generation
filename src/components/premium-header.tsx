@@ -13,7 +13,7 @@ import {
     Command
 } from 'lucide-react';
 import { GlobalSearch } from '@/components/global-search';
-import { NotificationCenter } from '@/components/notification-center';
+import { NotificationCenter } from '@/components/notifications/notification-center';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
