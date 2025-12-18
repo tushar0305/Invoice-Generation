@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-export function GoldSilverTicker({ initialData }: { initialData?: any }) {
+export function GoldSilverTicker({ initialData, shopId }: { initialData?: any; shopId: string }) {
     const [prices, setPrices] = useState({
         gold24k: { value: initialData?.gold_24k || 0, trend: 'up' },
         gold22k: { value: initialData?.gold_22k || 0, trend: 'up' },
@@ -34,6 +34,7 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
             const { data, error } = await supabase
                 .from('market_rates')
                 .select('*')
+                .eq('shop_id', shopId)
                 .order('updated_at', { ascending: false })
                 .limit(1)
                 .single();
@@ -83,6 +84,7 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
                         'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
                         'Content-Type': 'application/json',
                     },
+                    body: JSON.stringify({ shop_id: shopId })
                 }
             );
             const result = await response.json();
@@ -123,7 +125,12 @@ export function GoldSilverTicker({ initialData }: { initialData?: any }) {
         const channel = supabase
             .channel('market_rates_changes')
             .on('postgres_changes',
-                { event: '*', schema: 'public', table: 'market_rates' },
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'market_rates',
+                    filter: `shop_id=eq.${shopId}`
+                },
                 (payload) => {
                     if (payload.new) {
                         const newRate = payload.new as any;

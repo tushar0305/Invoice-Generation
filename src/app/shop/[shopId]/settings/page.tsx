@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { PaletteSwitcher } from '@/components/palette-switcher';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoyaltySettingsForm } from '@/components/loyalty-settings-form';
+import { RateManager } from '@/components/dashboard/rate-manager';
 
 
 const settingsFormSchema = z.object({
@@ -336,6 +337,7 @@ export default function SettingsPage() {
         <Tabs defaultValue="general" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="general">General Settings</TabsTrigger>
+            <TabsTrigger value="rates">Market Rates</TabsTrigger>
             <TabsTrigger value="loyalty">Loyalty Program</TabsTrigger>
             <TabsTrigger value="billing">Billing & Plans</TabsTrigger>
           </TabsList>
@@ -587,6 +589,14 @@ export default function SettingsPage() {
                   </fieldset>
                 </form>
               </Form>
+            )}
+          </TabsContent>
+
+          <TabsContent value="rates">
+            {activeShop ? (
+              <RateManager shopId={activeShop.id} />
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">Loading shop details...</div>
             )}
           </TabsContent>
 

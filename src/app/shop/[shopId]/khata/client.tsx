@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Plus, Search, TrendingUp, TrendingDown, Users, Wallet, Eye, Trash2, Edit, IndianRupee, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Plus, Search, TrendingUp, TrendingDown, Users, Wallet, Eye, Trash2, Edit, IndianRupee, ChevronLeft, ChevronRight, RefreshCw, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -367,66 +367,33 @@ export function KhataClient({
                     </div>
                 </CardHeader>
 
-                {/* Filters */}
-                <div className="p-4 md:p-6 space-y-4 border-b border-white/40 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-xl rounded-b-none rounded-t-2xl md:rounded-t-2xl">
-                    <div className="flex flex-col md:flex-row gap-4 justify-between">
-                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
-                            <button
-                                onClick={() => handleFilterChange('all')}
-                                className={cn(
-                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                    currentFilter === 'all'
-                                        ? 'bg-primary/20 text-primary border border-primary/50 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
-                                        : 'bg-white/70 dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-white/40 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:border-primary/50 backdrop-blur'
-                                )}
-                            >
-                                All
-                            </button>
-                            <button
-                                onClick={() => handleFilterChange('receivable')}
-                                className={cn(
-                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                    currentFilter === 'receivable'
-                                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                                        : 'bg-white/70 dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-white/40 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:border-primary/50 backdrop-blur'
-                                )}
-                            >
-                                Receivable
-                            </button>
-                            <button
-                                onClick={() => handleFilterChange('payable')}
-                                className={cn(
-                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                    currentFilter === 'payable'
-                                        ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-                                        : 'bg-white/70 dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-white/40 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:border-primary/50 backdrop-blur'
-                                )}
-                            >
-                                Payable
-                            </button>
-                            <button
-                                onClick={() => handleFilterChange('settled')}
-                                className={cn(
-                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                                    currentFilter === 'settled'
-                                        ? 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border border-gray-500/50 shadow-[0_0_15px_rgba(107,114,128,0.3)]'
-                                        : 'bg-white/70 dark:bg-white/5 text-muted-foreground dark:text-gray-400 border border-white/40 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:border-primary/50 backdrop-blur'
-                                )}
-                            >
-                                Settled
-                            </button>
-                        </div>
-
-                        <div className="flex items-center gap-2 w-full md:w-auto">
-                            <div className="relative flex-1 md:flex-none md:w-64">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                {/* Sticky Header Section */}
+                <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md pb-2 -mx-4 px-4 md:mx-0 md:px-0 border-b border-border/40 transition-all duration-300">
+                    <div className="flex flex-col gap-3 pt-2 pb-2">
+                        {/* Search and Main Actions */}
+                        <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
                                 <Input
-                                    placeholder="Search customers..."
-                                    className="pl-9 h-10 bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-gray-500 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all duration-300"
+                                    placeholder="Search by name or phone..."
+                                    className="pl-9 h-11 bg-white dark:bg-white/5 border-2 border-gray-200 dark:border-white/10 focus:border-primary rounded-xl transition-all shadow-sm w-full"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
+                                {searchTerm && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 z-10 hover:bg-transparent text-muted-foreground hover:text-foreground"
+                                        onClick={() => setSearchTerm('')}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                )}
                             </div>
+
+                            {/* Refresh Button */}
                             <Button
                                 variant="outline"
                                 size="icon"
@@ -435,11 +402,35 @@ export function KhataClient({
                                         router.refresh();
                                     });
                                 }}
-                                className="h-10 w-10 border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10"
-                                title="Refresh Data"
+                                className="shrink-0 h-11 w-11 rounded-xl bg-white dark:bg-white/5 border-2 border-gray-200 dark:border-white/10 hover:border-primary hover:bg-gray-50 dark:hover:bg-white/10"
                             >
-                                <RefreshCw className={cn("h-4 w-4", isPending ? "animate-spin" : "")} />
+                                <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
                             </Button>
+
+                            {/* Add Button (Mobile Only shortcut?) - kept in main card header usually, but good here too */}
+                        </div>
+
+                        {/* Scrollable Filter Pills */}
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                            {[
+                                { id: 'all', label: 'All Customers' },
+                                { id: 'receivable', label: 'Receivable', color: 'emerald' },
+                                { id: 'payable', label: 'Payable', color: 'red' },
+                                { id: 'settled', label: 'Settled', color: 'gray' }
+                            ].map((filter) => (
+                                <button
+                                    key={filter.id}
+                                    onClick={() => handleFilterChange(filter.id)}
+                                    className={cn(
+                                        "px-4 py-2 rounded-full text-xs font-medium transition-all whitespace-nowrap border h-9 flex items-center shadow-sm",
+                                        currentFilter === filter.id
+                                            ? `bg-${filter.color || 'primary'}-50 dark:bg-${filter.color || 'primary'}-900/20 border-${filter.color || 'primary'}-200 dark:border-${filter.color || 'primary'}-800 text-${filter.color || 'primary'}-700 dark:text-${filter.color || 'primary'}-300 ring-2 ring-${filter.color || 'primary'}-500/20`
+                                            : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-muted-foreground hover:bg-gray-50 dark:hover:bg-white/10"
+                                    )}
+                                >
+                                    {filter.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>

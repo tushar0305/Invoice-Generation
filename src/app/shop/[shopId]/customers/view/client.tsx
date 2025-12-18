@@ -15,12 +15,7 @@ import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Invoice } from '@/lib/definitions';
 import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
+    // Breadcrumb imports removed
 } from '@/components/ui/breadcrumb';
 import { EnrollmentModal } from '@/components/schemes/enrollment-modal';
 
@@ -130,25 +125,7 @@ export function CustomerDetailsClient() {
     return (
         <MotionWrapper className="space-y-6">
             {/* Breadcrumb Navigation */}
-            <Breadcrumb className="hidden md:block">
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink onClick={() => router.push('/dashboard')}>
-                            Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink onClick={() => router.push('/dashboard/customers')}>
-                            Customers
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbPage>{customerName}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+
 
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">

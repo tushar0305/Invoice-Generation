@@ -28,10 +28,10 @@ export default async function CustomersPage({
     const { shopId } = await params;
     const supabase = await createClient();
 
-    // ✅ Server-side data fetching from CUSTOMERS table
+    // ✅ Server-side data fetching from CUSTOMERS table with invoice count
     const { data: customers, error } = await supabase
         .from('customers')
-        .select('*')
+        .select('*, invoices(count)')
         .eq('shop_id', shopId)
         .order('created_at', { ascending: false });
 
@@ -39,10 +39,11 @@ export default async function CustomersPage({
     const customerData: Record<string, CustomerStats> = {};
 
     if (customers) {
-        for (const customer of customers) {
+        for (const customer of (customers as any[])) {
             customerData[customer.name] = {
                 totalPurchase: Number(customer.total_spent) || 0,
-                invoiceCount: 0, // We could do a join count if needed, or just leave as is for now
+                // Invoice count from relation or fallback to 0
+                invoiceCount: customer.invoices?.[0]?.count || 0,
                 lastPurchase: customer.updated_at || new Date().toISOString(),
                 phone: customer.phone,
                 email: customer.email,

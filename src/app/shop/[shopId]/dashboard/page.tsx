@@ -51,7 +51,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
 
   const [stats, marketRates, additionalStats] = await Promise.all([
     getDashboardData(shopId),
-    getMarketRates(),
+    getMarketRates(shopId),
     getAdditionalStats(shopId)
   ]);
 
@@ -107,7 +107,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
 
         {/* Ticker Section - Full Width, below floating buttons on mobile */}
         <div className="w-full pb-1">
-          <GoldSilverTicker initialData={marketRates} />
+          <GoldSilverTicker initialData={marketRates} shopId={shopId} />
         </div>
 
         {/* Hero Section */}

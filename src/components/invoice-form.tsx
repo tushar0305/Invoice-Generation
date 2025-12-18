@@ -434,6 +434,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                             <FormControl>
                               <Input
                                 type="date"
+                                className="w-auto"
                                 value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
                                 onChange={(e) => field.onChange(new Date(e.target.value))}
                               />
@@ -466,24 +467,6 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                         )}
                       />
                       {/* Global Current Rate (₹/g) */}
-                      <FormField
-                        control={form.control}
-                        name="currentRate"
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Current Rate (₹/g)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                value={field.value}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                placeholder="Enter gold/silver rate per gram"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                     </CardContent>
                   </Card>
 

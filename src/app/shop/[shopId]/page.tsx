@@ -220,7 +220,7 @@ export default function DashboardPage() {
       />
 
       {/* Gold & Silver Ticker */}
-      <GoldSilverTicker />
+      {activeShop?.id && <GoldSilverTicker shopId={activeShop.id} />}
 
       {/* Quick Actions Grid */}
       <MotionWrapper className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">

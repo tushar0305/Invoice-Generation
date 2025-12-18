@@ -88,109 +88,113 @@ export function LoansDashboardClient({
                                 Track active gold loans, manage interest collections, and monitor overdue accounts.
                             </p>
                         </div>
-                        <Button
-                            onClick={() => router.push(`/shop/${shopId}/loans/new`)}
-                            className="bg-[#D4AF37] hover:bg-[#b5952f] text-white shadow-lg shadow-amber-500/20 h-11 px-6 gap-2 transition-all hover:scale-105"
-                        >
-                            <Plus className="h-4 w-4" />
-                            New Loan / Girvi
-                        </Button>
                     </div>
+                </div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-                        {/* Active Loans */}
-                        <Card className="border border-border shadow-sm bg-card relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <FileText className="h-16 w-16 text-[#D4AF37]" />
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                    {/* Active Loans */}
+                    <Card className="border border-border shadow-sm bg-card relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <FileText className="h-16 w-16 text-[#D4AF37]" />
+                        </div>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Active Loans</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total_active_loans}</div>
+                            <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                <span>Currently running properties</span>
                             </div>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Active Loans</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total_active_loans}</div>
-                                <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    <span>Currently running properties</span>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        </CardContent>
+                    </Card>
 
-                        {/* Principal Disbursed */}
-                        <Card className="border border-border shadow-sm bg-card relative overflow-hidden">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-[#b5952f] dark:text-[#D4AF37]">Active Principal</CardTitle>
-                                <Banknote className="h-4 w-4 text-[#D4AF37]" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-[#b5952f] dark:text-[#D4AF37]">
-                                    {formatCurrency(stats.total_principal_disbursed)}
-                                </div>
-                                <p className="text-xs text-[#b5952f]/70 dark:text-[#D4AF37]/70 mt-1">
-                                    Total amount in market
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        {/* Interest Earned */}
-                        <Card className="border border-border shadow-sm bg-card relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <TrendingUp className="h-16 w-16 text-emerald-500" />
+                    {/* Principal Disbursed */}
+                    <Card className="border border-border shadow-sm bg-card relative overflow-hidden">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-[#b5952f] dark:text-[#D4AF37]">Active Principal</CardTitle>
+                            <Banknote className="h-4 w-4 text-[#D4AF37]" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-[#b5952f] dark:text-[#D4AF37]">
+                                {formatCurrency(stats.total_principal_disbursed)}
                             </div>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Interest Earned</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                                    {formatCurrency(stats.total_interest_earned)}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Total interest resolved
-                                </p>
-                            </CardContent>
-                        </Card>
+                            <p className="text-xs text-[#b5952f]/70 dark:text-[#D4AF37]/70 mt-1">
+                                Total amount in market
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                        {/* Overdue */}
-                        <Card className={cn(
-                            "border border-border shadow-sm relative overflow-hidden group transition-all",
-                            stats.total_overdue_loans > 0 ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50" : "bg-card"
-                        )}>
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <AlertCircle className="h-16 w-16 text-red-500" />
+                    {/* Interest Earned */}
+                    <Card className="border border-border shadow-sm bg-card relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <TrendingUp className="h-16 w-16 text-emerald-500" />
+                        </div>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Interest Earned</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                {formatCurrency(stats.total_interest_earned)}
                             </div>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Overdue Accounts</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className={cn("text-2xl font-bold", stats.total_overdue_loans > 0 ? "text-red-600 dark:text-red-400" : "text-foreground")}>
-                                    {stats.total_overdue_loans}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Loans passed due date
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Total interest resolved
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Overdue */}
+                    <Card className={cn(
+                        "border border-border shadow-sm relative overflow-hidden group transition-all",
+                        stats.total_overdue_loans > 0 ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50" : "bg-card"
+                    )}>
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <AlertCircle className="h-16 w-16 text-red-500" />
+                        </div>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Overdue Accounts</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className={cn("text-2xl font-bold", stats.total_overdue_loans > 0 ? "text-red-600 dark:text-red-400" : "text-foreground")}>
+                                {stats.total_overdue_loans}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Loans passed due date
+                            </p>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
 
+
             {/* Main Content Area */}
             <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
-                <Card className="border border-border shadow-sm bg-card">
-                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                        <div className="relative w-full sm:w-72">
+                {/* Sticky Header */}
+                <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 pt-2 -mx-4 px-4 md:-mx-8 md:px-8 transition-all duration-200 border-b border-border/40 md:border-none mb-4 md:mb-0">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search by name, phone or loan #"
+                                placeholder="Search by name, phone or loan #..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9 border-gray-200 dark:border-gray-700 focus:ring-[#D4AF37] focus:border-[#D4AF37]"
+                                className="pl-9 h-11 rounded-xl bg-card border-border/80 focus:ring-[#D4AF37] focus:border-[#D4AF37] transition-all shadow-sm"
                             />
                         </div>
-                        <div className="flex gap-2">
-                            {/* Future: Add Date Range Filter */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                                onClick={() => router.push(`/shop/${shopId}/loans/new`)}
+                                className="bg-[#D4AF37] hover:bg-[#b5952f] text-white shadow-lg shadow-amber-500/20 h-11 px-6 gap-2 transition-all rounded-xl w-full sm:w-auto"
+                            >
+                                <Plus className="h-4 w-4" />
+                                New Loan / Girvi
+                            </Button>
                         </div>
                     </div>
+                </div>
+
+                <Card className="border border-border shadow-sm bg-card">
 
                     <div className="p-0">
                         {/* Mobile View - Cards */}
@@ -270,11 +274,30 @@ export function LoansDashboardClient({
                                     )}
                                 </div>
                             ))}
-                            {filteredLoans.length === 0 && (
-                                <div className="p-8 text-center text-muted-foreground">
-                                    No loans found matching your search.
+                            {loans.length === 0 ? (
+                                <div className="p-12 text-center flex flex-col items-center justify-center">
+                                    <div className="h-16 w-16 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-4">
+                                        <Coins className="h-8 w-8 text-[#D4AF37]" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-foreground mb-2">No loans created yet</h3>
+                                    <p className="text-muted-foreground text-sm max-w-xs mb-6">
+                                        Get started by creating your first gold loan or girvi entry.
+                                    </p>
+                                    <Button
+                                        onClick={() => router.push(`/shop/${shopId}/loans/new`)}
+                                        className="bg-[#D4AF37] hover:bg-[#b5952f] text-white rounded-xl gap-2 pl-4 pr-5"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Create New Loan
+                                    </Button>
                                 </div>
-                            )}
+                            ) : filteredLoans.length === 0 ? (
+                                <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
+                                    <Search className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                                    <p className="font-medium">No active loans found</p>
+                                    <p className="text-sm">Try adjusting your search terms.</p>
+                                </div>
+                            ) : null}
                         </div>
 
                         {/* Desktop View - Table */}
@@ -337,5 +360,6 @@ export function LoansDashboardClient({
                 </Card>
             </div>
         </div>
+
     );
 }

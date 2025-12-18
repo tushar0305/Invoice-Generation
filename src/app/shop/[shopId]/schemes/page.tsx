@@ -94,18 +94,12 @@ export default function SchemesPage() {
     return (
         <div className="min-h-screen pb-20 md:pb-8 space-y-6 md:space-y-8 max-w-7xl mx-auto p-4 md:p-8">
 
-            {/* Header with Breadcrumb and Actions */}
+            {/* Header with Breadcrumb */}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Gold Schemes</h1>
                     <p className="text-muted-foreground text-sm md:text-base mt-1">Manage your saving plans and portfolio.</p>
                 </div>
-                <Link href={`/shop/${shopId}/schemes/create`}>
-                    <Button className="w-full md:w-auto h-10 gap-2 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
-                        <Plus className="w-4 h-4" />
-                        New Scheme
-                    </Button>
-                </Link>
             </div>
 
             {/* Financial Overview Cards */}
@@ -160,36 +154,48 @@ export default function SchemesPage() {
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {/* Search & Filter Bar */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search schemes..."
-                                className="pl-9 h-10 rounded-xl bg-card border-border/80"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex items-center gap-2 bg-card p-1 rounded-xl border border-border/80 w-max self-start md:self-auto">
-                            <button
-                                onClick={() => setShowInactive(false)}
-                                className={cn(
-                                    "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
-                                    !showInactive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
-                                )}
-                            >
-                                Active
-                            </button>
-                            <button
-                                onClick={() => setShowInactive(true)}
-                                className={cn(
-                                    "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
-                                    showInactive ? "bg-slate-100 dark:bg-muted text-foreground" : "text-muted-foreground hover:bg-muted"
-                                )}
-                            >
-                                All Status
-                            </button>
+                    {/* Sticky Header: Search & Actions */}
+                    <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 pt-2 -mx-4 px-4 md:-mx-8 md:px-8 transition-all duration-200 border-b border-border/40 md:border-none mb-4 md:mb-0">
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search schemes..."
+                                    className="pl-9 h-11 rounded-xl bg-card border-border/80 focus:ring-primary/20 transition-all shadow-sm"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+                                <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50 h-11">
+                                    <button
+                                        onClick={() => setShowInactive(false)}
+                                        className={cn(
+                                            "px-4 h-full text-sm font-medium rounded-lg transition-all flex items-center gap-2",
+                                            !showInactive ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:bg-muted"
+                                        )}
+                                    >
+                                        <div className={cn("w-2 h-2 rounded-full", !showInactive ? "bg-primary" : "bg-transparent")} />
+                                        Active
+                                    </button>
+                                    <button
+                                        onClick={() => setShowInactive(true)}
+                                        className={cn(
+                                            "px-4 h-full text-sm font-medium rounded-lg transition-all",
+                                            showInactive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
+                                        )}
+                                    >
+                                        All
+                                    </button>
+                                </div>
+
+                                <Link href={`/shop/${shopId}/schemes/create`}>
+                                    <Button className="h-11 rounded-xl gap-2 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
+                                        <Plus className="w-4 h-4" />
+                                        <span className="hidden sm:inline">New Scheme</span>
+                                    </Button>
+                                </Link>
+                            </div>
                         </div>
                     </div>
 

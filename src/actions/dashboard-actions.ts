@@ -141,15 +141,16 @@ const fetchDashboardDataCached = cache(async (shopId: string) => {
 // Export cached function - React's cache() deduplicates within same request
 export const getDashboardData = fetchDashboardDataCached;
 
-// Market rates don't need cookies - can use simple caching
-// Using a simple in-memory cache with timestamp
-let marketRatesCache: { data: any; timestamp: number } | null = null;
-const MARKET_RATES_TTL = 60 * 60 * 1000; // 1 hour (PERF-003: rates change daily, not per-minute)
+// Market rates cache per shop
+const marketRatesCache: Record<string, { data: any; timestamp: number }> = {};
+const MARKET_RATES_TTL = 60 * 60 * 1000; // 1 hour
 
-export async function getMarketRates() {
+export async function getMarketRates(shopId: string) {
     const now = Date.now();
-    if (marketRatesCache && (now - marketRatesCache.timestamp) < MARKET_RATES_TTL) {
-        return marketRatesCache.data;
+    const cached = marketRatesCache[shopId];
+
+    if (cached && (now - cached.timestamp) < MARKET_RATES_TTL) {
+        return cached.data;
     }
 
     // Try to fetch from DB first
@@ -158,6 +159,7 @@ export async function getMarketRates() {
         const { data: dbData, error } = await supabase
             .from('market_rates')
             .select('*')
+            .eq('shop_id', shopId)
             .order('updated_at', { ascending: false })
             .limit(1)
             .single();
@@ -169,7 +171,7 @@ export async function getMarketRates() {
                 silver: Number(dbData.silver),
                 updated_at: dbData.updated_at,
             };
-            marketRatesCache = { data: rates, timestamp: now };
+            marketRatesCache[shopId] = { data: rates, timestamp: now };
             return rates;
         }
     } catch (err) {
@@ -184,7 +186,7 @@ export async function getMarketRates() {
         updated_at: new Date().toISOString(),
     };
 
-    marketRatesCache = { data, timestamp: now };
+    marketRatesCache[shopId] = { data, timestamp: now };
     return data;
 }
 

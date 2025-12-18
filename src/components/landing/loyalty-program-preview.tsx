@@ -22,12 +22,16 @@ export function LoyaltyProgramPreview() {
             ]);
             setShowCoupon(false);
 
-            while (true) {
+            let mounted = true;
+            while (mounted) {
                 // 1. Initial wait
+                if (!mounted) break;
                 await cursorControls.start({ x: 0, y: 0, opacity: 0, transition: { duration: 0 } });
                 await new Promise(r => setTimeout(r, 1500));
 
-                // 2. Simulate "New Purchase" event (Points Increase + New Activity)
+                if (!mounted) break;
+
+                // 2. Simulate "New Purchase" event
                 setPoints(prev => prev + 500);
                 setRecentActivity(prev => [
                     { type: 'earn', label: 'Big Purchase', detail: 'Diamond Necklace', points: '+500', color: 'green' },
@@ -35,17 +39,23 @@ export function LoyaltyProgramPreview() {
                 ]);
                 await new Promise(r => setTimeout(r, 1000));
 
+                if (!mounted) break;
+
                 // 3. Cursor moves to "Redeem" button
                 await cursorControls.start({ opacity: 1, transition: { duration: 0.5 } });
                 await cursorControls.start({ x: 380, y: 160, transition: { duration: 1.5, ease: "easeInOut" } });
+
+                if (!mounted) break;
 
                 // 4. Click "Redeem"
                 await cursorControls.start({ scale: 0.9, transition: { duration: 0.1 } });
                 if (window.navigator.vibrate) window.navigator.vibrate(20);
                 await cursorControls.start({ scale: 1, transition: { duration: 0.1 } });
 
+                if (!mounted) break;
+
                 setShowCoupon(true);
-                setPoints(prev => prev - 500); // Deduct points
+                setPoints(prev => prev - 500);
                 setRecentActivity(prev => [
                     { type: 'redeem', label: 'Points Redeemed', detail: 'Gold Coin Coupon', points: '-500', color: 'rose' },
                     ...prev
@@ -53,17 +63,22 @@ export function LoyaltyProgramPreview() {
 
                 await new Promise(r => setTimeout(r, 2000));
 
-                // 5. Reset loop (fade cursor, wait, then logic resets at top of loop)
+                if (!mounted) break;
+
+                // 5. Reset loop
                 await cursorControls.start({ opacity: 0, transition: { duration: 0.5 } });
                 await new Promise(r => setTimeout(r, 2000));
 
-                // Reset State for loop
+                if (!mounted) break;
+
+                // Reset State
                 setPoints(2450);
                 setRecentActivity([
                     { type: 'earn', label: 'Purchase Reward', detail: '22k Gold Ring - 12g', points: '+250', color: 'green' }
                 ]);
                 setShowCoupon(false);
             }
+            return () => { mounted = false; };
         };
 
         sequence();

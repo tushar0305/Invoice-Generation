@@ -159,6 +159,39 @@ export const POST = withAuth(async (
             documents: input.documents.length
         });
 
+        // 7. Ledger Integration (Khata)
+        // Try to find the main customer ID using the phone number from the loan customer
+        const { data: loanCustomer } = await supabase
+            .from('loan_customers')
+            .select('phone')
+            .eq('id', input.customerId)
+            .single();
+
+        if (loanCustomer?.phone) {
+            const { data: mainCustomer } = await supabase
+                .from('customers')
+                .select('id')
+                .eq('shop_id', input.shopId)
+                .eq('phone', loanCustomer.phone)
+                .limit(1)
+                .maybeSingle();
+
+            if (mainCustomer) {
+                // Add DEBIT (Loan Given) to Ledger
+                await supabase.from('ledger_transactions').insert({
+                    shop_id: input.shopId,
+                    customer_id: mainCustomer.id,
+                    transaction_type: 'INVOICE', // Using 'INVOICE' type for general debt, or add 'LOAN' enum if possible. But 'INVOICE' works for now as "Debt Created"
+                    amount: input.principalAmount,
+                    entry_type: 'DEBIT',
+                    description: `Loan Disbursed #${loan.loan_number} (Principal)`,
+                    created_by: user.id
+                });
+
+                // Update customer total spent/stats if needed. (Optional for loans, but good for keeping track of activity)
+            }
+        }
+
         // 7. Revalidate
         revalidatePath(`/shop/${input.shopId}/loans`);
         revalidatePath(`/shop/${input.shopId}/dashboard`);

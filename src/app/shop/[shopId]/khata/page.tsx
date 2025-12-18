@@ -79,7 +79,8 @@ export default async function KhataPage({ params, searchParams }: PageProps) {
     let query = supabase
         .from('customer_balances_view')
         .select('*', { count: 'exact' })
-        .eq('shop_id', shopId);
+        .eq('shop_id', shopId)
+        .gt('transaction_count', 0); // Filter out customers with no ledger usage (Cash & Carry)
 
     if (search) {
         query = query.ilike('name', `%${search}%`);
