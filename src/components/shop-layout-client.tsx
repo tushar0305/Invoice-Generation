@@ -71,7 +71,6 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { CommandPalette } from '@/components/command-palette';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
-import { PageTransition } from '@/components/page-transition';
 import { PremiumHeader } from '@/components/premium-header';
 import { NotificationCenter } from '@/components/notifications/notification-center';
 import type { Shop, UserShopRole, Permission } from '@/lib/definitions';

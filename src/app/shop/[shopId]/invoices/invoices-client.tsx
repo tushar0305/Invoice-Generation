@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/table';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { deleteInvoiceAction, updateInvoiceStatusAction } from '@/app/actions/invoice-actions';
-import { haptics, ImpactStyle, NotificationType } from '@/lib/haptics';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -211,7 +210,6 @@ export function InvoicesClient({
             // Server re-fetch
             router.refresh();
 
-            haptics.notification(NotificationType.Success);
             toast({
                 title: 'Success',
                 description: `Invoice marked as ${newStatus}`
@@ -248,7 +246,6 @@ export function InvoicesClient({
             // The optimistic UI handles the immediate display
             router.refresh();
 
-            haptics.impact(ImpactStyle.Light);
             setLastRefreshed(new Date());
             toast({
                 title: 'Refreshed!',
@@ -721,7 +718,6 @@ export function InvoicesClient({
                                         <DropdownMenuItem
                                             key={status}
                                             onClick={() => {
-                                                haptics.impact(ImpactStyle.Light);
                                                 setStatusFilter(status);
                                                 router.push(`/shop/${shopId}/invoices?status=${status}`);
                                             }}
@@ -780,9 +776,9 @@ export function InvoicesClient({
                                 <>
                                     <div className="border-t border-gray-200 dark:border-white/10 my-1"></div>
                                     <div className="px-2 py-2">
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
                                             className="w-full text-xs text-muted-foreground hover:text-foreground"
                                             onClick={() => setDateRange(undefined)}
                                         >

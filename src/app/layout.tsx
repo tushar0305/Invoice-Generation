@@ -8,7 +8,6 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AppListeners } from '@/components/app-listeners';
 import { InstallPrompt } from '@/components/install-prompt';
 import { UpdatePrompt } from '@/components/update-prompt';
-import { PageTransition } from '@/components/page-transition';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://swarnavyapar.in'),
@@ -139,7 +138,6 @@ export default function RootLayout({
               <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
                 {/* Global listeners: analytics + heatmap */}
                 <AppListeners />
-                <PageTransition />
                 {children}
                 <InstallPrompt />
                 <UpdatePrompt />

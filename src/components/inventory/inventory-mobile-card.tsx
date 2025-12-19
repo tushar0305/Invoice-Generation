@@ -5,7 +5,6 @@ import { motion, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Trash2, Check, QrCode, Scale, Eye } from 'lucide-react';
-import { haptics, ImpactStyle, NotificationType } from '@/lib/haptics';
 import { useState } from 'react';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { InventoryItem } from '@/lib/inventory-types';
@@ -37,11 +36,9 @@ export function InventoryMobileCard({ item, shopId, onDelete, onMarkSold }: Inve
         setIsDragging(false);
         if (info.offset.x > 100 && onDelete) {
             // Swipe Right -> Delete
-            haptics.notification(NotificationType.Warning);
             onDelete(item.id);
         } else if (info.offset.x < -100 && onMarkSold && item.status === 'IN_STOCK') {
             // Swipe Left -> Mark as Sold
-            haptics.notification(NotificationType.Success);
             onMarkSold(item.id);
         }
     };

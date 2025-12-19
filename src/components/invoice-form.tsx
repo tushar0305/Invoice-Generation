@@ -289,7 +289,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
       });
     });
 
-    // UX-004: Haptic feedback on successful scan
+    // UX-004: Feedback on successful scan
     if ('vibrate' in navigator) {
       navigator.vibrate([50, 30, 50]); // Short success pattern
     }

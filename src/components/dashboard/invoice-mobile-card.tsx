@@ -6,8 +6,6 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Download, Trash2, Share2, CheckCircle, RefreshCw, Check, Printer } from 'lucide-react';
-import { haptics } from '@/lib/haptics';
-import { ImpactStyle, NotificationType } from '@/lib/haptics';
 import { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
@@ -48,7 +46,6 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
 
     const handleTouchStart = () => {
         timerRef.current = setTimeout(() => {
-            haptics.impact(ImpactStyle.Medium);
             onShare(invoice.id);
         }, 800); // 800ms long press
     };
@@ -64,11 +61,9 @@ export function InvoiceMobileCard({ invoice, onView, onDelete, onDownload, onSha
         setIsDragging(false);
         if (info.offset.x > 100) {
             // Swipe Right -> Delete
-            haptics.notification(NotificationType.Warning);
             onDelete(invoice.id);
         } else if (info.offset.x < -100) {
             // Swipe Left -> Toggle Status
-            haptics.notification(NotificationType.Success);
             onMarkPaid(invoice.id);
         }
     };

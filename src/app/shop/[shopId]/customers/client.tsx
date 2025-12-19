@@ -23,7 +23,6 @@ import { formatCurrency } from '@/lib/utils';
 import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { haptics } from '@/lib/haptics';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
     Dialog,
@@ -331,155 +330,153 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                {paginatedCustomers.length > 0 ? (
-                                    paginatedCustomers
-                                        .map(([name, stats]) => (
-                                            <TableRow
-                                                key={name}
-                                                className="hover:bg-muted/50 cursor-pointer transition-colors"
-                                                onClick={() => {
-                                                    haptics.selection();
-                                                    router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(name)}`);
-                                                }}
-                                            >
-                                                <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar className="h-10 w-10 border border-border">
-                                                            <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                                                                {getInitials(name)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <span className="font-medium truncate max-w-[180px] md:max-w-[250px]">{name}</span>
-                                                    </div>
+                                        {paginatedCustomers.length > 0 ? (
+                                            paginatedCustomers
+                                                .map(([name, stats]) => (
+                                                    <TableRow
+                                                        key={name}
+                                                        className="hover:bg-muted/50 cursor-pointer transition-colors"
+                                                        onClick={() => {
+                                                            router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(name)}`);
+                                                        }}
+                                                    >
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="h-10 w-10 border border-border">
+                                                                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                                                                        {getInitials(name)}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="font-medium truncate max-w-[180px] md:max-w-[250px]">{name}</span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <Badge variant="secondary" className="font-normal">
+                                                                {stats.invoiceCount}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-muted-foreground">
+                                                            {new Date(stats.lastPurchase).toLocaleDateString('en-IN', {
+                                                                day: 'numeric',
+                                                                month: 'short',
+                                                                year: 'numeric'
+                                                            })}
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-bold text-primary">
+                                                            {formatCurrency(stats.totalPurchase)}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="h-96 text-center">
+                                                    <EmptyState
+                                                        icon={Users}
+                                                        title="No customers found"
+                                                        description={
+                                                            searchTerm
+                                                                ? "Try adjusting your search terms."
+                                                                : "Your customer list is empty."
+                                                        }
+                                                        action={
+                                                            searchTerm
+                                                                ? { label: 'Clear search', onClick: () => setSearchTerm('') }
+                                                                : undefined
+                                                        }
+                                                    />
                                                 </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant="secondary" className="font-normal">
-                                                        {stats.invoiceCount}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground">
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Pagination Controls for Desktop */}
+                            {filteredCustomers.length > itemsPerPage && (
+                                <div className="flex items-center justify-between border-t-2 border-gray-300 dark:border-white/20 pt-4 px-4 pb-4">
+                                    <div className="text-sm text-muted-foreground">
+                                        Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} customers
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                        >
+                                            Previous
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Mobile View - Separate scrollable cards */}
+                <div className="md:hidden space-y-3">
+                    {paginatedCustomers.length > 0 ? (
+                        paginatedCustomers
+                            .map(([name, stats]) => (
+                                <div
+                                    key={name}
+                                    onClick={() => {
+                                        router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(name)}`);
+                                    }}
+                                    className="flex flex-col gap-3 p-5 border-2 border-gray-300 dark:border-white/20 rounded-2xl bg-card shadow-lg active:shadow-xl active:scale-[0.98] transition-all touch-manipulation"
+                                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                                >
+                                    <div className="flex justify-between items-start w-full">
+                                        <div className="flex-1 min-w-0 pr-4">
+                                            <h3 className="font-bold text-lg text-foreground truncate leading-tight">{name}</h3>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
+                                                <Calendar className="h-3.5 w-3.5" />
+                                                <span>
                                                     {new Date(stats.lastPurchase).toLocaleDateString('en-IN', {
                                                         day: 'numeric',
                                                         month: 'short',
                                                         year: 'numeric'
                                                     })}
-                                                </TableCell>
-                                                <TableCell className="text-right font-bold text-primary">
-                                                    {formatCurrency(stats.totalPurchase)}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="h-96 text-center">
-                                            <EmptyState
-                                                icon={Users}
-                                                title="No customers found"
-                                                description={
-                                                    searchTerm
-                                                        ? "Try adjusting your search terms."
-                                                        : "Your customer list is empty."
-                                                }
-                                                action={
-                                                    searchTerm
-                                                        ? { label: 'Clear search', onClick: () => setSearchTerm('') }
-                                                        : undefined
-                                                }
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-
-                    {/* Pagination Controls for Desktop */}
-                    {filteredCustomers.length > itemsPerPage && (
-                        <div className="flex items-center justify-between border-t-2 border-gray-300 dark:border-white/20 pt-4 px-4 pb-4">
-                            <div className="text-sm text-muted-foreground">
-                                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} customers
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                >
-                                    Previous
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                >
-                                    Next
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-
-        {/* Mobile View - Separate scrollable cards */}
-        <div className="md:hidden space-y-3">
-                        {paginatedCustomers.length > 0 ? (
-                            paginatedCustomers
-                                .map(([name, stats]) => (
-                                    <div
-                                        key={name}
-                                        onClick={() => {
-                                            haptics.selection();
-                                            router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(name)}`);
-                                        }}
-                                        className="flex flex-col gap-3 p-5 border-2 border-gray-300 dark:border-white/20 rounded-2xl bg-card shadow-lg active:shadow-xl active:scale-[0.98] transition-all touch-manipulation"
-                                        style={{ WebkitTapHighlightColor: 'transparent' }}
-                                    >
-                                        <div className="flex justify-between items-start w-full">
-                                            <div className="flex-1 min-w-0 pr-4">
-                                                <h3 className="font-bold text-lg text-foreground truncate leading-tight">{name}</h3>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
-                                                    <Calendar className="h-3.5 w-3.5" />
-                                                    <span>
-                                                        {new Date(stats.lastPurchase).toLocaleDateString('en-IN', {
-                                                            day: 'numeric',
-                                                            month: 'short',
-                                                            year: 'numeric'
-                                                        })}
-                                                    </span>
-                                                </div>
+                                                </span>
                                             </div>
-                                            <div className="text-right shrink-0">
-                                                <p className="font-bold text-lg text-primary tracking-tight">{formatCurrency(stats.totalPurchase)}</p>
-                                                <div className="flex justify-end mt-1">
-                                                    <Badge variant="secondary" className="text-[10px] h-5 px-2 font-medium bg-secondary/50 text-secondary-foreground">
-                                                        {stats.invoiceCount} Orders
-                                                    </Badge>
-                                                </div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="font-bold text-lg text-primary tracking-tight">{formatCurrency(stats.totalPurchase)}</p>
+                                            <div className="flex justify-end mt-1">
+                                                <Badge variant="secondary" className="text-[10px] h-5 px-2 font-medium bg-secondary/50 text-secondary-foreground">
+                                                    {stats.invoiceCount} Orders
+                                                </Badge>
                                             </div>
                                         </div>
                                     </div>
-                                ))
-                        ) : (
-                            <div className="py-12">
-                                <EmptyState
-                                    icon={Users}
-                                    title="No customers found"
-                                    description={
-                                        searchTerm
-                                            ? "Try adjusting your search terms."
-                                            : "Your customer list is empty."
-                                    }
-                                    action={
-                                        searchTerm
-                                            ? { label: 'Clear search', onClick: () => setSearchTerm('') }
-                                            : undefined
-                                    }
-                                />
-                            </div>
-                        )}
+                                </div>
+                            ))
+                    ) : (
+                        <div className="py-12">
+                            <EmptyState
+                                icon={Users}
+                                title="No customers found"
+                                description={
+                                    searchTerm
+                                        ? "Try adjusting your search terms."
+                                        : "Your customer list is empty."
+                                }
+                                action={
+                                    searchTerm
+                                        ? { label: 'Clear search', onClick: () => setSearchTerm('') }
+                                        : undefined
+                                }
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Pagination Controls for Mobile */}

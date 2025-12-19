@@ -19,7 +19,6 @@ import {
     TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useHaptic } from '@/hooks/use-haptic';
 import {
     Sheet,
     SheetContent,
@@ -27,13 +26,11 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
-import { startProgress } from '@/components/page-transition';
 
 export function MobileBottomNav({ shopId }: { shopId: string }) {
     const pathname = usePathname();
     const [isVisible, setIsVisible] = useState(true);
     const lastScrollY = useRef(0);
-    const { vibrate } = useHaptic();
     const [isOpen, setIsOpen] = useState(false);
     const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
 
@@ -45,8 +42,6 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
     const handleNavClick = (href: string) => {
         if (pathname !== href) {
             setNavigatingTo(href);
-            // Trigger feedback immediately
-            startProgress();
             if (navigator.vibrate) navigator.vibrate(10);
         }
     };
@@ -239,7 +234,6 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                             <Sheet open={isOpen} onOpenChange={setIsOpen}>
                                 <SheetTrigger asChild>
                                     <button
-                                        onClick={() => vibrate('light')}
                                         className="flex flex-col items-center gap-1 p-2 group relative"
                                     >
                                         {(isMoreActive || isOpen) && (
@@ -277,7 +271,6 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                                                 key={item.href}
                                                 href={item.href}
                                                 onClick={() => {
-                                                    vibrate('light');
                                                     setIsOpen(false);
                                                 }}
                                                 className="flex flex-col items-center gap-2.5 group"

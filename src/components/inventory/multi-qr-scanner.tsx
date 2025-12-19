@@ -230,7 +230,7 @@ export function MultiQRScanner({
                     timestamp: Date.now()
                 }]);
             } else {
-                // UX-003: Haptic feedback on successful scan
+                // UX-003: Feedback on successful scan
                 if ('vibrate' in navigator) {
                     navigator.vibrate([50, 30, 50]); // Success pattern
                 }
