@@ -15,6 +15,7 @@ import {
   Plus,
   PackagePlus,
   TrendingUp,
+  Share2,
   Users
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -288,14 +289,45 @@ export default function DashboardPage() {
                         <p className="text-xs text-muted-foreground">{invoice.invoiceNumber} • {new Date(invoice.invoiceDate).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end gap-1">
                       <p className="font-bold text-sm text-foreground">{formatCurrency(invoice.grandTotal)}</p>
-                      <span className={cn(
-                        "text-[10px] capitalize font-medium px-2 py-0.5 rounded-full",
-                        invoice.status === 'paid' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                      )}>
-                        {invoice.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "text-[10px] capitalize font-medium px-2 py-0.5 rounded-full",
+                          invoice.status === 'paid' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                        )}>
+                          {invoice.status}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 hover:bg-gold-500/10 hover:text-gold-600 -mr-1 z-20 relative"
+                          onClick={async (e) => {
+                            e.preventDefault(); // Prevent navigation
+                            e.stopPropagation();
+
+                            const shareData = {
+                              title: `Invoice #${invoice.invoiceNumber}`,
+                              text: `Invoice from ${invoice.customerSnapshot?.name} - Total: ${formatCurrency(invoice.grandTotal)}`,
+                              url: `${window.location.origin}/invoice/${invoice.id}` // Hypothetical public link
+                            };
+
+                            if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                              try {
+                                await navigator.share(shareData);
+                              } catch (err) {
+                                console.error('Share failed:', err);
+                              }
+                            } else {
+                              // Fallback for desktop or unsupported
+                              toast({ title: "Share not supported on this device", description: "Link copied to clipboard instead." });
+                              await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
+                            }
+                          }}
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}

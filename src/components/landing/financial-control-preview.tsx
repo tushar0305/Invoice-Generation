@@ -11,39 +11,54 @@ export function FinancialControlPreview() {
     const cursorControls = useAnimation();
 
     useEffect(() => {
+        let mounted = true;
+
         const sequence = async () => {
-            while (true) {
+            while (mounted) {
                 // Reset State
+                if (!mounted) break;
                 setReminderSent(false);
                 setActiveTab('khata');
 
                 // 1. Start: Cursor enters, moves to "Send Reminder"
+                if (!mounted) break;
                 await cursorControls.start({ x: 0, y: 0, opacity: 0, transition: { duration: 0 } });
+                if (!mounted) break;
                 await cursorControls.start({ opacity: 1, transition: { duration: 0.5 } });
+                if (!mounted) break;
                 await cursorControls.start({ x: 400, y: 320, transition: { duration: 1.5, ease: "easeInOut" } });
 
                 // 2. Click "Send Reminder"
+                if (!mounted) break;
                 await cursorControls.start({ scale: 0.9, transition: { duration: 0.1 } });
+                if (!mounted) break;
                 await cursorControls.start({ scale: 1, transition: { duration: 0.1 } });
+                if (!mounted) break;
                 setReminderSent(true);
                 await new Promise(r => setTimeout(r, 800));
 
                 // 3. Move to "Gold Loans" tab
+                if (!mounted) break;
                 await cursorControls.start({ x: 350, y: 60, transition: { duration: 1.2, ease: "easeInOut" } });
 
                 // 4. Click "Gold Loans" tab
+                if (!mounted) break;
                 await cursorControls.start({ scale: 0.9, transition: { duration: 0.1 } });
+                if (!mounted) break;
                 await cursorControls.start({ scale: 1, transition: { duration: 0.1 } });
+                if (!mounted) break;
                 setActiveTab('loan');
                 await new Promise(r => setTimeout(r, 1500));
 
                 // 5. Move out
+                if (!mounted) break;
                 await cursorControls.start({ x: 600, y: 400, opacity: 0, transition: { duration: 1 } });
                 await new Promise(r => setTimeout(r, 1000));
             }
         };
 
         sequence();
+        return () => { mounted = false; };
     }, [cursorControls]);
 
     return (

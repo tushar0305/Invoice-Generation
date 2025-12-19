@@ -55,6 +55,7 @@ export function LoyaltyProgramPreview() {
                 if (!mounted) break;
 
                 setShowCoupon(true);
+                if (!mounted) break;
                 setPoints(prev => prev - 500);
                 setRecentActivity(prev => [
                     { type: 'redeem', label: 'Points Redeemed', detail: 'Gold Coin Coupon', points: '-500', color: 'rose' },
@@ -66,7 +67,9 @@ export function LoyaltyProgramPreview() {
                 if (!mounted) break;
 
                 // 5. Reset loop
-                await cursorControls.start({ opacity: 0, transition: { duration: 0.5 } });
+                if (mounted) {
+                    await cursorControls.start({ opacity: 0, transition: { duration: 0.5 } });
+                }
                 await new Promise(r => setTimeout(r, 2000));
 
                 if (!mounted) break;

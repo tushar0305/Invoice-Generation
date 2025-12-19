@@ -117,7 +117,7 @@ export function MarketingDashboardClient({
                         </p>
                     </div>
 
-                    <Card className="border-0 shadow-2xl bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl overflow-hidden ring-1 ring-slate-200 dark:ring-slate-800">
+                    <Card className="border-0 shadow-2xl bg-white/70 dark:bg-card/50 backdrop-blur-xl overflow-hidden ring-1 ring-slate-200 dark:ring-border">
                         <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 Pointer-events-none" />
                         <CardContent className="p-0 relative">
                             <WhatsAppSetupWizard
@@ -152,7 +152,7 @@ export function MarketingDashboardClient({
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 font-sans">
+        <div className="min-h-screen bg-slate-50 dark:bg-background p-4 md:p-8 font-sans">
             <motion.div
                 variants={container}
                 initial="hidden"
@@ -174,16 +174,16 @@ export function MarketingDashboardClient({
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-3 bg-white dark:bg-card p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-border">
                         <div className="h-10 w-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                             <MessageSquare className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
-                        <div className="pr-4 border-r border-slate-100 dark:border-slate-800">
+                        <div className="pr-4 border-r border-slate-100 dark:border-border">
                             <p className="text-sm font-semibold text-slate-900 dark:text-white">{config?.phone_number}</p>
                             <p className="text-xs text-slate-500">Connected</p>
                         </div>
                         {isOwner && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500" onClick={() => setShowSetup(true)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100 dark:hover:bg-muted text-slate-500" onClick={() => setShowSetup(true)}>
                                 <Settings className="h-4 w-4" />
                             </Button>
                         )}
@@ -290,7 +290,7 @@ export function MarketingDashboardClient({
                             </motion.div>
                         </Link>
 
-                        <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+                        <div className="rounded-3xl border border-slate-200 dark:border-border bg-white dark:bg-card p-6 shadow-sm">
                             <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Why use WhatsApp?</h3>
                             <ul className="space-y-4">
                                 <li className="flex gap-3">
@@ -323,10 +323,10 @@ export function MarketingDashboardClient({
 // --- Sub Components ---
 
 const STAT_COLOR_STYLES: Record<string, string> = {
-    blue: "from-blue-500/10 to-blue-500/5 text-blue-600 border-blue-200/50",
-    purple: "from-purple-500/10 to-purple-500/5 text-purple-600 border-purple-200/50",
-    green: "from-green-500/10 to-green-500/5 text-green-600 border-green-200/50",
-    amber: "from-amber-500/10 to-amber-500/5 text-amber-600 border-amber-200/50",
+    blue: "from-blue-500/10 to-blue-500/5 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-800/30",
+    purple: "from-purple-500/10 to-purple-500/5 text-purple-600 dark:text-purple-400 border-purple-200/50 dark:border-purple-800/30",
+    green: "from-green-500/10 to-green-500/5 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/30",
+    amber: "from-amber-500/10 to-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-800/30",
 };
 
 const STAT_ICON_BG: Record<string, string> = {
@@ -342,7 +342,7 @@ function StatCard({ icon: Icon, label, value, trend, subtext, color, delay }: { 
 
     return (
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-            <Card className={cn("border bg-gradient-to-br backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300", colorStyle)}>
+            <Card className={cn("border bg-gradient-to-br backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 bg-white dark:bg-card", colorStyle)}>
                 <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
                         <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", iconBg)}>
@@ -381,7 +381,7 @@ function TemplateCard({ template, idx }: { template: WhatsAppTemplate, idx: numb
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: idx * 0.05 }}
-            className="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-xl hover:border-slate-300 transition-all duration-300 flex flex-col h-full"
+            className="group relative bg-white dark:bg-card rounded-2xl border border-slate-200 dark:border-border overflow-hidden hover:shadow-xl hover:border-slate-300 transition-all duration-300 flex flex-col h-full"
         >
             {/* WhatsApp Chat Preview Header */}
             <div className="bg-[#075E54] p-3 flex items-center gap-2">
@@ -400,7 +400,7 @@ function TemplateCard({ template, idx }: { template: WhatsAppTemplate, idx: numb
             </div>
 
             {/* Footer Info */}
-            <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+            <div className="p-4 bg-white dark:bg-card border-t border-slate-100 dark:border-border">
                 <div className="flex justify-between items-start mb-2">
                     <h4 className="font-semibold text-slate-900 dark:text-white line-clamp-1">{template.name}</h4>
                     <span className={cn("text-[10px] font-bold px-2 py-1 rounded-full border flex items-center", statusColor)}>
@@ -420,7 +420,7 @@ function TemplateCard({ template, idx }: { template: WhatsAppTemplate, idx: numb
 
 function EmptyStateCard({ onAction }: { onAction: () => void }) {
     return (
-        <Card className="col-span-full border-dashed border-2 border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+        <Card className="col-span-full border-dashed border-2 border-slate-300 dark:border-border bg-slate-50/50 dark:bg-card/50">
             <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                 <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
                     <Sparkles className="h-8 w-8 text-slate-400" />

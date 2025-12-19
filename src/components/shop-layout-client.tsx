@@ -290,8 +290,8 @@ function ShopLayoutInner({
                                                     className={cn(
                                                         "w-full justify-start gap-3 px-4 py-3 rounded-xl transition-colors duration-200 group relative overflow-hidden focus-ring",
                                                         isActive
-                                                            ? "bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))] font-semibold shadow-md"
-                                                            : "text-sidebar-foreground hover:bg-[hsl(var(--sidebar-primary))]/10 hover:text-[hsl(var(--sidebar-primary))]"
+                                                            ? "bg-primary/10 text-primary font-semibold shadow-sm border border-primary/20"
+                                                            : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary"
                                                     )}
                                                 >
                                                     <Link

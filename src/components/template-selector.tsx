@@ -35,12 +35,12 @@ const templates = [
 
 export function TemplateSelector({ value, onChange }: TemplateSelectorProps) {
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="flex flex-row overflow-x-auto pb-4 gap-4 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 snap-x">
             {templates.map((template) => (
                 <div
                     key={template.id}
                     className={cn(
-                        "relative cursor-pointer rounded-xl border-2 p-4 transition-all hover:border-primary/50",
+                        "relative cursor-pointer rounded-xl border-2 p-4 transition-all hover:border-primary/50 min-w-[280px] sm:min-w-0 snap-center",
                         value === template.id ? "border-primary bg-primary/5" : "border-transparent bg-muted/50",
                     )}
                     onClick={() => onChange(template.id)}

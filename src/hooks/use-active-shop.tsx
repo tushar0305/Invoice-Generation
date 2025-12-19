@@ -45,6 +45,7 @@ type ActiveShopProviderProps = {
 
 function ActiveShopProviderInner({ children, initialData }: ActiveShopProviderProps) {
     const router = useRouter();
+    const queryClient = useQueryClient(); // Access the client
     const [activeShop, setActiveShop] = useState<Shop | null>(initialData.activeShop);
     const [userShops, setUserShops] = useState<Shop[]>(initialData.userShops);
     const [userRole, setUserRole] = useState<UserShopRole | null>(initialData.userRole);
@@ -52,6 +53,11 @@ function ActiveShopProviderInner({ children, initialData }: ActiveShopProviderPr
 
     // Update state when initial data changes (server-side navigation)
     useEffect(() => {
+        if (initialData.activeShop?.logoUrl) {
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('shopLogo', initialData.activeShop.logoUrl);
+            }
+        }
         setActiveShop(initialData.activeShop);
         setUserShops(initialData.userShops);
         setUserRole(initialData.userRole);
@@ -112,6 +118,8 @@ function ActiveShopProviderInner({ children, initialData }: ActiveShopProviderPr
     const refreshShops = async () => {
         setIsLoading(true);
         try {
+            // Invalidate all queries to ensure fresh data
+            await queryClient.invalidateQueries();
             // Force a hard refresh by navigating to current page
             router.refresh();
         } catch (error) {

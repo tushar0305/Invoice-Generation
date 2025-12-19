@@ -15,7 +15,8 @@ import {
     Settings,
     Plus,
     QrCode,
-    PiggyBank
+    PiggyBank,
+    TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHaptic } from '@/hooks/use-haptic';
@@ -26,6 +27,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { startProgress } from '@/components/page-transition';
 
 export function MobileBottomNav({ shopId }: { shopId: string }) {
     const pathname = usePathname();
@@ -33,6 +35,21 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
     const lastScrollY = useRef(0);
     const { vibrate } = useHaptic();
     const [isOpen, setIsOpen] = useState(false);
+    const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+
+    // Reset navigating state when pathname changes
+    useEffect(() => {
+        setNavigatingTo(null);
+    }, [pathname]);
+
+    const handleNavClick = (href: string) => {
+        if (pathname !== href) {
+            setNavigatingTo(href);
+            // Trigger feedback immediately
+            startProgress();
+            if (navigator.vibrate) navigator.vibrate(10);
+        }
+    };
 
     // Auto-hide on scroll
     useEffect(() => {
@@ -69,6 +86,7 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
         { href: `/shop/${shopId}/loans`, label: 'Loans', icon: Banknote },
         { href: `/shop/${shopId}/khata`, label: 'Khata Book', icon: BookOpen },
         { href: `/shop/${shopId}/loyalty`, label: 'Loyalty', icon: Crown },
+        { href: `/shop/${shopId}/insights`, label: 'Analytics', icon: TrendingUp },
         { href: `/shop/${shopId}/settings`, label: 'Settings', icon: Settings },
     ];
 
@@ -82,28 +100,33 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
             {/* iPhone 17 Style Navigation Bar */}
             <div className="mx-3 mb-2">
                 <div className="relative overflow-hidden rounded-[28px] shadow-[0_8px_32px_0_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
-                    {/* Glass Background with Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-white/70 dark:from-gray-900/90 dark:via-gray-900/80 dark:to-gray-900/70 backdrop-blur-2xl" />
-                    
+                    {/* Glass Background with Gradient - Updated for Dark Theme alignment */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-white/70 dark:from-black/90 dark:via-black/80 dark:to-black/70 backdrop-blur-2xl" />
+
                     {/* Subtle Top Border Glow */}
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/20 to-transparent" />
-                    
+
                     <nav className="relative flex items-center justify-between px-4 h-[72px]">
                         {/* Left Tabs */}
                         <div className="flex flex-1 justify-around items-center">
                             <Link
                                 href={`/shop/${shopId}/dashboard`}
-                                onClick={() => vibrate('light')}
+                                onClick={() => handleNavClick(`/shop/${shopId}/dashboard`)}
                                 className="flex flex-col items-center gap-1 p-2 group relative"
                             >
                                 {isActive(`/shop/${shopId}/dashboard`) && (
                                     <div className="absolute inset-0 bg-gradient-to-b from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl scale-110 blur-sm" />
                                 )}
+                                {navigatingTo === `/shop/${shopId}/dashboard` && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-black/50 rounded-2xl z-10">
+                                        <div className="w-4 h-4 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                )}
                                 <div className={cn(
                                     "relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300",
                                     isActive(`/shop/${shopId}/dashboard`)
                                         ? "bg-gradient-to-br from-[#D4AF37]/20 to-amber-600/20 shadow-lg shadow-[#D4AF37]/20"
-                                        : "group-hover:bg-gray-100/50 dark:group-hover:bg-gray-800/50"
+                                        : "group-hover:bg-gray-100/50 dark:group-hover:bg-white/5"
                                 )}>
                                     <LayoutDashboard className={cn(
                                         "w-5 h-5 transition-all duration-300",
@@ -122,17 +145,22 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
 
                             <Link
                                 href={`/shop/${shopId}/invoices`}
-                                onClick={() => vibrate('light')}
+                                onClick={() => handleNavClick(`/shop/${shopId}/invoices`)}
                                 className="flex flex-col items-center gap-1 p-2 group relative"
                             >
                                 {isActive(`/shop/${shopId}/invoices`, true) && (
                                     <div className="absolute inset-0 bg-gradient-to-b from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl scale-110 blur-sm" />
                                 )}
+                                {navigatingTo === `/shop/${shopId}/invoices` && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-black/50 rounded-2xl z-10">
+                                        <div className="w-4 h-4 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                )}
                                 <div className={cn(
                                     "relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300",
                                     isActive(`/shop/${shopId}/invoices`, true)
                                         ? "bg-gradient-to-br from-[#D4AF37]/20 to-amber-600/20 shadow-lg shadow-[#D4AF37]/20"
-                                        : "group-hover:bg-gray-100/50 dark:group-hover:bg-gray-800/50"
+                                        : "group-hover:bg-gray-100/50 dark:group-hover:bg-white/5"
                                 )}>
                                     <FileText className={cn(
                                         "w-5 h-5 transition-all duration-300",
@@ -154,12 +182,17 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                         <div className="mx-3 relative">
                             <Link
                                 href={`/shop/${shopId}/invoices/new`}
-                                onClick={() => vibrate('medium')}
+                                onClick={() => handleNavClick(`/shop/${shopId}/invoices/new`)}
                                 className="relative group"
                             >
                                 {/* Glow Effect */}
+                                {navigatingTo === `/shop/${shopId}/invoices/new` && (
+                                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/10 rounded-full">
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                )}
                                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#D4AF37] to-amber-600 blur-xl opacity-40 group-hover:opacity-60 transition-opacity" />
-                                
+
                                 {/* Button */}
                                 <div className="relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-[#D4AF37] via-amber-500 to-amber-600 shadow-2xl shadow-[#D4AF37]/40 group-hover:scale-105 group-active:scale-95 transition-all duration-300 border-[3px] border-white/30 dark:border-white/20">
                                     <Plus className="w-7 h-7 text-white drop-shadow-md" strokeWidth={3} />
@@ -171,17 +204,22 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                         <div className="flex flex-1 justify-around items-center">
                             <Link
                                 href={`/shop/${shopId}/inventory`}
-                                onClick={() => vibrate('light')}
+                                onClick={() => handleNavClick(`/shop/${shopId}/inventory`)}
                                 className="flex flex-col items-center gap-1 p-2 group relative"
                             >
                                 {isActive(`/shop/${shopId}/inventory`, true) && (
                                     <div className="absolute inset-0 bg-gradient-to-b from-[#D4AF37]/20 to-[#D4AF37]/5 rounded-2xl scale-110 blur-sm" />
                                 )}
+                                {navigatingTo === `/shop/${shopId}/inventory` && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-black/50 rounded-2xl z-10">
+                                        <div className="w-4 h-4 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                )}
                                 <div className={cn(
                                     "relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300",
                                     isActive(`/shop/${shopId}/inventory`, true)
                                         ? "bg-gradient-to-br from-[#D4AF37]/20 to-amber-600/20 shadow-lg shadow-[#D4AF37]/20"
-                                        : "group-hover:bg-gray-100/50 dark:group-hover:bg-gray-800/50"
+                                        : "group-hover:bg-gray-100/50 dark:group-hover:bg-white/5"
                                 )}>
                                     <QrCode className={cn(
                                         "w-5 h-5 transition-all duration-300",
@@ -211,7 +249,7 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                                             "relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all duration-300",
                                             (isMoreActive || isOpen)
                                                 ? "bg-gradient-to-br from-[#D4AF37]/20 to-amber-600/20 shadow-lg shadow-[#D4AF37]/20"
-                                                : "group-hover:bg-gray-100/50 dark:group-hover:bg-gray-800/50"
+                                                : "group-hover:bg-gray-100/50 dark:group-hover:bg-white/5"
                                         )}>
                                             <MoreHorizontal className={cn(
                                                 "w-5 h-5 transition-all duration-300",
@@ -228,8 +266,8 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                                         )}>More</span>
                                     </button>
                                 </SheetTrigger>
-                                <SheetContent side="bottom" className="rounded-t-[32px] p-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl border-t border-gray-200/50 dark:border-gray-700/50 shadow-2xl">
-                                    <SheetHeader className="p-6 border-b border-gray-100 dark:border-gray-800">
+                                <SheetContent side="bottom" className="rounded-t-[32px] p-0 bg-white/95 dark:bg-[#0a0a0b]/95 backdrop-blur-2xl border-t border-gray-200/50 dark:border-white/10 shadow-2xl">
+                                    <SheetHeader className="p-6 border-b border-gray-100 dark:border-white/5">
                                         <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4" />
                                         <SheetTitle className="text-center text-base font-bold text-gray-900 dark:text-white">Quick Menu</SheetTitle>
                                     </SheetHeader>
@@ -248,7 +286,7 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                                                     "flex items-center justify-center w-14 h-14 rounded-3xl transition-all duration-300 shadow-lg",
                                                     isActive(item.href, true)
                                                         ? "bg-gradient-to-br from-[#D4AF37] to-amber-600 text-white shadow-[#D4AF37]/30"
-                                                        : "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 text-gray-600 dark:text-gray-300 group-hover:scale-105"
+                                                        : "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-white/5 dark:to-white/10 text-gray-600 dark:text-gray-300 group-hover:scale-105"
                                                 )}>
                                                     <item.icon className="w-6 h-6" strokeWidth={2} />
                                                 </div>

@@ -53,6 +53,11 @@ export default function TemplatesPage() {
   const [isSaving, setIsSaving] = useState<string | null>(null);
 
   useEffect(() => {
+    // Ensure we have the latest data
+    refreshShops();
+  }, []);
+
+  useEffect(() => {
     if (activeShop?.templateId) {
       setCurrentTemplate(activeShop.templateId);
     }
@@ -157,9 +162,9 @@ export default function TemplatesPage() {
             </div>
 
             {/* Content Overlay - Bottom */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end items-center text-center">
-              <h3 className="font-bold text-lg mb-1">{template.name}</h3>
-              <p className="text-xs text-white/80 mb-3 line-clamp-2">{template.description}</p>
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end items-center text-center">
+              <h3 className="font-bold text-lg mb-1 text-white drop-shadow-md">{template.name}</h3>
+              <p className="text-xs text-white/90 mb-3 line-clamp-2 drop-shadow-sm">{template.description}</p>
               <Button
                 size="sm"
                 variant={currentTemplate === template.id ? "default" : "outline"}
@@ -177,9 +182,21 @@ export default function TemplatesPage() {
               </div>
             )}
 
-            {/* Always visible title for mobile/touch when not hovering */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-white/90 backdrop-blur-sm border-t border-gray-100 md:hidden">
-              <h3 className="font-semibold text-sm text-center text-gray-900">{template.name}</h3>
+            {/* Always visible title and button for mobile/touch */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-sm border-t border-gray-100 md:hidden flex items-center justify-between gap-2">
+              <h3 className="font-semibold text-sm text-gray-900 truncate flex-1">{template.name}</h3>
+              <Button
+                size="sm"
+                variant={currentTemplate === template.id ? "default" : "outline"}
+                className="h-7 text-xs px-3"
+                disabled={isSaving === template.id || currentTemplate === template.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelectTemplate(template.id);
+                }}
+              >
+                {isSaving === template.id ? <Loader2 className="h-3 w-3 animate-spin" /> : (currentTemplate === template.id ? 'Active' : 'Use')}
+              </Button>
             </div>
           </motion.div>
         ))}

@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AppListeners } from '@/components/app-listeners';
 import { InstallPrompt } from '@/components/install-prompt';
 import { UpdatePrompt } from '@/components/update-prompt';
+import { PageTransition } from '@/components/page-transition';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://swarnavyapar.in'),
@@ -130,7 +131,7 @@ export default function RootLayout({
         <link rel="preload" href="/fonts/PlayfairDisplay-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/PlayfairDisplay-Italic.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
-      <body className="font-body antialiased bg-mesh min-h-screen" suppressHydrationWarning>
+      <body className="font-body antialiased min-h-screen" suppressHydrationWarning>
         {/* <SmoothScroll> */}
         <SupabaseProvider>
           <QueryProvider>
@@ -138,6 +139,7 @@ export default function RootLayout({
               <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
                 {/* Global listeners: analytics + heatmap */}
                 <AppListeners />
+                <PageTransition />
                 {children}
                 <InstallPrompt />
                 <UpdatePrompt />

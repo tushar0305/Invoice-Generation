@@ -8,12 +8,12 @@ export function HeroBackground() {
             {/* 1. Base Gradient */}
             <div className="absolute inset-0 bg-white" />
 
-            {/* 2. Animated Aurora Blobs */}
+            {/* 2. Animated Aurora Blobs - Desktop Only */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 1 }}
-                className="absolute inset-0 overflow-hidden"
+                className="hidden md:block absolute inset-0 overflow-hidden"
             >
                 {/* Gold/Amber Blob - Top Center/Right */}
                 <motion.div
@@ -62,6 +62,9 @@ export function HeroBackground() {
                     className="absolute -top-[10%] -right-[10%] w-[500px] h-[500px] bg-gradient-to-bl from-gold-100/50 to-transparent rounded-full blur-[60px] opacity-40 mix-blend-multiply"
                 />
             </motion.div>
+
+            {/* Mobile Fallback - Static Gradient */}
+            <div className="md:hidden absolute inset-0 bg-gradient-to-br from-gold-50/50 via-white to-blue-50/30" />
 
             {/* 3. Grid Pattern Overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70" />

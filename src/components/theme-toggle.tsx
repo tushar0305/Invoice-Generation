@@ -15,22 +15,6 @@ export function ThemeToggle() {
     const handleThemeChange = async () => {
         const newTheme = theme === "dark" ? "light" : "dark";
         setTheme(newTheme);
-
-        if (user) {
-            const { error } = await supabase
-                .from('user_preferences')
-                .upsert({
-                    user_id: user.uid,
-                    theme: newTheme,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
-            
-            if (error) {
-                if (process.env.NODE_ENV === 'development') {
-                    console.error('Error updating theme preference:', error);
-                }
-            }
-        }
     };
 
     return (

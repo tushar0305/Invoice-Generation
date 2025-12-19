@@ -70,7 +70,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const { user, isUserLoading } = useUser();
-  const { activeShop, permissions, isLoading: shopLoading } = useActiveShop();
+  const { activeShop, permissions, isLoading: shopLoading, refreshShops } = useActiveShop();
   const [settings, setSettings] = useState<any | null>(null);
   const [settingsLoading, setSettingsLoading] = useState<boolean>(true);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -288,6 +288,9 @@ export default function SettingsPage() {
           templateId: updatedData.template_id,
         };
         setSettings(updatedSettings);
+
+        // Refresh global context to reflect changes immediately
+        await refreshShops();
 
         const newProgress = getSetupProgress(updatedSettings);
         if (!previousProgress && newProgress.isComplete) {
@@ -511,7 +514,29 @@ export default function SettingsPage() {
                         </CardContent>
                       </Card>
 
-                      {/* Branding & Theme Card — removed as requested */}
+                      {/* Invoice Design Card */}
+                      <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-300 group">
+                        <CardHeader className="pb-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-500 group-hover:scale-110 transition-transform duration-300">
+                              <FileText className="h-5 w-5" />
+                            </div>
+                            <CardTitle className="text-lg">Invoice Design</CardTitle>
+                          </div>
+                          <CardDescription>Choose how your invoices look</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <FormField control={form.control} name="templateId" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Template Style</FormLabel>
+                              <FormControl>
+                                <TemplateSelector value={field.value || 'classic'} onChange={field.onChange} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </CardContent>
+                      </Card>
 
                       {/* Tax & Finance Card */}
                       <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-300 group">

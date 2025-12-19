@@ -2,7 +2,8 @@ import type { Invoice, InvoiceItem, UserSettings } from './definitions';
 import { format } from 'date-fns';
 
 // Helper to format currency
-const formatCurrency = (amount: number) => {
+const formatCurrency = (amount: number | undefined | null) => {
+  if (amount === undefined || amount === null) return 'Rs. 0.00';
   return `Rs. ${amount.toFixed(2)}`;
 };
 
