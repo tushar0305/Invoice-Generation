@@ -81,10 +81,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   // Calculate pending payments (no overdue logic)
   const totalDue = stats.dueInvoices.reduce((sum: number, inv: any) => sum + Number(inv.grand_total), 0);
 
-  // Customer insights
-  const returningCustomers = Math.floor(totalUniqueCustomers * 0.3);
+  // Customer insights - now using actual data from RPC
+  const returningCustomers = additionalStats.returningCustomerCount || 0;
+  const newCustomers = additionalStats.newCustomerCount || (totalUniqueCustomers - returningCustomers);
   const returningCustomerRate = totalUniqueCustomers > 0 ? (returningCustomers / totalUniqueCustomers) * 100 : 0;
-  const newCustomers = totalUniqueCustomers - returningCustomers;
 
   // Top customer - map RPC field names correctly (try multiple possible field names)
   const topCustomer = additionalStats.topCustomerAllTime ? {

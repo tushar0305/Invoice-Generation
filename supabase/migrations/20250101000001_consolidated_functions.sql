@@ -47,7 +47,7 @@ BEGIN
     SET loyalty_points = loyalty_points + p_points 
     WHERE id = p_customer_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
 
 CREATE OR REPLACE FUNCTION decrement_loyalty_points(
     p_customer_id UUID,
@@ -59,7 +59,7 @@ BEGIN
     SET loyalty_points = GREATEST(0, loyalty_points - p_points)
     WHERE id = p_customer_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
 
 
 -- 3. INVENTORY FUNCTIONS
@@ -113,7 +113,7 @@ BEGIN
 
   RETURN v_tag_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public, extensions;
 
 -- Trigger: Set Tag ID
 CREATE OR REPLACE FUNCTION set_inventory_tag_id()
@@ -126,7 +126,7 @@ BEGIN
   NEW.updated_at := now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public, extensions;
 
 DROP TRIGGER IF EXISTS trigger_set_inventory_tag_id ON inventory_items;
 CREATE TRIGGER trigger_set_inventory_tag_id
@@ -146,7 +146,7 @@ BEGIN
   NEW.updated_by := auth.uid();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public, extensions;
 
 DROP TRIGGER IF EXISTS trigger_track_inventory_status ON inventory_items;
 CREATE TRIGGER trigger_track_inventory_status
@@ -169,7 +169,7 @@ BEGIN
   END IF;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public, extensions;
 
 DROP TRIGGER IF EXISTS trigger_revert_inventory_on_delete ON invoice_items;
 CREATE TRIGGER trigger_revert_inventory_on_delete
@@ -425,7 +425,7 @@ BEGIN
     UPDATE invoices SET status = 'cancelled', updated_at = NOW() WHERE id = p_invoice_id;
     RETURN jsonb_build_object('success', true);
 END;
-$$;
+$$ SET search_path = public, extensions;
 
 -- UPDATE INVOICE V2 RPC
 CREATE OR REPLACE FUNCTION update_invoice_v2(
@@ -491,7 +491,7 @@ BEGIN
 
     RETURN jsonb_build_object('success', true);
 END;
-$$;
+$$ SET search_path = public, extensions;
 
 
 -- DASHBOARD STATS RPC
@@ -511,7 +511,7 @@ BEGIN
     ) INTO result;
     RETURN result;
 END;
-$$;
+$$ SET search_path = public, extensions;
 
 -- Create New Shop
 CREATE OR REPLACE FUNCTION create_new_shop_with_details(

@@ -1,18 +1,78 @@
 /**
- * Ledger (formerly Khata) Type Definitions
- * For tracking customer credit/debit transactions
+ * Ledger (Khata V2) Type Definitions
+ * Universal ledger supporting Customers, Suppliers, Karigars, and Partners
  */
+
+// Basic Contact Entity (Non-Customer)
+export type KhatabookContact = {
+    id: string;
+    shop_id: string;
+    name: string;
+    phone: string | null;
+    email?: string | null;
+    address?: string | null;
+    type: 'CUSTOMER' | 'SUPPLIER' | 'KARIGAR' | 'PARTNER' | 'OTHER';
+    notes?: string | null;
+    is_active: boolean; // mapped to is_deleted in view (is_active=false -> is_deleted=true)
+    created_at: string;
+    updated_at: string;
+    deleted_at?: string | null;
+};
+
+// Start using KhatabookContact as the primary type
+export type UnifiedParty = {
+    id: string;
+    shop_id: string;
+    name: string;
+    phone: string | null;
+    email?: string | null;
+    address?: string | null;
+    entity_type: 'CUSTOMER' | 'SUPPLIER' | 'KARIGAR' | 'PARTNER' | 'OTHER';
+    source_table: 'khatabook_contact'; // Always this for Khata V2
+
+    // Aggregates
+    total_debit: number;
+    total_credit: number;
+    current_balance: number;
+    transaction_count: number;
+    last_transaction_date?: string | null;
+
+    // Legacy aliases
+    total_spent?: number;
+    total_paid?: number;
+
+    is_deleted: boolean;
+};
+
+// Aliases for backward compatibility
+export type CustomerBalance = UnifiedParty;
+
+export type TransactionType =
+    | 'INVOICE' | 'PAYMENT' | 'ADJUSTMENT'          // Legacy/Customer
+    | 'SALE' | 'SALE_RETURN'                        // Customer V2
+    | 'PURCHASE' | 'PURCHASE_RETURN'                // Supplier
+    | 'WORK_ORDER' | 'MAKING_CHARGES'               // Karigar
+    | 'JAMA' | 'ODHARA'                             // Generic
+    | 'LOAN_GIVEN' | 'LOAN_RECEIVED' | 'SETTLEMENT'; // Loans
+
+export type TransactionDocument = {
+    id: string;
+    transaction_id: string;
+    file_name: string;
+    file_type: string; // mime type
+    storage_path: string;
+    description?: string | null;
+    uploaded_at: string;
+};
 
 export type LedgerTransaction = {
     id: string;
     shop_id: string;
-    customer_id: string;
-    invoice_id?: string | null;
-    transaction_type: 'INVOICE' | 'PAYMENT' | 'ADJUSTMENT';
+    transaction_type: TransactionType;
     amount: number;
-    entry_type: 'DEBIT' | 'CREDIT'; // DEBIT: Customer owes more, CREDIT: Customer pays
+    entry_type: 'DEBIT' | 'CREDIT';
     description?: string | null;
-    transaction_date: string; // Date in ISO format (YYYY-MM-DD)
+    transaction_date: string;
     created_at: string;
     created_by?: string | null;
 
@@ -21,34 +81,30 @@ export type LedgerTransaction = {
         name: string;
         phone?: string | null;
     };
-};
+    documents?: TransactionDocument[];
 
-export type CustomerBalance = {
-    id: string;
-    shop_id: string;
-    name: string;
-    phone?: string | null;
-    email?: string | null;
-    address?: string | null;
-    total_spent: number; // Total invoiced amount
-    total_paid: number; // Total payments received
-    current_balance: number; // total_spent - total_paid (Positive means they owe us)
-    last_transaction_date?: string | null;
+    // Computed client-side
+    balance_after?: number;
 };
 
 export type LedgerStats = {
-    total_customers: number;
-    total_receivable: number; // Total amount we need to receive (positive balances)
-    total_payable: number; // Total amount we need to pay (negative balances - rare in this context but possible)
-    net_balance: number; // receivable - payable
+    total_customers: number; // Total active entities
+    total_receivable: number;
+    total_payable: number;
+    net_balance: number;
 };
 
-export type CreateLedgerTransactionInput = {
+export type CreateLedgerEntryInput = {
     shop_id: string;
-    customer_id: string;
-    transaction_type: 'PAYMENT' | 'ADJUSTMENT';
+    entity_id: string;
+    entity_type: 'customer' | 'contact';
+    transaction_type: TransactionType;
     amount: number;
     entry_type: 'DEBIT' | 'CREDIT';
     description?: string;
     transaction_date: Date;
+    // Optional Doc
+    doc_path?: string;
+    doc_type?: string;
+    doc_name?: string;
 };

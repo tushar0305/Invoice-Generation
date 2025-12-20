@@ -2,19 +2,18 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Plus, Search, TrendingUp, TrendingDown, Users, Wallet, Eye, Trash2, ChevronLeft, ChevronRight, X, Phone, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Plus, Search, TrendingUp, TrendingDown, Users, Wallet, Eye, Trash2, ChevronLeft, ChevronRight, X, Phone, ArrowUpRight, ArrowDownRight, Briefcase, Truck, Hammer, User, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { cn, formatCurrency } from '@/lib/utils';
+import { useDebounce } from '@/hooks/use-debounce';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/supabase/client';
+import { useMediaQuery } from '@/hooks/use-media-query';
+import type { CustomerBalance, LedgerStats, LedgerTransaction } from '@/lib/ledger-types';
+
 import {
     Dialog,
     DialogContent,
@@ -25,21 +24,22 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+    SheetFooter,
+} from "@/components/ui/sheet";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/supabase/client';
-import type { CustomerBalance, LedgerStats, LedgerTransaction } from '@/lib/ledger-types';
-import { cn, formatCurrency } from '@/lib/utils';
-import { useDebounce } from '@/hooks/use-debounce';
 
 type KhataClientProps = {
     customers: CustomerBalance[];
@@ -49,12 +49,162 @@ type KhataClientProps = {
     userId: string;
     initialSearch?: string;
     initialBalanceType?: 'positive' | 'negative' | 'zero';
+    initialType?: string;
     pagination?: {
         currentPage: number;
         totalPages: number;
         totalItems: number;
     }
 };
+
+type NewEntityState = {
+    name: string;
+    phone: string;
+    address: string;
+    type: string;
+    email?: string;
+};
+
+// Reusable Form Component
+function AddContactForm({
+    onSubmit,
+    onCancel,
+    isPending,
+    shopId
+}: {
+    onSubmit: (data: NewEntityState) => Promise<void>;
+    onCancel: () => void;
+    isPending: boolean;
+    shopId: string;
+}) {
+    const [newEntity, setNewEntity] = useState<NewEntityState>({
+        name: '',
+        phone: '',
+        address: '',
+        type: 'CUSTOMER',
+        email: ''
+    });
+
+    // Customer Search for "Link Existing"
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const debouncedSearch = useDebounce(searchQuery, 300);
+
+    // Search Effect
+    useEffect(() => {
+        async function searchCustomers() {
+            if (!debouncedSearch || debouncedSearch.length < 2) {
+                setSearchResults([]);
+                return;
+            }
+            console.log('Searching customers for:', debouncedSearch, 'in shop:', shopId);
+            setIsSearching(true);
+            const { data, error } = await supabase
+                .from('customers')
+                .select('id, name, phone, address')
+                .eq('shop_id', shopId)
+                .ilike('name', `%${debouncedSearch}%`)
+                .limit(5);
+
+            if (error) console.error('Search Error:', error);
+            console.log('Search Results:', data);
+
+            setSearchResults(data || []);
+            setIsSearching(false);
+        }
+        if (newEntity.type === 'CUSTOMER') {
+            searchCustomers();
+        } else {
+            setSearchResults([]); // Don't search if not adding customer
+        }
+    }, [debouncedSearch, shopId, newEntity.type]);
+
+    const handleSelectExisting = (customer: any) => {
+        setNewEntity({
+            ...newEntity,
+            name: customer.name,
+            phone: customer.phone || '',
+            address: customer.address || '',
+            type: 'CUSTOMER'
+        });
+        setSearchQuery('');
+        setSearchResults([]);
+    };
+
+    return (
+        <div className="space-y-4 py-4">
+            <div className="space-y-2">
+                <Label>Account Type</Label>
+                <Select
+                    value={newEntity.type}
+                    onValueChange={(val) => setNewEntity({ ...newEntity, type: val })}
+                >
+                    <SelectTrigger>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="CUSTOMER">Customer</SelectItem>
+                        <SelectItem value="SUPPLIER">Supplier</SelectItem>
+                        <SelectItem value="KARIGAR">Karigar</SelectItem>
+                        <SelectItem value="PARTNER">Partner</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Search Box only for Customers */}
+            {newEntity.type === 'CUSTOMER' && (
+                <div className="space-y-2 relative">
+                    <Label className="text-xs text-muted-foreground uppercase">Import Existing Customer (Optional)</Label>
+                    <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search name to autofill..."
+                            className="pl-8"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    {searchResults.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-40 overflow-auto">
+                            {searchResults.map(c => (
+                                <button
+                                    key={c.id}
+                                    className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
+                                    onClick={() => handleSelectExisting(c)}
+                                >
+                                    <div className="font-medium">{c.name}</div>
+                                    <div className="text-xs text-muted-foreground">{c.phone}</div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input value={newEntity.name} onChange={(e) => setNewEntity({ ...newEntity, name: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input value={newEntity.phone} onChange={(e) => setNewEntity({ ...newEntity, phone: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+                <Label>Address</Label>
+                <Input value={newEntity.address} onChange={(e) => setNewEntity({ ...newEntity, address: e.target.value })} />
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+                <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+                <Button onClick={() => onSubmit(newEntity)} disabled={isPending}>
+                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create {newEntity.type}
+                </Button>
+            </div>
+        </div>
+    );
+}
 
 export function KhataClient({
     customers,
@@ -63,7 +213,7 @@ export function KhataClient({
     shopId,
     userId,
     initialSearch = '',
-    initialBalanceType,
+    initialType = 'all',
     pagination
 }: KhataClientProps) {
     const router = useRouter();
@@ -71,46 +221,31 @@ export function KhataClient({
     const searchParams = useSearchParams();
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
+    const isDesktop = useMediaQuery("(min-width: 768px)");
 
     const [searchTerm, setSearchTerm] = useState(initialSearch);
     const debouncedSearch = useDebounce(searchTerm, 500);
+
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
-    // URL sync for search
+    // URL Sync
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
-        const currentSearch = params.get('search') || '';
-        if (debouncedSearch !== currentSearch) {
-            if (debouncedSearch) {
-                params.set('search', debouncedSearch);
-            } else {
-                params.delete('search');
-            }
+        if (debouncedSearch !== (params.get('search') || '')) {
+            if (debouncedSearch) params.set('search', debouncedSearch);
+            else params.delete('search');
             params.set('page', '1');
             router.push(`${pathname}?${params.toString()}`);
         }
-    }, [debouncedSearch, pathname, router, searchParams]);
+    }, [debouncedSearch]);
 
-    useEffect(() => {
+    const handleTypeFilterChange = (type: string) => {
         const params = new URLSearchParams(searchParams);
-        const urlSearch = params.get('search') || '';
-        if (urlSearch !== searchTerm && urlSearch !== debouncedSearch) {
-            setSearchTerm(urlSearch);
-        }
-    }, [searchParams]);
-
-    const handleFilterChange = (filter: string) => {
-        const params = new URLSearchParams(searchParams);
-        if (filter !== 'all') {
-            params.set('balance_type', filter);
-        } else {
-            params.delete('balance_type');
-        }
+        if (type !== 'all') params.set('type', type);
+        else params.delete('type');
         params.set('page', '1');
         router.push(`${pathname}?${params.toString()}`);
     };
-
-    const currentFilter = searchParams.get('balance_type') || 'all';
 
     const handlePageChange = (newPage: number) => {
         const params = new URLSearchParams(searchParams);
@@ -118,484 +253,271 @@ export function KhataClient({
         router.push(`${pathname}?${params.toString()}`);
     };
 
-    const [newCustomer, setNewCustomer] = useState({
-        name: '',
-        phone: '',
-        address: '',
-        opening_balance: 0,
-    });
-    const [customerToDelete, setCustomerToDelete] = useState<{ id: string, name: string } | null>(null);
-
-    const handleAddCustomer = async () => {
-        if (!newCustomer.name.trim()) {
-            toast({ variant: 'destructive', title: 'Validation Error', description: 'Customer name is required' });
+    const handleCreateEntity = async (entityData: NewEntityState) => {
+        if (!entityData.name.trim()) {
+            toast({ variant: 'destructive', title: 'Name Required' });
             return;
         }
 
         startTransition(async () => {
             try {
-                const { error } = await supabase.rpc('create_customer', {
+                // Unified Create RPC (No GST/PAN support as requested)
+                const res = await supabase.rpc('create_khatabook_contact', {
                     p_shop_id: shopId,
-                    p_name: newCustomer.name.trim(),
-                    p_phone: newCustomer.phone.trim() || null,
-                    p_email: null,
-                    p_address: newCustomer.address.trim() || null,
-                    p_state: null,
-                    p_pincode: null,
-                    p_gst_number: null,
-                    p_opening_balance: newCustomer.opening_balance
+                    p_name: entityData.name.trim(),
+                    p_phone: entityData.phone.trim() || null,
+                    p_address: entityData.address.trim() || null,
+                    p_type: entityData.type,
+                    p_email: null // Add email field to UI if needed, currently skipped
                 });
 
-                if (error) {
-                    if (error.code === 'P0001' || error.message?.includes('already exists') || error.code === '23505') {
-                        toast({ variant: 'destructive', title: 'Customer Exists', description: 'A customer with this phone number already exists.' });
-                        return;
-                    }
-                    throw error;
-                }
+                if (res.error) throw res.error;
 
-                toast({ title: 'Customer Added', description: `${newCustomer.name} has been added to your khata book` });
+                toast({ title: 'Added Successfully', description: `${entityData.name} has been added.` });
                 setIsAddDialogOpen(false);
-                setNewCustomer({ name: '', phone: '', address: '', opening_balance: 0 });
                 router.refresh();
-            } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to add customer' });
+            } catch (err: any) {
+                toast({ variant: 'destructive', title: 'Error', description: err.message });
             }
         });
     };
 
-    const handleDeleteCustomer = async () => {
-        if (!customerToDelete) return;
-        const { id: customerId, name: customerName } = customerToDelete;
+    const currentType = searchParams.get('type') || 'all';
 
-        startTransition(async () => {
-            try {
-                const { error } = await supabase
-                    .from('customers')
-                    .update({ deleted_at: new Date().toISOString() })
-                    .eq('id', customerId);
-
-                if (error) throw error;
-                toast({ title: 'Customer Deleted', description: `${customerName} has been removed` });
-                setCustomerToDelete(null);
-                router.refresh();
-            } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to delete' });
-            }
-        });
-    };
-
-    const filters = [
-        { id: 'all', label: 'All' },
-        { id: 'receivable', label: 'To Collect', color: 'emerald' },
-        { id: 'payable', label: 'To Pay', color: 'red' },
-        { id: 'settled', label: 'Settled', color: 'gray' }
+    const typeTabs = [
+        { id: 'all', label: 'All', icon: Users },
+        { id: 'customer', label: 'Customers', icon: User },
+        { id: 'supplier', label: 'Suppliers', icon: Truck },
+        { id: 'karigar', label: 'Karigars', icon: Hammer },
+        { id: 'partner', label: 'Partners', icon: Briefcase },
     ];
 
+    const getEntityIcon = (type: string) => {
+        switch (type) {
+            case 'SUPPLIER': return <Truck className="h-4 w-4" />;
+            case 'KARIGAR': return <Hammer className="h-4 w-4" />;
+            case 'PARTNER': return <Briefcase className="h-4 w-4" />;
+            default: return <User className="h-4 w-4" />;
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-            {/* Mobile Header - Native App Style */}
-            <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40 md:hidden">
-                <div className="px-4 py-3">
-                    <h1 className="text-xl font-bold">Khata Book</h1>
-                    <p className="text-xs text-muted-foreground">Track credits & payments</p>
-                </div>
+        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pb-24 md:pb-8">
+            {/* Header */}
+            <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40 md:hidden px-4 py-3">
+                <h1 className="text-xl font-bold">Khata Book</h1>
+                <p className="text-xs text-muted-foreground">Manage your business connections</p>
             </div>
 
-            {/* Stats Summary - Horizontal Scroll on Mobile */}
-            <div className="px-4 pt-4 md:pt-6">
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {/* Net Balance - Featured */}
+            {/* Content Container */}
+            <div className="px-4 py-4 max-w-7xl mx-auto space-y-6">
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className={cn(
-                        "col-span-2 md:col-span-1 border-0 shadow-lg",
-                        stats.net_balance >= 0
-                            ? "bg-gradient-to-br from-emerald-500 to-emerald-600"
-                            : "bg-gradient-to-br from-red-500 to-red-600"
+                        "col-span-2 lg:col-span-1 border-0 shadow-lg text-white",
+                        stats.net_balance >= 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-600" : "bg-gradient-to-br from-red-500 to-red-600"
                     )}>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-medium text-white/80">Net Balance</span>
-                                <Wallet className="h-4 w-4 text-white/80" />
-                            </div>
-                            <div className="text-2xl font-bold text-white">
-                                {formatCurrency(Math.abs(stats.net_balance))}
-                            </div>
-                            <p className="text-xs text-white/70 mt-0.5">
-                                {stats.net_balance >= 0 ? 'To collect' : 'To pay'}
-                            </p>
+                        <CardContent className="p-5">
+                            <p className="text-sm opacity-90 mb-1">Net Balance</p>
+                            <h2 className="text-3xl font-bold">{formatCurrency(Math.abs(stats.net_balance))}</h2>
+                            <Badge className="mt-2 bg-white/20 text-white hover:bg-white/30 border-0">
+                                {stats.net_balance >= 0 ? 'To Receive' : 'To Pay'}
+                            </Badge>
                         </CardContent>
                     </Card>
 
-                    {/* Total Receivable */}
-                    <Card className="bg-card border-border/50">
-                        <CardContent className="p-3">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-[10px] font-medium text-muted-foreground">Receivable</span>
-                                <ArrowDownRight className="h-3.5 w-3.5 text-emerald-500" />
+                    <Card className="bg-card/50 backdrop-blur-sm">
+                        <CardContent className="p-5">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className="text-xs font-medium text-muted-foreground uppercase">Receivable</span>
+                                <ArrowDownRight className="h-4 w-4 text-emerald-500" />
                             </div>
-                            <div className="text-base font-bold text-emerald-600">{formatCurrency(stats.total_receivable)}</div>
-                            <p className="text-[9px] text-muted-foreground">To collect</p>
+                            <div className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.total_receivable)}</div>
                         </CardContent>
                     </Card>
 
-                    {/* Total Payable */}
-                    <Card className="bg-card border-border/50">
-                        <CardContent className="p-3">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-[10px] font-medium text-muted-foreground">Payable</span>
-                                <ArrowUpRight className="h-3.5 w-3.5 text-red-500" />
+                    <Card className="bg-card/50 backdrop-blur-sm">
+                        <CardContent className="p-5">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className="text-xs font-medium text-muted-foreground uppercase">Payable</span>
+                                <ArrowUpRight className="h-4 w-4 text-red-500" />
                             </div>
-                            <div className="text-base font-bold text-red-600">{formatCurrency(stats.total_payable)}</div>
-                            <p className="text-[9px] text-muted-foreground">To pay</p>
+                            <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.total_payable)}</div>
                         </CardContent>
                     </Card>
 
-                    {/* Total Customers - Hidden on mobile, shown on desktop */}
-                    <Card className="hidden md:block bg-card border-border/50">
-                        <CardContent className="p-3">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-[10px] font-medium text-muted-foreground">Customers</span>
-                                <Users className="h-3.5 w-3.5 text-primary" />
+                    <Card className="hidden md:block bg-card/50 backdrop-blur-sm">
+                        <CardContent className="p-5">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className="text-xs font-medium text-muted-foreground uppercase">Connections</span>
+                                <Users className="h-4 w-4 text-primary" />
                             </div>
-                            <div className="text-base font-bold">{stats.total_customers}</div>
-                            <p className="text-[9px] text-muted-foreground">Active accounts</p>
+                            <div className="text-2xl font-bold">{stats.total_customers}</div>
                         </CardContent>
                     </Card>
                 </div>
-            </div>
 
-            {/* Search & Filters - Sticky on Mobile */}
-            <div className="sticky top-[68px] md:top-0 z-20 bg-background/95 backdrop-blur-lg border-b border-border/40 px-4 py-3">
-                <div className="flex items-center gap-2 mb-3">
-                    <div className="relative flex-1">
+                {/* Filters & Actions */}
+                <div className="sticky top-[68px] md:top-0 z-20 bg-background/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-sm p-3 gap-3 flex flex-col md:flex-row items-center">
+
+                    {/* Search */}
+                    <div className="relative w-full md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search customers..."
-                            className="pl-9 h-10 bg-muted/50 border-0 rounded-xl"
+                            placeholder="Search..."
+                            className="pl-9 bg-muted/50 border-0"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        {searchTerm && (
-                            <button
-                                onClick={() => setSearchTerm('')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                        )}
                     </div>
-                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button size="icon" className="h-10 w-10 rounded-xl shrink-0">
-                                <Plus className="h-5 w-5" />
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add Customer</DialogTitle>
-                                <DialogDescription>Add a new customer to your khata book</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">Name *</Label>
-                                    <Input
-                                        id="name"
-                                        value={newCustomer.name}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                                        placeholder="Customer name"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">Phone</Label>
-                                    <Input
-                                        id="phone"
-                                        value={newCustomer.phone}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                                        placeholder="Phone number"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="address">Address</Label>
-                                    <Input
-                                        id="address"
-                                        value={newCustomer.address}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                                        placeholder="Address"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="opening_balance">Opening Balance</Label>
-                                    <Input
-                                        id="opening_balance"
-                                        type="number"
-                                        step="0.01"
-                                        value={newCustomer.opening_balance}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, opening_balance: parseFloat(e.target.value) || 0 })}
-                                        placeholder="0.00"
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Positive = They owe you, Negative = You owe them
-                                    </p>
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                                <Button onClick={handleAddCustomer} disabled={isPending}>Add Customer</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                </div>
 
-                {/* Filter Pills */}
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-                    {filters.map((filter) => (
-                        <button
-                            key={filter.id}
-                            onClick={() => handleFilterChange(filter.id)}
-                            className={cn(
-                                "px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all",
-                                currentFilter === filter.id
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                            )}
-                        >
-                            {filter.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                    {/* Type Tabs */}
+                    <div className="flex-1 w-full overflow-x-auto scrollbar-hide flex gap-2">
+                        {typeTabs.map(tab => {
+                            const Icon = tab.icon;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => handleTypeFilterChange(tab.id)}
+                                    className={cn(
+                                        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
+                                        currentType === tab.id
+                                            ? "bg-primary text-primary-foreground shadow-sm"
+                                            : "hover:bg-muted text-muted-foreground"
+                                    )}
+                                >
+                                    <Icon className="h-4 w-4" />
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
 
-            {/* Customer List */}
-            <div className="px-4 pb-24 md:pb-8">
-                {/* Mobile View - Native Card Style */}
-                <div className="md:hidden space-y-2 pt-4">
-                    {customers.length === 0 ? (
-                        <div className="text-center py-16">
-                            <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                            <p className="text-muted-foreground">
-                                {searchTerm || currentFilter !== 'all' ? 'No customers found' : 'No customers yet'}
-                            </p>
-                            <Button variant="outline" className="mt-4" onClick={() => setIsAddDialogOpen(true)}>
-                                <Plus className="h-4 w-4 mr-2" /> Add Customer
-                            </Button>
-                        </div>
+                    {/* Add Button - Responsive Dialog/Sheet */}
+                    {isDesktop ? (
+                        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="shrink-0 gap-2 rounded-lg">
+                                    <Plus className="h-4 w-4" />
+                                    <span>Add Contact</span>
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Add New Contact</DialogTitle>
+                                    <DialogDescription>Create a new ledger account</DialogDescription>
+                                </DialogHeader>
+                                <AddContactForm
+                                    onSubmit={handleCreateEntity}
+                                    onCancel={() => setIsAddDialogOpen(false)}
+                                    isPending={isPending}
+                                    shopId={shopId}
+                                />
+                            </DialogContent>
+                        </Dialog>
                     ) : (
-                        customers.map((customer) => (
-                            <button
-                                key={customer.id}
-                                onClick={() => router.push(`/shop/${shopId}/khata/${customer.id}`)}
-                                className="w-full text-left bg-card hover:bg-muted/50 active:scale-[0.99] transition-all rounded-xl p-4 border border-border/50"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        {/* Avatar */}
-                                        <div className={cn(
-                                            "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-                                            customer.current_balance > 0
-                                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                                : customer.current_balance < 0
-                                                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                                    : "bg-muted text-muted-foreground"
-                                        )}>
-                                            {customer.name.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <h3 className="font-medium truncate">{customer.name}</h3>
-                                            {customer.phone && (
-                                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                    <Phone className="h-3 w-3" />
-                                                    {customer.phone}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="text-right shrink-0 pl-3">
-                                        <div className={cn(
-                                            "text-base font-bold",
-                                            customer.current_balance > 0 ? "text-emerald-600" :
-                                                customer.current_balance < 0 ? "text-red-600" : "text-muted-foreground"
-                                        )}>
-                                            {formatCurrency(Math.abs(customer.current_balance))}
-                                        </div>
-                                        <Badge
-                                            variant="secondary"
-                                            className={cn(
-                                                "text-[9px] px-1.5 h-4 font-medium",
-                                                customer.current_balance > 0
-                                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                                    : customer.current_balance < 0
-                                                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                                        : "bg-muted text-muted-foreground"
-                                            )}
-                                        >
-                                            {customer.current_balance > 0 ? 'WILL PAY' : customer.current_balance < 0 ? 'TO PAY' : 'SETTLED'}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            </button>
-                        ))
+                        <Sheet open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                            <SheetTrigger asChild>
+                                <Button className="shrink-0 gap-2 rounded-lg">
+                                    <Plus className="h-4 w-4" />
+                                    <span>Add Contact</span>
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent side="bottom" className="h-[80vh]">
+                                <SheetHeader className="text-left">
+                                    <SheetTitle>Add New Contact</SheetTitle>
+                                    <SheetDescription>Create a new ledger account</SheetDescription>
+                                </SheetHeader>
+                                <AddContactForm
+                                    onSubmit={handleCreateEntity}
+                                    onCancel={() => setIsAddDialogOpen(false)}
+                                    isPending={isPending}
+                                    shopId={shopId}
+                                />
+                            </SheetContent>
+                        </Sheet>
                     )}
                 </div>
 
-                {/* Desktop View - Clean Table */}
-                <div className="hidden md:block pt-4">
-                    <Card className="border-border/50">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="hover:bg-transparent">
-                                    <TableHead>Customer</TableHead>
-                                    <TableHead>Contact</TableHead>
-                                    <TableHead className="text-right">Given</TableHead>
-                                    <TableHead className="text-right">Received</TableHead>
-                                    <TableHead className="text-right">Balance</TableHead>
-                                    <TableHead className="text-center w-[100px]">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {customers.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                                            {searchTerm || currentFilter !== 'all' ? 'No customers found' : 'No customers yet. Add your first customer!'}
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    customers.map((customer) => (
-                                        <TableRow key={customer.id} className="hover:bg-muted/50">
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className={cn(
-                                                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
-                                                        customer.current_balance > 0
-                                                            ? "bg-emerald-100 text-emerald-700"
-                                                            : customer.current_balance < 0
-                                                                ? "bg-red-100 text-red-700"
-                                                                : "bg-muted text-muted-foreground"
-                                                    )}>
-                                                        {customer.name.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <span className="font-medium">{customer.name}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground">{customer.phone || '-'}</TableCell>
-                                            <TableCell className="text-right text-emerald-600 font-medium">
-                                                {formatCurrency(customer.total_spent)}
-                                            </TableCell>
-                                            <TableCell className="text-right text-blue-600 font-medium">
-                                                {formatCurrency(customer.total_paid)}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <span className={cn(
-                                                    "font-bold",
-                                                    customer.current_balance > 0 ? "text-emerald-600" :
-                                                        customer.current_balance < 0 ? "text-red-600" : "text-muted-foreground"
-                                                )}>
-                                                    {formatCurrency(Math.abs(customer.current_balance))}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground ml-1">
-                                                    {customer.current_balance > 0 ? 'Dr' : customer.current_balance < 0 ? 'Cr' : ''}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        onClick={() => router.push(`/shop/${shopId}/khata/${customer.id}`)}
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                        onClick={() => setCustomerToDelete({ id: customer.id, name: customer.name })}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-
-                        {/* Pagination */}
-                        {pagination && pagination.totalPages > 1 && (
-                            <div className="p-4 border-t border-border/50 flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">
-                                    Page {pagination.currentPage} of {pagination.totalPages}
-                                </span>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handlePageChange(pagination.currentPage - 1)}
-                                        disabled={pagination.currentPage <= 1}
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handlePageChange(pagination.currentPage + 1)}
-                                        disabled={pagination.currentPage >= pagination.totalPages}
-                                    >
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
+                {/* List View */}
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {customers.map((entity) => (
+                        <Card
+                            key={entity.id}
+                            onClick={() => router.push(`/shop/${shopId}/khata/${entity.id}`)}
+                            className="text-left cursor-pointer hover:border-primary/50 transition-all active:scale-[0.99]"
+                        >
+                            <CardContent className="p-4 flex items-center gap-4">
+                                <div className={cn(
+                                    "h-12 w-12 rounded-full flex items-center justify-center shrink-0 font-bold text-lg",
+                                    entity.current_balance > 0 ? "bg-emerald-100 text-emerald-600" :
+                                        entity.current_balance < 0 ? "bg-red-100 text-red-600" :
+                                            "bg-muted text-muted-foreground"
+                                )}>
+                                    {entity.name[0]?.toUpperCase()}
                                 </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold truncate">{entity.name}</h3>
+                                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 flex gap-1">
+                                            {getEntityIcon(entity.entity_type || 'CUSTOMER')}
+                                            {entity.entity_type || 'CUSTOMER'}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground truncate">{entity.phone || 'No phone'}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className={cn(
+                                        "font-bold text-lg",
+                                        entity.current_balance > 0 ? "text-emerald-600" :
+                                            entity.current_balance < 0 ? "text-red-600" :
+                                                "text-muted-foreground"
+                                    )}>
+                                        {formatCurrency(Math.abs(entity.current_balance))}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground uppercase font-medium">
+                                        {entity.current_balance > 0 ? 'Receivable' : entity.current_balance < 0 ? 'Payable' : 'Settled'}
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+
+                    {customers.length === 0 && (
+                        <div className="col-span-full py-12 text-center text-muted-foreground">
+                            <div className="bg-muted/50 h-20 w-20 rounded-full mx-auto flex items-center justify-center mb-4">
+                                <Search className="h-8 w-8 opacity-50" />
                             </div>
-                        )}
-                    </Card>
+                            <p>No contacts found matching your filters.</p>
+                        </div>
+                    )}
                 </div>
 
-                {/* Mobile Pagination */}
+                {/* Pagination */}
                 {pagination && pagination.totalPages > 1 && (
-                    <div className="md:hidden flex items-center justify-center gap-4 pt-4">
+                    <div className="flex justify-center gap-2 py-4">
                         <Button
                             variant="outline"
-                            size="sm"
                             onClick={() => handlePageChange(pagination.currentPage - 1)}
                             disabled={pagination.currentPage <= 1}
                         >
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                            Previous
                         </Button>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="flex items-center px-4 text-sm font-medium">
                             {pagination.currentPage} / {pagination.totalPages}
                         </span>
                         <Button
                             variant="outline"
-                            size="sm"
                             onClick={() => handlePageChange(pagination.currentPage + 1)}
                             disabled={pagination.currentPage >= pagination.totalPages}
                         >
-                            Next <ChevronRight className="h-4 w-4 ml-1" />
+                            Next
                         </Button>
                     </div>
                 )}
             </div>
-
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Customer?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will remove {customerToDelete?.name} from your Khata Book. This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDeleteCustomer}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                        >
-                            {isPending ? 'Deleting...' : 'Delete'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </div>
     );
 }
+

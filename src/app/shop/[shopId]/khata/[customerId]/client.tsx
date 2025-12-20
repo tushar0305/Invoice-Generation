@@ -1,14 +1,19 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, TrendingUp, TrendingDown, Edit, Trash2, Phone, MessageCircle, ArrowDownRight, ArrowUpRight } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+import {
+    ArrowLeft, Plus, Edit, Trash2, Phone, MessageCircle, ArrowDownRight, ArrowUpRight,
+    Paperclip, FileText, X, Loader2, MapPin, Mail, Calendar, CreditCard
+} from 'lucide-react';
+import { MotionWrapper } from '@/components/ui/motion-wrapper';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Dialog,
     DialogContent,
@@ -19,27 +24,49 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
-import type { CustomerBalance, LedgerTransaction } from '@/lib/ledger-types';
+import type { UnifiedParty, LedgerTransaction, TransactionType } from '@/lib/ledger-types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 
 type CustomerLedgerClientProps = {
-    customer: CustomerBalance;
+    entity: UnifiedParty;
     transactions: LedgerTransaction[];
     shopId: string;
     userId: string;
 };
 
+const ENTITY_LABELS: Record<string, { given: string, received: string }> = {
+    CUSTOMER: { given: 'Sale / Given', received: 'Payment / Received' },
+    SUPPLIER: { given: 'Payment Sent', received: 'Purchase / Bill' },
+    KARIGAR: { given: 'Payment Sent', received: 'Work / Labor' },
+    PARTNER: { given: 'Withdrawal', received: 'Deposit / Profit' },
+    OTHER: { given: 'Given', received: 'Got' },
+};
+
 export function CustomerLedgerClient({
-    customer,
+    entity,
     transactions: initialTransactions,
     shopId,
     userId,
@@ -49,31 +76,32 @@ export function CustomerLedgerClient({
     const [isPending, startTransition] = useTransition();
 
     const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
-    const [isEditCustomerOpen, setIsEditCustomerOpen] = useState(false);
+    const [isEditEntityOpen, setIsEditEntityOpen] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [newTransaction, setNewTransaction] = useState({
-        type: 'received' as 'given' | 'received',
+        entry_type: 'DEBIT' as 'DEBIT' | 'CREDIT',  // DEBIT = You Gave / They Took. CREDIT = You Got / They Gave.
         amount: '',
+        transaction_type: '' as TransactionType | '',
         description: '',
         transaction_date: format(new Date(), 'yyyy-MM-dd'),
+        file: null as File | null
     });
 
-    const [editCustomer, setEditCustomer] = useState({
-        name: customer.name,
-        phone: customer.phone || '',
-        address: customer.address || '',
+    const [editEntity, setEditEntity] = useState({
+        name: entity.name,
+        phone: entity.phone || '',
+        address: entity.address || '',
     });
 
-    // Calculate running balance
+    // Compute running balance
     let runningBalance = 0;
-    const transactionsWithBalance = initialTransactions.map(trans => {
-        if (trans.entry_type === 'DEBIT') {
-            runningBalance += trans.amount;
-        } else {
-            runningBalance -= trans.amount;
-        }
+    // We reverse to calculate from oldest to newest
+    const transactionsWithBalance = [...initialTransactions].reverse().map(trans => {
+        if (trans.entry_type === 'DEBIT') runningBalance += trans.amount;
+        else runningBalance -= trans.amount;
         return { ...trans, balance_after: runningBalance };
-    }).reverse();
+    }).reverse(); // Reverse back to newest first
 
     const handleAddTransaction = async () => {
         const amount = parseFloat(newTransaction.amount);
@@ -84,351 +112,486 @@ export function CustomerLedgerClient({
 
         startTransition(async () => {
             try {
-                const { error } = await supabase.rpc('add_ledger_transaction', {
+                let docPath = null;
+                let docType = null;
+                let docName = null;
+
+                // 1. Upload File if present
+                if (newTransaction.file) {
+                    const file = newTransaction.file;
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${shopId}/${entity.id}/${Date.now()}.${fileExt}`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('khata-docs')
+                        .upload(fileName, file);
+
+                    if (uploadError) {
+                        // Attempt to create bucket if it doesn't exist? No, usually generic error.
+                        // Assuming bucket 'khata-docs' exists. If not, this fails.
+                        console.error('Upload error', uploadError);
+                        throw new Error('Failed to upload document. Please try again or remove the file.');
+                    }
+
+                    docPath = fileName;
+                    docType = file.type;
+                    docName = file.name;
+                }
+
+                // 2. Add Transaction via V2 RPC
+                // Determine transaction type if not set
+                let txType = newTransaction.transaction_type;
+                if (!txType) {
+                    if (entity.entity_type === 'CUSTOMER') {
+                        txType = newTransaction.entry_type === 'DEBIT' ? 'SALE' : 'PAYMENT';
+                    } else if (entity.entity_type === 'SUPPLIER') {
+                        txType = newTransaction.entry_type === 'CREDIT' ? 'PURCHASE' : 'PAYMENT';
+                    } else {
+                        txType = newTransaction.entry_type === 'DEBIT' ? 'ODHARA' : 'JAMA';
+                    }
+                }
+
+                const { error } = await supabase.rpc('add_ledger_entry_v2', {
                     p_shop_id: shopId,
-                    p_customer_id: customer.id,
+                    p_khatabook_contact_id: entity.id,
+                    p_transaction_type: txType,
                     p_amount: amount,
-                    p_transaction_type: newTransaction.type === 'given' ? 'INVOICE' : 'PAYMENT',
-                    p_entry_type: newTransaction.type === 'given' ? 'DEBIT' : 'CREDIT',
+                    p_entry_type: newTransaction.entry_type,
                     p_description: newTransaction.description.trim() || null,
-                    p_date: newTransaction.transaction_date
+                    p_transaction_date: new Date(newTransaction.transaction_date),
+                    p_file_path: docPath,
+                    p_file_type: docType,
+                    p_file_name: docName
                 });
 
                 if (error) throw error;
 
-                toast({ title: 'Transaction Added', description: `₹${formatCurrency(amount)} ${newTransaction.type === 'given' ? 'given to' : 'received from'} ${customer.name}` });
+                toast({ title: 'Transaction Added', description: 'Entry recorded successfully' });
                 setIsAddTransactionOpen(false);
-                setNewTransaction({ type: 'received', amount: '', description: '', transaction_date: format(new Date(), 'yyyy-MM-dd') });
+                setNewTransaction({
+                    entry_type: 'CREDIT',
+                    amount: '',
+                    transaction_type: '',
+                    description: '',
+                    transaction_date: format(new Date(), 'yyyy-MM-dd'),
+                    file: null
+                });
                 router.refresh();
+
             } catch (error: any) {
                 toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to add transaction' });
             }
         });
     };
 
-    const handleUpdateCustomer = async () => {
-        if (!editCustomer.name.trim()) {
-            toast({ variant: 'destructive', title: 'Validation Error', description: 'Customer name is required' });
-            return;
-        }
-
+    const handleDeleteTransaction = async (transactionId: string) => {
+        // Implement V2 delete or generic delete
+        if (!confirm('Are you sure you want to delete this transaction?')) return;
         startTransition(async () => {
-            try {
-                const { error } = await supabase.rpc('update_customer', {
-                    p_customer_id: customer.id,
-                    p_shop_id: shopId,
-                    p_name: editCustomer.name.trim(),
-                    p_phone: editCustomer.phone.trim() || null,
-                    p_email: null,
-                    p_address: editCustomer.address.trim() || null,
-                    p_state: null,
-                    p_pincode: null,
-                    p_gst_number: null
-                });
-
-                if (error) throw error;
-
-                toast({ title: 'Customer Updated', description: 'Details have been updated' });
-                setIsEditCustomerOpen(false);
+            const { error } = await supabase.from('ledger_transactions').update({ deleted_at: new Date().toISOString() }).eq('id', transactionId);
+            if (error) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete' });
+            } else {
+                toast({ title: 'Deleted', description: 'Transaction removed' });
                 router.refresh();
-            } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to update' });
             }
         });
     };
 
-    const handleDeleteTransaction = async (transactionId: string, amount: number, type: string) => {
-        if (!confirm(`Delete this ₹${formatCurrency(amount)} transaction?`)) return;
-
+    const handleUpdateEntity = async () => {
+        // Update Logic based on source table
+        if (!editEntity.name) return;
         startTransition(async () => {
-            try {
-                const { error } = await supabase.rpc('delete_ledger_transaction', {
-                    p_transaction_id: transactionId,
-                    p_shop_id: shopId
-                });
+            const { error } = await supabase
+                .from('khatabook_contacts')
+                .update({
+                    name: editEntity.name,
+                    phone: editEntity.phone || null,
+                    address: editEntity.address || null
+                })
+                .eq('id', entity.id);
 
-                if (error) throw error;
-                toast({ title: 'Transaction Deleted' });
+            if (error) {
+                toast({ variant: 'destructive', title: 'Error', description: error.message });
+            } else {
+                toast({ title: 'Updated', description: 'Details updated successfully' });
+                setIsEditEntityOpen(false);
                 router.refresh();
-            } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to delete' });
+            }
+        });
+    };
+
+    const handleDeleteEntity = async () => {
+        if (!confirm('Are you sure you want to delete this contact?')) return;
+        startTransition(async () => {
+            const { error } = await supabase.from('khatabook_contacts').update({ deleted_at: new Date().toISOString() }).eq('id', entity.id);
+            if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
+            else {
+                toast({ title: 'Deleted', description: 'Contact deleted successfully' });
+                router.push(`/shop/${shopId}/khata`);
             }
         });
     };
 
     const sendWhatsApp = () => {
-        const balance = Math.abs(customer.current_balance);
-        const type = customer.current_balance > 0 ? 'receivable' : 'payable';
-        const text = `Hello ${customer.name}, your current khata balance is ₹${balance} (${type}).`;
-        const url = `https://wa.me/${customer.phone?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
+        if (!entity.phone) return;
+        const balance = Math.abs(entity.current_balance);
+        const typeStr = entity.current_balance > 0 ? 'receivable (You owe me)' : 'payable (I owe you)';
+        const text = `Hi ${entity.name}, your current balance with us is ₹${balance} - ${typeStr}.`;
+        window.open(`https://wa.me/${entity.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
     };
 
+    const labels = ENTITY_LABELS[entity.entity_type] || ENTITY_LABELS.OTHER;
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pb-24">
-            {/* Mobile Header - Native Style */}
-            <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40">
-                <div className="flex items-center gap-3 px-4 py-3">
-                    <button
-                        onClick={() => router.push(`/shop/${shopId}/khata`)}
-                        className="p-2 -ml-2 rounded-full hover:bg-muted/50 active:scale-95 transition-transform"
-                    >
+        <MotionWrapper className="space-y-6 pb-24">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" onClick={() => router.push(`/shop/${shopId}/khata`)}>
                         <ArrowLeft className="h-5 w-5" />
-                    </button>
-                    <div className="flex-1 min-w-0">
-                        <h1 className="text-lg font-bold truncate">{customer.name}</h1>
-                        {customer.phone && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {customer.phone}
-                            </p>
-                        )}
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-bold">{entity.name}</h1>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            {entity.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {entity.phone}</span>}
+                            <Badge variant="outline" className="text-xs">{entity.entity_type}</Badge>
+                        </div>
                     </div>
-                    <Dialog open={isEditCustomerOpen} onOpenChange={setIsEditCustomerOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9">
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Edit Customer</DialogTitle>
-                                <DialogDescription>Update customer details</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>Name *</Label>
-                                    <Input value={editCustomer.name} onChange={(e) => setEditCustomer({ ...editCustomer, name: e.target.value })} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Phone</Label>
-                                    <Input value={editCustomer.phone} onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Address</Label>
-                                    <Input value={editCustomer.address} onChange={(e) => setEditCustomer({ ...editCustomer, address: e.target.value })} />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsEditCustomerOpen(false)}>Cancel</Button>
-                                <Button onClick={handleUpdateCustomer} disabled={isPending}>Save</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                </div>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setIsEditEntityOpen(true)} className="gap-2">
+                        <Edit className="h-4 w-4" /> Edit
+                    </Button>
                 </div>
             </div>
 
-            {/* Balance Card - Hero Style */}
-            <div className="px-4 pt-4">
-                <Card className={cn(
-                    "border-0 shadow-xl overflow-hidden",
-                    customer.current_balance > 0
-                        ? "bg-gradient-to-br from-emerald-500 to-emerald-600"
-                        : customer.current_balance < 0
-                            ? "bg-gradient-to-br from-red-500 to-red-600"
-                            : "bg-gradient-to-br from-slate-500 to-slate-600"
-                )}>
-                    <CardContent className="p-5">
-                        <div className="text-center text-white">
-                            <p className="text-sm opacity-80 mb-1">Current Balance</p>
-                            <h2 className="text-4xl font-bold mb-2">
-                                {formatCurrency(Math.abs(customer.current_balance))}
-                            </h2>
-                            <Badge className={cn(
-                                "text-xs font-medium",
-                                customer.current_balance > 0
-                                    ? "bg-white/20 text-white"
-                                    : customer.current_balance < 0
-                                        ? "bg-white/20 text-white"
-                                        : "bg-white/20 text-white"
-                            )}>
-                                {customer.current_balance > 0 ? 'WILL PAY YOU' : customer.current_balance < 0 ? 'YOU WILL PAY' : 'SETTLED'}
-                            </Badge>
+            {/* Edit Dialog */}
+            <Dialog open={isEditEntityOpen} onOpenChange={setIsEditEntityOpen}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Edit Details</DialogTitle></DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2"><Label>Name</Label><Input value={editEntity.name} onChange={e => setEditEntity({ ...editEntity, name: e.target.value })} /></div>
+                        <div className="space-y-2"><Label>Phone</Label><Input value={editEntity.phone} onChange={e => setEditEntity({ ...editEntity, phone: e.target.value })} /></div>
+                        <div className="space-y-2"><Label>Address</Label><Input value={editEntity.address} onChange={e => setEditEntity({ ...editEntity, address: e.target.value })} /></div>
+                    </div>
+                    <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between w-full">
+                        <Button variant="destructive" onClick={handleDeleteEntity} disabled={isPending} type="button" className="w-full sm:w-auto">
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </Button>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <Button variant="outline" onClick={() => setIsEditEntityOpen(false)} className="flex-1 sm:flex-none">Cancel</Button>
+                            <Button onClick={handleUpdateEntity} disabled={isPending} className="flex-1 sm:flex-none">Save</Button>
                         </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-white/20">
-                            <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 text-white/70 text-xs mb-1">
-                                    <ArrowDownRight className="h-3 w-3" />
-                                    Total Given
-                                </div>
-                                <p className="text-lg font-bold text-white">{formatCurrency(customer.total_spent)}</p>
-                            </div>
-                            <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 text-white/70 text-xs mb-1">
-                                    <ArrowUpRight className="h-3 w-3" />
-                                    Total Received
-                                </div>
-                                <p className="text-lg font-bold text-white">{formatCurrency(customer.total_paid)}</p>
-                            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+                {/* Balance Card */}
+                <Card className={cn(
+                    "border-0 shadow-xl overflow-hidden text-white md:col-span-1",
+                    entity.current_balance > 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-600" :
+                        entity.current_balance < 0 ? "bg-gradient-to-br from-red-500 to-red-600" :
+                            "bg-gradient-to-br from-slate-500 to-slate-600"
+                )}>
+                    <CardContent className="p-6 text-center flex flex-col items-center justify-center h-full min-h-[180px]">
+                        <p className="opacity-90 text-sm mb-1">Current Balance</p>
+                        <h2 className="text-4xl font-bold mb-3">{formatCurrency(Math.abs(entity.current_balance))}</h2>
+                        <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 mb-4">
+                            {entity.current_balance > 0 ? 'To Collect' : entity.current_balance < 0 ? 'To Pay' : 'Settled'}
+                        </Badge>
+
+                        <div className="flex gap-2 w-full mt-auto">
+                            <Button variant="secondary" className="w-full bg-white/20 hover:bg-white/30 text-white border-0" onClick={sendWhatsApp} disabled={!entity.phone}>
+                                <MessageCircle className="h-4 w-4 mr-2" /> Remind
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2 mt-4">
+                {/* Contact Info Card */}
+                <Card className="md:col-span-2">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Contact Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                    <Phone className="h-3 w-3" /> Phone
+                                </div>
+                                <p className="font-medium">{entity.phone || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                    <Mail className="h-3 w-3" /> Email
+                                </div>
+                                <p className="font-medium">{entity.email || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-1 sm:col-span-2">
+                                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                    <MapPin className="h-3 w-3" /> Address
+                                </div>
+                                <p className="font-medium">{entity.address || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Transactions Section */}
+            <Card className="glass-card">
+                <div className="p-4 border-b flex items-center justify-between">
+                    <div>
+                        <h3 className="font-bold text-lg">Transaction History</h3>
+                        <p className="text-xs text-muted-foreground">Recent ledger entries</p>
+                    </div>
                     <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
                         <DialogTrigger asChild>
-                            <Button className="flex-1 gap-2 h-11">
-                                <Plus className="h-4 w-4" />
-                                Add Entry
+                            <Button className="gap-2">
+                                <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add Transaction</span>
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="sm:max-w-md">
                             <DialogHeader>
-                                <DialogTitle>Add Transaction</DialogTitle>
-                                <DialogDescription>Record a transaction for {customer.name}</DialogDescription>
+                                <DialogTitle>New Transaction</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
-                                <div className="grid grid-cols-2 gap-2">
+                                {/* Type Toggle */}
+                                <div className="grid grid-cols-2 gap-3">
                                     <button
-                                        onClick={() => setNewTransaction({ ...newTransaction, type: 'given' })}
+                                        onClick={() => setNewTransaction({ ...newTransaction, entry_type: 'DEBIT' })}
                                         className={cn(
-                                            "p-4 rounded-xl border-2 text-center transition-all",
-                                            newTransaction.type === 'given'
-                                                ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
-                                                : "border-border"
+                                            "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1",
+                                            newTransaction.entry_type === 'DEBIT'
+                                                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                                                : "border-border hover:bg-muted"
                                         )}
                                     >
-                                        <ArrowDownRight className={cn(
-                                            "h-6 w-6 mx-auto mb-1",
-                                            newTransaction.type === 'given' ? "text-emerald-600" : "text-muted-foreground"
-                                        )} />
-                                        <span className={cn(
-                                            "text-sm font-medium",
-                                            newTransaction.type === 'given' ? "text-emerald-600" : "text-muted-foreground"
-                                        )}>Given</span>
+                                        <ArrowDownRight className="h-5 w-5" />
+                                        <span className="font-bold text-sm">YOU GAVE</span>
+                                        <span className="text-[10px] opacity-70">{labels.given}</span>
                                     </button>
                                     <button
-                                        onClick={() => setNewTransaction({ ...newTransaction, type: 'received' })}
+                                        onClick={() => setNewTransaction({ ...newTransaction, entry_type: 'CREDIT' })}
                                         className={cn(
-                                            "p-4 rounded-xl border-2 text-center transition-all",
-                                            newTransaction.type === 'received'
-                                                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                                                : "border-border"
+                                            "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1",
+                                            newTransaction.entry_type === 'CREDIT'
+                                                ? "border-red-500 bg-red-50 text-red-700"
+                                                : "border-border hover:bg-muted"
                                         )}
                                     >
-                                        <ArrowUpRight className={cn(
-                                            "h-6 w-6 mx-auto mb-1",
-                                            newTransaction.type === 'received' ? "text-blue-600" : "text-muted-foreground"
-                                        )} />
-                                        <span className={cn(
-                                            "text-sm font-medium",
-                                            newTransaction.type === 'received' ? "text-blue-600" : "text-muted-foreground"
-                                        )}>Received</span>
+                                        <ArrowUpRight className="h-5 w-5" />
+                                        <span className="font-bold text-sm">YOU GOT</span>
+                                        <span className="text-[10px] opacity-70">{labels.received}</span>
                                     </button>
                                 </div>
+
                                 <div className="space-y-2">
-                                    <Label>Amount *</Label>
+                                    <Label>Amount</Label>
                                     <Input
                                         type="number"
-                                        step="0.01"
                                         value={newTransaction.amount}
-                                        onChange={(e) => setNewTransaction({ ...newTransaction, amount: e.target.value })}
+                                        onChange={e => setNewTransaction({ ...newTransaction, amount: e.target.value })}
+                                        className="text-2xl font-bold h-12"
                                         placeholder="0.00"
-                                        className="text-2xl h-14 text-center font-bold"
+                                        autoFocus
                                     />
                                 </div>
+
+                                <div className="space-y-2">
+                                    <Label>Description</Label>
+                                    <Textarea
+                                        value={newTransaction.description}
+                                        onChange={e => setNewTransaction({ ...newTransaction, description: e.target.value })}
+                                        placeholder="Item details, bill no, etc."
+                                        rows={2}
+                                    />
+                                </div>
+
                                 <div className="space-y-2">
                                     <Label>Date</Label>
                                     <Input
                                         type="date"
                                         value={newTransaction.transaction_date}
-                                        onChange={(e) => setNewTransaction({ ...newTransaction, transaction_date: e.target.value })}
+                                        onChange={e => setNewTransaction({ ...newTransaction, transaction_date: e.target.value })}
                                     />
                                 </div>
+
                                 <div className="space-y-2">
-                                    <Label>Note (optional)</Label>
-                                    <Textarea
-                                        value={newTransaction.description}
-                                        onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
-                                        placeholder="Add a note..."
-                                        rows={2}
-                                    />
+                                    <Label>Attachment (Optional)</Label>
+                                    <div className="flex gap-2 items-center">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2"
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            <Paperclip className="h-4 w-4" />
+                                            {newTransaction.file ? 'Change File' : 'Attach File'}
+                                        </Button>
+                                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                            {newTransaction.file?.name}
+                                        </span>
+                                        {newTransaction.file && (
+                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setNewTransaction({ ...newTransaction, file: null })}>
+                                                <X className="h-3 w-3" />
+                                            </Button>
+                                        )}
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            accept="image/*,application/pdf"
+                                            onChange={(e) => {
+                                                if (e.target.files?.[0]) {
+                                                    setNewTransaction({ ...newTransaction, file: e.target.files[0] });
+                                                }
+                                            }}
+                                        />
+                                    </div>
                                 </div>
+
                             </div>
                             <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsAddTransactionOpen(false)}>Cancel</Button>
-                                <Button onClick={handleAddTransaction} disabled={isPending}>
-                                    {newTransaction.type === 'given' ? 'Record Given' : 'Record Received'}
+                                <Button onClick={handleAddTransaction} disabled={isPending} className="w-full">
+                                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Save Transaction
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-
-                    <Button variant="outline" className="h-11 gap-2" onClick={sendWhatsApp} disabled={!customer.phone}>
-                        <MessageCircle className="h-4 w-4" />
-                        Remind
-                    </Button>
                 </div>
-            </div>
 
-            {/* Transaction History */}
-            <div className="px-4 mt-6">
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Transaction History</h3>
-
-                {transactionsWithBalance.length === 0 ? (
-                    <Card className="border-border/50">
-                        <CardContent className="py-12 text-center">
-                            <p className="text-muted-foreground">No transactions yet</p>
-                            <Button variant="outline" className="mt-4" onClick={() => setIsAddTransactionOpen(true)}>
-                                <Plus className="h-4 w-4 mr-2" /> Add First Entry
-                            </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div className="space-y-2">
-                        {transactionsWithBalance.map((trans) => (
-                            <Card key={trans.id} className="border-border/50 overflow-hidden">
-                                <CardContent className="p-0">
-                                    <div className="flex items-center p-4">
+                <div className="p-0">
+                    {/* Mobile View - Cards */}
+                    <div className="md:hidden space-y-3 p-4">
+                        {transactionsWithBalance.length === 0 ? (
+                            <div className="text-center py-10 text-muted-foreground">No transactions yet</div>
+                        ) : (
+                            transactionsWithBalance.map(t => (
+                                <Card key={t.id} className="overflow-hidden border border-border/50">
+                                    <CardContent className="p-0 flex">
                                         <div className={cn(
-                                            "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                                            trans.entry_type === 'DEBIT'
-                                                ? "bg-emerald-100 dark:bg-emerald-900/30"
-                                                : "bg-blue-100 dark:bg-blue-900/30"
-                                        )}>
-                                            {trans.entry_type === 'DEBIT'
-                                                ? <ArrowDownRight className="h-5 w-5 text-emerald-600" />
-                                                : <ArrowUpRight className="h-5 w-5 text-blue-600" />
-                                            }
-                                        </div>
-                                        <div className="flex-1 ml-3 min-w-0">
-                                            <div className="flex items-baseline justify-between">
-                                                <span className={cn(
-                                                    "text-base font-bold",
-                                                    trans.entry_type === 'DEBIT' ? "text-emerald-600" : "text-blue-600"
-                                                )}>
-                                                    {trans.entry_type === 'DEBIT' ? '+' : '-'}{formatCurrency(trans.amount)}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {format(new Date(trans.transaction_date), 'dd MMM')}
-                                                </span>
+                                            "w-1.5 shrink-0",
+                                            t.entry_type === 'DEBIT' ? "bg-emerald-500" : "bg-red-500"
+                                        )} />
+                                        <div className="p-3 flex-1">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <div>
+                                                    <div className="font-bold text-base flex items-center gap-2">
+                                                        <span className={t.entry_type === 'DEBIT' ? "text-emerald-700" : "text-red-700"}>
+                                                            {t.entry_type === 'DEBIT' ? '+' : '-'}{formatCurrency(t.amount)}
+                                                        </span>
+                                                        {t.transaction_type && <Badge variant="outline" className="text-[10px] h-4 px-1">{t.transaction_type}</Badge>}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground">{format(new Date(t.transaction_date), 'dd MMM, yyyy')}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-mono text-muted-foreground">Bal: {formatCurrency(Math.abs(t.balance_after || 0))}</p>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 text-muted-foreground/50 hover:text-red-500" onClick={() => handleDeleteTransaction(t.id)}>
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center justify-between mt-0.5">
-                                                <span className="text-xs text-muted-foreground truncate mr-2">
-                                                    {trans.description || (trans.entry_type === 'DEBIT' ? 'Given' : 'Received')}
-                                                </span>
-                                                <span className="text-[10px] text-muted-foreground font-mono shrink-0">
-                                                    Bal: {formatCurrency(Math.abs(trans.balance_after))}
-                                                    {trans.balance_after > 0 ? ' Dr' : trans.balance_after < 0 ? ' Cr' : ''}
-                                                </span>
-                                            </div>
+                                            {t.description && <p className="text-sm text-foreground/80 bg-muted/30 p-1.5 rounded-md mt-1">{t.description}</p>}
+
+                                            {/* Documents */}
+                                            {t.documents && t.documents.length > 0 && (
+                                                <div className="flex gap-2 mt-2 flex-wrap">
+                                                    {t.documents.map(doc => (
+                                                        <a
+                                                            key={doc.id}
+                                                            href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/khata-docs/${doc.storage_path}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-medium hover:bg-blue-100 transition-colors"
+                                                        >
+                                                            <Paperclip className="h-3 w-3" />
+                                                            {doc.file_name}
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
-                                        <button
-                                            onClick={() => handleDeleteTransaction(trans.id, trans.amount, trans.entry_type)}
-                                            className="ml-2 p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
                     </div>
-                )}
-            </div>
-        </div>
+
+                    {/* Desktop View - Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-muted/50">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead className="text-right">Debit (+)</TableHead>
+                                    <TableHead className="text-right">Credit (-)</TableHead>
+                                    <TableHead className="text-right">Balance</TableHead>
+                                    <TableHead></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {transactionsWithBalance.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                            No transactions found.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    transactionsWithBalance.map((t) => (
+                                        <TableRow key={t.id} className="group">
+                                            <TableCell className="w-[120px]">
+                                                {format(new Date(t.transaction_date), 'dd MMM, yyyy')}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="max-w-[300px] truncate" title={t.description || ''}>
+                                                    {t.description || '-'}
+                                                </div>
+                                                {/* Documents */}
+                                                {t.documents && t.documents.length > 0 && (
+                                                    <div className="flex gap-1 mt-1">
+                                                        {t.documents.map(doc => (
+                                                            <Paperclip key={doc.id} className="h-3 w-3 text-blue-500" />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {t.transaction_type && <Badge variant="outline" className="text-[10px]">{t.transaction_type}</Badge>}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium text-emerald-600">
+                                                {t.entry_type === 'DEBIT' ? formatCurrency(t.amount) : '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium text-red-600">
+                                                {t.entry_type === 'CREDIT' ? formatCurrency(t.amount) : '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono text-muted-foreground">
+                                                {formatCurrency(Math.abs(t.balance_after || 0))}
+                                            </TableCell>
+                                            <TableCell className="text-right w-[50px]">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => handleDeleteTransaction(t.id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+            </Card>
+        </MotionWrapper>
     );
 }

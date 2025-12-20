@@ -153,6 +153,12 @@ export function InventoryClient({
 
     return (
         <div className="pb-20 md:pb-6 pt-2 px-4 md:px-0">
+            {/* Page Header */}
+            <div className="mb-4 md:mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Inventory</h1>
+                <p className="text-muted-foreground text-sm md:text-base mt-1">Manage your stock, tag items, and track inventory status.</p>
+            </div>
+
             {/* Sticky Header Section */}
             <div className="sticky top-0 z-20 bg-background pb-3 space-y-3 -mx-4 px-4 md:mx-0 md:px-0">
                 {/* Search Bar */}
@@ -235,8 +241,8 @@ export function InventoryClient({
                         onClick={() => handleFilterChange(filter.key)}
                         className={cn(
                             "shrink-0 gap-2 h-9 rounded-full transition-all",
-                            activeFilter === filter.key 
-                                ? "bg-primary text-primary-foreground shadow-glow-sm" 
+                            activeFilter === filter.key
+                                ? "bg-primary text-primary-foreground shadow-glow-sm"
                                 : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10"
                         )}
                     >
@@ -284,64 +290,64 @@ export function InventoryClient({
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                {initialItems.map((item) => (
-                                    <TableRow
-                                        key={item.id}
-                                        className="cursor-pointer hover:bg-muted/50"
-                                        onClick={() => router.push(`/shop/${shopId}/inventory/${item.tag_id}`)}
-                                    >
-                                        <TableCell className="font-medium font-mono text-xs">
-                                            <div className="flex items-center gap-2">
-                                                <QrCode className="h-3 w-3 text-muted-foreground" />
-                                                {item.tag_id}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="font-medium">{item.name}</TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-col text-xs">
-                                                <span>{item.category || item.metal_type}</span>
-                                                <span className="text-muted-foreground">{item.purity}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{item.net_weight.toFixed(3)} g</TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant="secondary"
-                                                className={cn(
-                                                    "text-xs font-normal",
-                                                    item.status === 'IN_STOCK' && "bg-emerald-500/10 text-emerald-600",
-                                                    item.status === 'RESERVED' && "bg-yellow-500/10 text-yellow-600",
-                                                    item.status === 'SOLD' && "bg-blue-500/10 text-blue-600",
-                                                )}
+                                        {initialItems.map((item) => (
+                                            <TableRow
+                                                key={item.id}
+                                                className="cursor-pointer hover:bg-muted/50"
+                                                onClick={() => router.push(`/shop/${shopId}/inventory/${item.tag_id}`)}
                                             >
-                                                {STATUS_LABELS[item.status]?.label || item.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right text-xs">
-                                            {item.making_charge_value > 0 ? (
-                                                <span>₹{item.making_charge_value}/{item.making_charge_type === 'PER_GRAM' ? 'g' : ' flat'}</span>
-                                            ) : '-'}
-                                        </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </Card>
-                    </div>
+                                                <TableCell className="font-medium font-mono text-xs">
+                                                    <div className="flex items-center gap-2">
+                                                        <QrCode className="h-3 w-3 text-muted-foreground" />
+                                                        {item.tag_id}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="font-medium">{item.name}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col text-xs">
+                                                        <span>{item.category || item.metal_type}</span>
+                                                        <span className="text-muted-foreground">{item.purity}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{item.net_weight.toFixed(3)} g</TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className={cn(
+                                                            "text-xs font-normal",
+                                                            item.status === 'IN_STOCK' && "bg-emerald-500/10 text-emerald-600",
+                                                            item.status === 'RESERVED' && "bg-yellow-500/10 text-yellow-600",
+                                                            item.status === 'SOLD' && "bg-blue-500/10 text-blue-600",
+                                                        )}
+                                                    >
+                                                        {STATUS_LABELS[item.status]?.label || item.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right text-xs">
+                                                    {item.making_charge_value > 0 ? (
+                                                        <span>₹{item.making_charge_value}/{item.making_charge_type === 'PER_GRAM' ? 'g' : ' flat'}</span>
+                                                    ) : '-'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </Card>
+                        </div>
 
-                    {/* Mobile Card View */}
-                    <div className="md:hidden space-y-3">
-                        {initialItems.map((item) => (
-                            <InventoryMobileCard
-                                key={item.id}
-                                item={item}
-                                shopId={shopId}
-                            />
-                        ))}
-                    </div>
-                </>
-            )}
-        </div>            {/* Pagination */}
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-3">
+                            {initialItems.map((item) => (
+                                <InventoryMobileCard
+                                    key={item.id}
+                                    item={item}
+                                    shopId={shopId}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>            {/* Pagination */}
             {pagination.totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 pt-4">
                     <Button

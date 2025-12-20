@@ -197,7 +197,7 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const { data: stats, error } = await supabase.rpc('get_dashboard_stats', { p_shop_id: shopId });
 
     if (error || !stats) {
-        console.error('Error fetching dashboard stats:', error);
+        console.error('Error fetching dashboard stats:', JSON.stringify(error, null, 2), 'Code:', error?.code, 'Message:', error?.message);
         // Return zeros/empty if RPC fails
         return {
             customerCount: 0,
@@ -221,6 +221,8 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     // Map RPC result to UI expected format
     return {
         customerCount: stats.customer_count || 0,
+        returningCustomerCount: stats.returning_customer_count || 0,
+        newCustomerCount: stats.new_customer_count || 0,
         productCount: stats.product_count || 0,
         totalInvoices: stats.invoice_count || 0,
         activeLoans: stats.active_loans_count || 0,

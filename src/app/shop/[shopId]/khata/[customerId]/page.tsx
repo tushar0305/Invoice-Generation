@@ -3,6 +3,9 @@ import { createClient } from '@/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 import { CustomerLedgerClient } from './client';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { UnifiedParty, LedgerTransaction } from '@/lib/ledger-types';
+
+export const dynamic = 'force-dynamic';
 
 type PageProps = {
     params: Promise<{ shopId: string; customerId: string }>;
@@ -19,16 +22,12 @@ async function LedgerLoading() {
 
 export default async function CustomerLedgerPage({ params }: PageProps) {
     const { shopId, customerId } = await params;
-
     const supabase = await createClient();
 
     // Auth check
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-        redirect('/login');
-    }
+    if (authError || !user) redirect('/login');
 
-    // Check shop access
     const { data: userRole } = await supabase
         .from('user_shop_roles')
         .select('role')
@@ -36,70 +35,76 @@ export default async function CustomerLedgerPage({ params }: PageProps) {
         .eq('user_id', user.id)
         .single();
 
-    if (!userRole) {
-        redirect('/dashboard');
-    }
+    if (!userRole) redirect('/dashboard');
 
-    // Fetch customer details
-    const { data: customerRaw, error: customerError } = await supabase
-        .from('customers')
+    // 1. Fetch Contact Details
+    const { data: contact, error: viewError } = await supabase
+        .from('khatabook_contacts')
         .select('*')
         .eq('id', customerId)
         .eq('shop_id', shopId)
         .single();
 
-    if (customerError || !customerRaw) {
-        notFound();
-    }
+    if (viewError || !contact) notFound();
 
-    // Fetch all transactions for this customer
+    // 2. Fetch Transactions
     const { data: transactionsRaw, error: transError } = await supabase
         .from('ledger_transactions')
-        .select('*')
-        .eq('customer_id', customerId)
+        .select(`
+            *,
+            documents:transaction_documents(*)
+        `)
+        .eq('khatabook_contact_id', customerId) // Use correct column
+        .eq('shop_id', shopId)
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-    if (transError) {
-        console.error('Error fetching transactions:', transError);
-    }
+    if (transError) console.error('Error fetching transactions:', JSON.stringify(transError, null, 2));
 
-    // Calculate balance
-    let totalPaid = 0;
-    let currentBalance = 0;
+    // 3. Calculate Running Balances & Totals from Transactions
+    let totalDebit = 0;
+    let totalCredit = 0;
 
-    const transactions = (transactionsRaw || []).map(t => {
-        if (t.entry_type === 'CREDIT') {
-            totalPaid += Number(t.amount);
-            currentBalance -= Number(t.amount);
-        } else {
-            currentBalance += Number(t.amount);
-        }
-        return {
-            ...t,
-            transaction_type: t.transaction_type as any,
-            entry_type: t.entry_type as any
-        };
+    // We can use the fetched transactions to calculate exact totals
+    (transactionsRaw || []).forEach(t => {
+        if (t.entry_type === 'DEBIT') totalDebit += Number(t.amount);
+        else totalCredit += Number(t.amount);
     });
 
-    const customer = {
-        id: customerRaw.id,
-        shop_id: customerRaw.shop_id,
-        name: customerRaw.name,
-        phone: customerRaw.phone,
-        email: customerRaw.email,
-        address: customerRaw.address,
-        total_spent: customerRaw.total_spent || 0,
-        total_paid: totalPaid,
-        current_balance: currentBalance,
-        last_transaction_date: transactions.length > 0 ? transactions[0].transaction_date : null
+    const transactions: LedgerTransaction[] = (transactionsRaw || []).map(t => ({
+        ...t,
+        transaction_type: t.transaction_type as any,
+        entry_type: t.entry_type as any,
+        documents: t.documents || []
+    }));
+
+    // Construct the Prop Object
+    const entity: UnifiedParty = {
+        id: contact.id,
+        shop_id: contact.shop_id,
+        name: contact.name,
+        phone: contact.phone,
+        email: contact.email,
+        address: contact.address,
+        entity_type: contact.type as any || 'CUSTOMER',
+        source_table: 'khatabook_contact',
+        is_deleted: contact.deleted_at ? true : false,
+        total_debit: totalDebit,
+        total_credit: totalCredit,
+        current_balance: totalDebit - totalCredit, // Recalculate or use view if preferred (removed view query for simplicity)
+        transaction_count: transactions.length,
+        last_transaction_date: transactions[0]?.transaction_date || null,
+
+        // Legacy aliases
+        total_spent: totalDebit,
+        total_paid: totalCredit
     };
 
     return (
         <Suspense fallback={<LedgerLoading />}>
             <CustomerLedgerClient
-                customer={customer}
-                transactions={transactions || []}
+                entity={entity}
+                transactions={transactions}
                 shopId={shopId}
                 userId={user.id}
             />
