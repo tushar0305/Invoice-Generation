@@ -277,18 +277,18 @@
     --border: 240 4% 16%;
     /* Subtle Dark Border */
     --input: 240 4% 16%;
-    --ring: 200 100% 55%;
-    /* Electric Blue Ring */
+    --ring: 42 75% 55%;
+    /* Gold Ring */
 
-    /* Sidebar - Glassy Frosted */
+    /* Sidebar - Glassy Frosted with Gold Accent */
     --sidebar-background: 240 10% 4%;
     --sidebar-foreground: 240 5% 64%;
-    --sidebar-primary: 200 100% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 42 75% 55%;
+    --sidebar-primary-foreground: 20 14% 4%;
     --sidebar-accent: 240 4% 16%;
     --sidebar-accent-foreground: 0 0% 93%;
     --sidebar-border: 240 4% 16%;
-    --sidebar-ring: 200 100% 55%;
+    --sidebar-ring: 42 75% 55%;
 
     /* Premium Glow Colors */
     --glow-primary: 200 100% 55%;

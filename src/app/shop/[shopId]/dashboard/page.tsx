@@ -86,11 +86,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   const returningCustomerRate = totalUniqueCustomers > 0 ? (returningCustomers / totalUniqueCustomers) * 100 : 0;
   const newCustomers = totalUniqueCustomers - returningCustomers;
 
-  // Top customer
+  // Top customer - map RPC field names correctly (try multiple possible field names)
   const topCustomer = additionalStats.topCustomerAllTime ? {
-    name: additionalStats.topCustomerAllTime.name,
-    totalSpent: additionalStats.topCustomerAllTime.totalSpent,
-    orders: 0
+    name: additionalStats.topCustomerAllTime.name || 'Unknown',
+    totalSpent: Number(additionalStats.topCustomerAllTime.total_spent || additionalStats.topCustomerAllTime.totalSpent) || 0,
+    orders: Number(additionalStats.topCustomerAllTime.order_count || additionalStats.topCustomerAllTime.invoice_count || additionalStats.topCustomerAllTime.orders) || 0
   } : undefined;
 
 

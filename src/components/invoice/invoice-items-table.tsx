@@ -9,7 +9,7 @@ import { UseFormReturn, useFieldArray } from 'react-hook-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getInventoryItems } from '@/services/inventory';
 import { useEffect, useState, useRef } from 'react';
-import { InventoryItem, STATUS_LABELS } from '@/lib/inventory-types';
+import { InventoryItem, STATUS_LABELS, ITEM_CATEGORIES } from '@/lib/inventory-types';
 import { Badge } from '@/components/ui/badge';
 
 interface InvoiceItemsTableProps {
@@ -172,9 +172,9 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                             </Select>
                         </div>
 
-                        {/* Row 1: Description, Purity, HSN */}
+                        {/* Row 1: Description, Category, Purity, HSN */}
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
-                            <div className="md:col-span-6">
+                            <div className="md:col-span-4">
                                 <FormField
                                     control={form.control}
                                     name={`items.${index}.description`}
@@ -190,11 +190,35 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                             <div className="md:col-span-3">
                                 <FormField
                                     control={form.control}
-                                    name={`items.${index}.hsnCode`}
+                                    name={`items.${index}.category`}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-xs uppercase text-muted-foreground">HSN Code</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="HSN" /></FormControl>
+                                            <FormLabel className="text-xs uppercase text-muted-foreground">Category</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select category" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {ITEM_CATEGORIES.map((cat) => (
+                                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name={`items.${index}.purity`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs uppercase text-muted-foreground">Purity</FormLabel>
+                                            <FormControl><Input {...field} placeholder="22K" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -203,11 +227,11 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                             <div className="md:col-span-3">
                                 <FormField
                                     control={form.control}
-                                    name={`items.${index}.purity`}
+                                    name={`items.${index}.hsnCode`}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-xs uppercase text-muted-foreground">Purity</FormLabel>
-                                            <FormControl><Input {...field} placeholder="22K" /></FormControl>
+                                            <FormLabel className="text-xs uppercase text-muted-foreground">HSN Code</FormLabel>
+                                            <FormControl><Input {...field} value={field.value || ''} placeholder="HSN" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}

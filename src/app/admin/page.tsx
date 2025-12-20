@@ -2,25 +2,37 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@/supabase/provider';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
     Building2,
     TrendingUp,
     FileText,
     Plus,
     ArrowRight,
-    Settings,
+    BarChart3,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/supabase/client';
 import type { Shop } from '@/lib/definitions';
-import { BusinessHealthWidget } from '@/components/dashboard/business-health';
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
+
+// Animation variants for staggered reveals
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: { staggerChildren: 0.08, delayChildren: 0.1 }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+};
 
 export default function AdminDashboardPage() {
     const { user } = useUser();
@@ -31,7 +43,7 @@ export default function AdminDashboardPage() {
         invoices: 0,
         thisMonthRevenue: 0,
         lastMonthRevenue: 0,
-        thisMonthOrders: 0
+        thisMonthOrders: 0,
     });
     const [isLoading, setIsLoading] = useState(true);
 
@@ -81,7 +93,6 @@ export default function AdminDashboardPage() {
 
                 setUserShops(shops);
 
-                // Fetch total revenue across all shops
                 const shopIds = shops.map(shop => shop.id);
 
                 if (shopIds.length === 0) {
@@ -89,6 +100,7 @@ export default function AdminDashboardPage() {
                     return;
                 }
 
+                // Fetch invoices
                 const { data: invoices, error: invoicesError } = await supabase
                     .from('invoices')
                     .select('grand_total, invoice_date')
@@ -122,7 +134,7 @@ export default function AdminDashboardPage() {
                     invoices: totalInvoices,
                     thisMonthRevenue,
                     lastMonthRevenue,
-                    thisMonthOrders: thisMonthInvoices.length
+                    thisMonthOrders: thisMonthInvoices.length,
                 });
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -136,175 +148,166 @@ export default function AdminDashboardPage() {
 
     if (isLoading) {
         return (
-            <div className="space-y-8 p-6 md:p-8">
-                <div className="flex items-center justify-between">
-                    <Skeleton className="h-10 w-48" />
-                    <Skeleton className="h-10 w-32" />
+            <div className="space-y-6">
+                <Skeleton className="h-10 w-48" />
+                <div className="flex gap-3 overflow-hidden">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-[280px] rounded-2xl flex-shrink-0" />)}
                 </div>
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Skeleton className="h-32" />
-                    <Skeleton className="h-32" />
-                    <Skeleton className="h-32" />
+                <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}
                 </div>
-                <Skeleton className="h-[400px]" />
             </div>
         );
     }
 
-    // Calculate aggregated stats
     const totalShops = userShops.length;
+    const revenueGrowth = stats.lastMonthRevenue > 0
+        ? ((stats.thisMonthRevenue - stats.lastMonthRevenue) / stats.lastMonthRevenue) * 100
+        : 0;
 
     return (
-        <div className="space-y-8">
+        <motion.div
+            className="space-y-6 lg:space-y-8"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+        >
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-                        Global Admin Dashboard
+                    <h1 className="text-2xl sm:text-3xl font-bold font-heading text-foreground">
+                        Welcome back
                     </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Overview of all your jewellery shops
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                        Here's what's happening across your {totalShops} shop{totalShops !== 1 ? 's' : ''}
                     </p>
                 </div>
                 <Button
                     onClick={() => router.push('/onboarding/shop-setup')}
-                    className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white shadow-lg shadow-gold-500/20"
+                    className="sm:w-auto bg-gradient-to-r from-gold-500 to-amber-500 hover:from-gold-600 hover:to-amber-600 text-white shadow-lg shadow-gold-500/25 h-11 rounded-xl font-medium"
                 >
                     <Plus className="mr-2 h-4 w-4" />
-                    Create New Shop
+                    Add Shop
                 </Button>
-            </div>
+            </motion.div>
 
-            {/* Founder Widgets */}
-            <div className="grid gap-6 md:grid-cols-3">
-                <div className="md:col-span-1">
-                    <BusinessHealthWidget
-                        totalRevenue={stats.thisMonthRevenue}
-                        totalOrders={stats.thisMonthOrders}
-                        revenueGrowth={stats.lastMonthRevenue > 0 ? ((stats.thisMonthRevenue - stats.lastMonthRevenue) / stats.lastMonthRevenue) * 100 : 0}
-                        returningRate={30} // Placeholder for global aggregate, as we don't have this data easily available per shop in this view yet
-                    />
+            {/* Shop Quick Access - Right below header */}
+            <motion.div variants={itemVariants}>
+                <div className="flex items-center gap-2 mb-3">
+                    <h2 className="text-base font-semibold text-foreground">Your Shops</h2>
+                    <span className="text-xs text-muted-foreground bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                        {totalShops}
+                    </span>
                 </div>
 
-                {/* Global Stats Cards (Condensed) */}
-                <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
-                    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border-none shadow-xl">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-slate-300">Lifetime Revenue</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-gold-400" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(stats.revenue)}</div>
-                            <p className="text-xs text-slate-400 mt-1">
-                                Across {totalShops} shops
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.invoices}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Lifetime generated
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card className="md:col-span-2">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Active Shops</CardTitle>
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{totalShops}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Locations managing business
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-
-            {/* Shop List */}
-            <div>
-                <h2 className="text-xl font-semibold mb-4">Your Shops</h2>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {userShops.map((shop, index) => (
-                        <motion.div
+                {/* Horizontal scroll on mobile, grid on desktop */}
+                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-3 xl:grid-cols-4 lg:overflow-visible scrollbar-hide">
+                    {userShops.map((shop) => (
+                        <motion.button
                             key={shop.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
+                            onClick={() => router.push(`/shop/${shop.id}/dashboard`)}
+                            className="flex-shrink-0 w-[240px] lg:w-auto text-left p-4 rounded-2xl bg-slate-50 dark:bg-white/5 hover:bg-gold-50 dark:hover:bg-gold-500/10 transition-all duration-300 group active:scale-[0.98]"
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.98 }}
                         >
-                            <Card className="group hover:shadow-lg transition-all duration-300 border-slate-200 dark:border-slate-800 overflow-hidden">
-                                <CardHeader className="pb-4">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-lg bg-gold-100 dark:bg-gold-900/20 flex items-center justify-center text-gold-600 dark:text-gold-400">
-                                                <Building2 className="h-5 w-5" />
-                                            </div>
-                                            <div>
-                                                <CardTitle className="text-lg">{shop.shopName}</CardTitle>
-                                                <CardDescription className="line-clamp-1">{shop.address || 'No address set'}</CardDescription>
-                                            </div>
-                                        </div>
-                                        <Badge variant={shop.isActive ? "default" : "secondary"} className={shop.isActive ? "bg-green-500/10 text-green-600 hover:bg-green-500/20" : ""}>
-                                            {shop.isActive ? 'Active' : 'Inactive'}
-                                        </Badge>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid grid-cols-2 gap-4 mb-6">
-                                        <div>
-                                            <p className="text-xs text-muted-foreground">GSTIN</p>
-                                            <p className="font-medium text-sm">{shop.gstNumber || 'N/A'}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-muted-foreground">Role</p>
-                                            <p className="font-medium text-sm capitalize">Owner</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <Button
-                                            className="flex-1 bg-slate-900 text-white hover:bg-slate-800"
-                                            onClick={() => router.push(`/shop/${shop.id}/dashboard`)}
-                                        >
-                                            Dashboard
-                                            <ArrowRight className="ml-2 h-4 w-4" />
-                                        </Button>
-                                        <Button variant="outline" size="icon">
-                                            <Settings className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gold-400 to-amber-500 flex items-center justify-center text-white flex-shrink-0">
+                                    <Building2 className="h-5 w-5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-foreground group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors truncate">
+                                        {shop.shopName}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                        {shop.state || 'Open Dashboard'}
+                                    </p>
+                                </div>
+                                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-gold-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                            </div>
+                        </motion.button>
                     ))}
 
-                    {/* Add New Shop Card */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: userShops.length * 0.1 }}
+                    {/* Add New Shop */}
+                    <motion.button
+                        onClick={() => router.push('/onboarding/shop-setup')}
+                        className="flex-shrink-0 w-[240px] lg:w-auto flex items-center gap-3 p-4 rounded-2xl bg-transparent hover:bg-gold-50/50 dark:hover:bg-gold-950/10 border-2 border-dashed border-slate-200 dark:border-white/10 hover:border-gold-400 transition-all duration-300 group"
+                        whileHover={{ y: -2 }}
                     >
-                        <button
-                            onClick={() => router.push('/onboarding/shop-setup')}
-                            className="w-full h-full min-h-[200px] flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-gold-500/50 hover:bg-gold-50/50 dark:hover:bg-gold-950/10 transition-all duration-300 group"
-                        >
-                            <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                <Plus className="h-6 w-6 text-slate-400 group-hover:text-gold-500" />
-                            </div>
-                            <div className="text-center">
-                                <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-gold-600 dark:group-hover:text-gold-400">Add New Shop</h3>
-                                <p className="text-sm text-muted-foreground">Expand your business</p>
-                            </div>
-                        </button>
-                    </motion.div>
+                        <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center group-hover:bg-gold-500/20 transition-colors">
+                            <Plus className="h-5 w-5 text-slate-400 group-hover:text-gold-500" />
+                        </div>
+                        <span className="font-medium text-muted-foreground group-hover:text-gold-600 dark:group-hover:text-gold-400">
+                            Add Shop
+                        </span>
+                    </motion.button>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+
+            {/* Stats Grid */}
+            <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                {/* This Month Revenue - Featured */}
+                <Card className="col-span-2 lg:col-span-1 relative overflow-hidden bg-gradient-to-br from-[#0a0a0b] via-[#111113] to-[#0a0a0b] dark:from-gold-950/50 dark:via-gold-900/30 dark:to-[#0a0a0b] text-white border border-gold-500/20 dark:border-gold-500/30 shadow-2xl rounded-2xl">
+                    <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
+                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-gold-500/30 rounded-full blur-3xl" />
+                    <CardContent className="relative p-5">
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-xs font-semibold text-gold-400/80 uppercase tracking-wider">This Month</span>
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gold-400 to-amber-500 flex items-center justify-center shadow-lg shadow-gold-500/30">
+                                <TrendingUp className="h-5 w-5 text-white" />
+                            </div>
+                        </div>
+                        <div className="text-3xl sm:text-4xl font-bold tracking-tight">{formatCurrency(stats.thisMonthRevenue)}</div>
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className={cn(
+                                "text-xs font-medium px-2 py-0.5 rounded-full",
+                                revenueGrowth >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                            )}>
+                                {revenueGrowth >= 0 ? '+' : ''}{revenueGrowth.toFixed(1)}%
+                            </span>
+                            <span className="text-xs text-slate-400">vs last month</span>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Lifetime Revenue */}
+                <Card className="rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:shadow-lg transition-shadow">
+                    <CardContent className="p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                <BarChart3 className="h-5 w-5 text-emerald-500" />
+                            </div>
+                        </div>
+                        <div className="text-2xl font-bold text-foreground">{formatCurrency(stats.revenue)}</div>
+                        <p className="text-xs text-muted-foreground mt-1 font-medium">Lifetime Revenue</p>
+                    </CardContent>
+                </Card>
+
+                {/* Total Invoices */}
+                <Card className="rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:shadow-lg transition-shadow">
+                    <CardContent className="p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                <FileText className="h-5 w-5 text-blue-500" />
+                            </div>
+                        </div>
+                        <div className="text-2xl font-bold text-foreground">{stats.invoices.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground mt-1 font-medium">Total Invoices</p>
+                    </CardContent>
+                </Card>
+
+                {/* Active Shops */}
+                <Card className="rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:shadow-lg transition-shadow">
+                    <CardContent className="p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                                <Building2 className="h-5 w-5 text-purple-500" />
+                            </div>
+                        </div>
+                        <div className="text-2xl font-bold text-foreground">{totalShops}</div>
+                        <p className="text-xs text-muted-foreground mt-1 font-medium">Active Shops</p>
+                    </CardContent>
+                </Card>
+            </motion.div>
+        </motion.div>
     );
 }

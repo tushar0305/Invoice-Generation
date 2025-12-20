@@ -66,31 +66,29 @@ export function InstallPrompt() {
                 exit={{ opacity: 0, y: 50 }}
                 className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50"
             >
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between">
+                <div className="bg-slate-900 dark:bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-gold-400 via-amber-500 to-yellow-600 shadow-lg flex items-center justify-center overflow-hidden border border-white/10">
-                            {/* Use img tag for simplicity in client component without extra config */}
-                            <img src="/icons/icon-192x192.png" alt="App Logo" className="w-full h-full object-cover" />
+                        <div className="h-12 w-12 rounded-xl flex items-center justify-center overflow-hidden">
+                            <img src="/logo/logo.png" alt="App Logo" className="w-full h-full object-contain" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-base">Install App</h3>
+                            <h3 className="font-bold text-base text-white">Install SwarnaVyapar</h3>
                             <p className="text-xs text-slate-300">
-                                {support?.platform === 'ios' ? 'Tap Share > Add to Home Screen' : 'Get the full experience'}
+                                {support?.platform === 'ios' ? 'Tap Share › Add to Home Screen' : 'Add to home screen for the best experience'}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button
                             size="sm"
-                            variant="outline"
                             onClick={handleInstall}
-                            className="h-8 text-xs bg-gold-500 text-slate-900 hover:bg-gold-400 border-0"
+                            className="h-9 px-4 text-sm font-semibold bg-gradient-to-r from-gold-500 to-amber-500 text-slate-900 hover:from-gold-400 hover:to-amber-400 border-0 shadow-md"
                         >
                             Install
                         </Button>
                         <button
                             onClick={() => setIsVisible(false)}
-                            className="p-1 hover:bg-slate-800 rounded-full transition-colors"
+                            className="p-1.5 hover:bg-slate-700 rounded-full transition-colors"
                         >
                             <X className="h-4 w-4 text-slate-400" />
                         </button>

@@ -16,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
 import { useUser } from '@/supabase/provider';
 import { shareInvoice } from '@/lib/share';
-import { generateInvoicePdf } from '@/lib/pdf';
 // import type { UserSettings } from '@/lib/definitions';
 
 // A simple number to words converter for INR
@@ -211,16 +210,14 @@ export function ViewInvoiceClient() {
         if (!invoice || !items) return;
 
         try {
-            const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
-            const url = URL.createObjectURL(pdfBlob);
-            window.open(url, '_blank');
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            const { printInvoice } = await import('@/lib/print-invoice');
+            printInvoice({ invoice, items, settings });
         } catch (error) {
-            console.error('Error generating PDF:', error);
+            console.error('Error printing:', error);
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Failed to generate PDF for printing.',
+                description: 'Failed to print invoice.',
             });
         }
     };

@@ -587,20 +587,16 @@ export function InvoicesClient({
                 templateId: shopDetails.template_id || 'classic',
             } : undefined;
 
-            const { generateInvoicePdf } = await import('@/lib/pdf');
-            const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
-
-            const url = URL.createObjectURL(pdfBlob);
-            window.open(url, '_blank');
-
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            // Use iframe-based printing instead of blob URL
+            const { printInvoice } = await import('@/lib/print-invoice');
+            printInvoice({ invoice, items, settings });
 
         } catch (error) {
-            console.error('Error generating PDF:', error);
+            console.error('Error printing:', error);
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Failed to generate PDF for printing.',
+                description: 'Failed to print invoice.',
             });
         }
     };

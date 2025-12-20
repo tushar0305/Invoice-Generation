@@ -3,63 +3,17 @@
 import Image from 'next/image';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { useTheme } from '@/components/theme-provider';
-import {
-    SidebarProvider,
-    Sidebar,
-    SidebarHeader,
-    SidebarContent,
-    SidebarMenu,
-    SidebarMenuItem,
-    SidebarMenuButton,
-    SidebarFooter,
-    SidebarInset
-} from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutDashboard, Settings, User } from 'lucide-react';
+import { LogOut, Moon, Sun, Menu } from 'lucide-react';
 import { useAuth, useUser } from '@/supabase/provider';
-import { useRouter, usePathname } from 'next/navigation';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useRouter } from 'next/navigation';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-function AdminUserNav() {
-    const { user } = useUser();
-    const router = useRouter();
-
-    if (!user) return null;
-    const fallback = user.email ? user.email.charAt(0).toUpperCase() : 'A';
-
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-xl p-2 text-left text-sm hover:bg-gold-500/5 transition-colors border border-transparent hover:border-gold-500/10 w-full">
-                    <Avatar className="h-9 w-9 border border-gold-500/20">
-                        <AvatarFallback className="bg-gold-500/10 text-gold-700 font-heading font-bold">{fallback}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col min-w-0 items-start">
-                        <span className="font-medium text-sm truncate">{user.email}</span>
-                        <span className="text-[10px] text-muted-foreground">Global Admin</span>
-                    </div>
-                </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 glass-panel" align="end" side="bottom">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/admin/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
-}
 
 export default function AdminLayout({
     children,
@@ -67,9 +21,9 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     const auth = useAuth();
+    const { user } = useUser();
     const router = useRouter();
-    const pathname = usePathname();
-    const { theme } = useTheme();
+    const { theme, setTheme } = useTheme();
 
     // Calculate logo based on theme
     const logoSrc = theme === 'dark' ? '/logo/swarnavyapar_dark.png' : '/logo/swarnavyapar_light.png';
@@ -79,85 +33,94 @@ export default function AdminLayout({
         router.push('/login');
     };
 
+    const toggleTheme = () => {
+        setTheme(theme === 'dark' ? 'light' : 'dark');
+    };
+
+    const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : 'A';
+
     return (
         <AuthWrapper>
-            <SidebarProvider>
-                <Sidebar className="border-r border-gold-500/10 bg-background/80 backdrop-blur-xl">
-                    <SidebarHeader className="relative overflow-hidden">
-                        <div className="px-4 py-3 relative z-10 pt-[max(0.75rem,env(safe-area-inset-top))]">
-                            <div className="flex items-center justify-center gap-2">
-                                <div className="h-12 w-32 relative">
-                                    <Image
-                                        src={logoSrc}
-                                        alt="Swarnavyapar Logo"
-                                        fill
-                                        className="object-contain"
-                                        priority
-                                    />
-                                </div>
+            <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0b] flex flex-col">
+                {/* Native-feeling Header */}
+                <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#0a0a0b]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 safe-area-top">
+                    <div className="flex h-14 md:h-16 items-center justify-between px-4 md:px-6">
+                        {/* Logo */}
+                        <div className="flex items-center gap-3">
+                            <div className="h-8 w-24 md:h-10 md:w-32 relative">
+                                <Image
+                                    src={logoSrc}
+                                    alt="Swarnavyapar Logo"
+                                    fill
+                                    className="object-contain"
+                                    priority
+                                />
                             </div>
+                            <span className="hidden md:inline-block text-xs font-medium text-muted-foreground bg-gold-500/10 text-gold-600 dark:text-gold-400 px-2 py-0.5 rounded-full">
+                                Admin
+                            </span>
                         </div>
-                        <div className="px-4 pb-3">
-                            <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-gold-500/30 to-transparent"></div>
+
+                        {/* Right Actions */}
+                        <div className="flex items-center gap-2 md:gap-3">
+                            {/* Theme Toggle */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={toggleTheme}
+                                className="h-9 w-9 rounded-full hover:bg-slate-100 dark:hover:bg-white/10"
+                            >
+                                {theme === 'dark' ? (
+                                    <Sun className="h-4 w-4 text-gold-400" />
+                                ) : (
+                                    <Moon className="h-4 w-4 text-slate-600" />
+                                )}
+                            </Button>
+
+                            {/* User Menu */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+                                        <Avatar className="h-8 w-8 border border-gold-500/20">
+                                            <AvatarFallback className="bg-gold-500/10 text-gold-700 dark:text-gold-400 text-sm font-bold">
+                                                {userInitial}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span className="hidden md:block text-sm font-medium text-foreground max-w-[120px] truncate">
+                                            {user?.email?.split('@')[0] || 'Admin'}
+                                        </span>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
+                                    <DropdownMenuItem
+                                        onClick={handleSignOut}
+                                        className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-500/10 cursor-pointer"
+                                    >
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        <span>Sign Out</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
-                    </SidebarHeader>
+                    </div>
+                </header>
 
-                    <SidebarContent className="px-4 py-4">
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    onClick={() => router.push('/admin')}
-                                    isActive={pathname === '/admin'}
-                                    className="group/item h-10 px-3 rounded-xl data-[active=true]:bg-gold-500/10 data-[active=true]:text-gold-700 dark:data-[active=true]:text-gold-400 hover:bg-gold-500/5 transition-all duration-300"
-                                >
-                                    <LayoutDashboard className="h-[18px] w-[18px]" />
-                                    <span className="text-sm font-medium">Overview</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-
-                            {/* Add more global admin links here if needed */}
-                        </SidebarMenu>
-                    </SidebarContent>
-
-                    <SidebarFooter className="border-t border-gold-500/10 p-4">
-                        <AdminUserNav />
-                        <SidebarMenu className="mt-2 space-y-1">
-                            <SidebarMenuItem>
-                                <ThemeToggle />
-                            </SidebarMenuItem>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    onClick={handleSignOut}
-                                    className="group/signout h-10 px-3 rounded-xl hover:bg-destructive/5 transition-all duration-200"
-                                >
-                                    <LogOut className="h-[18px] w-[18px] text-destructive/70" />
-                                    <span className="text-sm text-destructive/70 font-medium">Sign Out</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                    </SidebarFooter>
-                </Sidebar>
-
-                <SidebarInset className="bg-slate-50 dark:bg-slate-950 flex flex-col">
-                    <header className="flex h-14 items-center gap-4 border-b bg-background/60 px-6 backdrop-blur-xl lg:h-[60px]">
-                        <div className="flex-1">
-                            <h1 className="text-lg font-semibold font-heading text-foreground">Global Admin</h1>
-                        </div>
-                    </header>
-                    <main className="flex-1 p-6 pt-8 overflow-y-auto">
+                {/* Main Content */}
+                <main className="flex-1 overflow-y-auto">
+                    <div className="p-4 md:p-6 lg:p-8 pb-24 md:pb-8">
                         {children}
-                    </main>
-                    <footer className="py-3 px-6 border-t border-border/40 bg-background/60 backdrop-blur-sm mt-auto">
-                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                            <span>Swarnavyapar Admin</span>
-                            <span className="opacity-50">•</span>
-                            <span>v{process.env.npm_package_version || '0.1.0'}</span>
-                            <span className="opacity-50">•</span>
-                            <span>© {new Date().getFullYear()}</span>
-                        </div>
-                    </footer>
-                </SidebarInset>
-            </SidebarProvider>
+                    </div>
+                </main>
+
+                {/* Subtle Footer - Desktop only */}
+                <footer className="hidden md:block py-3 px-6 border-t border-slate-200 dark:border-white/10 bg-white/60 dark:bg-black/60 backdrop-blur-sm">
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <span>SwarnaVyapar Admin</span>
+                        <span className="opacity-50">•</span>
+                        <span>© {new Date().getFullYear()}</span>
+                    </div>
+                </footer>
+            </div>
         </AuthWrapper>
     );
 }

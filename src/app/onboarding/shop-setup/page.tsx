@@ -529,10 +529,19 @@ export default function ShopSetupPage() {
                     {...step1Form.register('email')}
                 />
 
-                <Button onClick={handleStep1Next} className="w-full h-14 text-base font-bold rounded-xl mt-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-xl shadow-slate-900/20 hover:shadow-2xl hover:scale-[1.02] transition-all">
-                    Continue Step
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+                <div className="flex gap-4 mt-4">
+                    <Button
+                        variant="ghost"
+                        onClick={() => router.back()}
+                        className="flex-1 h-14 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl"
+                    >
+                        Cancel
+                    </Button>
+                    <Button onClick={handleStep1Next} className="flex-1 h-14 text-base font-bold rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-xl shadow-slate-900/20 hover:shadow-2xl hover:scale-[1.02] transition-all">
+                        Continue
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                </div>
             </div>
         </div>
     );

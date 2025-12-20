@@ -139,6 +139,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         description: item.description,
         purity: item.purity || '22K',
         hsnCode: item.hsnCode || '',
+        category: item.category || '',
+        metalType: item.metalType || '',
 
         grossWeight: Number(item.grossWeight),
         stoneWeight: Number(item.stoneWeight || 0),
@@ -472,23 +474,26 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
                   {/* 3. Items Summary Preview */}
                   {watchedItems.length > 0 && (
-                    <Card className="border-2 shadow-sm bg-blue-50/50 border-blue-200">
+                    <Card className="border-2 shadow-sm border-primary/30 dark:border-primary/20">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-base flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-600" /> Items Added ({watchedItems.length})
+                          <div className="p-1.5 rounded-lg bg-primary/10">
+                            <FileText className="h-4 w-4 text-primary" />
+                          </div>
+                          Items Added ({watchedItems.length})
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                           {watchedItems.map((item, idx) => (
-                            <div key={idx} className="p-3 bg-white rounded-lg border-l-4 border-blue-400">
+                            <div key={idx} className="p-3 bg-muted/50 dark:bg-white/5 rounded-lg border-l-4 border-primary/60">
                               <div className="flex justify-between items-start gap-2">
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-sm truncate">{item.description || `Item ${idx + 1}`}</p>
+                                  <p className="font-semibold text-sm truncate text-foreground">{item.description || `Item ${idx + 1}`}</p>
                                   <p className="text-xs text-muted-foreground">{item.purity} | {item.metalType || 'Metal'}</p>
                                 </div>
                                 <div className="text-right text-sm">
-                                  <p className="font-semibold">{Number(item.netWeight).toFixed(2)}g</p>
+                                  <p className="font-semibold text-foreground">{Number(item.netWeight).toFixed(2)}g</p>
                                   <p className="text-xs text-muted-foreground">@₹{Number(item.rate).toFixed(0)}/g</p>
                                 </div>
                               </div>

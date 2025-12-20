@@ -14,7 +14,13 @@ export function LoyaltyProgramPreview() {
     const cursorControls = useAnimation();
 
     useEffect(() => {
+        let mounted = true;
+
         const sequence = async () => {
+            // Wait for component to fully mount before starting animations
+            await new Promise(r => setTimeout(r, 100));
+            if (!mounted) return;
+
             // Initial State
             setPoints(2450);
             setRecentActivity([
@@ -22,7 +28,6 @@ export function LoyaltyProgramPreview() {
             ]);
             setShowCoupon(false);
 
-            let mounted = true;
             while (mounted) {
                 // 1. Initial wait
                 if (!mounted) break;
@@ -67,9 +72,7 @@ export function LoyaltyProgramPreview() {
                 if (!mounted) break;
 
                 // 5. Reset loop
-                if (mounted) {
-                    await cursorControls.start({ opacity: 0, transition: { duration: 0.5 } });
-                }
+                await cursorControls.start({ opacity: 0, transition: { duration: 0.5 } });
                 await new Promise(r => setTimeout(r, 2000));
 
                 if (!mounted) break;
@@ -81,10 +84,11 @@ export function LoyaltyProgramPreview() {
                 ]);
                 setShowCoupon(false);
             }
-            return () => { mounted = false; };
         };
 
         sequence();
+
+        return () => { mounted = false; };
     }, [cursorControls]);
 
     return (

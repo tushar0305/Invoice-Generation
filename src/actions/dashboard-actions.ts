@@ -159,7 +159,6 @@ export async function getMarketRates(shopId: string) {
         const { data: dbData, error } = await supabase
             .from('market_rates')
             .select('*')
-            .eq('shop_id', shopId)
             .order('updated_at', { ascending: false })
             .limit(1)
             .single();

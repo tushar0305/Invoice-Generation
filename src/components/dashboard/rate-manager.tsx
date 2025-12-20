@@ -54,7 +54,8 @@ export function RateManager({ shopId }: RateManagerProps) {
             const { data, error } = await supabase
                 .from('market_rates')
                 .select('*')
-                .eq('shop_id', shopId)
+                .order('updated_at', { ascending: false })
+                .limit(1)
                 .single();
 
             if (error && error.code !== 'PGRST116') {
@@ -80,7 +81,7 @@ export function RateManager({ shopId }: RateManagerProps) {
             const { error } = await supabase
                 .from('market_rates')
                 .upsert({
-                    shop_id: shopId,
+                    id: 1, // Global rates table has single row
                     gold_24k: data.gold_24k,
                     gold_22k: data.gold_22k,
                     silver: data.silver,
