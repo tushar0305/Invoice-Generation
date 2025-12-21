@@ -17,6 +17,7 @@ import {
     ShieldCheck,
     Briefcase
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,19 +50,39 @@ export default function SchemesPage() {
         if (!shopId) return;
         const fetchStats = async () => {
             try {
-                // Get count of all customer enrollments
-                const { count, error } = await supabase
-                    .from('customer_schemes')
-                    .select('*', { count: 'exact', head: true })
+                // Get active enrollments with scheme_id
+                const { data: enrollments, error } = await supabase
+                    .from('scheme_enrollments')
+                    .select('scheme_id')
                     .eq('shop_id', shopId)
-                    .eq('status', 'active');
+                    .eq('status', 'ACTIVE');
 
                 if (error) console.error('Error fetching stats:', error);
 
-                // For total value, we might need a more complex query, for now mocking purely based on schemes
-                // In a real app we'd sum (monthly_amount * duration) of all enrollments
-                // Let's use 0 for now or a placeholder if no data
-                setStats({ totalEnrollments: count || 0, totalValue: 0 });
+                const totalEnrollments = enrollments?.length || 0;
+
+                // Calculate total monthly collection active
+                // We map enrollment scheme_ids to the schemes we already fetched to get the amount
+                // Note: schemes might be empty initially, so we need to depend on schemes as well for this calculation
+                // But fetchStats runs on mount. Let's rely on the schemes context active.
+                // Actually, let's just wait for schemes to load or re-run this when schemes change?
+                // Better: calculate it in the render or useMemo if we have the enrollment counts per scheme.
+
+                // Let's store the enrollments locally or just the calculated value
+                // Since schemes are fetched via useSchemes, we might not have them inside this useEffect closure immediately if it runs parallel.
+                // We'll trust that we can calculate it if we have the scheme objects. 
+                // Wait, useSchemes `schemes` might be empty when this runs.
+
+                // Alternative: join correctly in the query
+                const { data: enrollmentValues, error: valError } = await supabase
+                    .from('scheme_enrollments')
+                    .select('scheme:schemes(installment_amount)')
+                    .eq('shop_id', shopId)
+                    .eq('status', 'ACTIVE');
+
+                const totalValue = enrollmentValues?.reduce((sum, item: any) => sum + (item.scheme?.installment_amount || 0), 0) || 0;
+
+                setStats({ totalEnrollments, totalValue });
             } finally {
                 setLoadingStats(false);
             }
@@ -94,8 +115,10 @@ export default function SchemesPage() {
     return (
         <div className="min-h-screen pb-20 md:pb-8 space-y-6 md:space-y-8 max-w-7xl mx-auto p-4 md:p-8">
 
-            {/* Header with Breadcrumb */}
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+
+
+            {/* Header with Breadcrumb - Hidden on Mobile since we have Global Header */}
+            <div className="hidden md:flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Gold Schemes</h1>
                     <p className="text-muted-foreground text-sm md:text-base mt-1">Manage your saving plans and portfolio.</p>
@@ -104,35 +127,37 @@ export default function SchemesPage() {
 
             {/* Financial Overview Cards */}
             {schemes.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatCard
-                        title="Active Schemes"
-                        value={activeSchemesCount}
-                        subtext={`${schemes.length} total created`}
-                        icon={Briefcase}
-                        iconColor="text-blue-600 dark:text-blue-400"
-                        bgColor="bg-blue-50 dark:bg-blue-900/20"
-                    />
-                    <StatCard
-                        title="Active Enrollments"
-                        value={stats.totalEnrollments}
-                        subtext="Customers currently paying"
-                        icon={Users}
-                        iconColor="text-emerald-600 dark:text-emerald-400"
-                        bgColor="bg-emerald-50 dark:bg-emerald-900/20"
-                    />
-                    <StatCard
-                        title="Avg. Monthly Amount"
-                        value={formatCurrency(
-                            schemes.length > 0
-                                ? schemes.reduce((acc, curr) => acc + curr.installment_amount, 0) / schemes.length
-                                : 0
-                        )}
-                        subtext="Across all schemes"
-                        icon={TrendingUp}
-                        iconColor="text-amber-600 dark:text-amber-400"
-                        bgColor="bg-amber-50 dark:bg-amber-900/20"
-                    />
+                <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:pb-0 sm:mx-0 sm:px-0 no-scrollbar">
+                    <div className="snap-center min-w-[85vw] sm:min-w-0">
+                        <StatCard
+                            title="Active Schemes"
+                            value={activeSchemesCount}
+                            subtext={`${schemes.length} total created`}
+                            icon={Briefcase}
+                            iconColor="text-blue-600 dark:text-blue-400"
+                            bgColor="bg-blue-50 dark:bg-blue-900/20"
+                        />
+                    </div>
+                    <div className="snap-center min-w-[85vw] sm:min-w-0">
+                        <StatCard
+                            title="Active Enrollments"
+                            value={stats.totalEnrollments}
+                            subtext="Customers currently paying"
+                            icon={Users}
+                            iconColor="text-emerald-600 dark:text-emerald-400"
+                            bgColor="bg-emerald-50 dark:bg-emerald-900/20"
+                        />
+                    </div>
+                    <div className="snap-center min-w-[85vw] sm:min-w-0">
+                        <StatCard
+                            title="Monthly Collection"
+                            value={formatCurrency(stats.totalValue)}
+                            subtext="Total active installments"
+                            icon={TrendingUp}
+                            iconColor="text-amber-600 dark:text-amber-400"
+                            bgColor="bg-amber-50 dark:bg-amber-900/20"
+                        />
+                    </div>
                 </div>
             )}
 
@@ -249,7 +274,11 @@ export default function SchemesPage() {
                                                 <div className="grid grid-cols-3 gap-2 mt-4 p-3 rounded-xl bg-muted/40 border border-border/50">
                                                     <div className="text-center">
                                                         <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Monthly</p>
-                                                        <p className="text-sm font-bold">{formatCurrency(scheme.installment_amount)}</p>
+                                                        <p className="text-sm font-bold">
+                                                            {scheme.scheme_type === 'FIXED_DURATION'
+                                                                ? formatCurrency(scheme.installment_amount || 0)
+                                                                : 'Flexible'}
+                                                        </p>
                                                     </div>
                                                     <div className="text-center border-l border-border/50">
                                                         <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Duration</p>

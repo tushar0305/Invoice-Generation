@@ -15,6 +15,8 @@ import { calculateMaturityValue } from '@/lib/utils/scheme-calculations';
 import { formatCurrency, cn } from '@/lib/utils';
 import { StatCard } from '@/components/schemes/stat-card';
 
+
+
 export default function SchemeDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const unwrappedParams = use(params);
     const schemeId = unwrappedParams.id;
@@ -101,13 +103,14 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
         );
     }
 
-
-
     const totalCollected = enrollments.reduce((sum, en) => sum + (en.total_paid || 0), 0);
     const totalGold = enrollments.reduce((sum, en) => sum + (en.total_gold_weight_accumulated || 0), 0);
 
     return (
         <div className="space-y-6 pb-24 md:pb-8 max-w-7xl mx-auto p-4 md:p-8">
+
+
+
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
@@ -115,7 +118,7 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                         variant="ghost"
                         size="icon"
                         onClick={() => router.back()}
-                        className="shrink-0 h-10 w-10 rounded-xl bg-background/50 border border-border/50 hover:bg-background mt-1 shadow-sm md:hidden"
+                        className="shrink-0 h-10 w-10 rounded-xl bg-background/50 border border-border/50 hover:bg-background mt-1 shadow-sm md:mt-0"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -158,32 +161,38 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                 {/* <Button>Edit Scheme</Button> */}
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard
-                    title="Total Enrollments"
-                    value={enrollments.length}
-                    subtext="Active members"
-                    icon={UserPlus}
-                    iconColor="text-blue-600 dark:text-blue-400"
-                    bgColor="bg-blue-500/10"
-                />
-                <StatCard
-                    title="Total Collected"
-                    value={formatCurrency(totalCollected)}
-                    subtext={scheme.scheme_type === 'FIXED_DURATION' ? `${scheme.duration_months} months term` : `${scheme.interest_rate}% Interest`}
-                    icon={Coins}
-                    iconColor="text-emerald-600 dark:text-emerald-400"
-                    bgColor="bg-emerald-500/10"
-                />
-                <StatCard
-                    title="Est. Maturity"
-                    value={`~${formatCurrency(calculateMaturityValue(scheme, totalCollected))}`}
-                    subtext="Projected total payout"
-                    icon={TrendingUp}
-                    iconColor="text-pink-600 dark:text-pink-400"
-                    bgColor="bg-pink-500/10"
-                />
+            {/* Stats Grid - Horizontal Scroll on Mobile */}
+            <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:pb-0 sm:mx-0 sm:px-0 no-scrollbar">
+                <div className="snap-center min-w-[85vw] sm:min-w-0">
+                    <StatCard
+                        title="Total Enrollments"
+                        value={enrollments.length}
+                        subtext="Active members"
+                        icon={UserPlus}
+                        iconColor="text-blue-600 dark:text-blue-400"
+                        bgColor="bg-blue-500/10"
+                    />
+                </div>
+                <div className="snap-center min-w-[85vw] sm:min-w-0">
+                    <StatCard
+                        title="Total Collected"
+                        value={formatCurrency(totalCollected)}
+                        subtext={scheme.scheme_type === 'FIXED_DURATION' ? `${scheme.duration_months} months term` : `${scheme.interest_rate}% Interest`}
+                        icon={Coins}
+                        iconColor="text-emerald-600 dark:text-emerald-400"
+                        bgColor="bg-emerald-500/10"
+                    />
+                </div>
+                <div className="snap-center min-w-[85vw] sm:min-w-0">
+                    <StatCard
+                        title="Est. Maturity"
+                        value={`~${formatCurrency(calculateMaturityValue(scheme, totalCollected))}`}
+                        subtext="Projected total payout"
+                        icon={TrendingUp}
+                        iconColor="text-pink-600 dark:text-pink-400"
+                        bgColor="bg-pink-500/10"
+                    />
+                </div>
             </div>
 
             {/* Enrolled Customers Table/List */}
@@ -230,10 +239,16 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                                                 <div className="flex justify-between items-start mb-1">
                                                     <div>
                                                         <h4 className="font-semibold text-sm text-foreground truncate">{enrollment.customer?.name}</h4>
-                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                            <span>{enrollment.customer?.phone}</span>
-                                                            <span className="text-border">•</span>
-                                                            <span className="font-mono bg-muted px-1 rounded">{enrollment.account_number}</span>
+                                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground mt-0.5">
+                                                            {enrollment.customer?.phone && (
+                                                                <>
+                                                                    <span>{enrollment.customer.phone}</span>
+                                                                    <span className="text-border/50 hidden xxs:inline">•</span>
+                                                                </>
+                                                            )}
+                                                            <span className="font-mono bg-muted/50 px-1.5 py-0.5 rounded border border-border/50 text-[10px] tracking-wide">
+                                                                #{enrollment.account_number}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                     <Button

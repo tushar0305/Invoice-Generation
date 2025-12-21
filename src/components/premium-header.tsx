@@ -101,8 +101,23 @@ export function PremiumHeader({ shopName, shopId, userId, userEmail, logoUrl }: 
             segments.push({ label: 'Insights' });
         } else if (pathname.includes('/templates')) {
             segments.push({ label: 'Templates' });
+        } else if (pathname.includes('/catalogue')) {
+            segments.push({ label: 'Catalogue' });
         } else if (pathname.includes('/settings')) {
             segments.push({ label: 'Settings' });
+        } else if (pathname.includes('/schemes/create')) {
+            segments.push({ label: 'Gold Schemes', href: `/shop/${shopId}/schemes` });
+            segments.push({ label: 'Create Scheme' });
+        } else if (pathname.includes('/schemes/')) {
+            segments.push({ label: 'Gold Schemes', href: `/shop/${shopId}/schemes` });
+            segments.push({ label: 'Details' });
+        } else if (pathname.includes('/schemes')) {
+            segments.push({ label: 'Gold Schemes' });
+        } else if (pathname.includes('/marketing/send')) {
+            segments.push({ label: 'Marketing', href: `/shop/${shopId}/marketing` });
+            segments.push({ label: 'Send Campaign' });
+        } else if (pathname.includes('/marketing')) {
+            segments.push({ label: 'Marketing' });
         }
 
         return segments;

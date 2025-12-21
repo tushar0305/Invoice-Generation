@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Plus,
     Pencil,
@@ -25,6 +25,12 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -44,9 +50,148 @@ import {
 
 interface ProductManagerProps {
     shopId: string;
+    viewMode?: 'list' | 'grid';
 }
 
-export function ProductManager({ shopId }: ProductManagerProps) {
+// Simple hook to detect mobile
+function useIsMobile() {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    return isMobile;
+}
+
+// Shared form content component for Dialog and Sheet
+function ProductFormContent({
+    formData,
+    setFormData,
+    categories,
+    onSave,
+    onCancel,
+    isSaving
+}: {
+    formData: any;
+    setFormData: (data: any) => void;
+    categories: any[];
+    onSave: () => void;
+    onCancel: () => void;
+    isSaving: boolean;
+}) {
+    return (
+        <div className="space-y-4 pb-4">
+            <div className="space-y-4">
+                <div>
+                    <Label className="text-sm font-medium">Product Name</Label>
+                    <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="e.g. Gold Necklace Set"
+                        className="mt-1.5 h-11"
+                    />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <Label className="text-sm font-medium">Category</Label>
+                        <Select
+                            value={formData.category_id}
+                            onValueChange={(val) => setFormData({ ...formData, category_id: val })}
+                        >
+                            <SelectTrigger className="mt-1.5 h-11">
+                                <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {categories.map(c => (
+                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label className="text-sm font-medium">Purity</Label>
+                        <Select
+                            value={formData.purity}
+                            onValueChange={(val) => setFormData({ ...formData, purity: val })}
+                        >
+                            <SelectTrigger className="mt-1.5 h-11">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="24K">24K</SelectItem>
+                                <SelectItem value="22K">22K</SelectItem>
+                                <SelectItem value="18K">18K</SelectItem>
+                                <SelectItem value="14K">14K</SelectItem>
+                                <SelectItem value="Silver">Silver</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <Label className="text-sm font-medium">Weight (g)</Label>
+                        <Input
+                            type="number"
+                            value={formData.weight_g}
+                            onChange={(e) => setFormData({ ...formData, weight_g: e.target.value })}
+                            placeholder="0.00"
+                            className="mt-1.5 h-11"
+                        />
+                    </div>
+                    <div>
+                        <Label className="text-sm font-medium">Price (₹)</Label>
+                        <Input
+                            type="number"
+                            value={formData.price}
+                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                            placeholder="0"
+                            className="mt-1.5 h-11"
+                        />
+                    </div>
+                </div>
+                <div>
+                    <Label className="text-sm font-medium">Image URL (Optional)</Label>
+                    <Input
+                        value={formData.image_url}
+                        onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                        placeholder="https://example.com/image.jpg"
+                        className="mt-1.5 h-11"
+                    />
+                </div>
+                <div>
+                    <Label className="text-sm font-medium">Description</Label>
+                    <Textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Product details..."
+                        className="mt-1.5 min-h-[80px]"
+                    />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                    <Label className="text-sm">Mark as Featured</Label>
+                    <Switch
+                        checked={formData.is_featured}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
+                    />
+                </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={onCancel} className="flex-1 h-11">Cancel</Button>
+                <Button onClick={onSave} disabled={isSaving} className="flex-1 h-11">
+                    {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Save Product
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+export function ProductManager({ shopId, viewMode = 'grid' }: ProductManagerProps) {
+    const isMobile = useIsMobile();
     const [products, setProducts] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -184,13 +329,22 @@ export function ProductManager({ shopId }: ProductManagerProps) {
                     />
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)}>
+                    <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)} className="hidden sm:flex">
                         <Tag className="h-4 w-4 mr-2" />
                         Categories
                     </Button>
-                    <Button onClick={() => { setEditingProduct(null); resetForm(); setIsProductDialogOpen(true); }}>
+                    {/* Mobile: Small buttons */}
+                    <Button variant="outline" size="icon" onClick={() => setIsCategoryDialogOpen(true)} className="sm:hidden h-10 w-10">
+                        <Tag className="h-4 w-4" />
+                    </Button>
+                    {/* Desktop Button */}
+                    <Button onClick={() => { setEditingProduct(null); resetForm(); setIsProductDialogOpen(true); }} className="hidden sm:flex">
                         <Plus className="h-4 w-4 mr-2" />
                         Add Product
+                    </Button>
+                    {/* Mobile Button */}
+                    <Button onClick={() => { setEditingProduct(null); resetForm(); setIsProductDialogOpen(true); }} className="sm:hidden h-10 w-10" size="icon">
+                        <Plus className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
@@ -207,7 +361,7 @@ export function ProductManager({ shopId }: ProductManagerProps) {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className={viewMode === 'list' ? "flex flex-col gap-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
                     {filteredProducts.map((product) => (
                         <Card key={product.id} className="group hover:shadow-md transition-shadow">
                             <CardContent className="p-4">
@@ -239,108 +393,40 @@ export function ProductManager({ shopId }: ProductManagerProps) {
                 </div>
             )}
 
-            {/* Add/Edit Product Dialog */}
-            <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="col-span-2">
-                                <Label>Product Name</Label>
-                                <Input
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="e.g. Gold Necklace Set"
-                                />
-                            </div>
-                            <div>
-                                <Label>Category</Label>
-                                <Select
-                                    value={formData.category_id}
-                                    onValueChange={(val) => setFormData({ ...formData, category_id: val })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map(c => (
-                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label>Purity</Label>
-                                <Select
-                                    value={formData.purity}
-                                    onValueChange={(val) => setFormData({ ...formData, purity: val })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="24K">24K</SelectItem>
-                                        <SelectItem value="22K">22K</SelectItem>
-                                        <SelectItem value="18K">18K</SelectItem>
-                                        <SelectItem value="14K">14K</SelectItem>
-                                        <SelectItem value="Silver">Silver</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label>Weight (g)</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.weight_g}
-                                    onChange={(e) => setFormData({ ...formData, weight_g: e.target.value })}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div>
-                                <Label>Price (₹)</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                    placeholder="0"
-                                />
-                            </div>
-                            <div className="col-span-2">
-                                <Label>Image URL (Optional)</Label>
-                                <Input
-                                    value={formData.image_url}
-                                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                                    placeholder="https://example.com/image.jpg"
-                                />
-                            </div>
-                            <div className="col-span-2">
-                                <Label>Description</Label>
-                                <Textarea
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    placeholder="Product details..."
-                                />
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    checked={formData.is_featured}
-                                    onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
-                                />
-                                <Label>Mark as Featured</Label>
-                            </div>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsProductDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSaveProduct} disabled={isSaving}>
-                            {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            Save Product
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {/* Add/Edit Product - Conditionally render Dialog (desktop) or Sheet (mobile) */}
+            {isMobile ? (
+                <Sheet open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                    <SheetContent side="bottom" className="h-[90vh] rounded-t-[20px] overflow-y-auto pb-safe">
+                        <SheetHeader className="mb-4">
+                            <SheetTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</SheetTitle>
+                        </SheetHeader>
+                        <ProductFormContent
+                            formData={formData}
+                            setFormData={setFormData}
+                            categories={categories}
+                            onSave={handleSaveProduct}
+                            onCancel={() => setIsProductDialogOpen(false)}
+                            isSaving={isSaving}
+                        />
+                    </SheetContent>
+                </Sheet>
+            ) : (
+                <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                    <DialogContent className="sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+                        </DialogHeader>
+                        <ProductFormContent
+                            formData={formData}
+                            setFormData={setFormData}
+                            categories={categories}
+                            onSave={handleSaveProduct}
+                            onCancel={() => setIsProductDialogOpen(false)}
+                            isSaving={isSaving}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
 
             {/* Add Category Dialog */}
             <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
