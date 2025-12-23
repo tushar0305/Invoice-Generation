@@ -13,13 +13,20 @@ export const DEFAULT_FREE_PLAN: Plan = {
 
 export async function getShopSubscription(shopId: string) {
     // 1. Fetch Subscription & Plan Link
+    // 1. Fetch Subscription
     const { data: sub, error: subError } = await supabase
-        .from('shop_subscriptions')
-        .select(`
-            *,
-            plan:plans(*)
-        `)
+        .from('subscriptions')
+        .select('*')
         .eq('shop_id', shopId)
+        .single();
+
+    // 2. Fetch Plan Details
+    // If sub exists, use its plan_id. Else 'free'.
+    const planId = sub?.plan_id || 'free';
+    const { data: planDetails } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('id', planId)
         .single();
 
     // 2. Fetch Usage for Current Period
@@ -35,7 +42,7 @@ export async function getShopSubscription(shopId: string) {
         .limit(1)
         .single();
 
-    const effectivePlan: Plan = sub?.plan || DEFAULT_FREE_PLAN;
+    const effectivePlan: Plan = (planDetails as Plan) || DEFAULT_FREE_PLAN;
 
     // Handle missing usage record (if new month/new shop)
     const effectiveUsage: ShopUsage = usage || {

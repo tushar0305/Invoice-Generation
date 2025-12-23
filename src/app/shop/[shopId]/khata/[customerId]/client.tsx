@@ -4,7 +4,7 @@ import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     ArrowLeft, Plus, Edit, Trash2, Phone, MessageCircle, ArrowDownRight, ArrowUpRight,
-    Paperclip, FileText, X, Loader2, MapPin, Mail, Calendar, CreditCard
+    Paperclip, FileText, X, Loader2, MapPin, Mail, Calendar, CreditCard, User, Crown
 } from 'lucide-react';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import {
@@ -127,8 +127,6 @@ export function CustomerLedgerClient({
                         .upload(fileName, file);
 
                     if (uploadError) {
-                        // Attempt to create bucket if it doesn't exist? No, usually generic error.
-                        // Assuming bucket 'khata-docs' exists. If not, this fails.
                         console.error('Upload error', uploadError);
                         throw new Error('Failed to upload document. Please try again or remove the file.');
                     }
@@ -139,7 +137,6 @@ export function CustomerLedgerClient({
                 }
 
                 // 2. Add Transaction via V2 RPC
-                // Determine transaction type if not set
                 let txType = newTransaction.transaction_type;
                 if (!txType) {
                     if (entity.entity_type === 'CUSTOMER') {
@@ -185,7 +182,6 @@ export function CustomerLedgerClient({
     };
 
     const handleDeleteTransaction = async (transactionId: string) => {
-        // Implement V2 delete or generic delete
         if (!confirm('Are you sure you want to delete this transaction?')) return;
         startTransition(async () => {
             const { error } = await supabase.from('ledger_transactions').update({ deleted_at: new Date().toISOString() }).eq('id', transactionId);
@@ -199,7 +195,6 @@ export function CustomerLedgerClient({
     };
 
     const handleUpdateEntity = async () => {
-        // Update Logic based on source table
         if (!editEntity.name) return;
         startTransition(async () => {
             const { error } = await supabase
@@ -244,29 +239,47 @@ export function CustomerLedgerClient({
     const labels = ENTITY_LABELS[entity.entity_type] || ENTITY_LABELS.OTHER;
 
     return (
-        <MotionWrapper className="space-y-6 pb-24">
-            {/* Header */}
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => router.push(`/shop/${shopId}/khata`)}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold">{entity.name}</h1>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            {entity.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {entity.phone}</span>}
-                            <Badge variant="outline" className="text-xs">{entity.entity_type}</Badge>
+        <div className="min-h-screen bg-background pb-20">
+            {/* --- PREMIUM HEADER SECTION --- */}
+            <div className="relative overflow-hidden bg-gradient-to-b from-muted/50 to-background border-b border-border transition-colors duration-300 pb-24 pt-10 md:pt-14 md:pb-32">
+                {/* Abstract Background Elements */}
+                <div className="absolute top-0 right-0 w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-primary/5 rounded-full blur-[80px] md:blur-[120px] -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute bottom-0 left-0 w-[150px] h-[150px] md:w-[300px] md:h-[300px] bg-primary/5 rounded-full blur-[60px] md:blur-[100px] translate-y-1/2 -translate-x-1/2" />
+
+                <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8">
+                    <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 md:gap-8">
+                        {/* Back + Brand Info */}
+                        <div className="space-y-4 max-w-full md:max-w-2xl w-full">
+                            <Button variant="ghost" size="sm" onClick={() => router.push(`/shop/${shopId}/khata`)} className="-ml-2 text-muted-foreground hover:text-foreground">
+                                <ArrowLeft className="h-4 w-4 mr-1" /> Back to List
+                            </Button>
+
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 backdrop-blur-md text-xs font-medium text-amber-600 dark:text-amber-400">
+                                <User className="h-3 w-3" />
+                                <span>{entity.entity_type || 'Customer'} Ledger</span>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-4">
+                                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-tight">
+                                    <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-foreground to-amber-500 dark:from-amber-400 dark:via-foreground dark:to-amber-500">
+                                        {entity.name}
+                                    </span>
+                                </h1>
+                                {entity.phone && <span className="text-lg text-muted-foreground font-mono">{entity.phone}</span>}
+                            </div>
+                        </div>
+
+                        {/* Header Actions */}
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <Button variant="outline" onClick={() => setIsEditEntityOpen(true)} className="flex-1 md:flex-none bg-card/50 backdrop-blur-sm border-border shadow-sm">
+                                <Edit className="h-4 w-4 mr-2" /> Edit Details
+                            </Button>
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setIsEditEntityOpen(true)} className="gap-2">
-                        <Edit className="h-4 w-4" /> Edit
-                    </Button>
-                </div>
             </div>
 
-            {/* Edit Dialog */}
+            {/* Edit Dialog (Hidden) */}
             <Dialog open={isEditEntityOpen} onOpenChange={setIsEditEntityOpen}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>Edit Details</DialogTitle></DialogHeader>
@@ -287,311 +300,346 @@ export function CustomerLedgerClient({
                 </DialogContent>
             </Dialog>
 
-            <div className="grid gap-6 md:grid-cols-3">
-                {/* Balance Card */}
-                <Card className={cn(
-                    "border-0 shadow-xl overflow-hidden text-white md:col-span-1",
-                    entity.current_balance > 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-600" :
-                        entity.current_balance < 0 ? "bg-gradient-to-br from-red-500 to-red-600" :
-                            "bg-gradient-to-br from-slate-500 to-slate-600"
-                )}>
-                    <CardContent className="p-6 text-center flex flex-col items-center justify-center h-full min-h-[180px]">
-                        <p className="opacity-90 text-sm mb-1">Current Balance</p>
-                        <h2 className="text-4xl font-bold mb-3">{formatCurrency(Math.abs(entity.current_balance))}</h2>
-                        <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 mb-4">
-                            {entity.current_balance > 0 ? 'To Collect' : entity.current_balance < 0 ? 'To Pay' : 'Settled'}
-                        </Badge>
+            {/* --- MAIN CONTENT (Overlapping) --- */}
+            <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-20 relative z-20 space-y-8">
 
-                        <div className="flex gap-2 w-full mt-auto">
-                            <Button variant="secondary" className="w-full bg-white/20 hover:bg-white/30 text-white border-0" onClick={sendWhatsApp} disabled={!entity.phone}>
-                                <MessageCircle className="h-4 w-4 mr-2" /> Remind
-                            </Button>
+                {/* Stats Grid - Bento Style */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Balance Card - Hero */}
+                    <Card className={cn(
+                        "md:col-span-1 border-0 shadow-lg shadow-black/10 overflow-hidden relative group",
+                        entity.current_balance >= 0
+                            ? "bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 text-white"
+                            : "bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white"
+                    )}>
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <CreditCard className="h-24 w-24 text-white" />
                         </div>
-                    </CardContent>
-                </Card>
-
-                {/* Contact Info Card */}
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Contact Information</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                    <Phone className="h-3 w-3" /> Phone
-                                </div>
-                                <p className="font-medium">{entity.phone || 'N/A'}</p>
+                        <CardContent className="p-6 md:p-8 flex flex-col justify-between h-full min-h-[200px]">
+                            <div>
+                                <p className="text-sm font-medium opacity-90 mb-1">Current Balance</p>
+                                <h2 className="text-4xl font-bold tracking-tight mb-3 tabular-nums">{formatCurrency(Math.abs(entity.current_balance))}</h2>
+                                <Badge className="bg-white/20 text-white hover:bg-white/30 border-0 backdrop-blur-sm">
+                                    {entity.current_balance >= 0 ? 'To Receive' : 'To Pay'}
+                                </Badge>
                             </div>
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                    <Mail className="h-3 w-3" /> Email
-                                </div>
-                                <p className="font-medium">{entity.email || 'N/A'}</p>
-                            </div>
-                            <div className="space-y-1 sm:col-span-2">
-                                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                    <MapPin className="h-3 w-3" /> Address
-                                </div>
-                                <p className="font-medium">{entity.address || 'N/A'}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Transactions Section */}
-            <Card className="glass-card">
-                <div className="p-4 border-b flex items-center justify-between">
-                    <div>
-                        <h3 className="font-bold text-lg">Transaction History</h3>
-                        <p className="text-xs text-muted-foreground">Recent ledger entries</p>
-                    </div>
-                    <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="gap-2">
-                                <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add Transaction</span>
+                            <Button variant="secondary" className="w-full mt-6 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm shadow-sm" onClick={sendWhatsApp} disabled={!entity.phone}>
+                                <MessageCircle className="h-4 w-4 mr-2" />
+                                Send Reminder
                             </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>New Transaction</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                {/* Type Toggle */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => setNewTransaction({ ...newTransaction, entry_type: 'DEBIT' })}
-                                        className={cn(
-                                            "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1",
-                                            newTransaction.entry_type === 'DEBIT'
-                                                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                                : "border-border hover:bg-muted"
-                                        )}
-                                    >
-                                        <ArrowDownRight className="h-5 w-5" />
-                                        <span className="font-bold text-sm">YOU GAVE</span>
-                                        <span className="text-[10px] opacity-70">{labels.given}</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setNewTransaction({ ...newTransaction, entry_type: 'CREDIT' })}
-                                        className={cn(
-                                            "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1",
-                                            newTransaction.entry_type === 'CREDIT'
-                                                ? "border-red-500 bg-red-50 text-red-700"
-                                                : "border-border hover:bg-muted"
-                                        )}
-                                    >
-                                        <ArrowUpRight className="h-5 w-5" />
-                                        <span className="font-bold text-sm">YOU GOT</span>
-                                        <span className="text-[10px] opacity-70">{labels.received}</span>
-                                    </button>
-                                </div>
+                        </CardContent>
+                    </Card>
 
-                                <div className="space-y-2">
-                                    <Label>Amount</Label>
-                                    <Input
-                                        type="number"
-                                        value={newTransaction.amount}
-                                        onChange={e => setNewTransaction({ ...newTransaction, amount: e.target.value })}
-                                        className="text-2xl font-bold h-12"
-                                        placeholder="0.00"
-                                        autoFocus
-                                    />
+                    {/* Contact Info - Glassy */}
+                    <Card className="md:col-span-2 border-border/50 shadow-lg shadow-black/5 bg-card/60 backdrop-blur-xl">
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <User className="h-5 w-5 text-primary" />
+                                Contact Information
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-6 sm:grid-cols-2">
+                                <div className="space-y-1 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                                        <Phone className="h-3 w-3" /> Phone
+                                    </div>
+                                    <p className="font-medium text-lg">{entity.phone || 'N/A'}</p>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <Label>Description</Label>
-                                    <Textarea
-                                        value={newTransaction.description}
-                                        onChange={e => setNewTransaction({ ...newTransaction, description: e.target.value })}
-                                        placeholder="Item details, bill no, etc."
-                                        rows={2}
-                                    />
+                                <div className="space-y-1 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                                        <Mail className="h-3 w-3" /> Email
+                                    </div>
+                                    <p className="font-medium text-lg">{entity.email || 'N/A'}</p>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <Label>Date</Label>
-                                    <Input
-                                        type="date"
-                                        value={newTransaction.transaction_date}
-                                        onChange={e => setNewTransaction({ ...newTransaction, transaction_date: e.target.value })}
-                                    />
+                                <div className="space-y-1 sm:col-span-2 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                                        <MapPin className="h-3 w-3" /> Address
+                                    </div>
+                                    <p className="font-medium text-lg">{entity.address || 'N/A'}</p>
                                 </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
 
-                                <div className="space-y-2">
-                                    <Label>Attachment (Optional)</Label>
-                                    <div className="flex gap-2 items-center">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className="gap-2"
-                                            onClick={() => fileInputRef.current?.click()}
+                {/* Transactions Section */}
+                <Card className="border-border/50 shadow-xl shadow-black/5 bg-card/60 backdrop-blur-xl overflow-hidden">
+                    <div className="p-4 md:p-6 border-b border-border/30 bg-muted/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div>
+                            <h3 className="font-bold text-lg flex items-center gap-2">
+                                <Calendar className="h-5 w-5 text-primary" />
+                                Transaction History
+                            </h3>
+                            <p className="text-sm text-muted-foreground">Recent ledger entries</p>
+                        </div>
+
+                        <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="w-full md:w-auto rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all">
+                                    <Plus className="h-4 w-4 mr-2" /> Add Transaction
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md rounded-2xl">
+                                <DialogHeader>
+                                    <DialogTitle>New Transaction</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4 py-4">
+                                    {/* Type Toggle */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            onClick={() => setNewTransaction({ ...newTransaction, entry_type: 'DEBIT' })}
+                                            className={cn(
+                                                "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1",
+                                                newTransaction.entry_type === 'DEBIT'
+                                                    ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                                                    : "border-border hover:bg-muted"
+                                            )}
                                         >
-                                            <Paperclip className="h-4 w-4" />
-                                            {newTransaction.file ? 'Change File' : 'Attach File'}
-                                        </Button>
-                                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                                            {newTransaction.file?.name}
-                                        </span>
-                                        {newTransaction.file && (
-                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setNewTransaction({ ...newTransaction, file: null })}>
-                                                <X className="h-3 w-3" />
-                                            </Button>
-                                        )}
-                                        <input
-                                            type="file"
-                                            ref={fileInputRef}
-                                            className="hidden"
-                                            accept="image/*,application/pdf"
-                                            onChange={(e) => {
-                                                if (e.target.files?.[0]) {
-                                                    setNewTransaction({ ...newTransaction, file: e.target.files[0] });
-                                                }
-                                            }}
+                                            <ArrowDownRight className="h-5 w-5" />
+                                            <span className="font-bold text-sm">YOU GAVE</span>
+                                            <span className="text-[10px] opacity-70">{labels.given}</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setNewTransaction({ ...newTransaction, entry_type: 'CREDIT' })}
+                                            className={cn(
+                                                "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1",
+                                                newTransaction.entry_type === 'CREDIT'
+                                                    ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-500/20 dark:text-red-400"
+                                                    : "border-border hover:bg-muted"
+                                            )}
+                                        >
+                                            <ArrowUpRight className="h-5 w-5" />
+                                            <span className="font-bold text-sm">YOU GOT</span>
+                                            <span className="text-[10px] opacity-70">{labels.received}</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Amount</Label>
+                                        <Input
+                                            type="number"
+                                            value={newTransaction.amount}
+                                            onChange={e => setNewTransaction({ ...newTransaction, amount: e.target.value })}
+                                            className="text-2xl font-bold h-12"
+                                            placeholder="0.00"
+                                            autoFocus
                                         />
                                     </div>
-                                </div>
 
-                            </div>
-                            <DialogFooter>
-                                <Button onClick={handleAddTransaction} disabled={isPending} className="w-full">
-                                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Save Transaction
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                </div>
+                                    <div className="space-y-2">
+                                        <Label>Description</Label>
+                                        <Textarea
+                                            value={newTransaction.description}
+                                            onChange={e => setNewTransaction({ ...newTransaction, description: e.target.value })}
+                                            placeholder="Item details, bill no, etc."
+                                            rows={2}
+                                        />
+                                    </div>
 
-                <div className="p-0">
-                    {/* Mobile View - Cards */}
-                    <div className="md:hidden space-y-3 p-4">
-                        {transactionsWithBalance.length === 0 ? (
-                            <div className="text-center py-10 text-muted-foreground">No transactions yet</div>
-                        ) : (
-                            transactionsWithBalance.map(t => (
-                                <Card key={t.id} className="overflow-hidden border border-border/50">
-                                    <CardContent className="p-0 flex">
-                                        <div className={cn(
-                                            "w-1.5 shrink-0",
-                                            t.entry_type === 'DEBIT' ? "bg-emerald-500" : "bg-red-500"
-                                        )} />
-                                        <div className="p-3 flex-1">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <div>
-                                                    <div className="font-bold text-base flex items-center gap-2">
-                                                        <span className={t.entry_type === 'DEBIT' ? "text-emerald-700" : "text-red-700"}>
-                                                            {t.entry_type === 'DEBIT' ? '+' : '-'}{formatCurrency(t.amount)}
-                                                        </span>
-                                                        {t.transaction_type && <Badge variant="outline" className="text-[10px] h-4 px-1">{t.transaction_type}</Badge>}
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground">{format(new Date(t.transaction_date), 'dd MMM, yyyy')}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-[10px] font-mono text-muted-foreground">Bal: {formatCurrency(Math.abs(t.balance_after || 0))}</p>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 text-muted-foreground/50 hover:text-red-500" onClick={() => handleDeleteTransaction(t.id)}>
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            {t.description && <p className="text-sm text-foreground/80 bg-muted/30 p-1.5 rounded-md mt-1">{t.description}</p>}
+                                    <div className="space-y-2">
+                                        <Label>Date</Label>
+                                        <Input
+                                            type="date"
+                                            value={newTransaction.transaction_date}
+                                            onChange={e => setNewTransaction({ ...newTransaction, transaction_date: e.target.value })}
+                                        />
+                                    </div>
 
-                                            {/* Documents */}
-                                            {t.documents && t.documents.length > 0 && (
-                                                <div className="flex gap-2 mt-2 flex-wrap">
-                                                    {t.documents.map(doc => (
-                                                        <a
-                                                            key={doc.id}
-                                                            href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/khata-docs/${doc.storage_path}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-medium hover:bg-blue-100 transition-colors"
-                                                        >
-                                                            <Paperclip className="h-3 w-3" />
-                                                            {doc.file_name}
-                                                        </a>
-                                                    ))}
-                                                </div>
+                                    <div className="space-y-2">
+                                        <Label>Attachment (Optional)</Label>
+                                        <div className="flex gap-2 items-center">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="gap-2"
+                                                onClick={() => fileInputRef.current?.click()}
+                                            >
+                                                <Paperclip className="h-4 w-4" />
+                                                {newTransaction.file ? 'Change File' : 'Attach File'}
+                                            </Button>
+                                            <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                                {newTransaction.file?.name}
+                                            </span>
+                                            {newTransaction.file && (
+                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setNewTransaction({ ...newTransaction, file: null })}>
+                                                    <X className="h-3 w-3" />
+                                                </Button>
                                             )}
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                className="hidden"
+                                                accept="image/*,application/pdf"
+                                                onChange={(e) => {
+                                                    if (e.target.files?.[0]) {
+                                                        setNewTransaction({ ...newTransaction, file: e.target.files[0] });
+                                                    }
+                                                }}
+                                            />
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            ))
-                        )}
+                                    </div>
+
+                                </div>
+                                <DialogFooter>
+                                    <Button onClick={handleAddTransaction} disabled={isPending} className="w-full">
+                                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Save Transaction
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </div>
 
-                    {/* Desktop View - Table */}
-                    <div className="hidden md:block overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-muted/50">
-                                <TableRow className="hover:bg-transparent">
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead className="text-right">Debit (+)</TableHead>
-                                    <TableHead className="text-right">Credit (-)</TableHead>
-                                    <TableHead className="text-right">Balance</TableHead>
-                                    <TableHead></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {transactionsWithBalance.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                                            No transactions found.
-                                        </TableCell>
+                    <div className="p-0">
+                        {/* Desktop View - Table */}
+                        <div className="hidden md:block">
+                            <Table>
+                                <TableHeader className="bg-muted/50">
+                                    <TableRow className="hover:bg-transparent border-border/50">
+                                        <TableHead className="w-[120px]">Date</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead className="text-right">Debit (+)</TableHead>
+                                        <TableHead className="text-right">Credit (-)</TableHead>
+                                        <TableHead className="text-right">Balance</TableHead>
+                                        <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
-                                ) : (
-                                    transactionsWithBalance.map((t) => (
-                                        <TableRow key={t.id} className="group">
-                                            <TableCell className="w-[120px]">
-                                                {format(new Date(t.transaction_date), 'dd MMM, yyyy')}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="max-w-[300px] truncate" title={t.description || ''}>
-                                                    {t.description || '-'}
-                                                </div>
-                                                {/* Documents */}
-                                                {t.documents && t.documents.length > 0 && (
-                                                    <div className="flex gap-1 mt-1">
-                                                        {t.documents.map(doc => (
-                                                            <Paperclip key={doc.id} className="h-3 w-3 text-blue-500" />
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                {t.transaction_type && <Badge variant="outline" className="text-[10px]">{t.transaction_type}</Badge>}
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium text-emerald-600">
-                                                {t.entry_type === 'DEBIT' ? formatCurrency(t.amount) : '-'}
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium text-red-600">
-                                                {t.entry_type === 'CREDIT' ? formatCurrency(t.amount) : '-'}
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono text-muted-foreground">
-                                                {formatCurrency(Math.abs(t.balance_after || 0))}
-                                            </TableCell>
-                                            <TableCell className="text-right w-[50px]">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                    onClick={() => handleDeleteTransaction(t.id)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                </TableHeader>
+                                <TableBody>
+                                    {transactionsWithBalance.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-lg">
+                                                No transactions found.
                                             </TableCell>
                                         </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
+                                    ) : (
+                                        transactionsWithBalance.map((t) => (
+                                            <TableRow key={t.id} className="group cursor-default hover:bg-muted/30 border-border/50 transition-colors">
+                                                <TableCell className="font-medium text-muted-foreground">
+                                                    {format(new Date(t.transaction_date), 'dd MMM, yyyy')}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="max-w-[300px]" title={t.description || ''}>
+                                                        {t.description || '-'}
+                                                    </div>
+                                                    {t.documents && t.documents.length > 0 && (
+                                                        <div className="flex gap-1 mt-1">
+                                                            {t.documents.map(doc => (
+                                                                <a
+                                                                    key={doc.id}
+                                                                    href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/khata-docs/${doc.storage_path}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded hover:bg-blue-100"
+                                                                >
+                                                                    <Paperclip className="h-3 w-3" />
+                                                                    View Doc
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {t.transaction_type && <Badge variant="secondary" className="text-[10px] font-mono uppercase bg-muted text-muted-foreground">{t.transaction_type}</Badge>}
+                                                </TableCell>
+                                                <TableCell className="text-right font-bold text-emerald-600 tabular-nums text-base">
+                                                    {t.entry_type === 'DEBIT' ? formatCurrency(t.amount) : <span className="text-muted-foreground/20">-</span>}
+                                                </TableCell>
+                                                <TableCell className="text-right font-bold text-red-600 tabular-nums text-base">
+                                                    {t.entry_type === 'CREDIT' ? formatCurrency(t.amount) : <span className="text-muted-foreground/20">-</span>}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-muted-foreground font-medium tabular-nums">
+                                                    {formatCurrency(Math.abs(t.balance_after || 0))}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                                                        onClick={() => handleDeleteTransaction(t.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        {/* Mobile View - Cards */}
+                        <div className="md:hidden space-y-3 p-4 bg-muted/5">
+                            {transactionsWithBalance.length === 0 ? (
+                                <div className="text-center py-10 text-muted-foreground">No transactions yet</div>
+                            ) : (
+                                transactionsWithBalance.map(t => (
+                                    <div key={t.id} className="relative bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden p-4">
+                                        <div className={cn(
+                                            "absolute left-0 top-0 bottom-0 w-1.5",
+                                            t.entry_type === 'DEBIT' ? "bg-emerald-500" : "bg-red-500"
+                                        )} />
+
+                                        <div className="pl-3 flex flex-col gap-2">
+                                            {/* Date & Amount Row */}
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                                        {format(new Date(t.transaction_date), 'dd MMM, yyyy')}
+                                                    </span>
+                                                    {t.transaction_type && <Badge variant="outline" className="text-[9px] w-fit mt-1 px-1.5 h-4 border-dashed">{t.transaction_type}</Badge>}
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className={cn("font-bold text-lg tabular-nums", t.entry_type === 'DEBIT' ? "text-emerald-600" : "text-red-600")}>
+                                                        {t.entry_type === 'DEBIT' ? '+' : '-'}{formatCurrency(t.amount)}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Description & Balance Row */}
+                                            <div className="flex justify-between items-end pt-2 border-t border-border/30 mt-1">
+                                                <div className="flex-1 mr-4">
+                                                    <p className="text-sm text-foreground/90 line-clamp-2">
+                                                        {t.description || <span className="italic text-muted-foreground">No description</span>}
+                                                    </p>
+                                                    {t.documents && t.documents.length > 0 && (
+                                                        <div className="flex gap-2 mt-2">
+                                                            {t.documents.map(doc => (
+                                                                <a
+                                                                    key={doc.id}
+                                                                    href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/khata-docs/${doc.storage_path}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-medium hover:bg-blue-100 transition-colors"
+                                                                >
+                                                                    <Paperclip className="h-3 w-3" />
+                                                                    Doc
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Balance</p>
+                                                    <p className="font-mono text-sm font-medium tabular-nums">{formatCurrency(Math.abs(t.balance_after || 0))}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="absolute top-2 right-2">
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/30 hover:text-red-500" onClick={() => handleDeleteTransaction(t.id)}>
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
-                </div>
-            </Card>
-        </MotionWrapper>
+                </Card>
+            </div>
+        </div>
     );
 }

@@ -2,8 +2,8 @@
 
 import { useMemo } from 'react';
 import {
-    Area,
-    AreaChart,
+    Bar,
+    BarChart,
     CartesianGrid,
     ResponsiveContainer,
     Tooltip,
@@ -24,12 +24,12 @@ import {
     Gift,
     Zap,
     History,
-    ArrowRight
+    Sparkles
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { cn, formatCurrency } from '@/lib/utils';
 import { format, subDays, startOfDay, isSameDay } from 'date-fns';
-import Link from 'next/link';
+import { m, LazyMotion, domAnimation } from 'framer-motion';
 
 interface LoyaltyDashboardProps {
     shopId: string;
@@ -44,6 +44,21 @@ interface LoyaltyDashboardProps {
     settings: any;
     allLogs: any[];
 }
+
+const container = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const item = {
+    hidden: { y: 20, opacity: 0 },
+    show: { y: 0, opacity: 1 }
+};
 
 export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, settings, allLogs }: LoyaltyDashboardProps) {
 
@@ -76,217 +91,206 @@ export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, sett
     }, [allLogs]);
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                        Loyalty Insights
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Track program performance and customer engagement
-                    </p>
+        <LazyMotion features={domAnimation}>
+            <m.div
+                dragConstraints={{ left: 0, right: 0 }}
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="space-y-8"
+            >
+                {/* Stats Cards - Bento Grid Style */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    <StatsCard
+                        title="Total Issued"
+                        value={stats.totalIssued.toLocaleString()}
+                        label="Points Distributed"
+                        icon={TrendingUp}
+                        className="bg-emerald-500/10 text-emerald-600"
+                    />
+                    <StatsCard
+                        title="Redeemed"
+                        value={stats.totalRedeemed.toLocaleString()}
+                        label="Points Used"
+                        icon={Gift}
+                        className="bg-purple-500/10 text-purple-600"
+                    />
+                    <StatsCard
+                        title="Active Members"
+                        value={stats.totalCustomers.toLocaleString()}
+                        label="Loyalty Users"
+                        icon={Users}
+                        className="bg-blue-500/10 text-blue-600"
+                    />
+                    <StatsCard
+                        title="Liability"
+                        value={formatCurrency(stats.liability)}
+                        label="Outstanding Value"
+                        icon={Zap}
+                        className="bg-amber-500/10 text-amber-600"
+                    />
                 </div>
-                <div className="flex gap-3">
-                    <Button asChild variant="outline">
-                        <Link href={`/shop/${shopId}/settings`}>
-                            Configuration
-                        </Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href={`/shop/${shopId}/invoices/new`}>
-                            New Invoice
-                        </Link>
-                    </Button>
-                </div>
-            </div>
 
-            {/* Stats Cards - Clean & Professional */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatsCard
-                    title="Total Issued"
-                    value={stats.totalIssued.toLocaleString()}
-                    label="pts"
-                    icon={<TrendingUp className="h-4 w-4" />}
-                />
-                <StatsCard
-                    title="Redeemed"
-                    value={stats.totalRedeemed.toLocaleString()}
-                    label="pts"
-                    icon={<Gift className="h-4 w-4" />}
-                />
-                <StatsCard
-                    title="Active Members"
-                    value={stats.totalCustomers.toLocaleString()}
-                    label="users"
-                    icon={<Users className="h-4 w-4" />}
-                />
-                <StatsCard
-                    title="Liability"
-                    value={formatCurrency(stats.liability)}
-                    label="value"
-                    icon={<Zap className="h-4 w-4" />}
-                />
-            </div>
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                {/* Chart Section (2/3 width) */}
-                <Card className="lg:col-span-2 shadow-sm border border-border bg-card">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                            Points Velocity
-                        </CardTitle>
-                        <CardDescription>
-                            Points issued vs redeemed over the last 30 days
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-[350px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorIssued" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1} />
-                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.4} />
-                                    <XAxis
-                                        dataKey="dateStr"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                                        dy={10}
-                                        minTickGap={30}
-                                    />
-                                    <YAxis
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="issued"
-                                        stroke="hsl(var(--primary))"
-                                        strokeWidth={2}
-                                        fillOpacity={1}
-                                        fill="url(#colorIssued)"
-                                        name="Points Issued"
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="redeemed"
-                                        stroke="hsl(var(--destructive))"
-                                        strokeWidth={2}
-                                        fillOpacity={1}
-                                        fill="transparent"
-                                        name="Points Redeemed"
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Leaderboard Section (1/3 width) */}
-                <div className="space-y-6">
-                    <Card className="shadow-sm border border-border bg-card">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                                <Crown className="h-4 w-4 text-amber-500" />
-                                Top Loyalists
-                            </CardTitle>
-                            <CardDescription>Highest point balance holders</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {topCustomers.map((customer, i) => (
-                                <div key={customer.id} className="flex items-center justify-between group">
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs ring-1",
-                                            i === 0 ? "bg-amber-100 text-amber-700 ring-amber-200" :
-                                                i === 1 ? "bg-slate-100 text-slate-700 ring-slate-200" :
-                                                    i === 2 ? "bg-orange-100 text-orange-700 ring-orange-200" :
-                                                        "bg-slate-50 text-slate-500 ring-slate-100"
-                                        )}>
-                                            {i + 1}
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-sm text-foreground">{customer.name}</p>
-                                            <p className="text-xs text-muted-foreground">{customer.phone}</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-sm text-primary">{customer.loyalty_points}</p>
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Points</p>
-                                    </div>
+                    {/* Chart Section (2/3 width) - Modern Bar Chart */}
+                    <Card className="lg:col-span-2 border-border/50 shadow-xl shadow-black/5 bg-card/60 backdrop-blur-xl overflow-hidden">
+                        <CardHeader className="border-b border-border/30 bg-muted/20 pb-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                        <TrendingUp className="w-5 h-5 text-primary" />
+                                        Points Velocity
+                                    </CardTitle>
+                                    <CardDescription>Points issued vs redeemed (30 Days)</CardDescription>
                                 </div>
-                            ))}
-                            {topCustomers.length === 0 && (
-                                <div className="text-center py-8 text-muted-foreground">No data available</div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Recent Activity Mini List */}
-                    <Card className="shadow-sm border border-border bg-card">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base font-semibold flex items-center gap-2">
-                                <History className="h-4 w-4 text-muted-foreground" /> Recent Activity
-                            </CardTitle>
+                            </div>
                         </CardHeader>
-                        <CardContent className="space-y-3">
-                            {recentLogs.slice(0, 5).map((log, i) => {
-                                const created = new Date(log.created_at);
-                                const validityDays = settings?.points_validity_days || 0;
-                                const expiry = validityDays > 0 ? new Date(created.getTime() + validityDays * 24 * 60 * 60 * 1000) : null;
-                                return (
-                                    <div key={i} className="grid grid-cols-2 md:grid-cols-3 items-center gap-2 text-sm py-2 border-b last:border-0 border-border/50">
-                                        <span className="text-foreground font-medium truncate">
-                                            {log.customer?.name}
-                                        </span>
-                                        <span className={cn(
-                                            "font-mono font-medium justify-self-end",
-                                            log.points_change > 0 ? "text-emerald-600" : "text-rose-600"
-                                        )}>
-                                            {log.points_change > 0 ? '+' : ''}{log.points_change}
-                                        </span>
-                                        <span className="hidden md:block text-xs text-muted-foreground justify-self-end">
-                                            {expiry ? `Expires ${format(expiry, 'MMM d, yyyy')}` : 'No expiry'}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                        <CardContent className="p-0 md:p-6">
+                            <div className="h-[300px] md:h-[350px] w-full pt-4 md:pt-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.4} />
+                                        <XAxis
+                                            dataKey="dateStr"
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                                            dy={10}
+                                            minTickGap={30}
+                                        />
+                                        <YAxis
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                                            tickFormatter={(val) => Intl.NumberFormat('en-US', { notation: "compact" }).format(val)}
+                                        />
+                                        <Tooltip
+                                            cursor={{ fill: 'hsl(var(--muted)/0.2)', radius: 4 }}
+                                            contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--background)/0.95)', backdropFilter: 'blur(4px)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                            itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600, fontSize: '12px' }}
+                                        />
+                                        <Bar
+                                            dataKey="issued"
+                                            name="Issued"
+                                            fill="hsl(var(--primary))"
+                                            radius={[4, 4, 0, 0]}
+                                            maxBarSize={40}
+                                        />
+                                        <Bar
+                                            dataKey="redeemed"
+                                            name="Redeemed"
+                                            fill="hsl(var(--destructive))"
+                                            fillOpacity={0.8}
+                                            radius={[4, 4, 0, 0]}
+                                            maxBarSize={40}
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         </CardContent>
                     </Card>
-                </div>
 
-            </div>
-        </div>
+                    {/* Right Column Stack */}
+                    <div className="space-y-6">
+                        {/* Leaderboard Section */}
+                        <Card className="border-border/50 shadow-xl shadow-black/5 bg-card/60 backdrop-blur-xl overflow-hidden">
+                            <CardHeader className="border-b border-border/30 bg-muted/20">
+                                <CardTitle className="flex items-center gap-2 text-base font-bold">
+                                    <Crown className="h-4 w-4 text-amber-500" />
+                                    Top Loyalists
+                                </CardTitle>
+                                <CardDescription>Highest balance holders</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <div className="divide-y divide-border/30">
+                                    {topCustomers.map((customer, i) => (
+                                        <div key={customer.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg font-bold text-xs shadow-sm transition-all duration-300",
+                                                    i === 0 ? "bg-amber-100 text-amber-600 ring-2 ring-amber-50" :
+                                                        i === 1 ? "bg-slate-100 text-slate-600" :
+                                                            i === 2 ? "bg-orange-100 text-orange-700" :
+                                                                "bg-primary/5 text-primary"
+                                                )}>
+                                                    {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{customer.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <Badge variant="secondary" className="font-bold text-primary bg-primary/5 hover:bg-primary/10">
+                                                    {customer.loyalty_points.toLocaleString()}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {topCustomers.length === 0 && (
+                                        <div className="text-center py-8 text-muted-foreground text-sm">No data available</div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Recent Activity Mini List */}
+                        <Card className="border-border/50 shadow-xl shadow-black/5 bg-card/60 backdrop-blur-xl overflow-hidden">
+                            <CardHeader className="border-b border-border/30 bg-muted/20 pb-3">
+                                <CardTitle className="text-base font-bold flex items-center gap-2">
+                                    <History className="h-4 w-4 text-muted-foreground" /> Recent Activity
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <div className="divide-y divide-border/30">
+                                    {recentLogs.slice(0, 5).map((log, i) => (
+                                        <div key={i} className="flex items-center justify-between p-3.5 hover:bg-muted/30 transition-colors text-sm">
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-foreground">{log.customer?.name}</span>
+                                                <span className="text-[10px] text-muted-foreground">{format(new Date(log.created_at), 'MMM d, h:mm a')}</span>
+                                            </div>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    "font-mono font-bold border-0",
+                                                    log.points_change > 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                                                )}
+                                            >
+                                                {log.points_change > 0 ? '+' : ''}{log.points_change}
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                    {recentLogs.length === 0 && <div className="p-6 text-center text-xs text-muted-foreground">No recent activity</div>}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </m.div>
+        </LazyMotion>
     );
 }
 
-function StatsCard({ title, value, label, icon }: any) {
+function StatsCard({ title, value, label, icon: Icon, className }: any) {
     return (
-        <Card className="shadow-sm hover:shadow-md transition-shadow border border-border bg-card">
-            <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">{title}</p>
-                    <div className="flex items-baseline gap-1 mt-1">
-                        <h3 className="text-2xl font-bold tracking-tight text-foreground">{value}</h3>
-                        <span className="text-xs text-muted-foreground">{label}</span>
+        <m.div variants={item}>
+            <Card className="border-border/50 shadow-lg shadow-black/5 bg-card/60 backdrop-blur-xl hover:bg-card/90 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group">
+                <CardContent className="p-4 md:p-6">
+                    <div className="flex justify-between items-start mb-3 md:mb-4">
+                        <div className={cn("p-2 md:p-3 rounded-xl transition-all duration-300 group-hover:scale-110 shadow-sm", className)}>
+                            <Icon className="w-4 h-4 md:w-6 md:h-6" />
+                        </div>
                     </div>
-                </div>
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    {icon}
-                </div>
-            </CardContent>
-        </Card>
+                    <div>
+                        <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight truncate">
+                            {value}
+                        </h3>
+                        <p className="text-xs md:text-sm text-muted-foreground font-medium mt-1 truncate">{label}</p>
+                    </div>
+                </CardContent>
+            </Card>
+        </m.div>
     );
 }

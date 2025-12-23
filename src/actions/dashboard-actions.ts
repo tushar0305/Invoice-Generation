@@ -193,21 +193,129 @@ export async function getMarketRates(shopId: string) {
 const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const supabase = await createClient();
 
-    // Prefer dedicated insights RPC; fallback to legacy if missing
-    let stats: any = null;
-    let error: any = null;
-    const insights = await supabase.rpc('get_customer_insights_json', { params: { p_shop_id: shopId, p_days: 30 } });
-    if (!insights.error && insights.data) {
-        stats = insights.data;
-    } else {
-        const legacy = await supabase.rpc('get_dashboard_stats', { p_shop_id: shopId });
-        stats = legacy.data;
-        error = legacy.error;
+    // 1. Try Consolidated RPC
+    const { data: stats, error: rpcError } = await supabase.rpc('get_dashboard_stats', { p_shop_id: shopId });
+
+    if (!rpcError && stats) {
+        return mapStatsToResult(stats);
     }
 
-    if (error || !stats) {
-        console.error('Error fetching dashboard stats:', JSON.stringify(error, null, 2), 'Code:', error?.code, 'Message:', error?.message);
-        // Return zeros/empty if RPC fails
+    console.warn('RPC get_dashboard_stats failed, falling back to direct queries:', rpcError);
+
+    // 2. Fallback: Run individual queries in parallel
+    // This ensures the dashboard works even if the RPC or DB function is broken/missing
+    try {
+        const [
+            { count: customerCount },
+            { count: productCount },
+            { count: invoiceCount },
+            { count: activeLoans },
+            { data: khataData },
+            { count: loyaltyMembers },
+            { count: schemeCount },
+            activeEnrollmentsResult,
+            { data: recentCustomers },
+            { data: allPaidInvoices }
+        ] = await Promise.all([
+            supabase.from('customers').select('*', { count: 'exact', head: true }).eq('shop_id', shopId),
+            supabase.from('inventory_items').select('*', { count: 'exact', head: true }).eq('shop_id', shopId),
+            supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('shop_id', shopId),
+            supabase.from('loans').select('*', { count: 'exact', head: true }).eq('shop_id', shopId).eq('status', 'active'),
+            supabase.from('customers').select('khata_balance').eq('shop_id', shopId),
+            supabase.from('customers').select('*', { count: 'exact', head: true }).eq('shop_id', shopId).gt('loyalty_points', 0),
+            supabase.from('schemes').select('*', { count: 'exact', head: true }).eq('shop_id', shopId),
+            supabase.from('scheme_enrollments').select('total_paid, total_gold_weight_accumulated, status').eq('shop_id', shopId),
+            // New: For Sparkline & Insight
+            supabase.from('customers').select('created_at').eq('shop_id', shopId).gte('created_at', subMonths(startOfMonth(new Date()), 1).toISOString()), // Fetch a bit more for safety, or just 30 days
+            supabase.from('invoices').select('customer_id').eq('shop_id', shopId).eq('status', 'paid')
+        ]);
+
+        // Scheme Calculations
+        const enrollments = (activeEnrollmentsResult.data as any[]) || [];
+        const activeEnrollmentsCount = enrollments.filter((e: any) => e.status === 'ACTIVE').length;
+        const totalSchemeCollected = enrollments.reduce((sum, e) => sum + (Number(e.total_paid) || 0), 0);
+        const totalGoldAccumulated = enrollments.reduce((sum, e) => sum + (Number(e.total_gold_weight_accumulated) || 0), 0);
+
+        const khataBalance = khataData?.reduce((sum, c) => sum + (c.khata_balance || 0), 0) || 0;
+
+        // Fetch low stock items separately
+        const { data: lowStock } = await supabase
+            .from('inventory_items')
+            .select('id, name, gross_weight, metal_type')
+            .eq('shop_id', shopId)
+            .eq('status', 'IN_STOCK')
+            .lt('gross_weight', 50) // Assuming low stock threshold or weight based
+            .limit(5);
+
+        // Process Sparkline (Last 30 Days)
+        const sparklineMap = new Map<string, number>();
+        const sparklineData: number[] = [];
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        // Initialize map with 0
+        for (let i = 0; i < 30; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() - (29 - i));
+            const key = d.toISOString().split('T')[0];
+            sparklineMap.set(key, 0);
+        }
+
+        // Fill with data
+        (recentCustomers || []).forEach((c: any) => {
+            const dateKey = new Date(c.created_at).toISOString().split('T')[0];
+            if (sparklineMap.has(dateKey)) {
+                sparklineMap.set(dateKey, (sparklineMap.get(dateKey) || 0) + 1);
+            }
+        });
+
+        // Convert to array
+        for (const [key, val] of sparklineMap.entries()) {
+            sparklineData.push(val);
+        }
+        // Ensure sorted by date (Map iteration order is insertion order usually, but let's be safe if we inserted out of order? Above loop inserted in order).
+        // Actually map entries are insertion order. Check keys.
+        // The initialization loop was -29 to 0. Correct.
+
+        // Process Returning Customers
+        const customerInvoiceCounts: Record<string, number> = {};
+        (allPaidInvoices || []).forEach((inv: any) => {
+            if (inv.customer_id) {
+                customerInvoiceCounts[inv.customer_id] = (customerInvoiceCounts[inv.customer_id] || 0) + 1;
+            }
+        });
+        const returningCount = Object.values(customerInvoiceCounts).filter(count => count > 1).length;
+
+
+        return {
+            customerCount: customerCount || 0,
+            returningCustomerCount: returningCount,
+            newCustomerCount: (recentCustomers || []).length, // Approximation or filter by startOfThisMonth? RPC uses last 30 days.
+            productCount: productCount || 0,
+            totalInvoices: invoiceCount || 0,
+            activeLoans: activeLoans || 0,
+            khataBalance: khataBalance,
+            totalLoyaltyPoints: 0, // Skip expensive sum
+            lowStockItems: (lowStock || []).map((item: any) => ({
+                id: item.id,
+                name: item.name,
+                weight: Number(item.gross_weight),
+                metalType: item.metal_type
+            })),
+            loyaltyMembers: loyaltyMembers || 0,
+            customerSparkline: sparklineData,
+            topLoyaltyCustomer: null,
+            topCustomerAllTime: null,
+            // Scheme Stats
+            totalSchemes: schemeCount || 0,
+            activeEnrollments: activeEnrollmentsCount || 0,
+            totalSchemeCollected: totalSchemeCollected || 0,
+            totalGoldAccumulated: totalGoldAccumulated || 0
+        };
+
+    } catch (fallbackError) {
+        console.error('Fallback stats query failed:', fallbackError);
+        // Final fail-safe
         return {
             customerCount: 0,
             productCount: 0,
@@ -226,8 +334,9 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
             totalGoldAccumulated: 0
         };
     }
+});
 
-    // Map RPC result to UI expected format
+function mapStatsToResult(stats: any) {
     return {
         customerCount: stats.customer_count || 0,
         returningCustomerCount: stats.returning_customer_count || 0,
@@ -257,8 +366,7 @@ const fetchAdditionalStatsCached = cache(async (shopId: string) => {
         totalSchemeCollected: stats.total_scheme_collected || 0,
         totalGoldAccumulated: 0 // Not yet tracked
     };
-
-});
+}
 
 // Export cached function
 export const getAdditionalStats = fetchAdditionalStatsCached;

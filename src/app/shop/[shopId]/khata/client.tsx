@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Plus, Search, TrendingUp, TrendingDown, Users, Wallet, Eye, Trash2, ChevronLeft, ChevronRight, X, Phone, ArrowUpRight, ArrowDownRight, Briefcase, Truck, Hammer, User, Loader2 } from 'lucide-react';
+import { Plus, Search, TrendingUp, Users, Wallet, ChevronLeft, ChevronRight, Phone, ArrowUpRight, ArrowDownRight, Briefcase, Truck, Hammer, User, Loader2, BookOpen, Crown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,14 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import type { CustomerBalance, LedgerStats, LedgerTransaction } from '@/lib/ledger-types';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
 
 import {
     Dialog,
@@ -21,7 +30,6 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-    DialogFooter,
 } from '@/components/ui/dialog';
 import {
     Sheet,
@@ -30,7 +38,6 @@ import {
     SheetHeader,
     SheetTitle,
     SheetTrigger,
-    SheetFooter,
 } from "@/components/ui/sheet";
 import {
     Select,
@@ -98,7 +105,6 @@ function AddContactForm({
                 setSearchResults([]);
                 return;
             }
-            console.log('Searching customers for:', debouncedSearch, 'in shop:', shopId);
             setIsSearching(true);
             const { data, error } = await supabase
                 .from('customers')
@@ -108,8 +114,6 @@ function AddContactForm({
                 .limit(5);
 
             if (error) console.error('Search Error:', error);
-            console.log('Search Results:', data);
-
             setSearchResults(data || []);
             setIsSearching(false);
         }
@@ -268,7 +272,7 @@ export function KhataClient({
                     p_phone: entityData.phone.trim() || null,
                     p_address: entityData.address.trim() || null,
                     p_type: entityData.type,
-                    p_email: null // Add email field to UI if needed, currently skipped
+                    p_email: null
                 });
 
                 if (res.error) throw res.error;
@@ -302,71 +306,79 @@ export function KhataClient({
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pb-24 md:pb-8">
-            {/* Header */}
-            <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40 md:hidden px-4 py-3">
-                <h1 className="text-xl font-bold">Khata Book</h1>
-                <p className="text-xs text-muted-foreground">Manage your business connections</p>
+        <div className="min-h-screen bg-background pb-20">
+            {/* --- PREMIUM HEADER SECTION --- */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-amber-50/50 via-background to-background dark:from-amber-950/20 dark:via-background dark:to-background border-b border-border transition-colors duration-300 pb-24 pt-10 md:pt-14 md:pb-32">
+                {/* Abstract Background Elements */}
+                <div className="absolute top-0 right-0 w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-amber-500/10 rounded-full blur-[80px] md:blur-[120px] -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute bottom-0 left-0 w-[150px] h-[150px] md:w-[300px] md:h-[300px] bg-amber-500/10 rounded-full blur-[60px] md:blur-[100px] translate-y-1/2 -translate-x-1/2" />
+
+                <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
+                        {/* Brand Info */}
+                        <div className="space-y-4 max-w-full md:max-w-2xl">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 backdrop-blur-md text-xs font-medium text-amber-600 dark:text-amber-400">
+                                <Crown className="h-3 w-3" />
+                                <span>Business Ledger</span>
+                            </div>
+
+                            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-tight">
+                                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-foreground to-amber-500 dark:from-amber-400 dark:via-foreground dark:to-amber-500">
+                                    Khata Book
+                                </span>
+                            </h1>
+
+                            <p className="text-muted-foreground max-w-lg text-sm md:text-base leading-relaxed">
+                                Track receivables, manage debts, and settle accounts with your customers and suppliers.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Content Container */}
-            <div className="px-4 py-4 max-w-7xl mx-auto space-y-6">
+            {/* --- MAIN CONTENT (Overlapping) --- */}
+            <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-20 relative z-20 space-y-8">
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className={cn(
-                        "col-span-2 lg:col-span-1 border-0 shadow-lg text-white",
-                        stats.net_balance >= 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-600" : "bg-gradient-to-br from-red-500 to-red-600"
-                    )}>
-                        <CardContent className="p-5">
-                            <p className="text-sm opacity-90 mb-1">Net Balance</p>
-                            <h2 className="text-3xl font-bold">{formatCurrency(Math.abs(stats.net_balance))}</h2>
-                            <Badge className="mt-2 bg-white/20 text-white hover:bg-white/30 border-0">
-                                {stats.net_balance >= 0 ? 'To Receive' : 'To Pay'}
-                            </Badge>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-card/50 backdrop-blur-sm">
-                        <CardContent className="p-5">
-                            <div className="flex justify-between items-start mb-2">
-                                <span className="text-xs font-medium text-muted-foreground uppercase">Receivable</span>
-                                <ArrowDownRight className="h-4 w-4 text-emerald-500" />
-                            </div>
-                            <div className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.total_receivable)}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-card/50 backdrop-blur-sm">
-                        <CardContent className="p-5">
-                            <div className="flex justify-between items-start mb-2">
-                                <span className="text-xs font-medium text-muted-foreground uppercase">Payable</span>
-                                <ArrowUpRight className="h-4 w-4 text-red-500" />
-                            </div>
-                            <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.total_payable)}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="hidden md:block bg-card/50 backdrop-blur-sm">
-                        <CardContent className="p-5">
-                            <div className="flex justify-between items-start mb-2">
-                                <span className="text-xs font-medium text-muted-foreground uppercase">Connections</span>
-                                <Users className="h-4 w-4 text-primary" />
-                            </div>
-                            <div className="text-2xl font-bold">{stats.total_customers}</div>
-                        </CardContent>
-                    </Card>
+                {/* Stats Grid - Bento Style */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    <StatsCard
+                        title="Net Balance"
+                        value={formatCurrency(Math.abs(stats.net_balance))}
+                        label={stats.net_balance >= 0 ? "To Receive" : "To Pay"}
+                        icon={Wallet}
+                        className={stats.net_balance >= 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}
+                    />
+                    <StatsCard
+                        title="Total Receivable"
+                        value={formatCurrency(stats.total_receivable)}
+                        label="Incoming"
+                        icon={ArrowDownRight}
+                        className="bg-blue-500/10 text-blue-600"
+                    />
+                    <StatsCard
+                        title="Total Payable"
+                        value={formatCurrency(stats.total_payable)}
+                        label="Outgoing"
+                        icon={ArrowUpRight}
+                        className="bg-red-500/10 text-red-600"
+                    />
+                    <StatsCard
+                        title="Connections"
+                        value={stats.total_customers.toString()}
+                        label="Active Accounts"
+                        icon={Users}
+                        className="bg-amber-500/10 text-amber-600"
+                    />
                 </div>
 
                 {/* Filters & Actions */}
-                <div className="sticky top-[68px] md:top-0 z-20 bg-background/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-sm p-3 gap-3 flex flex-col md:flex-row items-center">
-
+                <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-xl border-b border-border/20 -mx-4 px-4 md:-mx-8 md:px-8 py-4 mb-6 flex flex-col md:flex-row items-center gap-3 transition-all duration-200">
                     {/* Search */}
-                    <div className="relative w-full md:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <div className="relative w-full md:w-72 group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <Input
-                            placeholder="Search..."
-                            className="pl-9 bg-muted/50 border-0"
+                            placeholder="Search contacts..."
+                            className="pl-9 h-11 rounded-full bg-muted/40 border-border/50 focus:bg-background focus:ring-primary/20 focus:border-primary/50 transition-all shadow-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -381,10 +393,10 @@ export function KhataClient({
                                     key={tab.id}
                                     onClick={() => handleTypeFilterChange(tab.id)}
                                     className={cn(
-                                        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
+                                        "flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all border",
                                         currentType === tab.id
-                                            ? "bg-primary text-primary-foreground shadow-sm"
-                                            : "hover:bg-muted text-muted-foreground"
+                                            ? "bg-primary/10 border-primary/20 text-primary shadow-sm"
+                                            : "bg-muted/30 border-transparent hover:bg-muted/50 text-muted-foreground"
                                     )}
                                 >
                                     <Icon className="h-4 w-4" />
@@ -394,125 +406,208 @@ export function KhataClient({
                         })}
                     </div>
 
-                    {/* Add Button - Responsive Dialog/Sheet */}
-                    {isDesktop ? (
-                        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="shrink-0 gap-2 rounded-lg">
-                                    <Plus className="h-4 w-4" />
-                                    <span>Add Contact</span>
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Add New Contact</DialogTitle>
-                                    <DialogDescription>Create a new ledger account</DialogDescription>
-                                </DialogHeader>
-                                <AddContactForm
-                                    onSubmit={handleCreateEntity}
-                                    onCancel={() => setIsAddDialogOpen(false)}
-                                    isPending={isPending}
-                                    shopId={shopId}
-                                />
-                            </DialogContent>
-                        </Dialog>
-                    ) : (
-                        <Sheet open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                            <SheetTrigger asChild>
-                                <Button className="shrink-0 gap-2 rounded-lg">
-                                    <Plus className="h-4 w-4" />
-                                    <span>Add Contact</span>
-                                </Button>
-                            </SheetTrigger>
-                            <SheetContent side="bottom" className="h-[80vh]">
-                                <SheetHeader className="text-left">
-                                    <SheetTitle>Add New Contact</SheetTitle>
-                                    <SheetDescription>Create a new ledger account</SheetDescription>
-                                </SheetHeader>
-                                <AddContactForm
-                                    onSubmit={handleCreateEntity}
-                                    onCancel={() => setIsAddDialogOpen(false)}
-                                    isPending={isPending}
-                                    shopId={shopId}
-                                />
-                            </SheetContent>
-                        </Sheet>
-                    )}
+                    {/* Add Button */}
+                    <div className="shrink-0 w-full md:w-auto">
+                        {isDesktop ? (
+                            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button className="h-11 px-6 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all gap-2 border-0">
+                                        <Plus className="h-4 w-4" />
+                                        <span>Add Contact</span>
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-md rounded-2xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Contact</DialogTitle>
+                                        <DialogDescription>Create a new ledger account</DialogDescription>
+                                    </DialogHeader>
+                                    <AddContactForm
+                                        onSubmit={handleCreateEntity}
+                                        onCancel={() => setIsAddDialogOpen(false)}
+                                        isPending={isPending}
+                                        shopId={shopId}
+                                    />
+                                </DialogContent>
+                            </Dialog>
+                        ) : (
+                            <Sheet open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                                <SheetTrigger asChild>
+                                    <Button className="h-11 px-6 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all gap-2 border-0 w-full">
+                                        <Plus className="h-4 w-4" />
+                                        <span>Add Contact</span>
+                                    </Button>
+                                </SheetTrigger>
+                                <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
+                                    <SheetHeader className="text-left">
+                                        <SheetTitle>Add New Contact</SheetTitle>
+                                        <SheetDescription>Create a new ledger account</SheetDescription>
+                                    </SheetHeader>
+                                    <AddContactForm
+                                        onSubmit={handleCreateEntity}
+                                        onCancel={() => setIsAddDialogOpen(false)}
+                                        isPending={isPending}
+                                        shopId={shopId}
+                                    />
+                                </SheetContent>
+                            </Sheet>
+                        )}
+                    </div>
                 </div>
 
-                {/* List View */}
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    {customers.map((entity) => (
-                        <Card
-                            key={entity.id}
-                            onClick={() => router.push(`/shop/${shopId}/khata/${entity.id}`)}
-                            className="text-left cursor-pointer hover:border-primary/50 transition-all active:scale-[0.99]"
-                        >
-                            <CardContent className="p-4 flex items-center gap-4">
-                                <div className={cn(
-                                    "h-12 w-12 rounded-full flex items-center justify-center shrink-0 font-bold text-lg",
-                                    entity.current_balance > 0 ? "bg-emerald-100 text-emerald-600" :
-                                        entity.current_balance < 0 ? "bg-red-100 text-red-600" :
-                                            "bg-muted text-muted-foreground"
-                                )}>
-                                    {entity.name[0]?.toUpperCase()}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-semibold truncate">{entity.name}</h3>
-                                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 flex gap-1">
-                                            {getEntityIcon(entity.entity_type || 'CUSTOMER')}
-                                            {entity.entity_type || 'CUSTOMER'}
-                                        </Badge>
+                {/* Content Container */}
+                <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-3xl overflow-hidden shadow-xl shadow-black/5">
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block">
+                        <Table>
+                            <TableHeader className="bg-muted/50">
+                                <TableRow className="hover:bg-transparent border-border/50">
+                                    <TableHead className="w-[80px]">Avatar</TableHead>
+                                    <TableHead>Contact</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Phone</TableHead>
+                                    <TableHead className="text-right">Balance</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {customers.map((entity) => (
+                                    <TableRow
+                                        key={entity.id}
+                                        className="cursor-pointer hover:bg-muted/30 border-border/50 transition-colors"
+                                        onClick={() => router.push(`/shop/${shopId}/khata/${entity.id}`)}
+                                    >
+                                        <TableCell>
+                                            <div className={cn(
+                                                "h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shadow-inner transition-transform hover:scale-105",
+                                                entity.current_balance > 0 ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200" :
+                                                    entity.current_balance < 0 ? "bg-red-100 text-red-700 ring-1 ring-red-200" :
+                                                        "bg-muted text-muted-foreground"
+                                            )}>
+                                                {entity.name[0]?.toUpperCase()}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="font-medium text-foreground">
+                                            {entity.name}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary" className="text-[10px] h-6 px-2.5 gap-1.5 font-medium bg-muted/50 hover:bg-muted">
+                                                {getEntityIcon(entity.entity_type || 'CUSTOMER')}
+                                                <span className="capitalize">{entity.entity_type?.toLowerCase() || 'Customer'}</span>
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground font-mono text-xs">
+                                            {entity.phone || '-'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex flex-col items-end">
+                                                <span className={cn(
+                                                    "font-bold tabular-nums text-base",
+                                                    entity.current_balance > 0 ? "text-emerald-600" :
+                                                        entity.current_balance < 0 ? "text-red-600" :
+                                                            "text-muted-foreground"
+                                                )}>
+                                                    {formatCurrency(Math.abs(entity.current_balance))}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider opacity-70">
+                                                    {entity.current_balance > 0 ? 'Receivable' : entity.current_balance < 0 ? 'Payable' : 'Settled'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {/* Mobile View: Cards */}
+                    <div className="md:hidden">
+                        <div className="divide-y divide-border/50">
+                            {customers.map((entity, idx) => (
+                                <div
+                                    key={entity.id}
+                                    onClick={() => router.push(`/shop/${shopId}/khata/${entity.id}`)}
+                                    className="p-4 active:bg-muted/30 transition-colors cursor-pointer group"
+                                >
+                                    <div className="flex items-center gap-3.5">
+                                        <div className={cn(
+                                            "h-12 w-12 rounded-full flex items-center justify-center shrink-0 font-bold text-lg shadow-sm border border-border/10",
+                                            entity.current_balance > 0 ? "bg-emerald-100 text-emerald-700" :
+                                                entity.current_balance < 0 ? "bg-red-100 text-red-700" :
+                                                    "bg-muted text-muted-foreground"
+                                        )}>
+                                            {entity.name[0]?.toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start mb-0.5">
+                                                <h3 className="font-semibold text-base truncate text-foreground pr-2">{entity.name}</h3>
+                                                <Badge variant="outline" className={cn("text-[9px] h-5 px-1.5 uppercase font-bold tracking-wide border-0 tabular-nums",
+                                                    entity.current_balance > 0 ? "bg-emerald-50 text-emerald-700" :
+                                                        entity.current_balance < 0 ? "bg-red-50 text-red-700" : "bg-muted/50 text-muted-foreground")}>
+                                                    {entity.current_balance > 0 ? 'Receive' : entity.current_balance < 0 ? 'Pay' : 'Settled'}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex justify-between items-end">
+                                                <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                                    {getEntityIcon(entity.entity_type || 'CUSTOMER')}
+                                                    <span className="capitalize">{entity.entity_type?.toLowerCase() || 'Customer'}</span>
+                                                </p>
+                                                <span className={cn(
+                                                    "font-bold text-base tabular-nums",
+                                                    entity.current_balance > 0 ? "text-emerald-600" :
+                                                        entity.current_balance < 0 ? "text-red-600" :
+                                                            "text-muted-foreground"
+                                                )}>
+                                                    {formatCurrency(Math.abs(entity.current_balance))}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p className="text-sm text-muted-foreground truncate">{entity.phone || 'No phone'}</p>
                                 </div>
-                                <div className="text-right">
-                                    <p className={cn(
-                                        "font-bold text-lg",
-                                        entity.current_balance > 0 ? "text-emerald-600" :
-                                            entity.current_balance < 0 ? "text-red-600" :
-                                                "text-muted-foreground"
-                                    )}>
-                                        {formatCurrency(Math.abs(entity.current_balance))}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground uppercase font-medium">
-                                        {entity.current_balance > 0 ? 'Receivable' : entity.current_balance < 0 ? 'Payable' : 'Settled'}
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                            ))}
+                        </div>
+                    </div>
 
                     {customers.length === 0 && (
-                        <div className="col-span-full py-12 text-center text-muted-foreground">
-                            <div className="bg-muted/50 h-20 w-20 rounded-full mx-auto flex items-center justify-center mb-4">
-                                <Search className="h-8 w-8 opacity-50" />
+                        <div className="py-20 text-center flex flex-col items-center justify-center">
+                            <div className="bg-muted/30 h-24 w-24 rounded-full flex items-center justify-center mb-6 ring-1 ring-border/50">
+                                <BookOpen className="h-10 w-10 text-muted-foreground/30" />
                             </div>
-                            <p>No contacts found matching your filters.</p>
+                            <h3 className="text-xl font-semibold text-foreground mb-2">No contacts found</h3>
+                            <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                                Add a new contact to start tracking your business ledger.
+                            </p>
                         </div>
                     )}
                 </div>
 
                 {/* Pagination */}
                 {pagination && pagination.totalPages > 1 && (
-                    <div className="flex justify-center gap-2 py-4">
+                    <div className="flex justify-center gap-2 py-6">
                         <Button
                             variant="outline"
+                            size="sm"
+                            className="rounded-full h-9 border-border/50 bg-background/50 backdrop-blur-sm"
                             onClick={() => handlePageChange(pagination.currentPage - 1)}
                             disabled={pagination.currentPage <= 1}
                         >
+                            <ChevronLeft className="h-4 w-4 mr-1" />
                             Previous
                         </Button>
-                        <span className="flex items-center px-4 text-sm font-medium">
+                        <span className="flex items-center px-4 text-sm font-medium bg-background/50 rounded-full border border-border/20 backdrop-blur-sm">
                             {pagination.currentPage} / {pagination.totalPages}
                         </span>
                         <Button
                             variant="outline"
+                            size="sm"
+                            className="rounded-full h-9 border-border/50 bg-background/50 backdrop-blur-sm"
                             onClick={() => handlePageChange(pagination.currentPage + 1)}
                             disabled={pagination.currentPage >= pagination.totalPages}
                         >
                             Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
                         </Button>
                     </div>
                 )}
@@ -521,3 +616,26 @@ export function KhataClient({
     );
 }
 
+// ----------------------
+// HELPER COMPONENTS
+// ----------------------
+
+function StatsCard({ title, value, label, icon: Icon, className }: any) {
+    return (
+        <Card className="border-border/50 shadow-lg shadow-black/5 bg-card/60 backdrop-blur-xl hover:bg-card/90 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group">
+            <CardContent className="p-4 md:p-6">
+                <div className="flex justify-between items-start mb-3 md:mb-4">
+                    <div className={cn("p-2 md:p-3 rounded-xl transition-all duration-300 group-hover:scale-110 shadow-sm", className)}>
+                        <Icon className="w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                </div>
+                <div>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight truncate">
+                        {value}
+                    </h3>
+                    <p className="text-xs md:text-sm text-muted-foreground font-medium mt-1 truncate">{label}</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}

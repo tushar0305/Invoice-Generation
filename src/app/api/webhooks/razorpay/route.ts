@@ -53,19 +53,20 @@ export async function POST(req: NextRequest) {
         const payload = event.payload.subscription.entity;
 
         if (event.event === 'subscription.charged') {
-            // Determine Plan ID from Razorpay Plan ID (Mapping logic)
-            // You might want to query plans table to find match or hardcode mapping if simple.
-            // For now, assuming standard mapping or just keeping the razorpay_plan_id.
-            // Also need to set 'plan_id' column for our app logic (free/pro).
+            // Map Razorpay Plan ID to Internal Plan ID
+            let planId = 'free';
+            const rzPlanId = payload.plan_id;
 
-            // NOTE: Ideally fetch this mapping from DB or config.
-            // Using a heuristic: if amount > 500 etc. or just update standard fields.
-            // Let's assume the action set the correct plan_id initially, but we should confirm/reactivate it here.
+            // TODO: Replace with DB lookup or Environment Variable Map
+            if (rzPlanId === process.env.RAZORPAY_PLAN_ID_GOLD) planId = 'gold';
+            else if (rzPlanId === process.env.RAZORPAY_PLAN_ID_PLATINUM) planId = 'platinum';
+            else if (rzPlanId) planId = 'pro'; // Default to Pro if paid but unknown
 
             await supabaseAdmin
-                .from('shop_subscriptions')
+                .from('subscriptions')
                 .update({
                     status: 'active',
+                    plan_id: planId,
                     current_period_start: new Date(payload.current_start * 1000),
                     current_period_end: new Date(payload.current_end * 1000),
                     razorpay_customer_id: payload.customer_id,
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
         }
         else if (event.event === 'subscription.cancelled') {
             await supabaseAdmin
-                .from('shop_subscriptions')
+                .from('subscriptions')
                 .update({ status: 'canceled', updated_at: new Date() })
                 .eq('razorpay_subscription_id', payload.id);
         }

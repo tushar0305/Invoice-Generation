@@ -36,7 +36,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Trash2, Shield, User, MoreHorizontal, IndianRupee } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, Shield, User, MoreHorizontal, IndianRupee, Users, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { getRoleBadgeColor } from '@/lib/permissions';
@@ -49,10 +49,11 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { inviteStaffAction, createStaffAction, removeStaffAction, recordPaymentAction, markAttendanceAction, getStaffPayments, getStaffAttendance } from '@/app/actions/staff-actions';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { useActiveShop } from '@/hooks/use-active-shop';
+import { motion } from 'framer-motion';
 
 type StaffMember = {
     id: string;
@@ -163,264 +164,301 @@ export function StaffClient({
     }
 
     return (
-        <MotionWrapper className="space-y-6 p-4 md:p-6 pb-24 md:pb-6 max-w-[1800px] mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-heading text-foreground">Staff Management</h1>
-                    <p className="text-sm md:text-base text-muted-foreground mt-1">Manage your team members and their permissions.</p>
-                </div>
-
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md w-full md:w-auto">
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Create Staff Account
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-[95vw] sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle>Add New Staff Member</DialogTitle>
-                            <DialogDescription>
-                                Create an account for your staff member. They can use these credentials to login.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Full Name</Label>
-                                <Input
-                                    id="name"
-                                    type="text"
-                                    placeholder="John Doe"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="staff@example.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    type="text"
-                                    placeholder="Set a password (min 6 chars)"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    You set this password for them.
-                                </p>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="role">Role</Label>
-                                <Select value={role} onValueChange={(v: 'manager' | 'staff') => setRole(v)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="manager">Manager (Full Access)</SelectItem>
-                                        <SelectItem value="staff">Staff (Limited Access)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+        <div className="min-h-screen bg-background relative pb-20">
+            <MotionWrapper className="space-y-6 p-4 md:p-6 pb-24 md:pb-6 max-w-[1200px] mx-auto">
+                {/* Header Card - Simplified to match Invoice Page cleanliness */}
+                <div className="bg-card rounded-3xl border border-border shadow-sm p-5 md:p-8 relative overflow-hidden">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                                <Users className="h-8 w-8 text-primary" />
+                                Staff Management
+                            </h1>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Manage your team members, roles, and permissions.
+                            </p>
                         </div>
-                        <div className="flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                            <Button onClick={handleCreateStaff} disabled={isPending}>
-                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Create Account
-                            </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            </div>
-
-            {/* Pending Invitations */}
-            {initialInvitations.length > 0 && (
-                <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-muted-foreground">Pending Invitations</h3>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {initialInvitations.map((invite) => (
-                            <Card key={invite.id} className="border border-border shadow-sm bg-card">
-                                <CardContent className="p-4 flex justify-between items-center">
-                                    <div>
-                                        <div className="font-medium">{invite.email}</div>
-                                        <div className="text-xs text-muted-foreground capitalize">{invite.role} • {format(new Date(invite.created_at), 'MMM d')}</div>
-                                    </div>
-                                    <Badge variant="outline" className="text-primary border-primary/30 bg-primary/10">Pending</Badge>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Mobile View (Cards) */}
-            <div className="md:hidden space-y-4">
-                {initialStaff.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-8 border rounded-xl bg-card">
-                        <UserPlus className="h-8 w-8 opacity-50" />
-                        <p>No staff members found</p>
-                    </div>
-                ) : (
-                    initialStaff.map((member) => (
-                        <Card key={member.id} className="border border-border shadow-sm bg-card">
-                            <CardContent className="p-4 space-y-4">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-lg">
-                                            {member.name.charAt(0).toUpperCase()}
+                        {permissions?.canInviteStaff && (
+                            <div className="flex items-center gap-3 w-full md:w-auto">
+                                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            size="lg"
+                                            className="flex-1 md:flex-none h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium"
+                                        >
+                                            <UserPlus className="mr-2 h-4 w-4" />
+                                            Add Staff Member
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-[425px] rounded-2xl">
+                                        <DialogHeader>
+                                            <DialogTitle>Add New Staff Member</DialogTitle>
+                                            <DialogDescription>
+                                                Create an account for your staff member. They can use these credentials to login.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid gap-4 py-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="name">Full Name</Label>
+                                                <Input
+                                                    id="name"
+                                                    className="rounded-lg"
+                                                    type="text"
+                                                    placeholder="John Doe"
+                                                    value={name}
+                                                    onChange={(e) => setName(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="email">Email Address</Label>
+                                                <Input
+                                                    id="email"
+                                                    className="rounded-lg"
+                                                    type="email"
+                                                    placeholder="staff@example.com"
+                                                    value={email}
+                                                    onChange={(e) => setEmail(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="password">Password</Label>
+                                                <Input
+                                                    id="password"
+                                                    className="rounded-lg"
+                                                    type="text"
+                                                    placeholder="Set a password (min 6 chars)"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    You set this password for them.
+                                                </p>
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="role">Role</Label>
+                                                <Select value={role} onValueChange={(v: 'manager' | 'staff') => setRole(v)}>
+                                                    <SelectTrigger className="rounded-lg">
+                                                        <SelectValue placeholder="Select a role" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="manager">Manager (Full Access)</SelectItem>
+                                                        <SelectItem value="staff">Staff (Limited Access)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="font-medium text-foreground">{member.name}</div>
-                                            <Badge variant="secondary" className={`${getRoleBadgeColor(member.role)} capitalize mt-1`}>
+                                        <div className="flex justify-end gap-3">
+                                            <Button variant="outline" className="rounded-lg" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                                            <Button className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleCreateStaff} disabled={isPending}>
+                                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Create Account
+                                            </Button>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Pending Invitations */}
+                {initialInvitations.length > 0 && (
+                    <div className="space-y-3">
+                        <h3 className="text-sm font-medium text-muted-foreground px-1">Pending Invitations</h3>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {initialInvitations.map((invite, idx) => (
+                                <motion.div
+                                    key={invite.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                >
+                                    <Card className="border border-border/50 shadow-sm bg-card/60 backdrop-blur-sm relative overflow-hidden group hover:border-primary/20 transition-colors">
+                                        <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+                                            <Briefcase className="w-12 h-12 text-primary" />
+                                        </div>
+                                        <CardContent className="p-4 flex items-center justify-between relative z-10">
+                                            <div className="space-y-1">
+                                                <p className="font-medium truncate max-w-[180px]" title={invite.email}>{invite.email}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant="outline" className="capitalize text-xs">{invite.role}</Badge>
+                                                    <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full border border-primary/20">Pending</span>
+                                                </div>
+                                            </div>
+                                            {permissions?.canInviteStaff && ( // Assuming currentUserRole is derived from permissions
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => { /* handleRemove(inv.id, 'invite') */ }}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Staff List */}
+                <div className="space-y-4">
+                    <div className="hidden md:block rounded-2xl border border-border shadow-sm bg-card overflow-hidden">
+                        <Table>
+                            <TableHeader className="bg-muted/30">
+                                <TableRow className="border-b border-border/50 hover:bg-muted/30">
+                                    <TableHead className="w-[300px]">Member</TableHead>
+                                    <TableHead>Role</TableHead>
+                                    <TableHead>Joined</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {initialStaff.map((member) => (
+                                    <TableRow
+                                        key={member.id}
+                                        className="hover:bg-muted/30 border-b border-border/50 cursor-pointer group transition-colors"
+                                        onClick={() => router.push(`/shop/${shopId}/staff/${member.user_id}`)}
+                                    >
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center gap-3">
+                                                {/* Avatar component is missing, using a placeholder div */}
+                                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border border-primary/10">
+                                                    {member.name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-foreground group-hover:text-primary transition-colors">{member.name}</span>
+                                                    <span className="text-xs text-muted-foreground">{member.email}</span>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className={cn(getRoleBadgeColor(member.role), "capitalize border-0 shadow-sm bg-muted/50")}>
                                                 {member.role}
                                             </Badge>
-                                        </div>
-                                    </div>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/shop/${shopId}/staff/${member.user_id}`} className="flex items-center cursor-pointer">
-                                                    <User className="mr-2 h-4 w-4" />
-                                                    View Profile
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            {member.role !== 'owner' && (
-                                                <DropdownMenuItem
-                                                    className="text-red-600"
-                                                    onClick={() => handleRemoveStaff(member.id)}
-                                                >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Remove Staff
-                                                </DropdownMenuItem>
-                                            )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground text-sm">
+                                            {format(new Date(member.joined_at), 'MMM d, yyyy')}
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className={cn("inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border", member.is_active ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-red-500/30 bg-red-500/10 text-red-600")}>
+                                                <span className={cn("h-1.5 w-1.5 rounded-full animate-pulse", member.is_active ? "bg-emerald-500" : "bg-red-500")} />
+                                                {member.is_active ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-[160px] rounded-xl">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/shop/${shopId}/staff/${member.user_id}`} className="flex items-center cursor-pointer">
+                                                            <User className="mr-2 h-4 w-4" />
+                                                            View Profile
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    {permissions?.canInviteStaff && member.role !== 'owner' && ( // Assuming currentUserRole is derived from permissions
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive"
+                                                                onClick={(e) => { e.stopPropagation(); handleRemoveStaff(member.id); }}
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Remove Staff
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {initialStaff.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                                            No staff members found. Add someone to your team!
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
 
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <div className="text-muted-foreground mb-1">Joined</div>
-                                        <div>{format(new Date(member.joined_at), 'MMM d, yyyy')}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-muted-foreground mb-1">Status</div>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`h-2 w-2 rounded-full ${member.is_active ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                            <span>{member.is_active ? 'Active' : 'Inactive'}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))
-                )}
-            </div>
-
-            {/* Desktop View (Table) */}
-            <div className="hidden md:block rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-muted/50 hover:bg-muted/50">
-                            <TableHead>Staff Member</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Joined</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {initialStaff.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="h-32 text-center">
-                                    <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                                        <UserPlus className="h-8 w-8 opacity-50" />
-                                        <p>No staff members found</p>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            initialStaff.map((member) => (
-                                <TableRow
-                                    key={member.id}
-                                    className="group cursor-pointer hover:bg-muted/50 border-b border-border transition-colors"
+                    {/* Mobile Card View */}
+                    <div className="grid grid-cols-1 gap-4 md:hidden">
+                        {initialStaff.map((member, idx) => (
+                            <motion.div
+                                key={member.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: idx * 0.1 }}
+                            >
+                                <Card
+                                    className="border border-border/50 bg-card/60 backdrop-blur-xl shadow-sm active:scale-[0.98] transition-transform"
                                     onClick={() => router.push(`/shop/${shopId}/staff/${member.user_id}`)}
                                 >
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                                                {member.name.charAt(0).toUpperCase()}
+                                    <div className="p-4 flex flex-col gap-4">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg border border-primary/10">
+                                                    {member.name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold text-foreground">{member.name}</h4>
+                                                    <p className="text-sm text-muted-foreground">{member.email}</p>
+                                                    <Badge variant="secondary" className={cn(getRoleBadgeColor(member.role), "mt-1 capitalize border-0 shadow-sm")}>
+                                                        {member.role}
+                                                    </Badge>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-foreground">{member.name}</span>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary" className={`${getRoleBadgeColor(member.role)} capitalize`}>
-                                            {member.role}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {format(new Date(member.joined_at), 'MMM d, yyyy')}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`h-2 w-2 rounded-full ${member.is_active ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                            <span className="text-sm text-muted-foreground">{member.is_active ? 'Active' : 'Inactive'}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/shop/${shopId}/staff/${member.user_id}`} className="flex items-center cursor-pointer">
-                                                        <User className="mr-2 h-4 w-4" />
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                    <Button variant="ghost" size="icon" className="-mr-2 h-8 w-8 text-muted-foreground">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="rounded-xl">
+                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/shop/${shopId}/staff/${member.user_id}`); }}>
                                                         View Profile
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                {member.role !== 'owner' && (
-                                                    <DropdownMenuItem
-                                                        className="text-red-600"
-                                                        onClick={() => handleRemoveStaff(member.id)}
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Remove Staff
                                                     </DropdownMenuItem>
-                                                )}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                                    {permissions?.canInviteStaff && member.role !== 'owner' && (
+                                                        <DropdownMenuItem
+                                                            className="text-destructive"
+                                                            onClick={(e) => { e.stopPropagation(); handleRemoveStaff(member.id); }}
+                                                        >
+                                                            Remove
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                                            <span className="text-xs text-muted-foreground">Joined {format(new Date(member.joined_at), 'MMM d, yyyy')}</span>
+                                            <div className={cn("flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg", member.is_active ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600")}>
+                                                <div className={cn("h-1.5 w-1.5 rounded-full", member.is_active ? "bg-emerald-500" : "bg-red-500")} />
+                                                {member.is_active ? 'Active' : 'Inactive'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </motion.div>
+
+                        ))}
+                        {initialStaff.length === 0 && (
+                            <div className="p-8 text-center border-2 border-dashed border-border/50 rounded-2xl bg-card/30">
+                                <Users className="h-10 w-10 mx-auto text-muted-foreground opacity-50 mb-3" />
+                                <h3 className="font-medium text-foreground">No staff members</h3>
+                                <p className="text-sm text-muted-foreground mt-1">Tap the plus button to add your first team member.</p>
+                            </div>
                         )}
-                    </TableBody>
-                </Table>
-            </div>
-
-
-        </MotionWrapper>
+                    </div>
+                </div>
+            </MotionWrapper >
+        </div >
     );
 }
