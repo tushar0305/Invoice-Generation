@@ -193,8 +193,17 @@ export async function getMarketRates(shopId: string) {
 const fetchAdditionalStatsCached = cache(async (shopId: string) => {
     const supabase = await createClient();
 
-    // Call the consolidated RPC
-    const { data: stats, error } = await supabase.rpc('get_dashboard_stats', { p_shop_id: shopId });
+    // Prefer dedicated insights RPC; fallback to legacy if missing
+    let stats: any = null;
+    let error: any = null;
+    const insights = await supabase.rpc('get_customer_insights_json', { params: { p_shop_id: shopId, p_days: 30 } });
+    if (!insights.error && insights.data) {
+        stats = insights.data;
+    } else {
+        const legacy = await supabase.rpc('get_dashboard_stats', { p_shop_id: shopId });
+        stats = legacy.data;
+        error = legacy.error;
+    }
 
     if (error || !stats) {
         console.error('Error fetching dashboard stats:', JSON.stringify(error, null, 2), 'Code:', error?.code, 'Message:', error?.message);
