@@ -377,206 +377,75 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
     };
 
     return (
-        <div className="space-y-6 pb-12">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => router.push(`/shop/${shopId}/loans`)}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-2xl font-bold tracking-tight">Loan #{loan.loan_number}</h1>
-                            <Badge variant={getStatusColor(loan.status) as any} className="capitalize">
-                                {loan.status}
-                            </Badge>
+        <div className="min-h-screen bg-background relative overflow-hidden">
+            {/* Header Section matching Marketing/Catalogue */}
+            <div className="relative overflow-hidden pb-12">
+                {/* Gradient Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+
+                {/* Floating Orbs */}
+                <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-56 h-56 bg-primary/15 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4" />
+
+                {/* Glass Container */}
+                <div className="relative max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-16">
+                    <div className="backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 rounded-3xl border border-white/40 dark:border-white/10 shadow-2xl shadow-primary/10 p-6 md:p-10">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div className="space-y-3 w-full md:w-auto">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <Button variant="ghost" size="icon" onClick={() => router.push(`/shop/${shopId}/loans`)} className="rounded-full hover:bg-primary/10 -ml-2">
+                                        <ArrowLeft className="h-5 w-5" />
+                                    </Button>
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/10 backdrop-blur-md text-xs font-medium text-primary">
+                                        <FileText className="h-3 w-3" />
+                                        <span>Loan Details</span>
+                                    </div>
+                                    <Badge variant={getStatusColor(loan.status) as any} className="capitalize shadow-sm">
+                                        {loan.status}
+                                    </Badge>
+                                </div>
+                                <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
+                                    Loan #{loan.loan_number}
+                                </h1>
+                                <div className="flex items-center gap-2 text-muted-foreground text-base md:text-lg">
+                                    <User className="h-4 w-4" />
+                                    <span className="font-medium text-foreground">{loan.customer.name}</span>
+                                    <span>•</span>
+                                    <span>{loan.customer.phone}</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                                <Button variant="outline" onClick={handlePrint} className="rounded-full border-primary/20 hover:bg-primary/5 hover:text-primary flex-1 md:flex-none">
+                                    <Printer className="h-4 w-4 mr-2" /> Print
+                                </Button>
+                                {loan.status === 'active' && (
+                                    <>
+                                        <Button onClick={() => setIsPaymentOpen(true)} className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 flex-1 md:flex-none">
+                                            <Plus className="h-4 w-4 mr-2" /> Add Payment
+                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" size="icon" className="rounded-full">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => setIsCloseLoanOpen(true)}>
+                                                    <Lock className="h-4 w-4 mr-2" /> Close Loan
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </>
+                                )}
+                            </div>
                         </div>
-                        <p className="text-muted-foreground flex items-center gap-2">
-                            <User className="h-4 w-4" /> {loan.customer.name} • {loan.customer.phone}
-                        </p>
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
-                        <DialogTrigger asChild>
-                            <Button disabled={loan.status === 'closed'}>
-                                <Plus className="h-4 w-4 mr-2" /> Add Payment
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Record Payment</DialogTitle>
-                                <DialogDescription>
-                                    Add a payment towards Loan #{loan.loan_number}
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                    <Label>Amount (₹)</Label>
-                                    <Input
-                                        type="number"
-                                        value={paymentAmount}
-                                        onChange={(e) => setPaymentAmount(e.target.value)}
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Payment Type</Label>
-                                    <Select value={paymentType} onValueChange={(v: any) => setPaymentType(v)}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="interest">Interest Payment</SelectItem>
-                                            <SelectItem value="principal">Principal Repayment</SelectItem>
-                                            <SelectItem value="full_settlement">Full Settlement</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Payment Method</Label>
-                                    <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="cash">Cash</SelectItem>
-                                            <SelectItem value="upi">UPI</SelectItem>
-                                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Notes (Optional)</Label>
-                                    <Textarea
-                                        value={paymentNotes}
-                                        onChange={(e) => setPaymentNotes(e.target.value)}
-                                        placeholder="Transaction ID, remarks, etc."
-                                    />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsPaymentOpen(false)}>Cancel</Button>
-                                <Button onClick={handleAddPayment} disabled={isSubmittingPayment}>
-                                    {isSubmittingPayment ? "Recording..." : "Record Payment"}
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={handlePrint}>
-                                <Printer className="h-4 w-4 mr-2" /> Print Details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onSelect={() => setIsCloseLoanOpen(true)}
-                                disabled={loan.status === 'closed'}
-                            >
-                                <Lock className="h-4 w-4 mr-2" /> Close Loan
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    {/* Close Loan Dialog */}
-                    <Dialog open={isCloseLoanOpen} onOpenChange={setIsCloseLoanOpen}>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Close Loan #{loan.loan_number}</DialogTitle>
-                                <DialogDescription>
-                                    Finalize and close this loan. This will mark all collateral as returned.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                {/* Outstanding Balance Summary */}
-                                <div className="rounded-lg border p-4 bg-muted/50">
-                                    <h4 className="font-semibold mb-2">Outstanding Balance</h4>
-                                    <div className="space-y-1 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Principal:</span>
-                                            <span>{formatCurrency(loan.principal_amount)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Total Paid:</span>
-                                            <span className="text-green-600">- {formatCurrency(loan.total_amount_paid || 0)}</span>
-                                        </div>
-                                        <div className="flex justify-between font-bold border-t pt-1 mt-1">
-                                            <span>Outstanding:</span>
-                                            <span className={Math.max(0, loan.principal_amount - (loan.total_amount_paid || 0)) > 0 ? 'text-orange-600' : 'text-green-600'}>
-                                                {formatCurrency(Math.max(0, loan.principal_amount - (loan.total_amount_paid || 0)))}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Settlement Amount */}
-                                <div className="grid gap-2">
-                                    <Label>Settlement Amount (₹)</Label>
-                                    <Input
-                                        type="number"
-                                        value={settlementAmount}
-                                        onChange={(e) => setSettlementAmount(e.target.value)}
-                                        placeholder={`${loan.total_amount_paid || 0}`}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Final amount to mark as settled. Leave empty to use total paid amount.
-                                    </p>
-                                </div>
-
-                                {/* Settlement Notes */}
-                                <div className="grid gap-2">
-                                    <Label>Settlement Notes (Optional)</Label>
-                                    <Textarea
-                                        value={settlementNotes}
-                                        onChange={(e) => setSettlementNotes(e.target.value)}
-                                        placeholder="Discount applied, early settlement, etc."
-                                        rows={3}
-                                    />
-                                </div>
-
-                                {/* Collateral Confirmation */}
-                                <div className="flex items-start space-x-2 p-3 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-950/20">
-                                    <Checkbox
-                                        id="collateral-confirm"
-                                        checked={collateralConfirmed}
-                                        onCheckedChange={(checked) => setCollateralConfirmed(checked as boolean)}
-                                    />
-                                    <div className="grid gap-1.5 leading-none">
-                                        <label
-                                            htmlFor="collateral-confirm"
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                        >
-                                            Confirm all collateral returned
-                                        </label>
-                                        <p className="text-xs text-muted-foreground">
-                                            I confirm that all {collateral.length} collateral item(s) have been returned to the customer.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsCloseLoanOpen(false)}>Cancel</Button>
-                                <Button
-                                    onClick={handleCloseLoan}
-                                    disabled={isSubmittingClose || !collateralConfirmed}
-                                    variant="default"
-                                >
-                                    {isSubmittingClose ? "Closing..." : "Close Loan"}
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
                 </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-7">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-8 relative z-10 space-y-8 pb-12">
+                <div className="grid gap-6 md:grid-cols-7">
                 {/* Main Content - Left Side */}
                 <div className="md:col-span-5 space-y-6">
                     {/* Key Stats Cards */}
@@ -766,17 +635,17 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                                                 variant={tx.type === 'disbursement' ? 'secondary' : (tx.type === 'upcoming' ? 'outline' : 'outline')}
                                                                 className={
                                                                     tx.type === 'disbursement' ? 'bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200' :
-                                                                        (tx.type === 'upcoming' ? 'bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 dashed border-2' : '')
+                                                                        (tx.type === 'upcoming' ? 'bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 dashed border-2' : '')
                                                                 }
                                                             >
                                                                 {tx.id === 'disbursement' ? 'Principal Disbursed' : (tx.type === 'upcoming' ? 'Upcoming Due' : tx.payment_type?.replace('_', ' '))}
                                                             </Badge>
                                                         </td>
                                                         <td className="px-4 py-3 capitalize text-muted-foreground">
-                                                            {tx.type === 'upcoming' ? <span className="italic text-amber-600">Expected</span> : tx.method?.replace('_', ' ')}
+                                                            {tx.type === 'upcoming' ? <span className="italic text-primary">Expected</span> : tx.method?.replace('_', ' ')}
                                                         </td>
                                                         <td className={`px-4 py-3 text-right font-bold ${tx.type === 'disbursement' ? 'text-red-600' :
-                                                            (tx.type === 'upcoming' ? 'text-amber-600' : 'text-green-600')
+                                                            (tx.type === 'upcoming' ? 'text-primary' : 'text-green-600')
                                                             }`}>
                                                             {tx.type === 'disbursement' ? '-' : (tx.type === 'upcoming' ? '~' : '+')} {formatCurrency(tx.amount)}
                                                         </td>
@@ -800,7 +669,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                                             className={`text-[10px] h-5 px-1.5 ${tx.type === 'disbursement'
                                                                 ? 'bg-blue-50 text-blue-700 border-blue-200'
                                                                 : (tx.type === 'upcoming'
-                                                                    ? 'bg-amber-50 text-amber-700 border-amber-200 border-dashed'
+                                                                    ? 'bg-primary/5 text-primary border-primary/20 border-dashed'
                                                                     : 'bg-green-50 text-green-700 border-green-200')
                                                                 }`}
                                                         >
@@ -815,7 +684,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                                     </p>
                                                 </div>
                                                 <div className={`text-right font-bold ${tx.type === 'disbursement' ? 'text-red-600' :
-                                                    (tx.type === 'upcoming' ? 'text-amber-600' : 'text-green-600')
+                                                    (tx.type === 'upcoming' ? 'text-primary' : 'text-green-600')
                                                     }`}>
                                                     <div className="text-base">
                                                         {tx.type === 'disbursement' ? '-' : (tx.type === 'upcoming' ? '~' : '+')} {formatCurrency(tx.amount)}
@@ -882,9 +751,9 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
 
                     {/* Upcoming Payment / Reminder Card */}
                     {loan.status === 'active' && (
-                        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/50">
+                        <Card className="border-primary/20 bg-primary/5 dark:bg-primary/10 dark:border-primary/20">
                             <CardHeader className="pb-2">
-                                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-500">
+                                <div className="flex items-center gap-2 text-primary">
                                     <AlertCircle className="h-5 w-5" />
                                     <CardTitle className="text-base">Upcoming Payment</CardTitle>
                                 </div>
@@ -893,7 +762,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                 <div>
                                     <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Estimated Interest</p>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+                                        <span className="text-2xl font-bold text-primary">
                                             {formatCurrency(getMonthlyInterest(loan.principal_amount, loan.interest_rate))}
                                         </span>
                                         <span className="text-sm font-medium text-muted-foreground">
@@ -902,7 +771,7 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                     </div>
                                 </div>
                                 <Button
-                                    className="w-full bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 dark:text-amber-300 transition-colors"
+                                    className="w-full bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 dark:text-primary transition-colors"
                                     variant="outline"
                                     onClick={handleWhatsAppReminder}
                                 >
@@ -941,6 +810,159 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                     </Card>
                 </div>
             </div>
+        </div>
+
+            {/* Dialogs */}
+            <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Record Payment</DialogTitle>
+                        <DialogDescription>
+                            Add a payment towards Loan #{loan.loan_number}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label>Amount (₹)</Label>
+                            <Input
+                                type="number"
+                                value={paymentAmount}
+                                onChange={(e) => setPaymentAmount(e.target.value)}
+                                placeholder="0.00"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Payment Type</Label>
+                            <Select value={paymentType} onValueChange={(v: any) => setPaymentType(v)}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="interest">Interest Payment</SelectItem>
+                                    <SelectItem value="principal">Principal Repayment</SelectItem>
+                                    <SelectItem value="full_settlement">Full Settlement</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Payment Method</Label>
+                            <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="cash">Cash</SelectItem>
+                                    <SelectItem value="upi">UPI</SelectItem>
+                                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Notes (Optional)</Label>
+                            <Textarea
+                                value={paymentNotes}
+                                onChange={(e) => setPaymentNotes(e.target.value)}
+                                placeholder="Transaction ID, remarks, etc."
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsPaymentOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddPayment} disabled={isSubmittingPayment}>
+                            {isSubmittingPayment ? "Recording..." : "Record Payment"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Close Loan Dialog */}
+            <Dialog open={isCloseLoanOpen} onOpenChange={setIsCloseLoanOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Close Loan #{loan.loan_number}</DialogTitle>
+                        <DialogDescription>
+                            Finalize and close this loan. This will mark all collateral as returned.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        {/* Outstanding Balance Summary */}
+                        <div className="rounded-lg border p-4 bg-muted/50">
+                            <h4 className="font-semibold mb-2">Outstanding Balance</h4>
+                            <div className="space-y-1 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Principal:</span>
+                                    <span>{formatCurrency(loan.principal_amount)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Total Paid:</span>
+                                    <span className="text-green-600">- {formatCurrency(loan.total_amount_paid || 0)}</span>
+                                </div>
+                                <div className="flex justify-between font-bold border-t pt-1 mt-1">
+                                    <span>Outstanding:</span>
+                                    <span className={Math.max(0, loan.principal_amount - (loan.total_amount_paid || 0)) > 0 ? 'text-orange-600' : 'text-green-600'}>
+                                        {formatCurrency(Math.max(0, loan.principal_amount - (loan.total_amount_paid || 0)))}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Settlement Amount */}
+                        <div className="grid gap-2">
+                            <Label>Settlement Amount (₹)</Label>
+                            <Input
+                                type="number"
+                                value={settlementAmount}
+                                onChange={(e) => setSettlementAmount(e.target.value)}
+                                placeholder={`${loan.total_amount_paid || 0}`}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Final amount to mark as settled. Leave empty to use total paid amount.
+                            </p>
+                        </div>
+
+                        {/* Settlement Notes */}
+                        <div className="grid gap-2">
+                            <Label>Settlement Notes (Optional)</Label>
+                            <Textarea
+                                value={settlementNotes}
+                                onChange={(e) => setSettlementNotes(e.target.value)}
+                                placeholder="Discount applied, early settlement, etc."
+                                rows={3}
+                            />
+                        </div>
+
+                        {/* Collateral Confirmation */}
+                        <div className="flex items-start space-x-2 p-3 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+                            <Checkbox
+                                id="collateral-confirm"
+                                checked={collateralConfirmed}
+                                onCheckedChange={(checked) => setCollateralConfirmed(checked as boolean)}
+                            />
+                            <div className="grid gap-1.5 leading-none">
+                                <label
+                                    htmlFor="collateral-confirm"
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Confirm all collateral returned
+                                </label>
+                                <p className="text-xs text-muted-foreground">
+                                    I confirm that all {collateral.length} collateral item(s) have been returned to the customer.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsCloseLoanOpen(false)}>Cancel</Button>
+                        <Button
+                            onClick={handleCloseLoan}
+                            disabled={isSubmittingClose || !collateralConfirmed}
+                            variant="default"
+                        >
+                            {isSubmittingClose ? "Closing..." : "Close Loan"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

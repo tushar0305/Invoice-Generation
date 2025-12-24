@@ -2,8 +2,8 @@
 
 import { useMemo } from 'react';
 import {
-    Bar,
-    BarChart,
+    Area,
+    AreaChart,
     CartesianGrid,
     ResponsiveContainer,
     Tooltip,
@@ -106,28 +106,28 @@ export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, sett
                         value={stats.totalIssued.toLocaleString()}
                         label="Points Distributed"
                         icon={TrendingUp}
-                        className="bg-emerald-500/10 text-emerald-600"
+                        className="bg-primary/10 text-primary"
                     />
                     <StatsCard
                         title="Redeemed"
                         value={stats.totalRedeemed.toLocaleString()}
                         label="Points Used"
                         icon={Gift}
-                        className="bg-purple-500/10 text-purple-600"
+                        className="bg-rose-500/10 text-rose-600"
                     />
                     <StatsCard
                         title="Active Members"
                         value={stats.totalCustomers.toLocaleString()}
                         label="Loyalty Users"
                         icon={Users}
-                        className="bg-blue-500/10 text-blue-600"
+                        className="bg-primary/10 text-primary"
                     />
                     <StatsCard
                         title="Liability"
                         value={formatCurrency(stats.liability)}
                         label="Outstanding Value"
                         icon={Zap}
-                        className="bg-amber-500/10 text-amber-600"
+                        className="bg-orange-500/10 text-orange-600"
                     />
                 </div>
 
@@ -145,48 +145,96 @@ export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, sett
                                     </CardTitle>
                                     <CardDescription>Points issued vs redeemed (30 Days)</CardDescription>
                                 </div>
+                                {/* Legend */}
+                                <div className="flex items-center gap-4 text-xs font-medium">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.4)]" />
+                                        <span className="text-muted-foreground">Issued</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+                                        <span className="text-muted-foreground">Redeemed</span>
+                                    </div>
+                                </div>
                             </div>
                         </CardHeader>
                         <CardContent className="p-0 md:p-6">
                             <div className="h-[300px] md:h-[350px] w-full pt-4 md:pt-0">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.4} />
+                                    <AreaChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="issuedGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="redeemedGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.3} />
                                         <XAxis
                                             dataKey="dateStr"
                                             axisLine={false}
                                             tickLine={false}
-                                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 500 }}
                                             dy={10}
                                             minTickGap={30}
                                         />
                                         <YAxis
                                             axisLine={false}
                                             tickLine={false}
-                                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 500 }}
                                             tickFormatter={(val) => Intl.NumberFormat('en-US', { notation: "compact" }).format(val)}
                                         />
                                         <Tooltip
-                                            cursor={{ fill: 'hsl(var(--muted)/0.2)', radius: 4 }}
-                                            contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--background)/0.95)', backdropFilter: 'blur(4px)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                            itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600, fontSize: '12px' }}
+                                            cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                            content={({ active, payload, label }) => {
+                                                if (active && payload && payload.length) {
+                                                    return (
+                                                        <div className="bg-background/95 backdrop-blur-xl border border-border/50 p-3 rounded-xl shadow-xl shadow-black/10 ring-1 ring-black/5 min-w-[160px]">
+                                                            <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">{label}</p>
+                                                            <div className="space-y-2">
+                                                                {payload.map((entry: any, index: number) => (
+                                                                    <div key={index} className="flex items-center justify-between gap-4">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div 
+                                                                                className="w-2 h-2 rounded-full shadow-sm" 
+                                                                                style={{ backgroundColor: entry.dataKey === 'issued' ? 'hsl(var(--primary))' : '#f43f5e' }} 
+                                                                            />
+                                                                            <span className="text-xs font-medium text-foreground capitalize">{entry.name}</span>
+                                                                        </div>
+                                                                        <span className="text-sm font-bold font-mono">
+                                                                            {entry.value > 0 ? '+' : ''}{entry.value}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            }}
                                         />
-                                        <Bar
+                                        <Area
+                                            type="monotone"
                                             dataKey="issued"
                                             name="Issued"
-                                            fill="hsl(var(--primary))"
-                                            radius={[4, 4, 0, 0]}
-                                            maxBarSize={40}
+                                            stroke="hsl(var(--primary))"
+                                            strokeWidth={2}
+                                            fill="url(#issuedGradient)"
+                                            animationDuration={1500}
                                         />
-                                        <Bar
+                                        <Area
+                                            type="monotone"
                                             dataKey="redeemed"
                                             name="Redeemed"
-                                            fill="hsl(var(--destructive))"
-                                            fillOpacity={0.8}
-                                            radius={[4, 4, 0, 0]}
-                                            maxBarSize={40}
+                                            stroke="#f43f5e"
+                                            strokeWidth={2}
+                                            fill="url(#redeemedGradient)"
+                                            animationDuration={1500}
                                         />
-                                    </BarChart>
+                                    </AreaChart>
                                 </ResponsiveContainer>
                             </div>
                         </CardContent>
@@ -255,7 +303,7 @@ export function LoyaltyDashboard({ shopId, stats, recentLogs, topCustomers, sett
                                                 variant="outline"
                                                 className={cn(
                                                     "font-mono font-bold border-0",
-                                                    log.points_change > 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                                                    log.points_change > 0 ? "bg-primary/10 text-primary" : "bg-rose-500/10 text-rose-600"
                                                 )}
                                             >
                                                 {log.points_change > 0 ? '+' : ''}{log.points_change}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
     MessageSquare,
     Send,
@@ -18,18 +19,17 @@ import {
     Loader2,
     Sparkles,
     Zap,
-    Smartphone,
     LayoutGrid,
     Check,
-    X,
     Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WhatsAppSetupWizard } from '@/components/whatsapp/setup-wizard';
 import { WhatsAppTemplate } from '@/types/whatsapp';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { MarketingHeader } from '@/components/marketing/marketing-header';
 
 interface Props {
     shopId: string;
@@ -53,10 +53,12 @@ export function MarketingDashboardClient({
     customerCount,
     isOwner,
 }: Props) {
+    const router = useRouter();
     const isConnected = config && config.status === 'connected';
     const [showSetup, setShowSetup] = useState(!isConnected);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isSeeding, setIsSeeding] = useState(false);
+    const [activeTab, setActiveTab] = useState('overview');
 
     const handleSeedTemplates = async () => {
         setIsSeeding(true);
@@ -102,7 +104,7 @@ export function MarketingDashboardClient({
             <div className="min-h-screen bg-background relative overflow-hidden">
                 {/* Liquid Background */}
                 <div className="fixed inset-0 -z-10">
-                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-green-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 animate-pulse" />
+                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 animate-pulse" />
                     <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/4" />
                 </div>
 
@@ -113,8 +115,8 @@ export function MarketingDashboardClient({
                         className="max-w-4xl w-full"
                     >
                         <div className="text-center mb-10 space-y-4">
-                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-green-400 to-green-600 shadow-xl shadow-green-500/20 mb-4">
-                                <MessageSquare className="h-10 w-10 text-white" />
+                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/80 shadow-xl shadow-primary/20 mb-4">
+                                <MessageSquare className="h-10 w-10 text-primary-foreground" />
                             </div>
                             <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">
                                 Connect WhatsApp Business
@@ -125,7 +127,7 @@ export function MarketingDashboardClient({
                         </div>
 
                         <Card className="border-0 shadow-2xl bg-card/70 backdrop-blur-xl overflow-hidden ring-1 ring-border/50">
-                            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-primary/5 pointer-events-none" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/5 pointer-events-none" />
                             <CardContent className="p-0 relative">
                                 <WhatsAppSetupWizard
                                     shopId={shopId}
@@ -143,165 +145,148 @@ export function MarketingDashboardClient({
 
     const approvedTemplates = templates.filter(t => t.status === 'APPROVED');
 
-    // Animation variants
-    const container = {
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: { staggerChildren: 0.1 }
-        }
-    };
-
     return (
-        <div className="min-h-screen bg-background relative overflow-hidden">
-            {/* Liquid Gradient Background */}
-            <div className="fixed inset-0 -z-10">
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 animate-pulse" />
-                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-green-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/4" />
-                <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2" />
-            </div>
+        <div className="min-h-screen bg-background pb-24 md:pb-8 transition-colors duration-300">
+            
+            {/* HEADER */}
+            <MarketingHeader 
+                shopName={config?.display_name || 'My Shop'} 
+                stats={{ totalMessages, customerCount }} 
+                onNewCampaign={() => router.push(`/shop/${shopId}/marketing/send`)} 
+            />
 
-            <div className="relative p-4 md:p-8">
-                <motion.div
-                    variants={container}
-                    initial="hidden"
-                    animate="show"
-                    className="max-w-7xl mx-auto space-y-6 md:space-y-8"
-                >
-                    {/* Glassy Modern Header */}
-                    <div className="backdrop-blur-xl bg-card/70 dark:bg-card/50 rounded-3xl border border-border/50 shadow-xl p-5 md:p-8">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="relative">
-                                        <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
-                                        <div className="absolute inset-0 h-3 w-3 rounded-full bg-green-500 animate-ping opacity-50" />
-                                    </div>
-                                    <span className="text-xs font-bold tracking-wider text-green-600 dark:text-green-400 uppercase">WhatsApp Connected</span>
-                                </div>
-                                <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-foreground">
-                                    Marketing Hub
-                                </h1>
-                                <p className="text-muted-foreground text-sm md:text-lg">
-                                    Manage campaigns for <span className="font-semibold text-foreground">{config?.display_name}</span>
-                                </p>
-                            </div>
+            {/* MAIN CONTENT - Overlaps Header */}
+            <div className="max-w-5xl mx-auto px-4 md:px-8 -mt-8 relative z-10 space-y-8">
 
-                            {/* Connection Status - Hidden on mobile, shown as inline on desktop */}
-                            <div className="hidden lg:flex items-center gap-4 bg-background/80 backdrop-blur-sm p-4 rounded-2xl border border-border/50 shadow-sm">
-                                <div className="h-12 w-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                                    <MessageSquare className="h-6 w-6 text-green-600 dark:text-green-400" />
-                                </div>
-                                <div className="pr-4 border-r border-border">
-                                    <p className="text-base font-semibold text-foreground">{config?.phone_number}</p>
-                                    <p className="text-xs text-muted-foreground">Connected Account</p>
-                                </div>
-                                {isOwner && (
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-muted" onClick={() => setShowSetup(true)}>
-                                        <Settings className="h-5 w-5 text-muted-foreground" />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
+                {/* TABS */}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <div className="flex justify-center md:justify-start">
+                        <TabsList className="h-auto p-1.5 bg-background/80 backdrop-blur-xl border border-border shadow-xl shadow-black/5 rounded-full grid grid-cols-2 w-full md:w-auto md:inline-flex md:h-14">
+                            <TabsTrigger
+                                value="overview"
+                                className="rounded-full px-6 md:px-8 py-3 md:py-0 h-full text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all capitalize"
+                            >
+                                Overview
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="templates"
+                                className="rounded-full px-6 md:px-8 py-3 md:py-0 h-full text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all capitalize"
+                            >
+                                Templates
+                            </TabsTrigger>
+                        </TabsList>
                     </div>
 
-                    {/* Stats Grid - 2 cols on mobile, 4 on desktop */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                        <StatCard icon={Send} label="Messages Sent" value={totalMessages.toLocaleString()} trend="+12%" color="blue" />
-                        <StatCard icon={Users} label="Audience" value={customerCount.toLocaleString()} subtext="Customers" color="purple" />
-                        <StatCard icon={CheckCircle2} label="Delivery Rate" value="98%" subtext="High Quality" color="green" />
-                        <StatCard icon={FileText} label="Templates" value={approvedTemplates.length.toString()} subtext="Ready" color="amber" />
-                    </div>
-
-                    {/* Main Content Area */}
-                    <div className="grid lg:grid-cols-[2fr,1fr] gap-6 md:gap-8">
-                        {/* Templates Gallery */}
-                        <div className="space-y-5">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-lg md:text-xl font-bold text-foreground flex items-center gap-2">
-                                    <LayoutGrid className="h-5 w-5 text-muted-foreground" />
-                                    Message Templates
-                                </h2>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={templates.length === 0 ? handleSeedTemplates : handleSyncTemplates}
-                                    disabled={isSyncing || isSeeding}
-                                    className="gap-2 rounded-full"
-                                >
-                                    {(isSyncing || isSeeding) ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                                    <span className="hidden sm:inline">{templates.length === 0 ? 'Load Templates' : 'Sync'}</span>
-                                </Button>
-                            </div>
-
-                            {templates.length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <AnimatePresence>
-                                        {templates.map((template, idx) => (
-                                            <TemplateCard key={template.id} template={template} idx={idx} />
-                                        ))}
-                                    </AnimatePresence>
-                                </div>
-                            ) : (
-                                <EmptyStateCard onAction={handleSeedTemplates} />
-                            )}
+                    {/* OVERVIEW TAB */}
+                    <TabsContent value="overview" className="space-y-6 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        
+                        {/* Mobile Stats Grid */}
+                        <div className="grid grid-cols-2 gap-3 md:hidden">
+                            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm col-span-2">
+                                <CardContent className="p-4 text-center">
+                                    <p className="text-2xl font-bold text-foreground">{totalMessages.toLocaleString()}</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Messages Sent</p>
+                                </CardContent>
+                            </Card>
+                            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm col-span-1">
+                                <CardContent className="p-4 text-center">
+                                    <p className="text-2xl font-bold text-foreground">{customerCount.toLocaleString()}</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Audience</p>
+                                </CardContent>
+                            </Card>
+                            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm col-span-1">
+                                <CardContent className="p-4 text-center">
+                                    <p className="text-2xl font-bold text-foreground">{approvedTemplates.length}</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Templates</p>
+                                </CardContent>
+                            </Card>
                         </div>
 
-                        {/* Quick Actions - Stack on mobile */}
-                        <div className="space-y-5">
-                            <h2 className="text-lg md:text-xl font-bold text-foreground flex items-center gap-2">
-                                <Zap className="h-5 w-5 text-amber-500" />
-                                Quick Actions
-                            </h2>
+                        {/* Desktop Additional Stats */}
+                        <div className="hidden md:grid md:grid-cols-4 gap-4">
+                            <StatCard icon={Send} label="Messages Sent" value={totalMessages.toLocaleString()} trend="+12%" color="blue" />
+                            <StatCard icon={Users} label="Audience" value={customerCount.toLocaleString()} subtext="Customers" color="purple" />
+                            <StatCard icon={CheckCircle2} label="Delivery Rate" value="98%" subtext="High Quality" color="green" />
+                            <StatCard icon={FileText} label="Templates" value={approvedTemplates.length.toString()} subtext="Ready" color="amber" />
+                        </div>
 
-                            <Link href={`/shop/${shopId}/marketing/send`}>
-                                <motion.div
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-primary/80 p-6 md:p-8 shadow-2xl cursor-pointer"
-                                >
-                                    <div className="absolute top-0 right-0 -mt-10 -mr-10 h-32 w-32 rounded-full bg-white/10 blur-3xl group-hover:bg-white/20 transition-all" />
-                                    <div className="relative z-10 flex flex-col h-full justify-between space-y-4 md:space-y-6">
-                                        <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                                            <Send className="h-6 w-6 md:h-7 md:w-7 text-white" />
+                        {/* Quick Actions */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <Link href={`/shop/${shopId}/marketing/send`} className="block h-full">
+                                <Card className="h-full border-0 bg-gradient-to-br from-primary/10 to-primary/5 text-foreground shadow-xl shadow-primary/5 hover:shadow-primary/10 transition-all">
+                                    <CardContent className="p-6 md:p-8 flex flex-col justify-center h-full space-y-4">
+                                        <div className="p-3 bg-primary/10 rounded-xl w-fit">
+                                            <Send className="h-6 w-6 text-primary" />
                                         </div>
-                                        <div>
-                                            <h3 className="text-xl md:text-2xl font-bold text-white mb-1">Create Campaign</h3>
-                                            <p className="text-white/70 text-sm md:text-base">Blast offers to customers instantly.</p>
+                                        <div className="space-y-2">
+                                            <h3 className="text-xl font-bold">Create Campaign</h3>
+                                            <p className="text-muted-foreground text-sm leading-relaxed">
+                                                Blast offers to customers instantly. High open rates guaranteed.
+                                            </p>
                                         </div>
-                                        <div className="flex items-center text-white/50 text-sm group-hover:text-white transition-colors">
-                                            Start Now <ChevronRight className="h-4 w-4 ml-1" />
-                                        </div>
-                                    </div>
-                                </motion.div>
+                                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 rounded-full shadow-lg shadow-primary/20">
+                                            Start Now <ChevronRight className="h-4 w-4 ml-2" />
+                                        </Button>
+                                    </CardContent>
+                                </Card>
                             </Link>
 
-                            <div className="rounded-2xl md:rounded-3xl border border-border bg-card/80 backdrop-blur-sm p-5 md:p-6 shadow-sm">
-                                <h3 className="font-semibold text-foreground mb-4">Why use WhatsApp?</h3>
-                                <ul className="space-y-3">
-                                    <li className="flex gap-3 items-start">
-                                        <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                                            <Check className="h-3 w-3 text-green-600" />
-                                        </div>
-                                        <span className="text-sm text-muted-foreground">98% Open rates compared to email</span>
-                                    </li>
-                                    <li className="flex gap-3 items-start">
-                                        <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                                            <Check className="h-3 w-3 text-blue-600" />
-                                        </div>
-                                        <span className="text-sm text-muted-foreground">Instant delivery to mobile phones</span>
-                                    </li>
-                                    <li className="flex gap-3 items-start">
-                                        <div className="h-6 w-6 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                                            <Check className="h-3 w-3 text-purple-600" />
-                                        </div>
-                                        <span className="text-sm text-muted-foreground">Rich media support (Images & PDFs)</span>
-                                    </li>
-                                </ul>
-                            </div>
+                            <Card className="border-none shadow-xl shadow-gray-200/50 dark:shadow-black/20 bg-card overflow-hidden relative group">
+                                <CardContent className="p-6 md:p-8 flex flex-col justify-center h-full space-y-4">
+                                    <div className="space-y-2">
+                                        <h3 className="text-xl font-bold">Why WhatsApp?</h3>
+                                        <ul className="space-y-3 mt-2">
+                                            <li className="flex gap-3 items-start">
+                                                <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <Check className="h-3 w-3 text-primary" />
+                                                </div>
+                                                <span className="text-sm text-muted-foreground">98% Open rates</span>
+                                            </li>
+                                            <li className="flex gap-3 items-start">
+                                                <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <Check className="h-3 w-3 text-primary" />
+                                                </div>
+                                                <span className="text-sm text-muted-foreground">Instant delivery</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <Button variant="outline" className="w-full rounded-full" onClick={() => setActiveTab('templates')}>
+                                        Manage Templates
+                                    </Button>
+                                </CardContent>
+                            </Card>
                         </div>
-                    </div>
-                </motion.div>
+                    </TabsContent>
+
+                    {/* TEMPLATES TAB */}
+                    <TabsContent value="templates" className="space-y-6 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-semibold">Message Templates</h2>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={templates.length === 0 ? handleSeedTemplates : handleSyncTemplates}
+                                disabled={isSyncing || isSeeding}
+                                className="gap-2 rounded-full"
+                            >
+                                {(isSyncing || isSeeding) ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                                <span className="hidden sm:inline">{templates.length === 0 ? 'Load Templates' : 'Sync'}</span>
+                            </Button>
+                        </div>
+
+                        {templates.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <AnimatePresence>
+                                    {templates.map((template, idx) => (
+                                        <TemplateCard key={template.id} template={template} idx={idx} />
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        ) : (
+                            <EmptyStateCard onAction={handleSeedTemplates} />
+                        )}
+                    </TabsContent>
+                </Tabs>
             </div>
         </div>
     );
