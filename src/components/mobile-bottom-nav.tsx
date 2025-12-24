@@ -89,23 +89,28 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
 
     return (
         <nav className={cn(
-            "fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border transition-transform duration-200",
+            "fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out",
             isVisible ? "translate-y-0" : "translate-y-full"
         )}>
-            <div className="flex items-stretch h-16" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            {/* Glassmorphism Background */}
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-t border-border/50 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.3)]" />
+            
+            <div className="relative flex items-center justify-between h-[60px] px-2" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(60px + env(safe-area-inset-bottom, 0px))' }}>
                 {/* Home */}
                 <Link
                     href={`/shop/${shopId}/dashboard`}
                     onClick={() => handleNavClick(`/shop/${shopId}/dashboard`)}
-                    className="flex-1 flex flex-col items-center justify-center gap-0.5"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 h-full relative group"
                 >
-                    <LayoutDashboard className={cn(
-                        "w-5 h-5",
-                        isActive(`/shop/${shopId}/dashboard`) ? "text-primary" : "text-muted-foreground"
-                    )} strokeWidth={1.8} />
+                    <div className={cn(
+                        "p-1.5 rounded-xl transition-all duration-300",
+                        isActive(`/shop/${shopId}/dashboard`) ? "bg-primary/10 text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    )}>
+                        <LayoutDashboard className="w-5 h-5" strokeWidth={isActive(`/shop/${shopId}/dashboard`) ? 2.5 : 2} />
+                    </div>
                     <span className={cn(
-                        "text-[10px]",
-                        isActive(`/shop/${shopId}/dashboard`) ? "text-primary font-semibold" : "text-muted-foreground"
+                        "text-[10px] font-medium transition-colors duration-300",
+                        isActive(`/shop/${shopId}/dashboard`) ? "text-primary" : "text-muted-foreground"
                     )}>Home</span>
                 </Link>
 
@@ -113,26 +118,28 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                 <Link
                     href={`/shop/${shopId}/invoices`}
                     onClick={() => handleNavClick(`/shop/${shopId}/invoices`)}
-                    className="flex-1 flex flex-col items-center justify-center gap-0.5"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 h-full relative group"
                 >
-                    <FileText className={cn(
-                        "w-5 h-5",
-                        isActive(`/shop/${shopId}/invoices`, true) ? "text-primary" : "text-muted-foreground"
-                    )} strokeWidth={1.8} />
+                    <div className={cn(
+                        "p-1.5 rounded-xl transition-all duration-300",
+                        isActive(`/shop/${shopId}/invoices`, true) ? "bg-primary/10 text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    )}>
+                        <FileText className="w-5 h-5" strokeWidth={isActive(`/shop/${shopId}/invoices`, true) ? 2.5 : 2} />
+                    </div>
                     <span className={cn(
-                        "text-[10px]",
-                        isActive(`/shop/${shopId}/invoices`, true) ? "text-primary font-semibold" : "text-muted-foreground"
+                        "text-[10px] font-medium transition-colors duration-300",
+                        isActive(`/shop/${shopId}/invoices`, true) ? "text-primary" : "text-muted-foreground"
                     )}>Bills</span>
                 </Link>
 
-                {/* Center FAB */}
-                <div className="flex items-center justify-center px-2">
+                {/* Center FAB - Floating Action Button */}
+                <div className="relative -top-5">
                     <Link
                         href={`/shop/${shopId}/invoices/new`}
                         onClick={() => handleNavClick(`/shop/${shopId}/invoices/new`)}
-                        className="flex items-center justify-center w-12 h-12 -mt-4 rounded-full bg-primary shadow-lg active:scale-95 transition-transform"
+                        className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-300 border-4 border-background"
                     >
-                        <Plus className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
+                        <Plus className="w-7 h-7" strokeWidth={2.5} />
                     </Link>
                 </div>
 
@@ -140,52 +147,61 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                 <Link
                     href={`/shop/${shopId}/inventory`}
                     onClick={() => handleNavClick(`/shop/${shopId}/inventory`)}
-                    className="flex-1 flex flex-col items-center justify-center gap-0.5"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 h-full relative group"
                 >
-                    <QrCode className={cn(
-                        "w-5 h-5",
-                        isActive(`/shop/${shopId}/inventory`, true) ? "text-primary" : "text-muted-foreground"
-                    )} strokeWidth={1.8} />
+                    <div className={cn(
+                        "p-1.5 rounded-xl transition-all duration-300",
+                        isActive(`/shop/${shopId}/inventory`, true) ? "bg-primary/10 text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    )}>
+                        <QrCode className="w-5 h-5" strokeWidth={isActive(`/shop/${shopId}/inventory`, true) ? 2.5 : 2} />
+                    </div>
                     <span className={cn(
-                        "text-[10px]",
-                        isActive(`/shop/${shopId}/inventory`, true) ? "text-primary font-semibold" : "text-muted-foreground"
+                        "text-[10px] font-medium transition-colors duration-300",
+                        isActive(`/shop/${shopId}/inventory`, true) ? "text-primary" : "text-muted-foreground"
                     )}>Stock</span>
                 </Link>
 
                 {/* More */}
                 <Sheet open={isOpen} onOpenChange={setIsOpen}>
                     <SheetTrigger asChild>
-                        <button className="flex-1 flex flex-col items-center justify-center gap-0.5">
-                            <MoreHorizontal className={cn(
-                                "w-5 h-5",
-                                (isMoreActive || isOpen) ? "text-primary" : "text-muted-foreground"
-                            )} strokeWidth={1.8} />
+                        <button className="flex-1 flex flex-col items-center justify-center gap-1 h-full relative group">
+                            <div className={cn(
+                                "p-1.5 rounded-xl transition-all duration-300",
+                                (isMoreActive || isOpen) ? "bg-primary/10 text-primary" : "text-muted-foreground group-hover:text-foreground"
+                            )}>
+                                <MoreHorizontal className="w-5 h-5" strokeWidth={(isMoreActive || isOpen) ? 2.5 : 2} />
+                            </div>
                             <span className={cn(
-                                "text-[10px]",
-                                (isMoreActive || isOpen) ? "text-primary font-semibold" : "text-muted-foreground"
+                                "text-[10px] font-medium transition-colors duration-300",
+                                (isMoreActive || isOpen) ? "text-primary" : "text-muted-foreground"
                             )}>More</span>
                         </button>
                     </SheetTrigger>
-                    <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-8">
-                        <div className="w-8 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
-                        <SheetHeader className="px-4 pb-3">
-                            <SheetTitle className="text-sm font-semibold text-left">Menu</SheetTitle>
+                    <SheetContent side="bottom" className="rounded-t-[2rem] px-0 pb-8 border-t-0 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)]">
+                        <div className="w-12 h-1.5 bg-muted-foreground/20 rounded-full mx-auto mb-6 mt-2" />
+                        <SheetHeader className="px-6 pb-4 text-left">
+                            <SheetTitle className="text-lg font-bold">Menu</SheetTitle>
                         </SheetHeader>
-                        <div className="space-y-0.5">
+                        <div className="grid grid-cols-4 gap-y-6 px-4">
                             {moreItems.map((item) => (
                                 <Link
                                     key={item.href}
                                     href={item.href}
                                     onClick={() => setIsOpen(false)}
-                                    className={cn(
-                                        "flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg transition-colors",
-                                        isActive(item.href, true)
-                                            ? "bg-primary/10 text-primary"
-                                            : "text-foreground active:bg-muted"
-                                    )}
+                                    className="flex flex-col items-center gap-2 group"
                                 >
-                                    <item.icon className="w-5 h-5" strokeWidth={1.8} />
-                                    <span className="text-sm font-medium">{item.label}</span>
+                                    <div className={cn(
+                                        "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300",
+                                        isActive(item.href, true)
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                                            : "bg-muted/50 text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+                                    )}>
+                                        <item.icon className="w-6 h-6" strokeWidth={1.8} />
+                                    </div>
+                                    <span className={cn(
+                                        "text-xs font-medium text-center transition-colors",
+                                        isActive(item.href, true) ? "text-primary" : "text-muted-foreground"
+                                    )}>{item.label}</span>
                                 </Link>
                             ))}
                         </div>

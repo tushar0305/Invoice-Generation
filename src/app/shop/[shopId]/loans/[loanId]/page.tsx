@@ -45,10 +45,6 @@ export default async function LoanDetailsPage({ params }: Props) {
         return <div>Loan not found</div>;
     }
 
-    if (process.env.NODE_ENV === 'development') {
-        console.log('Loan data fetched successfully:', JSON.stringify(loan, null, 2));
-    }
-
     const formattedShopDetails = shop ? {
         name: shop.shop_name,
         address: shop.address,

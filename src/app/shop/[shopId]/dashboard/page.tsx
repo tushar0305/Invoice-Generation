@@ -1,9 +1,30 @@
 import { startOfMonth, endOfMonth, startOfWeek, startOfDay, subMonths, isSameDay, subDays, format } from 'date-fns';
+import { getCatalogueStats } from '@/actions/catalogue-actions';
 import { createClient } from '@/supabase/server';
 import { getDashboardData, getMarketRates, getAdditionalStats } from '@/actions/dashboard-actions';
-import { DashboardClient } from './client';
+import { FloatingStoreAssistant } from '@/components/dashboard/floating-store-assistant';
+import { GoldSilverTicker } from '@/components/dashboard/gold-silver-ticker';
+import { FinelessHero } from '@/components/dashboard/fineless-hero';
+import { KPICard } from '@/components/dashboard/kpi-card';
+import { HeroSkeleton, KPICardSkeleton } from '@/components/dashboard/skeleton-loaders';
+import { formatCurrency, cn } from '@/lib/utils';
+import { Suspense } from 'react';
+import Link from 'next/link';
+import { Eye, ArrowRight, FileText, Calendar, Clock, Store, LayoutGrid, Zap } from 'lucide-react';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Store } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { RecentInvoicesEmptyState, PendingActionsEmptyState } from '@/components/dashboard/empty-states';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+
+import { SmartInsightsGrid } from '@/components/dashboard/smart-insights-grid';
+// Widget imports - removed PendingPaymentsWidget, SchemesWidget, LoyaltyWidget
+import { BusinessHealthWidget } from '@/components/dashboard/business-health';
+import { CustomerInsightsWidget } from '@/components/dashboard/customer-insights';
+import { QuickActions } from '@/components/dashboard/quick-actions';
+
+import { DashboardInvoiceRow } from '@/components/dashboard/dashboard-invoice-row';
 
 // Revalidate dashboard data every 0 seconds for fresh data
 export const revalidate = 0;
@@ -22,9 +43,12 @@ function generateSparkline(invoices: any[], days: number) {
   return data;
 }
 
+import { GoldRateTicker } from '@/components/dashboard/gold-rate-ticker';
+
 export default async function DashboardPage({ params }: { params: Promise<{ shopId: string }> }) {
   const { shopId } = await params;
-  
+  const supabase = await createClient();
+
   const [stats, marketRates, additionalStats] = await Promise.all([
     getDashboardData(shopId),
     getMarketRates(shopId),
@@ -44,7 +68,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
     );
   }
 
-  // Calculate metrics
+  // Calculate metrics (previously only for desktop)
   const totalUniqueCustomers = additionalStats.customerCount;
 
   const monthSparkline = generateSparkline(stats.recentInvoices, 30);
@@ -75,23 +99,201 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   const recentCount = stats.recentInvoices.length;
 
   return (
-    <DashboardClient
-      shopId={shopId}
-      stats={stats}
-      marketRates={marketRates}
-      additionalStats={additionalStats}
-      monthSparkline={monthSparkline}
-      weekSparkline={weekSparkline}
-      totalUniqueCustomers={totalUniqueCustomers}
-      lastMonthRevenue={lastMonthRevenue}
-      changeAmount={changeAmount}
-      totalDue={totalDue}
-      returningCustomers={returningCustomers}
-      newCustomers={newCustomers}
-      returningCustomerRate={returningCustomerRate}
-      topCustomer={topCustomer}
-      recentTotal={recentTotal}
-      recentCount={recentCount}
-    />
+    <div className="min-h-screen bg-slate-50/50 dark:bg-[#0a0a0b] pb-20">
+      <div className="max-w-[1600px] mx-auto pt-1 md:pt-1 px-4 md:px-6 lg:px-8 space-y-3 animate-in fade-in duration-500">
+
+        {/* Floating AI Assistant */}
+        <FloatingStoreAssistant shopId={shopId} />
+
+        {/* Ticker Section - Full Width, below floating buttons on mobile */}
+        <div className="w-full pb-1">
+          <GoldSilverTicker initialData={marketRates} shopId={shopId} />
+        </div>
+
+        {/* Hero Section */}
+        <section className="-mt-1">
+          <Suspense fallback={<HeroSkeleton />}>
+            <FinelessHero
+              title="Total Balance"
+              value={stats.totalPaidThisMonth}
+              change={stats.revenueMoM}
+              changeAmount={changeAmount}
+              sparklineData={monthSparkline}
+              viewMoreHref={`/shop/${shopId}/invoices`}
+              catalogueStats={stats.catalogueStats}
+            />
+          </Suspense>
+        </section>
+
+        {/* Quick Actions Bar */}
+        <section>
+          <QuickActions shopId={shopId} />
+        </section>
+
+        {/* KPI Grid */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <LayoutGrid className="w-4 h-4 text-primary" />
+            <h2 className="text-base font-semibold tracking-tight text-muted-foreground uppercase">Performance</h2>
+          </div>
+
+          {/* Mobile Carousel */}
+          <div className="block md:hidden -mx-4 px-4">
+            <Carousel opts={{ align: "start", loop: false }} className="w-full">
+              <CarouselContent className="-ml-2">
+                {[
+                  { title: "This Month", value: formatCurrency(stats.totalPaidThisMonth), change: stats.revenueMoM, sparkline: monthSparkline.slice(-7), href: `/shop/${shopId}/invoices` },
+                  { title: "This Week", value: formatCurrency(stats.totalPaidThisWeek), change: stats.totalPaidThisWeek > 0 ? ((stats.totalPaidThisWeek - (stats.totalPaidThisMonth / 4)) / (stats.totalPaidThisMonth / 4)) * 100 : 0, sparkline: weekSparkline, href: `/shop/${shopId}/invoices` },
+                  { title: "Today", value: formatCurrency(stats.totalPaidToday), change: stats.totalPaidToday > 0 && stats.totalPaidThisWeek > 0 ? ((stats.totalPaidToday - (stats.totalPaidThisWeek / 7)) / (stats.totalPaidThisWeek / 7)) * 100 : 0, sparkline: weekSparkline.slice(-3) },
+                  { title: "Customers", value: totalUniqueCustomers.toString(), sparkline: additionalStats.customerSparkline || [0], href: `/shop/${shopId}/customers` }
+                ].map((item, idx) => (
+                  <CarouselItem key={idx} className="pl-2 basis-[85%]">
+                    <div className="h-40">
+                      <Suspense fallback={<KPICardSkeleton index={idx} />}>
+                        <KPICard
+                          title={item.title}
+                          value={item.value}
+                          sparklineData={item.sparkline}
+                          href={item.href}
+                          index={idx}
+                        />
+                      </Suspense>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+          </div>
+
+          {/* Desktop Grid */}
+          <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="h-40">
+              <Suspense fallback={<KPICardSkeleton index={0} />}>
+                <KPICard
+                  title="This Month"
+                  value={formatCurrency(stats.totalPaidThisMonth)}
+                  change={stats.revenueMoM}
+                  sparklineData={monthSparkline.slice(-7)}
+                  href={`/shop/${shopId}/invoices`}
+                  index={0}
+                />
+              </Suspense>
+            </div>
+            <div className="h-40">
+              <Suspense fallback={<KPICardSkeleton index={1} />}>
+                <KPICard
+                  title="This Week"
+                  value={formatCurrency(stats.totalPaidThisWeek)}
+                  sparklineData={weekSparkline}
+                  href={`/shop/${shopId}/invoices`}
+                  index={1}
+                />
+              </Suspense>
+            </div>
+            <div className="h-40">
+              <Suspense fallback={<KPICardSkeleton index={2} />}>
+                <KPICard
+                  title="Today"
+                  value={formatCurrency(stats.totalPaidToday)}
+                  sparklineData={weekSparkline.slice(-3)}
+                  index={2}
+                />
+              </Suspense>
+            </div>
+            <div className="h-40">
+              <Suspense fallback={<KPICardSkeleton index={3} />}>
+                <KPICard
+                  title="Customers"
+                  value={totalUniqueCustomers.toString()}
+                  sparklineData={additionalStats.customerSparkline || [0, 0, 0, 0]}
+                  href={`/shop/${shopId}/customers`}
+                  index={3}
+                />
+              </Suspense>
+            </div>
+          </div>
+        </section>
+
+        {/* Smart Actionable Insights Grid */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-4 h-4 text-amber-500" />
+            <h2 className="text-base font-semibold tracking-tight text-muted-foreground uppercase">Actionable Insights</h2>
+          </div>
+
+          <SmartInsightsGrid
+            shopId={shopId}
+            stats={{
+              activeEnrollments: additionalStats.activeEnrollments || 0,
+              totalSchemeCollected: additionalStats.totalSchemeCollected || 0,
+              pendingCount: stats.dueInvoices.length,
+              totalDue: totalDue,
+              recentDueInvoice: stats.dueInvoices[0],
+              activeLoans: additionalStats.activeLoans || 0,
+              khataBalance: additionalStats.khataBalance || 0,
+              lowStockCount: additionalStats.lowStockItems.length,
+              lowStockItem: additionalStats.lowStockItems[0],
+              loyaltyPoints: additionalStats.totalLoyaltyPoints || 0,
+              loyaltyMembers: additionalStats.loyaltyMembers || 0,
+              topLoyaltyCustomer: additionalStats.topLoyaltyCustomer
+            }}
+          />
+        </section>
+
+        {/* Main Content Grid: Business Health & Activity */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Left Column: Business Health & Insights */}
+          <div className="xl:col-span-1 space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <BusinessHealthWidget
+                totalRevenue={stats.totalPaidThisMonth}
+                totalOrders={stats.totalOrdersThisMonth}
+                revenueGrowth={stats.revenueMoM}
+                returningRate={returningCustomerRate}
+              />
+
+              {/* Fixed Customer Insights Layout - now shares prominence */}
+              <CustomerInsightsWidget
+                newCustomers={newCustomers}
+                returningCustomers={returningCustomers}
+                topCustomer={topCustomer}
+              />
+            </div>
+          </div>
+
+          {/* Right Column: Recent Activity */}
+          <div className="space-y-6">
+            <Card className="h-full bg-card/60 backdrop-blur-md border border-border/50 shadow-sm flex flex-col min-h-[400px]">
+              <CardHeader className="py-4 px-5 flex flex-row items-center justify-between border-b border-border/40">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
+                </div>
+                <Button variant="ghost" size="sm" className="text-xs h-8 px-2.5 text-muted-foreground hover:text-primary" asChild>
+                  <Link href={`/shop/${shopId}/invoices`}>
+                    View All
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0 flex-1 overflow-hidden">
+                {stats.recentInvoices.length > 0 ? (
+                  <div className="divide-y divide-border/30">
+                    {stats.recentInvoices.slice(0, 8).map((invoice: any) => (
+                      <div key={invoice.id} className="p-1 px-2 hover:bg-muted/30 transition-colors">
+                        <DashboardInvoiceRow invoice={invoice} shopId={shopId} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6">
+                    <RecentInvoicesEmptyState />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

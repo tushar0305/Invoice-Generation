@@ -7,10 +7,9 @@ import {
   Loader2, Upload, X, Image as ImageIcon,
   Store, Building2, Receipt, Shield,
   Save, Trash2, AlertTriangle, CreditCard,
-  MapPin, Phone, Mail, FileText, Percent,
+  MapPin, Phone, Mail, Percent,
   Gift, ArrowLeft, ChevronRight
 } from 'lucide-react';
-import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -27,8 +26,6 @@ import { useActiveShop } from '@/hooks/use-active-shop';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getSetupProgress } from '@/lib/shop-setup';
 import { CelebrationModal } from '@/components/celebration-modal';
-import { TemplateSelector } from '@/components/template-selector';
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -37,7 +34,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
-import { PaletteSwitcher } from '@/components/palette-switcher';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoyaltySettingsForm } from '@/components/loyalty-settings-form';
 import { RateManager } from '@/components/dashboard/rate-manager';
@@ -79,7 +75,7 @@ export default function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [mobileSection, setMobileSection] = useState<'menu' | 'general' | 'rates' | 'loyalty' | 'billing'>('menu');
+  const [mobileSection, setMobileSection] = useState<'menu' | 'general' | 'rates' | 'loyalty'>('menu');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<SettingsFormValues>({
@@ -350,51 +346,74 @@ export default function SettingsPage() {
     { id: 'general' as const, label: 'General Settings', description: 'Shop details, logo & branding', icon: Store, color: 'bg-blue-500/10 text-blue-500' },
     { id: 'rates' as const, label: 'Market Rates', description: 'Gold & silver daily prices', icon: Receipt, color: 'bg-emerald-500/10 text-emerald-500' },
     { id: 'loyalty' as const, label: 'Loyalty Program', description: 'Points, rewards & tiers', icon: Gift, color: 'bg-pink-500/10 text-pink-500' },
-    { id: 'billing' as const, label: 'Billing & Plans', description: 'Subscription & invoices', icon: CreditCard, color: 'bg-purple-500/10 text-purple-500' },
   ];
 
   return (
-    <>
-      {/* Mobile View - Native App Experience */}
-      <div className="md:hidden min-h-screen bg-background">
-        <AnimatePresence mode="wait">
-          {mobileSection === 'menu' ? (
-            <motion.div
-              key="menu"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="pb-24"
-            >
-              {/* Header */}
-              <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-lg border-b border-border/50 px-4 py-4">
-                <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Manage your store preferences</p>
-              </div>
+    <div className="min-h-screen bg-background pb-24 md:pb-8 transition-colors duration-300">
+      {/* Header Section - Matching Catalogue Style */}
+      <div className="relative overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
 
-              {/* Settings Menu List */}
-              <div className="p-4 space-y-2">
-                {settingsSections.map((section) => (
-                  <button
-                    key={section.id}
-                    onClick={() => setMobileSection(section.id)}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card border border-border/50 hover:border-border active:scale-[0.98] transition-all duration-150 text-left group"
-                  >
-                    <div className={cn("p-3 rounded-xl", section.color)}>
-                      <section.icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground">{section.label}</h3>
-                      <p className="text-sm text-muted-foreground">{section.description}</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </button>
-                ))}
-              </div>
+        {/* Floating Glass Orbs */}
+        <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 animate-pulse" />
+        <div className="absolute bottom-0 left-0 w-56 h-56 bg-primary/15 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4" />
 
-              {/* Quick Info Card */}
-              <div className="px-4 mt-4">
-                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+        {/* Glass Container */}
+        <div className="relative max-w-5xl mx-auto px-4 md:px-8 py-10 md:py-16">
+          <div className="backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 rounded-3xl border border-white/40 dark:border-white/10 shadow-2xl shadow-primary/10 p-6 md:p-10">
+            <div className="flex flex-col gap-6">
+              {/* Brand Section */}
+              <div className="space-y-3">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
+                  Store Settings
+                </h1>
+                <p className="text-muted-foreground max-w-xl text-base md:text-lg leading-relaxed">
+                  Manage your shop's identity, tax settings, and preferences.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Container - Overlaps Header */}
+      <div className="max-w-5xl mx-auto px-4 md:px-8 -mt-8 relative z-10 space-y-8">
+        
+        {/* Mobile View - Native App Experience */}
+        <div className="md:hidden">
+          <AnimatePresence mode="wait">
+            {mobileSection === 'menu' ? (
+              <motion.div
+                key="menu"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-4"
+              >
+                {/* Settings Menu List */}
+                <div className="space-y-3">
+                  {settingsSections.map((section) => (
+                    <button
+                      key={section.id}
+                      onClick={() => setMobileSection(section.id)}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 hover:border-border active:scale-[0.98] transition-all duration-150 text-left group shadow-sm"
+                    >
+                      <div className={cn("p-3 rounded-xl", section.color)}>
+                        <section.icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground">{section.label}</h3>
+                        <p className="text-sm text-muted-foreground">{section.description}</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Quick Info Card */}
+                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <Shield className="h-5 w-5 text-primary" />
                     <span className="font-medium text-sm">Shop Owner Access</span>
@@ -403,238 +422,170 @@ export default function SettingsPage() {
                     You have full access to all settings as the shop owner.
                   </p>
                 </div>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key={mobileSection}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="min-h-screen pb-24"
-            >
-              {/* Section Header with Back Button */}
-              <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-lg border-b border-border/50">
-                <div className="flex items-center gap-3 px-4 py-3">
+              </motion.div>
+            ) : (
+              <motion.div
+                key={mobileSection}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-4"
+              >
+                {/* Section Header with Back Button */}
+                <div className="flex items-center gap-3 mb-4">
                   <button
                     onClick={() => setMobileSection('menu')}
-                    className="p-2 -ml-2 rounded-xl hover:bg-muted active:scale-95 transition-all"
+                    className="p-2 -ml-2 rounded-xl hover:bg-muted active:scale-95 transition-all bg-card/50 backdrop-blur-sm border border-border/50"
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </button>
-                  <div>
-                    <h1 className="font-semibold text-lg">
-                      {settingsSections.find(s => s.id === mobileSection)?.label}
-                    </h1>
-                  </div>
+                  <h1 className="font-semibold text-lg">
+                    {settingsSections.find(s => s.id === mobileSection)?.label}
+                  </h1>
                 </div>
-              </div>
 
-              {/* Section Content */}
-              <div className="p-4">
-                {/* Render content based on active mobile section */}
-                {mobileSection === 'general' && (
-                  <div className="space-y-6">
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <fieldset disabled={!permissions.canEditSettings} className="space-y-6">
-                          {/* Logo Section */}
-                          <div className="flex flex-col items-center gap-4 p-6 bg-card rounded-2xl border border-border/50">
-                            <div className="relative">
-                              <div className={cn(
-                                "w-24 h-24 rounded-full border-4 border-background shadow-lg overflow-hidden flex items-center justify-center bg-muted",
-                                !logoUrl && "border-dashed border-border"
-                              )}>
-                                {logoUrl ? (
-                                  <img src={logoUrl} alt="Shop Logo" className="w-full h-full object-cover" />
-                                ) : (
-                                  <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
-                                )}
+                {/* Section Content */}
+                <div className="bg-card/50 backdrop-blur-sm rounded-3xl border border-border/50 p-4 shadow-sm">
+                  {/* Render content based on active mobile section */}
+                  {mobileSection === 'general' && (
+                    <div className="space-y-6">
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                          <fieldset disabled={!permissions.canEditSettings} className="space-y-6">
+                            {/* Logo Section */}
+                            <div className="flex flex-col items-center gap-4 p-6 bg-card rounded-2xl border border-border/50">
+                              <div className="relative">
+                                <div className={cn(
+                                  "w-24 h-24 rounded-full border-4 border-background shadow-lg overflow-hidden flex items-center justify-center bg-muted",
+                                  !logoUrl && "border-dashed border-border"
+                                )}>
+                                  {logoUrl ? (
+                                    <img src={logoUrl} alt="Shop Logo" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => fileInputRef.current?.click()}
+                                  disabled={uploadingLogo}
+                                  className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 shadow-lg"
+                                >
+                                  {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                </button>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploadingLogo}
-                                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 shadow-lg"
-                              >
-                                {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                              </button>
-                            </div>
-                            <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleFileChange} className="hidden" />
-                            <FormField control={form.control} name="shopName" render={({ field }) => (
-                              <FormItem className="w-full">
-                                <FormLabel>Shop Name</FormLabel>
-                                <FormControl><Input {...field} placeholder="Your shop name" className="text-center" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-
-                          {/* Contact & Address */}
-                          <div className="space-y-4">
-                            <FormField control={form.control} name="phoneNumber" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Phone</FormLabel>
-                                <FormControl><Input {...field} placeholder="Phone number" /></FormControl>
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="address" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Address</FormLabel>
-                                <FormControl><Input {...field} placeholder="Shop address" /></FormControl>
-                              </FormItem>
-                            )} />
-                            <div className="grid grid-cols-2 gap-3">
-                              <FormField control={form.control} name="state" render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>State</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {INDIAN_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )} />
-                              <FormField control={form.control} name="pincode" render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Pincode</FormLabel>
-                                  <FormControl><Input {...field} placeholder="PIN" /></FormControl>
+                              <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={handleFileChange} className="hidden" />
+                              <FormField control={form.control} name="shopName" render={({ field }) => (
+                                <FormItem className="w-full">
+                                  <FormLabel>Shop Name</FormLabel>
+                                  <FormControl><Input {...field} placeholder="Your shop name" className="text-center" /></FormControl>
+                                  <FormMessage />
                                 </FormItem>
                               )} />
                             </div>
-                          </div>
 
-                          {/* Tax Info */}
-                          <div className="space-y-4 p-4 bg-muted/30 rounded-xl border border-border/50">
-                            <h3 className="font-semibold text-sm flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
-                              Tax Information
-                            </h3>
-                            <div className="grid grid-cols-2 gap-3">
-                              <FormField control={form.control} name="gstNumber" render={({ field }) => (
-                                <FormItem><FormLabel>GST No.</FormLabel><FormControl><Input {...field} placeholder="GST" /></FormControl></FormItem>
+                            {/* Contact & Address */}
+                            <div className="space-y-4">
+                              <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Phone</FormLabel>
+                                  <FormControl><Input {...field} placeholder="Phone number" /></FormControl>
+                                </FormItem>
                               )} />
-                              <FormField control={form.control} name="panNumber" render={({ field }) => (
-                                <FormItem><FormLabel>PAN No.</FormLabel><FormControl><Input {...field} placeholder="PAN" /></FormControl></FormItem>
+                              <FormField control={form.control} name="address" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Address</FormLabel>
+                                  <FormControl><Input {...field} placeholder="Shop address" /></FormControl>
+                                </FormItem>
                               )} />
+                              <div className="grid grid-cols-2 gap-3">
+                                <FormField control={form.control} name="state" render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>State</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        {INDIAN_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                      </SelectContent>
+                                    </Select>
+                                  </FormItem>
+                                )} />
+                                <FormField control={form.control} name="pincode" render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Pincode</FormLabel>
+                                    <FormControl><Input {...field} placeholder="PIN" /></FormControl>
+                                  </FormItem>
+                                )} />
+                              </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <FormField control={form.control} name="cgstRate" render={({ field }) => (
-                                <FormItem><FormLabel>CGST %</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
-                              )} />
-                              <FormField control={form.control} name="sgstRate" render={({ field }) => (
-                                <FormItem><FormLabel>SGST %</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
-                              )} />
+
+                            {/* Tax Info */}
+                            <div className="space-y-4 p-4 bg-muted/30 rounded-xl border border-border/50">
+                              <h3 className="font-semibold text-sm flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                Tax Information
+                              </h3>
+                              <div className="grid grid-cols-2 gap-3">
+                                <FormField control={form.control} name="gstNumber" render={({ field }) => (
+                                  <FormItem><FormLabel>GST No.</FormLabel><FormControl><Input {...field} placeholder="GST" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name="panNumber" render={({ field }) => (
+                                  <FormItem><FormLabel>PAN No.</FormLabel><FormControl><Input {...field} placeholder="PAN" /></FormControl></FormItem>
+                                )} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <FormField control={form.control} name="cgstRate" render={({ field }) => (
+                                  <FormItem><FormLabel>CGST %</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name="sgstRate" render={({ field }) => (
+                                  <FormItem><FormLabel>SGST %</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
+                                )} />
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Save Button */}
-                          <Button type="submit" disabled={isPending} className="w-full h-12 text-base font-semibold">
-                            {isPending ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Saving...</> : <><Save className="mr-2 h-5 w-5" />Save Changes</>}
-                          </Button>
-                        </fieldset>
-                      </form>
-                    </Form>
-                  </div>
-                )}
+                            {/* Save Button */}
+                            <Button type="submit" disabled={isPending} className="w-full h-12 text-base font-semibold">
+                              {isPending ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Saving...</> : <><Save className="mr-2 h-5 w-5" />Save Changes</>}
+                            </Button>
+                          </fieldset>
+                        </form>
+                      </Form>
+                    </div>
+                  )}
 
-                {mobileSection === 'rates' && (
-                  <Card className="border-border/50">
-                    <CardContent className="p-6">
-                      <RateManager shopId={activeShop?.id || ''} />
-                    </CardContent>
-                  </Card>
-                )}
+                  {mobileSection === 'rates' && (
+                    <RateManager shopId={activeShop?.id || ''} />
+                  )}
 
-                {mobileSection === 'loyalty' && (
-                  <Card className="border-border/50">
-                    <CardContent className="p-6">
-                      <LoyaltySettingsForm />
-                    </CardContent>
-                  </Card>
-                )}
-
-                {mobileSection === 'billing' && (
-                  <Card className="border-border/50">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 rounded-xl bg-purple-500/10">
-                          <CreditCard className="h-6 w-6 text-purple-500" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">Subscription</h3>
-                          <p className="text-sm text-muted-foreground">Manage your plan</p>
-                        </div>
-                      </div>
-                      <div className="p-4 bg-muted/50 rounded-xl border border-border">
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Upgrade to Pro for unlimited invoices & analytics.
-                        </p>
-                        <Button asChild className="w-full">
-                          <a href={`/shop/${activeShop?.id}/settings/billing`}>Manage Subscription</a>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              {/* Settings Bottom Nav */}
-              <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border/50 px-4 py-2 z-50">
-                <div className="flex justify-around">
-                  {settingsSections.map((section) => (
-                    <button
-                      key={section.id}
-                      onClick={() => setMobileSection(section.id)}
-                      className={cn(
-                        "flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all",
-                        mobileSection === section.id
-                          ? "text-primary bg-primary/10"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <section.icon className="h-5 w-5" />
-                      <span className="text-[10px] font-medium">{section.id.charAt(0).toUpperCase() + section.id.slice(1, 3)}</span>
-                    </button>
-                  ))}
+                  {mobileSection === 'loyalty' && (
+                    <LoyaltySettingsForm />
+                  )}
                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-      {/* Desktop View - Keep existing tabs */}
-      <div className="hidden md:block">
-        <MotionWrapper className="max-w-5xl mx-auto space-y-8 p-6 pb-24">
-          <Tabs defaultValue="general" className="w-full">
-            {/* Desktop Tab Navigation */}
-            <div className="mb-6">
-              <TabsList className="w-full grid grid-cols-4 p-1 h-auto bg-muted/50 rounded-xl border border-border/50">
-                <TabsTrigger value="general" className="flex items-center gap-2 py-2.5 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg">
-                  <Store className="h-4 w-4" />
-                  <span className="text-sm font-medium">General</span>
+        {/* Desktop View - Tabs */}
+        <div className="hidden md:block">
+          <Tabs defaultValue="general" className="space-y-6">
+            <div className="flex justify-center md:justify-start">
+              <TabsList className="h-14 p-1.5 bg-background/80 backdrop-blur-xl border border-border shadow-xl shadow-black/5 rounded-full inline-flex w-full md:w-auto">
+                <TabsTrigger value="general" className="rounded-full px-6 md:px-8 h-full text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                  General
                 </TabsTrigger>
-                <TabsTrigger value="rates" className="flex items-center gap-2 py-2.5 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg">
-                  <Receipt className="h-4 w-4" />
-                  <span className="text-sm font-medium">Rates</span>
+                <TabsTrigger value="rates" className="rounded-full px-6 md:px-8 h-full text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                  Rates
                 </TabsTrigger>
-                <TabsTrigger value="loyalty" className="flex items-center gap-2 py-2.5 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg">
-                  <Gift className="h-4 w-4" />
-                  <span className="text-sm font-medium">Loyalty</span>
-                </TabsTrigger>
-                <TabsTrigger value="billing" className="flex items-center gap-2 py-2.5 px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg">
-                  <CreditCard className="h-4 w-4" />
-                  <span className="text-sm font-medium">Billing</span>
+                <TabsTrigger value="loyalty" className="rounded-full px-6 md:px-8 h-full text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                  Loyalty
                 </TabsTrigger>
               </TabsList>
             </div>
 
-
-            <TabsContent value="general">
+            <TabsContent value="general" className="focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
               {isLoading ? (
                 <div className="space-y-6">
                   <Skeleton className="h-64 w-full rounded-3xl bg-white/5" />
@@ -803,8 +754,6 @@ export default function SettingsPage() {
                           </CardContent>
                         </Card>
 
-                        {/* Invoice Design Card - Removed as per user request */}
-
                         {/* Tax & Finance Card */}
                         <Card className="border border-border shadow-sm hover:shadow-md transition-all duration-300 group">
                           <CardHeader className="pb-4">
@@ -876,15 +825,13 @@ export default function SettingsPage() {
                         </Button>
                       </div>
 
-                      {/* Danger Zone — removed as requested */}
-
                     </fieldset>
                   </form>
                 </Form>
               )}
             </TabsContent>
 
-            <TabsContent value="rates">
+            <TabsContent value="rates" className="focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
               {activeShop ? (
                 <RateManager shopId={activeShop.id} />
               ) : (
@@ -892,37 +839,8 @@ export default function SettingsPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="loyalty">
+            <TabsContent value="loyalty" className="focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
               <LoyaltySettingsForm />
-            </TabsContent>
-
-            <TabsContent value="billing">
-              <Card className="border border-border shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500">
-                      <CreditCard className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-lg">Subscription & Billing</CardTitle>
-                  </div>
-                  <CardDescription>
-                    Manage your subscription plan, view invoices, and update payment methods.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                    <h4 className="font-semibold mb-2">Current Plan</h4>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Upgrade to Pro to unlock unlimited invoices, advanced analytics, and priority support.
-                    </p>
-                    <Button asChild className="w-full sm:w-auto">
-                      <a href={`/shop/${activeShop?.id}/settings/billing`}>
-                        Manage Subscription <Store className="ml-2 h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
 
@@ -930,9 +848,9 @@ export default function SettingsPage() {
             isOpen={showCelebration}
             onClose={() => setShowCelebration(false)}
           />
-        </MotionWrapper>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 

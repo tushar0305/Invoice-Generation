@@ -5,19 +5,14 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabase/client';
 import { format, addMonths, isAfter } from 'date-fns';
 import {
-    ArrowLeft,
     Calendar,
     CreditCard,
     DollarSign,
-    FileText,
     Gem,
-    MoreVertical,
-    Printer,
-    User,
-    Plus,
-    Lock,
     AlertCircle,
-    Wallet
+    Wallet,
+    FileText,
+    User
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -57,6 +52,7 @@ import { formatCurrency } from '@/lib/utils';
 import type { Loan, LoanCollateral, LoanPayment, LoanCustomer } from '@/lib/loan-types';
 import { createRoot } from 'react-dom/client';
 import { LoanPdfTemplate } from '@/components/loan-pdf-template';
+import { LoanDetailsHeader } from '@/components/loans/loan-details-header';
 
 type LoanDetailsClientProps = {
     shopId: string;
@@ -377,129 +373,66 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
     };
 
     return (
-        <div className="min-h-screen bg-background relative overflow-hidden">
+        <div className="min-h-screen bg-background relative overflow-x-hidden">
             {/* Header Section matching Marketing/Catalogue */}
-            <div className="relative overflow-hidden pb-12">
-                {/* Gradient Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
-
-                {/* Floating Orbs */}
-                <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 animate-pulse" />
-                <div className="absolute bottom-0 left-0 w-56 h-56 bg-primary/15 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4" />
-
-                {/* Glass Container */}
-                <div className="relative max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-16">
-                    <div className="backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 rounded-3xl border border-white/40 dark:border-white/10 shadow-2xl shadow-primary/10 p-6 md:p-10">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                            <div className="space-y-3 w-full md:w-auto">
-                                <div className="flex items-center gap-3 flex-wrap">
-                                    <Button variant="ghost" size="icon" onClick={() => router.push(`/shop/${shopId}/loans`)} className="rounded-full hover:bg-primary/10 -ml-2">
-                                        <ArrowLeft className="h-5 w-5" />
-                                    </Button>
-                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/10 backdrop-blur-md text-xs font-medium text-primary">
-                                        <FileText className="h-3 w-3" />
-                                        <span>Loan Details</span>
-                                    </div>
-                                    <Badge variant={getStatusColor(loan.status) as any} className="capitalize shadow-sm">
-                                        {loan.status}
-                                    </Badge>
-                                </div>
-                                <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
-                                    Loan #{loan.loan_number}
-                                </h1>
-                                <div className="flex items-center gap-2 text-muted-foreground text-base md:text-lg">
-                                    <User className="h-4 w-4" />
-                                    <span className="font-medium text-foreground">{loan.customer.name}</span>
-                                    <span>•</span>
-                                    <span>{loan.customer.phone}</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                                <Button variant="outline" onClick={handlePrint} className="rounded-full border-primary/20 hover:bg-primary/5 hover:text-primary flex-1 md:flex-none">
-                                    <Printer className="h-4 w-4 mr-2" /> Print
-                                </Button>
-                                {loan.status === 'active' && (
-                                    <>
-                                        <Button onClick={() => setIsPaymentOpen(true)} className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 flex-1 md:flex-none">
-                                            <Plus className="h-4 w-4 mr-2" /> Add Payment
-                                        </Button>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="outline" size="icon" className="rounded-full">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => setIsCloseLoanOpen(true)}>
-                                                    <Lock className="h-4 w-4 mr-2" /> Close Loan
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <LoanDetailsHeader 
+                shopId={shopId}
+                loan={loan}
+                onPrint={handlePrint}
+                onAddPayment={() => setIsPaymentOpen(true)}
+                onCloseLoan={() => setIsCloseLoanOpen(true)}
+            />
 
             <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-8 relative z-10 space-y-8 pb-12">
                 <div className="grid gap-6 md:grid-cols-7">
                 {/* Main Content - Left Side */}
                 <div className="md:col-span-5 space-y-6">
                     {/* Key Stats Cards */}
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Principal Amount</CardTitle>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <Card className="col-span-1 bg-card/50 backdrop-blur-sm">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                                <CardTitle className="text-sm font-medium truncate">Principal</CardTitle>
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{formatCurrency(loan.principal_amount)}</div>
-                                <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                                    <p>{loan.interest_rate}% Interest p.a.</p>
-                                    {loan.repayment_type && (
-                                        <p className="capitalize font-medium text-primary">
-                                            {loan.repayment_type.replace('_', ' ')}
-                                            {loan.repayment_type === 'emi' && loan.emi_amount && ` - ${formatCurrency(loan.emi_amount)}/mo`}
-                                        </p>
-                                    )}
+                            <CardContent className="p-4 pt-0">
+                                <div className="text-2xl font-bold truncate">{formatCurrency(loan.principal_amount)}</div>
+                                <div className="text-xs text-muted-foreground mt-1 space-y-0.5 truncate">
+                                    <p>{loan.interest_rate}% Interest</p>
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+                        <Card className="col-span-1 bg-card/50 backdrop-blur-sm">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                                <CardTitle className="text-sm font-medium truncate">Total Paid</CardTitle>
                                 <CreditCard className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{formatCurrency(loan.total_amount_paid || 0)}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    Last payment: {payments.length > 0 ? format(new Date(payments[0].payment_date), 'MMM d, yyyy') : 'No payments'}
+                            <CardContent className="p-4 pt-0">
+                                <div className="text-2xl font-bold truncate">{formatCurrency(loan.total_amount_paid || 0)}</div>
+                                <p className="text-xs text-muted-foreground mt-1 truncate">
+                                    Last: {payments.length > 0 ? format(new Date(payments[0].payment_date), 'MMM d') : 'None'}
                                 </p>
                             </CardContent>
                         </Card>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Start Date</CardTitle>
+                        <Card className="col-span-1 sm:col-span-2 md:col-span-1 bg-card/50 backdrop-blur-sm">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                                <CardTitle className="text-sm font-medium truncate">Start Date</CardTitle>
                                 <Calendar className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{format(new Date(loan.start_date), 'MMM d, yyyy')}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    Due Date: {loan.end_date ? format(new Date(loan.end_date), 'MMM d, yyyy') : 'Open-ended'}
+                            <CardContent className="p-4 pt-0">
+                                <div className="text-2xl font-bold truncate">{format(new Date(loan.start_date), 'MMM d, yyyy')}</div>
+                                <p className="text-xs text-muted-foreground mt-1 truncate">
+                                    Due: {loan.end_date ? format(new Date(loan.end_date), 'MMM d') : 'Open'}
                                 </p>
                             </CardContent>
                         </Card>
                     </div>
 
                     <Tabs defaultValue="collateral" className="w-full">
-                        <TabsList>
-                            <TabsTrigger value="collateral">Collateral Items</TabsTrigger>
-                            <TabsTrigger value="payments">Payment History</TabsTrigger>
-                            {loan.repayment_type === 'emi' && <TabsTrigger value="schedule">EMI Schedule</TabsTrigger>}
-                            <TabsTrigger value="documents">Documents</TabsTrigger>
+                        <TabsList className="w-[calc(100%+2rem)] -mx-4 px-4 justify-start overflow-x-auto flex-nowrap h-auto bg-transparent md:w-full md:mx-0 md:px-1 md:bg-muted/50 md:p-1 md:h-12 md:justify-center gap-2 md:gap-0 no-scrollbar">
+                            <TabsTrigger value="collateral" className="flex-shrink-0 data-[state=active]:bg-primary/10 data-[state=active]:text-primary md:data-[state=active]:bg-background md:data-[state=active]:text-foreground border border-border/50 md:border-transparent bg-card/50 md:bg-transparent">Collateral Items</TabsTrigger>
+                            <TabsTrigger value="payments" className="flex-shrink-0 data-[state=active]:bg-primary/10 data-[state=active]:text-primary md:data-[state=active]:bg-background md:data-[state=active]:text-foreground border border-border/50 md:border-transparent bg-card/50 md:bg-transparent">Payment History</TabsTrigger>
+                            {loan.repayment_type === 'emi' && <TabsTrigger value="schedule" className="flex-shrink-0 data-[state=active]:bg-primary/10 data-[state=active]:text-primary md:data-[state=active]:bg-background md:data-[state=active]:text-foreground border border-border/50 md:border-transparent bg-card/50 md:bg-transparent">EMI Schedule</TabsTrigger>}
+                            <TabsTrigger value="documents" className="flex-shrink-0 data-[state=active]:bg-primary/10 data-[state=active]:text-primary md:data-[state=active]:bg-background md:data-[state=active]:text-foreground border border-border/50 md:border-transparent bg-card/50 md:bg-transparent">Documents</TabsTrigger>
                         </TabsList>
 
                         {loan.repayment_type === 'emi' && (
@@ -581,21 +514,21 @@ export function LoanDetailsClient({ shopId, loan, currentUser, shopDetails }: Lo
                                 <CardContent>
                                     <div className="space-y-4">
                                         {collateral.map((item, idx) => (
-                                            <div key={item.id} className="flex items-start justify-between p-4 border rounded-lg">
-                                                <div className="flex gap-4">
-                                                    <div className="h-12 w-12 bg-secondary rounded-full flex items-center justify-center">
-                                                        <Gem className="h-6 w-6 text-primary" />
+                                            <div key={item.id} className="flex items-start justify-between p-4 border rounded-lg gap-3">
+                                                <div className="flex gap-3 min-w-0">
+                                                    <div className="h-10 w-10 shrink-0 bg-secondary rounded-full flex items-center justify-center">
+                                                        <Gem className="h-5 w-5 text-primary" />
                                                     </div>
-                                                    <div>
-                                                        <h4 className="font-semibold">{item.item_name}</h4>
-                                                        <p className="text-sm text-muted-foreground capitalize">{item.item_type} • {item.purity}</p>
-                                                        <div className="mt-1 text-sm">
-                                                            <span className="mr-4">Gross: {item.gross_weight}g</span>
-                                                            <span>Net: {item.net_weight}g</span>
+                                                    <div className="min-w-0">
+                                                        <h4 className="font-semibold truncate">{item.item_name}</h4>
+                                                        <p className="text-sm text-muted-foreground capitalize truncate">{item.item_type} • {item.purity}</p>
+                                                        <div className="mt-1 text-sm flex flex-wrap gap-x-3">
+                                                            <span className="whitespace-nowrap">Gross: {item.gross_weight}g</span>
+                                                            <span className="whitespace-nowrap">Net: {item.net_weight}g</span>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
+                                                <div className="text-right shrink-0">
                                                     <div className="font-bold">{formatCurrency(item.estimated_value || 0)}</div>
                                                     <p className="text-xs text-muted-foreground">Est. Value</p>
                                                 </div>

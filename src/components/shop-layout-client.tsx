@@ -402,36 +402,6 @@ function ShopLayoutInner({
                                         <Menu className="h-5 w-5" />
                                     </SidebarTrigger>
 
-                                    {/* Center: Page Title */}
-                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[60%]">
-                                        <span className="block text-[17px] font-semibold text-gray-900 dark:text-white truncate text-center leading-tight">
-                                            {pathname === `/shop/${shopId}/invoices` && 'Invoices'}
-                                            {pathname === `/shop/${shopId}/invoices/new` && 'New Invoice'}
-                                            {pathname === `/shop/${shopId}/invoices/edit` && 'Edit Invoice'}
-                                            {pathname === `/shop/${shopId}/customers` && 'Customers'}
-                                            {pathname === `/shop/${shopId}/customers/view` && 'Customer Details'}
-                                            {pathname === `/shop/${shopId}/inventory` && 'Inventory'}
-                                            {pathname === `/shop/${shopId}/inventory/new` && 'Add Item'}
-                                            {pathname.includes(`/shop/${shopId}/inventory/`) && !pathname.includes('/new') && 'Item Details'}
-                                            {pathname === `/shop/${shopId}/schemes` && 'Schemes'}
-                                            {pathname.includes(`/shop/${shopId}/schemes/`) && !pathname.includes('/create') && 'Scheme Details'}
-                                            {pathname.endsWith('/schemes/create') && 'Create Scheme'}
-                                            {pathname === `/shop/${shopId}/staff` && 'Staff'}
-                                            {pathname === `/shop/${shopId}/loans` && 'Loans & Girvi'}
-                                            {pathname === `/shop/${shopId}/loans/new` && 'New Loan'}
-                                            {pathname.includes(`/shop/${shopId}/loans/`) && !pathname.includes('/new') && 'Loan Details'}
-                                            {pathname === `/shop/${shopId}/khata` && 'Khata Book'}
-                                            {pathname.includes(`/shop/${shopId}/khata/`) && !pathname.includes('/new') && 'Transaction'}
-                                            {pathname === `/shop/${shopId}/loyalty` && 'Loyalty'}
-                                            {pathname === `/shop/${shopId}/marketing` && 'Marketing'}
-                                            {pathname.startsWith(`/shop/${shopId}/marketing/`) && 'Marketing'}
-                                            {pathname === `/shop/${shopId}/catalogue` && 'Catalogue'}
-                                            {pathname === `/shop/${shopId}/insights` && 'Insights'}
-                                            {pathname === `/shop/${shopId}/templates` && 'Templates'}
-                                            {pathname === `/shop/${shopId}/settings` && 'Settings'}
-                                        </span>
-                                    </div>
-
                                     {/* Right: Notification */}
                                     <NotificationCenter shopId={shopId} userId={userId} />
                                 </div>

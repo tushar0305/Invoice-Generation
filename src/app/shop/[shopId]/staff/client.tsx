@@ -54,6 +54,15 @@ import { useActiveShop } from '@/hooks/use-active-shop';
 import { motion } from 'framer-motion';
 import { StaffHeader } from '@/components/staff/staff-header';
 
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+
 type StaffMember = {
     id: string;
     user_id: string;
@@ -89,6 +98,7 @@ export function StaffClient({
     const { toast } = useToast();
     const { permissions } = useActiveShop();
     const [isPending, startTransition] = useTransition();
+    const isMobile = useIsMobile();
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     
@@ -156,6 +166,62 @@ export function StaffClient({
             </div>
         );
     }
+
+    const StaffFormContent = () => (
+        <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe"
+                />
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="john@example.com"
+                />
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                    id="password"
+                    type="text"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Set a password (min 6 chars)"
+                />
+                <p className="text-xs text-muted-foreground">
+                    You set this password for them.
+                </p>
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="role">Role</Label>
+                <Select value={role} onValueChange={(v: any) => setRole(v)}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="manager">Manager</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="flex justify-end gap-3 mt-4">
+                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateStaff} disabled={isPending}>
+                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create Account
+                </Button>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-background pb-24 md:pb-8 transition-colors duration-300">
@@ -284,70 +350,32 @@ export function StaffClient({
                 </Card>
             </div>
 
-            {/* Create Staff Dialog */}
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Add Team Member</DialogTitle>
-                        <DialogDescription>
-                            Create an account for your staff member. They can use these credentials to login.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Full Name</Label>
-                            <Input
-                                id="name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="John Doe"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="john@example.com"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="text"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Set a password (min 6 chars)"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                You set this password for them.
-                            </p>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="role">Role</Label>
-                            <Select value={role} onValueChange={(v: any) => setRole(v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="manager">Manager</SelectItem>
-                                    <SelectItem value="staff">Staff</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-3">
-                        <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                        <Button onClick={handleCreateStaff} disabled={isPending}>
-                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Create Account
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {/* Create Staff Dialog / Sheet */}
+            {isMobile ? (
+                <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                    <SheetContent side="bottom" className="rounded-t-xl">
+                        <SheetHeader>
+                            <SheetTitle>Add Team Member</SheetTitle>
+                            <SheetDescription>
+                                Create an account for your staff member.
+                            </SheetDescription>
+                        </SheetHeader>
+                        <StaffFormContent />
+                    </SheetContent>
+                </Sheet>
+            ) : (
+                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Add Team Member</DialogTitle>
+                            <DialogDescription>
+                                Create an account for your staff member. They can use these credentials to login.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <StaffFormContent />
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }
