@@ -106,7 +106,7 @@ export function PaymentSuccessClient({ shopId }: PaymentSuccessClientProps) {
                                     </Link>
                                 </Button>
                                 <Button variant="outline" asChild>
-                                    <Link href={`/shop/${shopId}/settings/billing`}>
+                                    <Link href={`/shop/${shopId}/billing`}>
                                         View Subscription Details
                                     </Link>
                                 </Button>
@@ -117,7 +117,7 @@ export function PaymentSuccessClient({ shopId }: PaymentSuccessClientProps) {
                     {status === 'error' && (
                         <div className="flex flex-col gap-3">
                             <Button asChild>
-                                <Link href={`/shop/${shopId}/settings/billing`}>
+                                <Link href={`/shop/${shopId}/billing`}>
                                     Try Again
                                 </Link>
                             </Button>

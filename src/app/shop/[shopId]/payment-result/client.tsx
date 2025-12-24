@@ -114,7 +114,7 @@ export function PaymentResultClient({ shopId }: PaymentResultClientProps) {
                                 </Link>
                             </Button>
                             <Button variant="outline" asChild className="w-full">
-                                <Link href={`/shop/${shopId}/settings/billing`}>
+                                <Link href={`/shop/${shopId}/billing`}>
                                     View Subscription Details
                                 </Link>
                             </Button>
@@ -146,7 +146,7 @@ export function PaymentResultClient({ shopId }: PaymentResultClientProps) {
 
                     <div className="flex flex-col gap-2">
                         <Button asChild>
-                            <Link href={`/shop/${shopId}/settings/billing`}>
+                            <Link href={`/shop/${shopId}/billing`}>
                                 Try Again
                             </Link>
                         </Button>

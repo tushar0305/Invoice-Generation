@@ -102,6 +102,29 @@ export function LoansDashboardClient({
                         </CardContent>
                     </Card>
 
+                    {/* Overdue */}
+                    <Card className={cn(
+                        "backdrop-blur-xl border shadow-lg relative overflow-hidden group hover:shadow-xl transition-all",
+                        stats.total_overdue_loans > 0
+                            ? "bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-200/50 dark:border-red-800/30"
+                            : "bg-card/60 border-border/50"
+                    )}>
+                        <CardHeader className="p-4 pb-2">
+                            <div className="flex justify-between items-start">
+                                <CardTitle className="text-sm font-medium text-muted-foreground truncate">Overdue</CardTitle>
+                                {stats.total_overdue_loans > 0 && <AlertCircle className="h-4 w-4 text-red-500 animate-pulse shrink-0" />}
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0">
+                            <div className={cn("text-2xl font-bold", stats.total_overdue_loans > 0 ? "text-red-600 dark:text-red-400" : "text-foreground")}>
+                                {stats.total_overdue_loans}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Action Required
+                            </p>
+                        </CardContent>
+                    </Card>
+
                     {/* Principal Disbursed */}
                     <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 backdrop-blur-xl shadow-lg relative overflow-hidden group hover:shadow-xl transition-all">
                         <CardHeader className="p-4 pb-2">
@@ -131,29 +154,6 @@ export function LoansDashboardClient({
                             </div>
                             <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1 font-medium truncate">
                                 Realized Gains
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    {/* Overdue */}
-                    <Card className={cn(
-                        "backdrop-blur-xl border shadow-lg relative overflow-hidden group hover:shadow-xl transition-all",
-                        stats.total_overdue_loans > 0
-                            ? "bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-200/50 dark:border-red-800/30"
-                            : "bg-card/60 border-border/50"
-                    )}>
-                        <CardHeader className="p-4 pb-2">
-                            <div className="flex justify-between items-start">
-                                <CardTitle className="text-sm font-medium text-muted-foreground truncate">Overdue</CardTitle>
-                                {stats.total_overdue_loans > 0 && <AlertCircle className="h-4 w-4 text-red-500 animate-pulse shrink-0" />}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0">
-                            <div className={cn("text-2xl font-bold", stats.total_overdue_loans > 0 ? "text-red-600 dark:text-red-400" : "text-foreground")}>
-                                {stats.total_overdue_loans}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Action Required
                             </p>
                         </CardContent>
                     </Card>

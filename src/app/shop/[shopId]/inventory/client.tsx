@@ -153,12 +153,6 @@ export function InventoryClient({
 
     return (
         <div className="pb-20 md:pb-6 pt-2 px-4 md:px-0">
-            {/* Page Header */}
-            <div className="mb-4 md:mb-6">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Inventory</h1>
-                <p className="text-muted-foreground text-sm md:text-base mt-1">Manage your stock, tag items, and track inventory status.</p>
-            </div>
-
             {/* Sticky Header Section */}
             <div className="sticky top-0 z-20 bg-background pb-3 space-y-3 -mx-4 px-4 md:mx-0 md:px-0">
                 {/* Search Bar */}

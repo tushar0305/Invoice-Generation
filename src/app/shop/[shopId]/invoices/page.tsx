@@ -24,11 +24,11 @@ export default async function InvoicesPage({
     params,
     searchParams,
 }: {
-    params: Promise<{ shopId: string }>;
-    searchParams: Promise<{ status?: string; q?: string; page?: string; limit?: string }>;
+    params: { shopId: string };
+    searchParams: { status?: string; q?: string; page?: string; limit?: string };
 }) {
-    const { shopId } = await params;
-    const { status, q, page: pageParam, limit: limitParam } = await searchParams;
+    const { shopId } = params;
+    const { status, q, page: pageParam, limit: limitParam } = searchParams;
     const supabase = await createClient();
 
     const page = Number(pageParam) || 1;

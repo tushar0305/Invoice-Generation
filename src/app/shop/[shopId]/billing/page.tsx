@@ -51,12 +51,10 @@ export default async function BillingPage({ params }: { params: Promise<{ shopId
     } : null;
 
     return (
-        <div className="max-w-5xl mx-auto py-8 px-4 pb-24">
-            <BillingClient
-                shopId={shopId}
-                currentSubscription={enrichedSubscription}
-                userEmail={user.email!}
-            />
-        </div>
+        <BillingClient
+            shopId={shopId}
+            currentSubscription={enrichedSubscription}
+            userEmail={user.email!}
+        />
     );
 }

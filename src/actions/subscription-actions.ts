@@ -100,7 +100,7 @@ export async function cancelSubscriptionAction(shopId: string, subscriptionId: s
             })
             .eq('razorpay_subscription_id', subscriptionId);
 
-        revalidatePath(`/shop/${shopId}/settings/billing`);
+        revalidatePath(`/shop/${shopId}/billing`);
         return {
             success: true, message: cancelAtPeriodEnd
                 ? 'Subscription will be cancelled at the end of the billing period'

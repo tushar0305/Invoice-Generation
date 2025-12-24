@@ -97,6 +97,8 @@ export function PremiumHeader({ shopName, shopId, userId, userEmail, logoUrl }: 
             segments.push({ label: 'Loans' });
         } else if (pathname.includes('/loyalty')) {
             segments.push({ label: 'Loyalty' });
+        } else if (pathname.includes('/billing')) {
+            segments.push({ label: 'Billing & Subscription' });
         } else if (pathname.includes('/insights')) {
             segments.push({ label: 'Insights' });
         } else if (pathname.includes('/templates')) {

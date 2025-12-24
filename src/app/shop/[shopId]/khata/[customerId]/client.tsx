@@ -239,41 +239,46 @@ export function CustomerLedgerClient({
     const labels = ENTITY_LABELS[entity.entity_type] || ENTITY_LABELS.OTHER;
 
     return (
-        <div className="min-h-screen bg-background pb-20">
-            {/* --- PREMIUM HEADER SECTION --- */}
-            <div className="relative overflow-hidden bg-gradient-to-b from-muted/50 to-background border-b border-border transition-colors duration-300 pb-24 pt-10 md:pt-14 md:pb-32">
-                {/* Abstract Background Elements */}
-                <div className="absolute top-0 right-0 w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-primary/5 rounded-full blur-[80px] md:blur-[120px] -translate-y-1/2 translate-x-1/2" />
-                <div className="absolute bottom-0 left-0 w-[150px] h-[150px] md:w-[300px] md:h-[300px] bg-primary/5 rounded-full blur-[60px] md:blur-[100px] translate-y-1/2 -translate-x-1/2" />
+        <div className="min-h-screen bg-background pb-24 transition-colors duration-300">
+            {/* --- HEADER SECTION (Strictly Matches Catalogue Premium Header) --- */}
+            <div className="relative overflow-hidden pb-12">
+                {/* Gradient Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
 
-                <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8">
-                    <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 md:gap-8">
-                        {/* Back + Brand Info */}
-                        <div className="space-y-4 max-w-full md:max-w-2xl w-full">
-                            <Button variant="ghost" size="sm" onClick={() => router.push(`/shop/${shopId}/khata`)} className="-ml-2 text-muted-foreground hover:text-foreground">
-                                <ArrowLeft className="h-4 w-4 mr-1" /> Back to List
-                            </Button>
+                {/* Floating Orbs */}
+                <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-56 h-56 bg-primary/15 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4" />
+                
+                {/* Glass Container */}
+                <div className="relative max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-16">
+                    <div className="backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 rounded-3xl border border-white/40 dark:border-white/10 shadow-2xl shadow-primary/10 p-6 md:p-10">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            {/* Back + Brand Info */}
+                            <div className="space-y-3 max-w-full md:max-w-2xl w-full">
+                                <Button variant="ghost" size="sm" onClick={() => router.push(`/shop/${shopId}/khata`)} className="-ml-2 text-muted-foreground hover:text-foreground mb-2">
+                                    <ArrowLeft className="h-4 w-4 mr-1" /> Back to List
+                                </Button>
 
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 backdrop-blur-md text-xs font-medium text-amber-600 dark:text-amber-400">
-                                <User className="h-3 w-3" />
-                                <span>{entity.entity_type || 'Customer'} Ledger</span>
-                            </div>
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/10 backdrop-blur-md text-xs font-medium text-primary">
+                                    <User className="h-3 w-3" />
+                                    <span>{entity.entity_type || 'Customer'} Ledger</span>
+                                </div>
 
-                            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-4">
-                                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-tight">
-                                    <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-foreground to-amber-500 dark:from-amber-400 dark:via-foreground dark:to-amber-500">
+                                <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-4">
+                                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent break-words line-clamp-2">
                                         {entity.name}
-                                    </span>
-                                </h1>
-                                {entity.phone && <span className="text-lg text-muted-foreground font-mono">{entity.phone}</span>}
+                                    </h1>
+                                    {entity.phone && <span className="text-lg text-muted-foreground font-mono">{entity.phone}</span>}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Header Actions */}
-                        <div className="flex gap-2 w-full md:w-auto">
-                            <Button variant="outline" onClick={() => setIsEditEntityOpen(true)} className="flex-1 md:flex-none bg-card/50 backdrop-blur-sm border-border shadow-sm">
-                                <Edit className="h-4 w-4 mr-2" /> Edit Details
-                            </Button>
+                            {/* Header Actions */}
+                            <div className="flex gap-2 w-full md:w-auto">
+                                <Button variant="outline" onClick={() => setIsEditEntityOpen(true)} className="flex-1 md:flex-none bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-border shadow-sm hover:bg-white/80 dark:hover:bg-gray-800/80">
+                                    <Edit className="h-4 w-4 mr-2" /> Edit Details
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -301,7 +306,7 @@ export function CustomerLedgerClient({
             </Dialog>
 
             {/* --- MAIN CONTENT (Overlapping) --- */}
-            <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-20 relative z-20 space-y-8">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-8 relative z-20 space-y-8">
 
                 {/* Stats Grid - Bento Style */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

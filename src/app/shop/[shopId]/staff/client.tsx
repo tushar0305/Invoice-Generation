@@ -35,7 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Trash2, Shield, MoreHorizontal, Briefcase } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, Shield, MoreHorizontal, Briefcase, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { getRoleBadgeColor } from '@/lib/permissions';
@@ -101,6 +101,21 @@ export function StaffClient({
     const isMobile = useIsMobile();
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    const filteredStaff = initialStaff.filter(member => 
+        member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.role.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
+    const paginatedStaff = filteredStaff.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
     
     // Form State
     const [name, setName] = useState('');
@@ -274,8 +289,21 @@ export function StaffClient({
                 )}
 
                 <Card className="border-none shadow-xl bg-card/50 backdrop-blur-xl">
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                         <CardTitle>Team Members</CardTitle>
+                        <div className="relative w-full max-w-xs">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search staff..."
+                                className="pl-9 bg-background/50"
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -289,7 +317,14 @@ export function StaffClient({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {initialStaff.map((member) => (
+                                {paginatedStaff.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                            No staff members found.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    paginatedStaff.map((member) => (
                                     <TableRow 
                                         key={member.id} 
                                         className="hover:bg-muted/30 border-border/50 transition-colors cursor-pointer"
@@ -343,9 +378,36 @@ export function StaffClient({
                                             )}
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                )))}
                             </TableBody>
                         </Table>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-end space-x-2 py-4">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    Previous
+                                </Button>
+                                <div className="text-sm text-muted-foreground">
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

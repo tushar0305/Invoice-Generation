@@ -233,67 +233,72 @@ export function InsightsClient({ invoices, invoiceItems, shopId }: InsightsClien
             <div className="min-h-screen bg-background pb-24 transition-colors duration-300">
 
                 {/* --- HEADER SECTION (Strictly Matches Catalogue Premium Header) --- */}
-                <div className="relative overflow-hidden bg-gradient-to-b from-muted/50 to-background border-b border-border transition-colors duration-300 pb-24 pt-10 md:pt-14 md:pb-32">
-                    {/* Abstract Background Elements (Exactly like PremiumHeader) */}
-                    <div className="absolute top-0 right-0 w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-primary/5 rounded-full blur-[80px] md:blur-[120px] -translate-y-1/2 translate-x-1/2" />
-                    <div className="absolute bottom-0 left-0 w-[150px] h-[150px] md:w-[300px] md:h-[300px] bg-primary/5 rounded-full blur-[60px] md:blur-[100px] translate-y-1/2 -translate-x-1/2" />
+                <div className="relative overflow-hidden pb-12">
+                    {/* Gradient Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
 
-                    <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8">
-                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
+                    {/* Floating Orbs */}
+                    <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 animate-pulse" />
+                    <div className="absolute bottom-0 left-0 w-56 h-56 bg-primary/15 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4" />
+                    
+                    {/* Glass Container */}
+                    <div className="relative max-w-5xl mx-auto px-4 md:px-8 py-10 md:py-16">
+                        <div className="backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 rounded-3xl border border-white/40 dark:border-white/10 shadow-2xl shadow-primary/10 p-6 md:p-10">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
 
-                            {/* Brand Info */}
-                            <div className="space-y-4 max-w-full md:max-w-2xl">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/10 backdrop-blur-md text-xs font-medium text-primary">
-                                    <Sparkles className="h-3 w-3" />
-                                    <span>Business Intelligence</span>
-                                </div>
+                                {/* Brand Info */}
+                                <div className="space-y-3">
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/10 backdrop-blur-md text-xs font-medium text-primary">
+                                        <Sparkles className="h-3 w-3" />
+                                        <span>Business Intelligence</span>
+                                    </div>
 
-                                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-tight">
-                                    <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-foreground to-primary/70">
+                                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent break-words line-clamp-2">
                                         Performance Overview
-                                    </span>
-                                </h1>
+                                    </h1>
 
-                                <p className="text-muted-foreground max-w-lg text-sm md:text-base leading-relaxed">
-                                    Track your shop's growth, revenue trends, and inventory health in real-time.
-                                </p>
-                            </div>
-
-                            {/* Actions & Filters - MOBILE OPTIMIZED */}
-                            <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
-                                {/* Time Range Pill */}
-                                <div className="flex items-center p-1 rounded-full bg-card border border-border shadow-sm shrink-0">
-                                    {['7d', '30d', '90d'].map((range) => (
-                                        <button
-                                            key={range}
-                                            onClick={() => setTimeRange(range)}
-                                            className={cn(
-                                                "px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium rounded-full transition-all",
-                                                timeRange === range
-                                                    ? "bg-primary text-primary-foreground shadow-sm"
-                                                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                                            )}
-                                        >
-                                            {range === '7d' ? 'Week' : range === '30d' ? 'Month' : 'Quarter'}
-                                        </button>
-                                    ))}
+                                    <p className="text-muted-foreground max-w-md text-base md:text-lg leading-relaxed">
+                                        Track your shop's growth, revenue trends, and inventory health in real-time.
+                                    </p>
                                 </div>
 
-                                <Button
-                                    size="icon"
-                                    variant="outline"
-                                    onClick={handleRefresh}
-                                    className={cn("rounded-full h-9 w-9 md:h-11 md:w-11 shrink-0 bg-card border-border shadow-sm hover:bg-muted", isRefreshing && "animate-spin")}
-                                >
-                                    <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                                </Button>
+                                {/* Actions & Filters - MOBILE OPTIMIZED */}
+                                <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
+                                    {/* Time Range Pill */}
+                                    <div className="flex items-center p-1 rounded-full bg-card border border-border shadow-sm shrink-0">
+                                        {['7d', '30d', '90d'].map((range) => (
+                                            <button
+                                                key={range}
+                                                onClick={() => setTimeRange(range)}
+                                                className={cn(
+                                                    "px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium rounded-full transition-all",
+                                                    timeRange === range
+                                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                                )}
+                                            >
+                                                {range === '7d' ? 'Week' : range === '30d' ? 'Month' : 'Quarter'}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <Button
+                                        size="icon"
+                                        variant="outline"
+                                        onClick={handleRefresh}
+                                        className={cn("rounded-full h-9 w-9 md:h-11 md:w-11 shrink-0 bg-card border-border shadow-sm hover:bg-muted", isRefreshing && "animate-spin")}
+                                    >
+                                        <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* --- MAIN CONTENT CONTAINER (Overlapping Header) --- */}
-                <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-20 relative z-20 space-y-6 md:space-y-8">
+                <div className="max-w-5xl mx-auto px-4 md:px-8 -mt-8 relative z-20 space-y-6 md:space-y-8">
 
                     {/* AI Search Bar (Hero Placement) */}
                     <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">

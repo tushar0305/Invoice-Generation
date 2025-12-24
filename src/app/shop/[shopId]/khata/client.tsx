@@ -306,38 +306,43 @@ export function KhataClient({
     };
 
     return (
-        <div className="min-h-screen bg-background pb-20">
-            {/* --- PREMIUM HEADER SECTION --- */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-amber-50/50 via-background to-background dark:from-amber-950/20 dark:via-background dark:to-background border-b border-border transition-colors duration-300 pb-24 pt-10 md:pt-14 md:pb-32">
-                {/* Abstract Background Elements */}
-                <div className="absolute top-0 right-0 w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-amber-500/10 rounded-full blur-[80px] md:blur-[120px] -translate-y-1/2 translate-x-1/2" />
-                <div className="absolute bottom-0 left-0 w-[150px] h-[150px] md:w-[300px] md:h-[300px] bg-amber-500/10 rounded-full blur-[60px] md:blur-[100px] translate-y-1/2 -translate-x-1/2" />
+        <div className="min-h-screen bg-background pb-24 transition-colors duration-300">
+            {/* --- HEADER SECTION (Strictly Matches Catalogue Premium Header) --- */}
+            <div className="relative overflow-hidden pb-12">
+                {/* Gradient Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
 
-                <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
-                        {/* Brand Info */}
-                        <div className="space-y-4 max-w-full md:max-w-2xl">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 backdrop-blur-md text-xs font-medium text-amber-600 dark:text-amber-400">
-                                <Crown className="h-3 w-3" />
-                                <span>Business Ledger</span>
-                            </div>
+                {/* Floating Orbs */}
+                <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-56 h-56 bg-primary/15 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4" />
+                
+                {/* Glass Container */}
+                <div className="relative max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-16">
+                    <div className="backdrop-blur-xl bg-white/60 dark:bg-gray-900/60 rounded-3xl border border-white/40 dark:border-white/10 shadow-2xl shadow-primary/10 p-6 md:p-10">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            {/* Brand Info */}
+                            <div className="space-y-3">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/10 backdrop-blur-md text-xs font-medium text-primary">
+                                    <Crown className="h-3 w-3" />
+                                    <span>Business Ledger</span>
+                                </div>
 
-                            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-tight">
-                                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-foreground to-amber-500 dark:from-amber-400 dark:via-foreground dark:to-amber-500">
+                                <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent break-words line-clamp-2">
                                     Khata Book
-                                </span>
-                            </h1>
+                                </h1>
 
-                            <p className="text-muted-foreground max-w-lg text-sm md:text-base leading-relaxed">
-                                Track receivables, manage debts, and settle accounts with your customers and suppliers.
-                            </p>
+                                <p className="text-muted-foreground max-w-md text-base md:text-lg leading-relaxed">
+                                    Track receivables, manage debts, and settle accounts with your customers and suppliers.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* --- MAIN CONTENT (Overlapping) --- */}
-            <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-20 relative z-20 space-y-8">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-8 relative z-20 space-y-8">
 
                 {/* Stats Grid - Bento Style */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
@@ -367,7 +372,7 @@ export function KhataClient({
                         value={stats.total_customers.toString()}
                         label="Active Accounts"
                         icon={Users}
-                        className="bg-amber-500/10 text-amber-600"
+                        className="bg-primary/10 text-primary"
                     />
                 </div>
 

@@ -212,7 +212,7 @@ function ShopLayoutInner({
             title: 'Settings',
             items: [
                 { icon: Palette, label: 'Templates', href: `/shop/${shopId}/templates`, permission: 'canEditSettings' },
-                { icon: CreditCard, label: 'Billing & Plans', href: `/shop/${shopId}/settings/billing` },
+                { icon: CreditCard, label: 'Billing & Plans', href: `/shop/${shopId}/billing` },
                 { icon: Settings, label: 'Settings', href: `/shop/${shopId}/settings`, permission: 'canEditSettings' },
             ],
         },
