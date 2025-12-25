@@ -71,12 +71,20 @@ export function useInvoiceCalculations({
             loyaltyDiscount = pointsToRedeem * loyaltySettings.redemption_conversion_rate;
         }
 
-        const totalDiscount = (Number(discount) || 0) + loyaltyDiscount;
-        const taxableAmount = Math.max(0, subtotal - totalDiscount);
-
+        // Tax Calculation (Before Discount)
+        // Taxable Amount = Subtotal
+        const taxableAmount = Math.max(0, subtotal);
         const sgstAmount = taxableAmount * (sgstRate / 100);
         const cgstAmount = taxableAmount * (cgstRate / 100);
-        const grandTotal = taxableAmount + sgstAmount + cgstAmount;
+        
+        // Total Before Discount
+        const totalBeforeDiscount = taxableAmount + sgstAmount + cgstAmount;
+
+        // Total Discount (Cash + Loyalty)
+        const totalDiscount = (Number(discount) || 0) + loyaltyDiscount;
+
+        // Grand Total = (Subtotal + Tax) - Discount
+        const grandTotal = Math.max(0, totalBeforeDiscount - totalDiscount);
 
         // Points to Earn
         let pointsToEarn = 0;

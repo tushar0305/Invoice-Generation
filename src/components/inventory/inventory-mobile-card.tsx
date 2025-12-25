@@ -93,7 +93,7 @@ export function InventoryMobileCard({ item, shopId, onDelete, onMarkSold }: Inve
                 onDragStart={() => setIsDragging(true)}
                 onDragEnd={handleDragEnd}
                 style={{ x, touchAction: 'none', background: 'hsl(var(--card))', WebkitTapHighlightColor: 'transparent' }}
-                className="relative z-10 overflow-hidden rounded-2xl border-2 border-gray-300 dark:border-white/20 bg-card shadow-lg transition-shadow active:shadow-xl touch-manipulation"
+                className="relative z-10 overflow-hidden rounded-2xl border-none shadow-lg shadow-gray-200/50 dark:shadow-black/20 bg-card transition-shadow active:shadow-xl touch-manipulation"
                 whileTap={{ scale: 0.98 }}
             >
                 <Link

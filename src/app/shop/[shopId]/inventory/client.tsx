@@ -154,11 +154,11 @@ export function InventoryClient({
     return (
         <div className="pb-20 md:pb-6 pt-2 px-4 md:px-0">
             {/* Sticky Header Section */}
-            <div className="sticky top-0 z-20 bg-background pb-3 space-y-3 -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl pb-4 pt-2 space-y-4 -mx-4 px-4 md:mx-0 md:px-0 transition-all duration-200">
                 {/* Search Bar */}
-                <div className="flex items-center gap-2 pt-0">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+                <div className="flex items-center gap-3">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10 pointer-events-none" />
                         <Input
                             placeholder="Search by name or tag..."
                             value={searchQuery}
@@ -174,14 +174,14 @@ export function InventoryClient({
                                     updateUrl({ q: searchQuery });
                                 }
                             }}
-                            className="pl-9 h-11 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm w-full"
+                            className="pl-11 h-12 bg-card border-none shadow-lg shadow-gray-200/50 dark:shadow-black/20 focus:ring-2 focus:ring-primary/20 rounded-full transition-all w-full"
                         />
                         {searchQuery && (
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 z-10"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 z-10 rounded-full hover:bg-muted"
                                 onClick={() => {
                                     setSearchQuery('');
                                     updateUrl({ q: null });
@@ -195,18 +195,18 @@ export function InventoryClient({
                         variant="outline"
                         size="icon"
                         onClick={handleRefresh}
-                        className="shrink-0 h-11 w-11 transition-all duration-300 hover:shadow-glow-sm interactive-scale bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary"
+                        className="shrink-0 h-12 w-12 rounded-full border-none shadow-lg shadow-gray-200/50 dark:shadow-black/20 bg-card hover:bg-primary hover:text-primary-foreground transition-all duration-300"
                         title="Refresh inventory"
                     >
-                        <RefreshCw className={cn("h-4 w-4 transition-transform duration-500", isRefreshing && "animate-spin")} />
+                        <RefreshCw className={cn("h-5 w-5 transition-transform duration-500", isRefreshing && "animate-spin")} />
                     </Button>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                     <Link href={`/shop/${shopId}/inventory/new`} className="flex-1 sm:flex-initial">
-                        <Button className="w-full sm:w-auto h-11 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium">
-                            <Plus className="h-4 w-4" />
+                        <Button className="w-full sm:w-auto h-12 px-6 gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground shadow-lg shadow-primary/25 rounded-full font-semibold transition-all hover:scale-[1.02]">
+                            <Plus className="h-5 w-5" />
                             <span>Add Item</span>
                         </Button>
                     </Link>
@@ -216,7 +216,7 @@ export function InventoryClient({
                         filename={`inventory-${new Date().toISOString().split('T')[0]}`}
                         statusOptions={statusOptions}
                         trigger={
-                            <Button variant="outline" className="flex-1 sm:flex-initial h-11 gap-2 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary rounded-xl">
+                            <Button variant="outline" className="flex-1 sm:flex-initial h-12 px-6 gap-2 bg-card border-none shadow-lg shadow-gray-200/50 dark:shadow-black/20 hover:bg-primary hover:text-primary-foreground rounded-full transition-all">
                                 <Download className="h-4 w-4" />
                                 <span>Export</span>
                             </Button>
@@ -226,7 +226,7 @@ export function InventoryClient({
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide mb-4 -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="flex gap-2 overflow-x-auto pb-2 pt-1 scrollbar-hide mb-4 -mx-4 px-4 md:mx-0 md:px-0">
                 {filters.map((filter) => (
                     <Button
                         key={filter.key}
@@ -234,16 +234,16 @@ export function InventoryClient({
                         size="sm"
                         onClick={() => handleFilterChange(filter.key)}
                         className={cn(
-                            "shrink-0 gap-2 h-9 rounded-full transition-all",
+                            "shrink-0 gap-2 h-10 px-5 rounded-full transition-all border-none shadow-md",
                             activeFilter === filter.key
-                                ? "bg-primary text-primary-foreground shadow-glow-sm"
-                                : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10"
+                                ? "bg-primary text-primary-foreground shadow-primary/25 scale-105"
+                                : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground shadow-gray-200/50 dark:shadow-black/20"
                         )}
                     >
                         {filter.label}
                         <Badge variant="secondary" className={cn(
-                            "h-5 px-1.5 text-xs",
-                            activeFilter === filter.key ? "bg-primary-foreground/20 text-primary-foreground" : ""
+                            "h-5 px-1.5 text-[10px] font-bold rounded-full",
+                            activeFilter === filter.key ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
                         )}>
                             {filter.count}
                         </Badge>
@@ -252,16 +252,18 @@ export function InventoryClient({
             </div>
 
             {/* Items Grid */}
-            <div className="space-y-3">
+            <div className="space-y-4">
                 {initialItems.length === 0 ? (
-                    <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-2 border-gray-300 dark:border-white/20 rounded-2xl">
-                        <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                        <h3 className="font-semibold text-lg mb-2">No items found</h3>
-                        <p className="text-muted-foreground mb-4 max-w-sm">
+                    <Card className="flex flex-col items-center justify-center p-12 text-center border-none shadow-xl shadow-gray-200/50 dark:shadow-black/20 rounded-3xl bg-card">
+                        <div className="p-4 bg-primary/5 rounded-full mb-4">
+                            <Package className="w-12 h-12 text-primary/50" />
+                        </div>
+                        <h3 className="font-bold text-xl mb-2">No items found</h3>
+                        <p className="text-muted-foreground mb-6 max-w-sm">
                             {initialSearch ? 'Try adjusting your search' : 'Add your first inventory item to get started'}
                         </p>
                         <Link href={`/shop/${shopId}/inventory/new`}>
-                            <Button className="gap-2">
+                            <Button className="gap-2 rounded-full h-11 px-6 shadow-lg shadow-primary/20">
                                 <Plus className="h-4 w-4" />
                                 Add First Item
                             </Button>
@@ -271,33 +273,35 @@ export function InventoryClient({
                     <>
                         {/* Desktop Table View */}
                         <div className="hidden md:block">
-                            <Card className="border-2 border-gray-300 dark:border-white/20 shadow-lg rounded-2xl overflow-hidden">
+                            <Card className="border-none shadow-xl shadow-gray-200/50 dark:shadow-black/20 rounded-3xl overflow-hidden bg-card">
                                 <Table>
-                                    <TableHeader className="bg-muted/50 border-b-2 border-gray-300 dark:border-white/20">
-                                        <TableRow className="hover:bg-transparent">
-                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Tag ID</TableHead>
-                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Product Name</TableHead>
-                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Category / Type</TableHead>
-                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Net Weight</TableHead>
-                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Status</TableHead>
-                                            <TableHead className="text-right text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Price Info</TableHead>
+                                    <TableHeader className="bg-muted/30">
+                                        <TableRow className="hover:bg-transparent border-b border-border/50">
+                                            <TableHead className="text-muted-foreground font-bold text-xs uppercase tracking-wider h-14 pl-6">Tag ID</TableHead>
+                                            <TableHead className="text-muted-foreground font-bold text-xs uppercase tracking-wider h-14">Product Name</TableHead>
+                                            <TableHead className="text-muted-foreground font-bold text-xs uppercase tracking-wider h-14">Category / Type</TableHead>
+                                            <TableHead className="text-muted-foreground font-bold text-xs uppercase tracking-wider h-14">Net Weight</TableHead>
+                                            <TableHead className="text-muted-foreground font-bold text-xs uppercase tracking-wider h-14">Status</TableHead>
+                                            <TableHead className="text-right text-muted-foreground font-bold text-xs uppercase tracking-wider h-14 pr-6">Price Info</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {initialItems.map((item) => (
                                             <TableRow
                                                 key={item.id}
-                                                className="cursor-pointer hover:bg-muted/50"
+                                                className="cursor-pointer hover:bg-muted/30 border-b border-border/50 last:border-0 transition-colors"
                                                 onClick={() => router.push(`/shop/${shopId}/inventory/${item.tag_id}`)}
                                             >
-                                                <TableCell className="font-medium font-mono text-xs">
+                                                <TableCell className="font-medium font-mono text-xs pl-6 py-4">
                                                     <div className="flex items-center gap-2">
-                                                        <QrCode className="h-3 w-3 text-muted-foreground" />
+                                                        <div className="p-1.5 bg-primary/10 rounded-md">
+                                                            <QrCode className="h-3.5 w-3.5 text-primary" />
+                                                        </div>
                                                         {item.tag_id}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="font-medium">{item.name}</TableCell>
-                                                <TableCell>
+                                                <TableCell className="font-semibold text-foreground py-4">{item.name}</TableCell>
+                                                <TableCell className="py-4">
                                                     <div className="flex flex-col text-xs">
                                                         <span>{item.category || item.metal_type}</span>
                                                         <span className="text-muted-foreground">{item.purity}</span>

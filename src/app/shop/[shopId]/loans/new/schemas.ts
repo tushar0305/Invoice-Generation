@@ -32,11 +32,11 @@ export const documentSchema = z.object({
 
 export const loanTermsSchema = z.object({
     loan_number: z.string().min(1, "Loan number is required"),
-    start_date: z.date(),
+    start_date: z.date({ required_error: "Start date is required" }),
     principal_amount: z.number().positive("Principal amount must be positive"),
-    interest_rate: z.number().min(0, "Interest rate cannot be negative"),
+    interest_rate: z.number().positive("Interest rate must be greater than 0"),
     repayment_type: z.enum(['interest_only', 'emi', 'bullet']).default('interest_only'),
-    tenure_months: z.number().min(1).optional(),
+    tenure_months: z.number().int().min(1, "Tenure must be at least 1 month").default(12),
     emi_amount: z.number().optional(),
 });
 

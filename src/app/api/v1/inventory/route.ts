@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/supabase/server';
+import { PURITY_OPTIONS } from '@/lib/inventory-types';
 import type { CreateInventoryItemPayload } from '@/lib/inventory-types';
 
 // GET /api/v1/inventory - List inventory items with filters
@@ -93,10 +94,30 @@ export async function POST(request: Request) {
 
         // Validation
         if (!body.shop_id) return NextResponse.json({ error: 'shop_id is required' }, { status: 400 });
+        if (!body.name || !body.name.trim()) return NextResponse.json({ error: 'name is required' }, { status: 400 });
         if (!body.metal_type) return NextResponse.json({ error: 'metal_type is required' }, { status: 400 });
         if (!body.purity) return NextResponse.json({ error: 'purity is required' }, { status: 400 });
+
+        const validPurities = PURITY_OPTIONS[body.metal_type] || [];
+        if (!validPurities.includes(body.purity)) {
+             return NextResponse.json({ error: `Invalid purity for ${body.metal_type}` }, { status: 400 });
+        }
+
         if (body.gross_weight === undefined || body.gross_weight <= 0) {
             return NextResponse.json({ error: 'gross_weight must be positive' }, { status: 400 });
+        }
+        if (body.net_weight === undefined || body.net_weight <= 0) {
+             return NextResponse.json({ error: 'net_weight must be positive' }, { status: 400 });
+        }
+        
+        if (body.net_weight > body.gross_weight) {
+            return NextResponse.json({ error: 'net_weight cannot be greater than gross_weight' }, { status: 400 });
+        }
+        
+        const stoneWeight = body.stone_weight || 0;
+        const calculatedNet = body.gross_weight - stoneWeight;
+        if (Math.abs(calculatedNet - body.net_weight) > 0.01) {
+             return NextResponse.json({ error: 'net_weight must equal gross_weight - stone_weight' }, { status: 400 });
         }
         if (body.net_weight === undefined || body.net_weight <= 0) {
             return NextResponse.json({ error: 'net_weight must be positive' }, { status: 400 });

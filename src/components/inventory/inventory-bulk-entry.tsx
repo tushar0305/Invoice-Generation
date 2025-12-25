@@ -75,9 +75,12 @@ export function InventoryBulkEntry({ shopId, onClose }: InventoryBulkEntryProps)
                 updated.purity = PURITY_OPTIONS[value as MetalType][0];
             }
 
-            // Auto-set net weight = gross weight if not set
-            if (field === 'gross_weight' && row.net_weight === 0) {
-                updated.net_weight = value;
+            // Auto-calculate Net Weight
+            if (field === 'gross_weight') {
+                updated.net_weight = value - (updated.stone_weight || 0);
+            }
+            if (field === 'stone_weight') {
+                updated.net_weight = (updated.gross_weight || 0) - value;
             }
 
             return updated;
@@ -141,6 +144,15 @@ export function InventoryBulkEntry({ shopId, onClose }: InventoryBulkEntryProps)
         if (!row.name.trim()) return 'Name is required';
         if (row.gross_weight <= 0) return 'Weight must be positive';
         if (row.net_weight <= 0) return 'Net weight must be positive';
+        
+        if (row.net_weight > row.gross_weight) return 'Net weight > Gross weight';
+        
+        const calculatedNet = row.gross_weight - row.stone_weight;
+        if (Math.abs(calculatedNet - row.net_weight) > 0.01) return 'Net != Gross - Stone';
+        
+        const validPurities = PURITY_OPTIONS[row.metal_type] || [];
+        if (!validPurities.includes(row.purity)) return `Invalid purity for ${row.metal_type}`;
+
         return null;
     };
 

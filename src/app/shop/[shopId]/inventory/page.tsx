@@ -29,7 +29,7 @@ export default async function InventoryPage({
     const supabase = await createClient();
 
     const page = Number(pageParam) || 1;
-    const limit = Number(limitParam) || 50;
+    const limit = Number(limitParam) || 10;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 

@@ -182,7 +182,8 @@ export function CustomerFTSCombobox({
                         const pincode = (createForm.pincode || '').trim();
 
                         if (!name) throw new Error('Name is required');
-                        if (phoneDigits && phoneDigits.length < 10) throw new Error('Phone must be 10+ digits');
+                        if (!phoneDigits) throw new Error('Phone is required');
+                        if (phoneDigits.length !== 10) throw new Error('Phone must be exactly 10 digits');
 
                         const res = await fetch('/api/v1/customers', {
                           method: 'POST',

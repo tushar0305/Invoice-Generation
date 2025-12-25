@@ -82,8 +82,8 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
     };
 
     return (
-        <Card className="border-2 shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+        <Card className="border-0 shadow-none md:border-2 md:shadow-sm bg-transparent md:bg-card">
+            <CardHeader className="px-0 pt-0 md:px-6 md:pt-6 pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg">
                     <FileText className="h-5 w-5 text-primary" /> Items
                 </CardTitle>
@@ -95,6 +95,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                         if (appendGuard.current) return;
                         appendGuard.current = true;
                         setIsAdding(true);
+                        const currentRate = form.getValues('currentRate') || 0;
                         append({
                             id: crypto.randomUUID(),
                             description: '',
@@ -104,7 +105,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                             stoneWeight: 0,
                             stoneAmount: 0,
                             wastagePercent: 0,
-                            rate: 0,
+                            rate: currentRate,
                             makingRate: 0,
                             making: 0,
                             hsnCode: '',
@@ -119,31 +120,38 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                     <Plus className="h-4 w-4 mr-1" /> Add Item
                 </Button>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="px-0 md:px-6 space-y-4">
                 {fields.length === 0 && (
                     <div className="text-center py-8 border-2 border-dashed rounded-lg text-muted-foreground">
                         No items added. Click "Add Item" to start.
                     </div>
                 )}
                 {fields.map((field, index) => (
-                    <div key={field.id} className="p-4 border rounded-lg bg-card">
-                        <div className="flex justify-end mb-2">
+                    <div key={field.id} className="p-3 border rounded-xl bg-card shadow-sm space-y-3">
+                        {/* Header: Item Number & Delete */}
+                        <div className="flex items-center justify-between border-b pb-2">
+                            <div className="flex items-center gap-2">
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                                    {index + 1}
+                                </span>
+                                <span className="text-sm font-medium text-muted-foreground">Item Details</span>
+                            </div>
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="text-destructive"
+                                className="h-8 w-8 text-destructive hover:bg-destructive/10"
                                 onClick={() => remove(index)}
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
                         </div>
 
-                        <div className="mb-4">
-                            <FormLabel className="text-xs uppercase text-muted-foreground mb-1.5 block">Select from Inventory (Optional)</FormLabel>
+                        {/* Inventory Selection */}
+                        <div>
                             <Select onValueChange={(val) => handleInventorySelect(index, val)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Choose an inventory item..." />
+                                <SelectTrigger className="h-9 text-sm bg-muted/30 border-dashed">
+                                    <SelectValue placeholder="Select from Inventory (Optional)" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {inventoryItems.map((item) => {
@@ -172,32 +180,37 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                             </Select>
                         </div>
 
-                        {/* Row 1: Description, Category, Purity, HSN */}
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
-                            <div className="md:col-span-4">
+                        {/* Main Details Grid */}
+                        <div className="grid grid-cols-12 gap-3">
+                            {/* Description - Full Width */}
+                            <div className="col-span-12">
                                 <FormField
                                     control={form.control}
                                     name={`items.${index}.description`}
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs uppercase text-muted-foreground">Description</FormLabel>
-                                            <FormControl><Input {...field} placeholder="Item Name" /></FormControl>
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Description</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} placeholder="e.g. Gold Ring" className="h-9 font-medium" />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </div>
-                            <div className="md:col-span-3">
+
+                            {/* Category & Purity - Half Width */}
+                            <div className="col-span-6">
                                 <FormField
                                     control={form.control}
                                     name={`items.${index}.category`}
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs uppercase text-muted-foreground">Category</FormLabel>
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Category</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ''}>
                                                 <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select category" />
+                                                    <SelectTrigger className="h-9">
+                                                        <SelectValue placeholder="Select" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
@@ -211,27 +224,16 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                     )}
                                 />
                             </div>
-                            <div className="md:col-span-2">
+                            <div className="col-span-6">
                                 <FormField
                                     control={form.control}
                                     name={`items.${index}.purity`}
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs uppercase text-muted-foreground">Purity</FormLabel>
-                                            <FormControl><Input {...field} placeholder="22K" /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="md:col-span-3">
-                                <FormField
-                                    control={form.control}
-                                    name={`items.${index}.hsnCode`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs uppercase text-muted-foreground">HSN Code</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="HSN" /></FormControl>
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Purity</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} placeholder="22K" className="h-9" />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -239,120 +241,143 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                             </div>
                         </div>
 
-                        {/* Row 2: Weights & Calculations */}
-                        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-                            {/* Gross Weight */}
-                            <FormField
-                                control={form.control}
-                                name={`items.${index}.grossWeight`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs uppercase text-muted-foreground">Gross (g)</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                {...field}
-                                                value={field.value ?? ''}
-                                                onChange={(e) => handleGrossChange(index, e.target.value)}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        {/* Weights Section - Card Style */}
+                        <div className="bg-muted/30 rounded-lg p-3 space-y-3 border border-border/50">
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="h-4 w-1 bg-primary rounded-full"></div>
+                                <span className="text-xs font-bold text-foreground">Weight Details</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <FormField
+                                    control={form.control}
+                                    name={`items.${index}.grossWeight`}
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Gross Wt (g)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    {...field}
+                                                    value={field.value === 0 ? '' : field.value}
+                                                    onChange={(e) => handleGrossChange(index, e.target.value)}
+                                                    className="h-9 bg-background"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                            {/* Stone Weight */}
-                            <FormField
-                                control={form.control}
-                                name={`items.${index}.stoneWeight`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs uppercase text-muted-foreground">Stone (g)</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                {...field}
-                                                value={field.value ?? ''}
-                                                onChange={(e) => handleStoneChange(index, e.target.value)}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                <FormField
+                                    control={form.control}
+                                    name={`items.${index}.stoneWeight`}
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Stone Wt (g)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    {...field}
+                                                    value={field.value === 0 ? '' : field.value}
+                                                    onChange={(e) => handleStoneChange(index, e.target.value)}
+                                                    className="h-9 bg-background"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
-                            {/* Net Weight (Editable) */}
                             <FormField
                                 control={form.control}
                                 name={`items.${index}.netWeight`}
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs uppercase text-muted-foreground font-bold text-primary">Net (g)</FormLabel>
+                                    <FormItem className="space-y-1">
+                                        <FormLabel className="text-[10px] uppercase tracking-wider text-primary font-bold">Net Weight (g)</FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
+                                                inputMode="decimal"
                                                 value={field.value ?? ''}
                                                 onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                                className="h-10 text-lg font-bold border-primary/30 bg-primary/5 text-primary"
                                             />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
+                        </div>
 
-                            {/* Rate */}
-                            <FormField
-                                control={form.control}
-                                name={`items.${index}.rate`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs uppercase text-muted-foreground">Rate (₹/g)</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                {...field}
-                                                value={field.value ?? ''}
-                                                onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        {/* Pricing Section - Card Style */}
+                        <div className="bg-muted/30 rounded-lg p-3 space-y-3 border border-border/50">
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="h-4 w-1 bg-emerald-500 rounded-full"></div>
+                                <span className="text-xs font-bold text-foreground">Pricing</span>
+                            </div>
 
-                            {/* Making Rate */}
-                            <FormField
-                                control={form.control}
-                                name={`items.${index}.makingRate`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs uppercase text-muted-foreground">Making (₹/g)</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                {...field}
-                                                value={field.value ?? ''}
-                                                onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            <div className="grid grid-cols-2 gap-3">
+                                <FormField
+                                    control={form.control}
+                                    name={`items.${index}.rate`}
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Rate (₹/g)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    inputMode="numeric"
+                                                    {...field}
+                                                    value={field.value === 0 ? '' : field.value}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                                    className="h-9 bg-background"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                            {/* Stone Amount */}
+                                <FormField
+                                    control={form.control}
+                                    name={`items.${index}.makingRate`}
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Making (₹/g)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    inputMode="numeric"
+                                                    {...field}
+                                                    value={field.value === 0 ? '' : field.value}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                                    className="h-9 bg-background"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
                             <FormField
                                 control={form.control}
                                 name={`items.${index}.stoneAmount`}
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs uppercase text-muted-foreground">Stone Val (₹)</FormLabel>
+                                    <FormItem className="space-y-1">
+                                        <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Stone Value (₹)</FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
+                                                inputMode="numeric"
                                                 {...field}
                                                 value={field.value ?? ''}
                                                 onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                                className="h-9 bg-background"
                                             />
                                         </FormControl>
                                         <FormMessage />

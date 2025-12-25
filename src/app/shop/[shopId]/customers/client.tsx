@@ -187,23 +187,24 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
             {/* Top Customer Card - Above sticky header */}
             {topCustomer && (
                 <FadeIn>
-                    <Card className="border-2 border-gray-300 dark:border-white/20 shadow-lg rounded-2xl mb-3">
-                        <CardContent className="p-4 md:p-6 flex items-center justify-between">
-                            <div className="flex items-center gap-3 md:gap-4">
-                                <div className="p-2 md:p-3 bg-primary/10 rounded-full">
-                                    <Trophy className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+                    <Card className="border-none shadow-xl shadow-primary/5 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-900/50 rounded-3xl mb-6 overflow-hidden relative">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                        <CardContent className="p-6 md:p-8 flex items-center justify-between relative z-10">
+                            <div className="flex items-center gap-4 md:gap-6">
+                                <div className="p-3 md:p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl shadow-inner">
+                                    <Trophy className="h-8 w-8 md:h-10 md:w-10 text-primary" />
                                 </div>
                                 <div>
-                                    <p className="text-xs md:text-sm font-medium text-muted-foreground">Top Customer</p>
-                                    <h3 className="text-lg md:text-2xl font-bold text-foreground truncate max-w-[200px] md:max-w-[300px]">{topCustomer[0]}</h3>
-                                    <p className="text-xs md:text-sm text-primary font-medium">
-                                        {formatCurrency(topCustomer[1].totalPurchase)} Lifetime Spend
+                                    <p className="text-xs md:text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">Top Customer</p>
+                                    <h3 className="text-xl md:text-3xl font-bold text-foreground truncate max-w-[200px] md:max-w-[400px]">{topCustomer[0]}</h3>
+                                    <p className="text-sm md:text-base text-primary font-semibold mt-1">
+                                        {formatCurrency(topCustomer[1].totalPurchase)} <span className="text-muted-foreground font-normal">Lifetime Spend</span>
                                     </p>
                                 </div>
                             </div>
                             <div className="hidden sm:block text-right">
-                                <p className="text-sm text-muted-foreground">Total Invoices</p>
-                                <p className="text-xl font-bold">{topCustomer[1].invoiceCount}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Total Invoices</p>
+                                <p className="text-3xl font-bold text-foreground">{topCustomer[1].invoiceCount}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -211,102 +212,26 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
             )}
 
             {/* Sticky Header Section */}
-            <div className="sticky top-0 z-20 bg-background pb-3 space-y-3 -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl pb-4 pt-2 space-y-4 -mx-4 px-4 md:mx-0 md:px-0 transition-all duration-200">
                 {/* Search Bar */}
-                <div className="flex items-center gap-2 pt-0">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+                <div className="flex items-center gap-3">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10 pointer-events-none" />
                         <Input
                             placeholder="Search customers by name..."
-                            className="pl-9 h-11 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 focus:border-primary rounded-xl backdrop-blur-sm transition-all shadow-sm w-full"
+                            className="pl-11 h-12 bg-card border-none shadow-lg shadow-gray-200/50 dark:shadow-black/20 focus:ring-2 focus:ring-primary/20 rounded-full transition-all w-full"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                    <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="flex-1 sm:flex-initial h-11 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 rounded-xl font-medium">
-                                <Plus className="h-4 w-4" />
-                                <span>New Customer</span>
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Add New Customer</DialogTitle>
-                                <DialogDescription>
-                                    Create a new customer profile.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">Name *</Label>
-                                    <Input
-                                        id="name"
-                                        value={newCustomer.name}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                                        placeholder="Customer Name"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">Phone</Label>
-                                    <Input
-                                        id="phone"
-                                        value={newCustomer.phone}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                                        placeholder="Phone Number"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        value={newCustomer.email}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                                        placeholder="Email Address"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="address">Address</Label>
-                                    <Input
-                                        id="address"
-                                        value={newCustomer.address}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                                        placeholder="Address"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="gst">GST Number</Label>
-                                    <Input
-                                        id="gst"
-                                        value={newCustomer.gstNumber}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, gstNumber: e.target.value })}
-                                        placeholder="GSTIN"
-                                    />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsAddCustomerOpen(false)}>
-                                    Cancel
-                                </Button>
-                                <Button onClick={handleAddCustomer} disabled={isPending}>
-                                    {isPending ? 'Creating...' : 'Create Customer'}
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-
+                    
                     <ExportDialog
                         onExport={handleExport}
                         filename={`customers-${new Date().toISOString().split('T')[0]}`}
                         trigger={
-                            <Button variant="outline" className="flex-1 sm:flex-initial h-11 gap-2 bg-white dark:bg-white/5 border-2 border-gray-300 dark:border-white/20 hover:bg-gray-50 dark:hover:bg-white/10 hover:border-primary rounded-xl">
+                            <Button variant="outline" className="h-12 px-6 gap-2 bg-card border-none shadow-lg shadow-gray-200/50 dark:shadow-black/20 hover:bg-primary hover:text-primary-foreground rounded-full transition-all">
                                 <Download className="h-4 w-4" />
-                                <span>Export</span>
+                                <span className="hidden sm:inline">Export</span>
                             </Button>
                         }
                     />
@@ -314,19 +239,19 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
             </div>
 
             {/* Customers Table/List - Scrollable Container */}
-            <div className="space-y-3">
+            <div className="space-y-4">
                 {/* Desktop Table View */}
                 <div className="hidden md:block">
-                    <Card className="border-2 border-gray-300 dark:border-white/20 shadow-lg rounded-2xl overflow-hidden">
+                    <Card className="border-none shadow-xl shadow-gray-200/50 dark:shadow-black/20 rounded-3xl overflow-hidden bg-card">
                         <CardContent className="p-0">
                             <div className="overflow-x-auto">
-                                <Table className="table-modern">
-                                    <TableHeader className="bg-muted/50 border-b-2 border-gray-300 dark:border-white/20 sticky top-0 z-10">
-                                        <TableRow className="hover:bg-transparent">
-                                            <TableHead className="w-[300px] text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Customer</TableHead>
-                                            <TableHead className="text-center text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Invoices</TableHead>
-                                            <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Last Purchase</TableHead>
-                                            <TableHead className="text-right text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Total Spent</TableHead>
+                                <Table>
+                                    <TableHeader className="bg-muted/30">
+                                        <TableRow className="hover:bg-transparent border-b border-border/50">
+                                            <TableHead className="w-[300px] text-muted-foreground font-bold text-xs uppercase tracking-wider h-14 pl-6">Customer</TableHead>
+                                            <TableHead className="text-center text-muted-foreground font-bold text-xs uppercase tracking-wider h-14">Invoices</TableHead>
+                                            <TableHead className="text-muted-foreground font-bold text-xs uppercase tracking-wider h-14">Last Purchase</TableHead>
+                                            <TableHead className="text-right text-muted-foreground font-bold text-xs uppercase tracking-wider h-14 pr-6">Total Spent</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -335,34 +260,34 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                                 .map(([name, stats]) => (
                                                     <TableRow
                                                         key={name}
-                                                        className="hover:bg-muted/50 cursor-pointer transition-colors"
+                                                        className="hover:bg-muted/30 cursor-pointer transition-colors border-b border-border/50 last:border-0"
                                                         onClick={() => {
                                                             router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(name)}`);
                                                         }}
                                                     >
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-3">
-                                                                <Avatar className="h-10 w-10 border border-border">
-                                                                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                                                        <TableCell className="pl-6 py-4">
+                                                            <div className="flex items-center gap-4">
+                                                                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                                                                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm">
                                                                         {getInitials(name)}
                                                                     </AvatarFallback>
                                                                 </Avatar>
-                                                                <span className="font-medium truncate max-w-[180px] md:max-w-[250px]">{name}</span>
+                                                                <span className="font-semibold text-foreground truncate max-w-[180px] md:max-w-[250px]">{name}</span>
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <Badge variant="secondary" className="font-normal">
+                                                        <TableCell className="text-center py-4">
+                                                            <Badge variant="secondary" className="font-medium bg-secondary/50 hover:bg-secondary/70 transition-colors px-3 py-1 rounded-full">
                                                                 {stats.invoiceCount}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="text-muted-foreground">
+                                                        <TableCell className="text-muted-foreground font-medium py-4">
                                                             {new Date(stats.lastPurchase).toLocaleDateString('en-IN', {
                                                                 day: 'numeric',
                                                                 month: 'short',
                                                                 year: 'numeric'
                                                             })}
                                                         </TableCell>
-                                                        <TableCell className="text-right font-bold text-primary">
+                                                        <TableCell className="text-right font-bold text-foreground pr-6 py-4">
                                                             {formatCurrency(stats.totalPurchase)}
                                                         </TableCell>
                                                     </TableRow>
@@ -393,8 +318,8 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
 
                             {/* Pagination Controls for Desktop */}
                             {filteredCustomers.length > itemsPerPage && (
-                                <div className="flex items-center justify-between border-t-2 border-gray-300 dark:border-white/20 pt-4 px-4 pb-4">
-                                    <div className="text-sm text-muted-foreground">
+                                <div className="flex items-center justify-between border-t border-border/50 p-4 bg-muted/10">
+                                    <div className="text-sm text-muted-foreground font-medium">
                                         Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} customers
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -403,6 +328,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                             size="sm"
                                             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                             disabled={currentPage === 1}
+                                            className="rounded-full px-4 border-none shadow-sm bg-background hover:bg-muted"
                                         >
                                             Previous
                                         </Button>
@@ -411,6 +337,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                             size="sm"
                                             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                             disabled={currentPage === totalPages}
+                                            className="rounded-full px-4 border-none shadow-sm bg-background hover:bg-muted"
                                         >
                                             Next
                                         </Button>
@@ -431,13 +358,13 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                     onClick={() => {
                                         router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(name)}`);
                                     }}
-                                    className="flex flex-col gap-3 p-5 border-2 border-gray-300 dark:border-white/20 rounded-2xl bg-card shadow-lg active:shadow-xl active:scale-[0.98] transition-all touch-manipulation"
+                                    className="flex flex-col gap-3 p-5 border-none shadow-lg shadow-gray-200/50 dark:shadow-black/20 rounded-2xl bg-card active:scale-[0.98] transition-all touch-manipulation"
                                     style={{ WebkitTapHighlightColor: 'transparent' }}
                                 >
                                     <div className="flex justify-between items-start w-full">
                                         <div className="flex-1 min-w-0 pr-4">
                                             <h3 className="font-bold text-lg text-foreground truncate leading-tight">{name}</h3>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
+                                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mt-2">
                                                 <Calendar className="h-3.5 w-3.5" />
                                                 <span>
                                                     {new Date(stats.lastPurchase).toLocaleDateString('en-IN', {
@@ -450,8 +377,8 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                                         </div>
                                         <div className="text-right shrink-0">
                                             <p className="font-bold text-lg text-primary tracking-tight">{formatCurrency(stats.totalPurchase)}</p>
-                                            <div className="flex justify-end mt-1">
-                                                <Badge variant="secondary" className="text-[10px] h-5 px-2 font-medium bg-secondary/50 text-secondary-foreground">
+                                            <div className="flex justify-end mt-2">
+                                                <Badge variant="secondary" className="text-[10px] h-6 px-2.5 font-semibold bg-secondary/50 text-secondary-foreground rounded-full">
                                                     {stats.invoiceCount} Orders
                                                 </Badge>
                                             </div>

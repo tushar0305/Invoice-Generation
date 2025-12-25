@@ -90,11 +90,18 @@ export const POST = withAuth(async (
         );
     }  // 4. Log audit trail
     const auditLogger = createAuditLogger(supabase, user.id, input.shopId);
-    await auditLogger.logCreate('customer', (data?.customer_id ?? data?.id), {
-        name: input.name,
-        phone: input.phone,
-        role,
-    });
+    
+    // Ensure we have an ID before logging
+    const customerId = data?.customer_id ?? data?.id;
+    if (customerId) {
+        await auditLogger.logCreate('customer', customerId, {
+            name: input.name,
+            phone: input.phone,
+            role,
+        });
+    } else {
+        console.warn('[Create Customer] Audit log skipped: No customer ID returned', data);
+    }
 
     // 5. Return success response
     return successResponse({

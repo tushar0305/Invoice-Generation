@@ -150,43 +150,55 @@ export function CustomerDetailsClient() {
                     <CardHeader>
                         <CardTitle className="text-lg">Overview</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <CreditCard className="h-4 w-4" />
-                                <span>Total Spent</span>
-                            </div>
-                            <span className="font-bold text-lg text-amber-600 dark:text-gold-400">
-                                {isLoading ? <Skeleton className="h-6 w-20" /> : formatCurrency(stats.totalSpent)}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <FileText className="h-4 w-4" />
-                                <span>Total Invoices</span>
-                            </div>
-                            <span className="font-bold text-lg">
-                                {isLoading ? <Skeleton className="h-6 w-10" /> : stats.invoiceCount}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Calendar className="h-4 w-4" />
-                                <span>Last Purchase</span>
-                            </div>
-                            <span className="font-medium">
-                                {isLoading ? <Skeleton className="h-6 w-24" /> : stats.lastPurchase ? format(new Date(stats.lastPurchase), 'dd MMM, yyyy') : 'N/A'}
-                            </span>
-                        </div>
-                        {customerData && (
-                            <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                    <CreditCard className="h-4 w-4 text-purple-500" />
-                                    <span>Loyalty Points</span>
+                    <CardContent className="grid gap-4">
+                        <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                                    <CreditCard className="h-5 w-5" />
                                 </div>
-                                <span className="font-bold text-lg text-purple-600">
-                                    {customerData.loyalty_points || 0}
-                                </span>
+                                <div>
+                                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Spent</p>
+                                    <div className="font-bold text-xl text-primary">
+                                        {isLoading ? <Skeleton className="h-6 w-24" /> : formatCurrency(stats.totalSpent)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
+                                <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                                    <FileText className="h-4 w-4" />
+                                    <span className="text-xs font-medium uppercase">Invoices</span>
+                                </div>
+                                <div className="font-bold text-2xl">
+                                    {isLoading ? <Skeleton className="h-8 w-12" /> : stats.invoiceCount}
+                                </div>
+                            </div>
+                            <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
+                                <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                                    <Calendar className="h-4 w-4" />
+                                    <span className="text-xs font-medium uppercase">Last Visit</span>
+                                </div>
+                                <div className="font-medium text-sm">
+                                    {isLoading ? <Skeleton className="h-6 w-20" /> : stats.lastPurchase ? format(new Date(stats.lastPurchase), 'dd MMM, yy') : 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {customerData && (
+                            <div className="p-4 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-900/20 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400">
+                                        <CreditCard className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-purple-600/80 dark:text-purple-400/80 font-medium uppercase tracking-wider">Loyalty Points</p>
+                                        <div className="font-bold text-xl text-purple-700 dark:text-purple-300">
+                                            {customerData.loyalty_points || 0}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </CardContent>

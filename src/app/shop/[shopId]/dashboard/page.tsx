@@ -78,6 +78,20 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   const lastMonthRevenue = stats.totalPaidLastMonth;
   const changeAmount = stats.totalPaidThisMonth - lastMonthRevenue;
 
+  // Robust MoM Calculation
+  let calculatedMoM = 0;
+  if (lastMonthRevenue > 0) {
+    calculatedMoM = ((stats.totalPaidThisMonth - lastMonthRevenue) / lastMonthRevenue) * 100;
+  } else if (stats.totalPaidThisMonth > 0) {
+    // No sales last month, but sales this month.
+    // If last month was 0, growth is technically infinite.
+    // We can show 100% to indicate "New Growth" or just show the raw value.
+    // Let's stick to 100% as a safe indicator for "Up from zero".
+    calculatedMoM = 100;
+  } else {
+    calculatedMoM = 0;
+  }
+
   // Calculate pending payments (no overdue logic)
   const totalDue = stats.dueInvoices.reduce((sum: number, inv: any) => sum + Number(inv.grand_total), 0);
 
@@ -116,7 +130,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
             <FinelessHero
               title="Total Balance"
               value={stats.totalPaidThisMonth}
-              change={stats.revenueMoM}
+              change={calculatedMoM}
               changeAmount={changeAmount}
               sparklineData={monthSparkline}
               viewMoreHref={`/shop/${shopId}/invoices`}

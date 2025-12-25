@@ -36,7 +36,7 @@ import { updateInvoiceAction, createInvoiceAction } from '@/app/actions/invoice-
 import { CompactTotalsSummary } from '@/components/invoice/CompactTotalsSummary';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/supabase/client';
-import type { Invoice } from '@/lib/definitions';
+import type { Invoice, InvoiceItem } from '@/lib/definitions';
 import type { LoyaltySettings } from '@/lib/loyalty-types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { MotionWrapper } from '@/components/ui/motion-wrapper';
@@ -71,11 +71,19 @@ const invoiceItemSchema = z.object({
   wastagePercent: z.coerce.number().min(0).default(0),
 
   // Value Components
-  rate: z.coerce.number().min(0, 'Must be positive'),
+  rate: z.coerce.number().min(1, 'Rate is required'),
   makingRate: z.coerce.number().min(0).default(0), // Per gram
   making: z.number().default(0), // Legacy (calculated or fixed total)
   stoneAmount: z.coerce.number().min(0).default(0),
   tagId: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.netWeight > data.grossWeight) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Net weight cannot exceed gross weight",
+      path: ["netWeight"],
+    });
+  }
 });
 
 const invoiceSchema = z.object({
@@ -83,7 +91,9 @@ const invoiceSchema = z.object({
   customerAddress: z.string().optional(),
   customerState: z.string().optional(),
   customerPincode: z.string().optional(),
-  customerPhone: z.string().optional(),
+  customerPhone: z.string()
+    .min(1, "Phone number is required")
+    .regex(/^[6-9]\d{9}$/, "Invalid phone number (10 digits required)"),
   customerEmail: z.preprocess(
     (val) => (val === null || val === undefined) ? '' : String(val),
     z.string().email().or(z.literal('')).optional()
@@ -101,7 +111,7 @@ const invoiceSchema = z.object({
 type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 interface InvoiceFormProps {
-  invoice?: Invoice & { items?: any[] };
+  invoice?: Invoice & { items?: InvoiceItem[] };
 }
 
 // --- 2. Main Component ---
@@ -120,6 +130,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const [showMobileDetails, setShowMobileDetails] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false); // UX-001: Confirmation modal
+  const [showClearConfirmation, setShowClearConfirmation] = useState(false);
 
 
 
@@ -216,6 +227,16 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     const loadData = async () => {
       // Load Shop Settings
       setSettings({
+        shopName: activeShop.shopName,
+        address: activeShop.address,
+        state: activeShop.state,
+        pincode: activeShop.pincode,
+        phoneNumber: activeShop.phoneNumber,
+        email: activeShop.email,
+        gstNumber: activeShop.gstNumber,
+        panNumber: activeShop.panNumber,
+        logoUrl: activeShop.logoUrl,
+        templateId: activeShop.templateId,
         sgstRate: activeShop.sgstRate || 1.5,
         cgstRate: activeShop.cgstRate || 1.5,
       });
@@ -269,6 +290,25 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     currentRate: watchedCurrentRate
   });
 
+  // Calculate Max Redeemable Points based on Invoice Value
+  const maxRedeemablePoints = useMemo(() => {
+    if (!loyaltySettings?.redemption_conversion_rate) return 0;
+    
+    // Max value we can cover with points (Grand Total Before Discount - Cash Discount)
+    // We need to recalculate total before discount here to be accurate
+    const taxableAmount = totals.subtotal;
+    const taxAmount = taxableAmount * ((settings?.sgstRate || 1.5) + (settings?.cgstRate || 1.5)) / 100;
+    const totalBeforeDiscount = taxableAmount + taxAmount;
+    
+    const maxRedeemableValue = Math.max(0, totalBeforeDiscount - (Number(watchedDiscount) || 0));
+    
+    // Convert value to points
+    const maxPointsByValue = Math.floor(maxRedeemableValue / loyaltySettings.redemption_conversion_rate);
+    
+    // Return lesser of (Customer Balance, Max Allowed by Invoice)
+    return Math.min(customerPoints, maxPointsByValue);
+  }, [totals.subtotal, watchedDiscount, loyaltySettings, customerPoints, settings?.sgstRate, settings?.cgstRate]);
+
   // --- 5.5. QR Scanner Handler ---
   const handleItemsFromQR = (items: any[]) => {
     items.forEach(item => {
@@ -284,7 +324,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         wastagePercent: item.wastage_percent || 0,
         makingRate: item.making_charge_value || 0,
         making: 0,
-        rate: 0,
+        rate: watchedCurrentRate > 0 ? watchedCurrentRate : 0,
         stoneAmount: item.stone_value || 0,
         stockId: item.id,
         tagId: item.tag_id,
@@ -317,6 +357,20 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const onSubmit = async (data: InvoiceFormValues) => {
     if (!activeShop?.id || !user?.uid) {
       toast({ title: 'Error', description: 'Session missing', variant: 'destructive' });
+      return;
+    }
+
+    // Client-side validation for loyalty points
+    if (data.redeemPoints && data.pointsToRedeem > maxRedeemablePoints) {
+      form.setError('pointsToRedeem', {
+        type: 'manual',
+        message: `Cannot redeem more than ${maxRedeemablePoints} points`
+      });
+      toast({
+        title: 'Validation Error',
+        description: `You can only redeem up to ${maxRedeemablePoints} points for this invoice.`,
+        variant: 'destructive'
+      });
       return;
     }
 
@@ -386,11 +440,21 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     <MotionWrapper className="min-h-screen flex flex-col lg:block">
 
       {/* 1. Fixed Header (Mobile) / Regular Header (Desktop) */}
-      <div className="flex-none p-4 py-3 bg-background border-b z-20 sticky top-0 lg:static lg:p-0 lg:border-none lg:mb-4 lg:bg-transparent">
+      <div className="flex-none p-4 py-3 bg-background border-b z-50 sticky top-0 lg:static lg:p-0 lg:border-none lg:mb-4 lg:bg-transparent">
         <div className="container mx-auto px-4 lg:px-0 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 -ml-2 pl-0 hover:bg-transparent lg:hover:bg-accent lg:pl-4">
-            <ArrowLeft className="h-4 w-4" /> Back
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 -ml-2 pl-0 hover:bg-transparent lg:hover:bg-accent lg:pl-4">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowClearConfirmation(true)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              Clear
+            </Button>
+          </div>
           <Button variant="outline" size="sm" onClick={() => setShowPreview(true)} className="gap-2 lg:hidden">
             <Eye className="h-4 w-4" /> Preview
           </Button>
@@ -410,7 +474,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
               >
 
                 {/* Scrollable Content Area */}
-                <div className="px-4 py-4 lg:p-0 space-y-4 lg:space-y-4">
+                <div className="px-2 py-3 lg:p-0 space-y-3 lg:space-y-4">
 
                   {/* 1. Customer Details */}
                   <CustomerDetailsCard
@@ -517,35 +581,23 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                         <QrCode className="h-4 w-4" />
                         Scan QR Codes
                       </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="w-full sm:w-auto"
-                        onClick={() => {
-                          const items = form.getValues('items') || [];
-                          const rate = Number(form.getValues('currentRate')) || 0;
-                          items.forEach((_: any, idx: number) => form.setValue(`items.${idx}.rate`, rate));
-                        }}
-                      >
-                        Apply Current Rate to All Items
-                      </Button>
                     </div>
                     <InvoiceItemsTable form={form} shopId={activeShop?.id} />
                   </div>
 
                   {/* 4. Loyalty Section */}
                   {loyaltySettings && watchedCustomerPhone && watchedCustomerPhone.length >= 10 && (
-                    <Card className="border-2 border-purple-500/20 bg-purple-50/50">
+                    <Card className="border-2 shadow-sm relative z-10">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-purple-700 flex items-center gap-2">
-                          <Users className="h-4 w-4" /> Loyalty Program
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Users className="h-5 w-5 text-primary" /> Loyalty Program
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="flex justify-between items-center mb-4">
+                        <div className="flex justify-between items-center mb-4 p-3 bg-muted/50 rounded-lg border">
                           <div>
                             <p className="text-sm text-muted-foreground">Available Points</p>
-                            <p className="text-2xl font-bold text-purple-700">{customerPoints}</p>
+                            <p className="text-2xl font-bold text-primary">{customerPoints}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-sm text-muted-foreground">Points to Earn</p>
@@ -559,10 +611,21 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                           control={form.control}
                           name="redeemPoints"
                           render={({ field }) => (
-                            <FormItem className="flex items-center justify-between border p-3 rounded-lg bg-background">
-                              <FormLabel className="cursor-pointer">Redeem Points</FormLabel>
+                            <FormItem className="flex items-center justify-between border p-3 rounded-lg bg-card shadow-sm">
+                              <FormLabel className="cursor-pointer font-medium">Redeem Points</FormLabel>
                               <FormControl>
-                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={(val) => {
+                                    // Wrap in transition to avoid flushSync errors with Radix UI
+                                    startTransition(() => {
+                                      field.onChange(val);
+                                      // Reset points if disabled
+                                      if (!val) form.setValue('pointsToRedeem', 0);
+                                    });
+                                  }} 
+                                  disabled={customerPoints <= 0 || maxRedeemablePoints <= 0}
+                                />
                               </FormControl>
                             </FormItem>
                           )}
@@ -575,14 +638,29 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                               name="pointsToRedeem"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Points to Redeem (Max: {customerPoints})</FormLabel>
+                                  <FormLabel>Points to Redeem (Max: {maxRedeemablePoints})</FormLabel>
                                   <div className="flex gap-2">
                                     <FormControl>
                                       <Input
                                         type="number"
-                                        max={customerPoints}
+                                        max={maxRedeemablePoints}
                                         {...field}
-                                        onChange={e => field.onChange(Number(e.target.value))}
+                                        value={field.value === 0 ? '' : (field.value ?? '')}
+                                        onChange={e => {
+                                          const val = Number(e.target.value);
+                                          if (val > maxRedeemablePoints) {
+                                            form.setError('pointsToRedeem', {
+                                              type: 'manual',
+                                              message: `Max points: ${maxRedeemablePoints}`
+                                            });
+                                          } else {
+                                            form.clearErrors('pointsToRedeem');
+                                          }
+                                          field.onChange(val);
+                                        }}
+                                        className={cn(
+                                          form.formState.errors.pointsToRedeem && "border-destructive focus-visible:ring-destructive"
+                                        )}
                                       />
                                     </FormControl>
                                     <div className="flex items-center px-3 bg-muted rounded-md min-w-[100px] justify-center font-bold text-emerald-600">
@@ -609,7 +687,17 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
                     {/* Expandable Details */}
                     {showMobileDetails && (
-                      <div className="space-y-1 text-sm pb-2 animate-in slide-in-from-bottom-2">
+                      <div className="space-y-3 text-sm pb-2 animate-in slide-in-from-bottom-2">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-muted-foreground whitespace-nowrap">Discount (₹)</span>
+                          <Input
+                            type="number"
+                            value={watchedDiscount === 0 ? '' : watchedDiscount}
+                            onChange={(e) => form.setValue('discount', Number(e.target.value))}
+                            className="h-8 w-24 text-right"
+                            placeholder="0"
+                          />
+                        </div>
                         <div className="flex justify-between text-muted-foreground">
                           <span>Subtotal</span>
                           <span>{formatCurrency(totals.subtotal)}</span>
@@ -738,6 +826,39 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             <AlertDialogCancel>Review Again</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmSubmit}>
               Confirm & Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Clear Form Confirmation Modal */}
+      <AlertDialog open={showClearConfirmation} onOpenChange={setShowClearConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Invoice Form?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to clear the form? This will discard all items and customer details. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                form.reset({
+                  customerName: '',
+                  customerPhone: '',
+                  items: [],
+                  discount: 0,
+                  status: 'paid',
+                  invoiceDate: new Date(),
+                });
+                if (DRAFT_KEY) localStorage.removeItem(DRAFT_KEY);
+                toast({ title: 'Form Cleared', description: 'Started a new invoice.' });
+                setShowClearConfirmation(false);
+              }}
+            >
+              Clear Form
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useActiveShop } from '@/hooks/use-active-shop';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import { InventoryBulkEntry } from '@/components/inventory/inventory-bulk-entry'
 import { useMediaQuery } from '@/hooks/use-media-query';
 
 const inventoryItemSchema = z.object({
-    name: z.string().trim().optional(),  // Optional - auto-generated from category + tag
+    name: z.string().trim().min(1, 'Item name is required'),
     metal_type: z.enum(['GOLD', 'SILVER', 'DIAMOND', 'PLATINUM']),
     purity: z.string().min(1, 'Purity is required'),
     category: z.string().optional(),
@@ -40,6 +40,35 @@ const inventoryItemSchema = z.object({
     making_charge_value: z.coerce.number().min(0).default(0),
     stone_value: z.coerce.number().min(0).default(0),
     hsn_code: z.string().optional(),
+}).superRefine((data, ctx) => {
+    // 1. Net Weight <= Gross Weight
+    if (data.net_weight > data.gross_weight) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Net weight cannot be greater than gross weight",
+            path: ["net_weight"],
+        });
+    }
+
+    // 2. Gross - Stone ≈ Net
+    const calculatedNet = data.gross_weight - data.stone_weight;
+    if (Math.abs(calculatedNet - data.net_weight) > 0.01) {
+         ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Net weight must equal Gross weight - Stone weight",
+            path: ["net_weight"],
+        });
+    }
+
+    // 3. Validate purity against metal_type
+    const validPurities = PURITY_OPTIONS[data.metal_type as MetalType] || [];
+    if (!validPurities.includes(data.purity)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Invalid purity for ${data.metal_type}`,
+            path: ["purity"],
+        });
+    }
 });
 
 type FormValues = z.infer<typeof inventoryItemSchema>;
@@ -73,6 +102,15 @@ export default function NewInventoryItemPage() {
             hsn_code: '',
         },
     });
+
+    // Auto-calculate Net Weight
+    const grossWeight = form.watch('gross_weight');
+    const stoneWeight = form.watch('stone_weight');
+
+    useEffect(() => {
+        const net = (grossWeight || 0) - (stoneWeight || 0);
+        form.setValue('net_weight', parseFloat(net.toFixed(3)));
+    }, [grossWeight, stoneWeight, form]);
 
     const onSubmit = (data: FormValues) => {
         if (!activeShop?.id) {
@@ -154,11 +192,10 @@ export default function NewInventoryItemPage() {
                                     name="name"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Item Name (Optional)</FormLabel>
+                                            <FormLabel>Item Name *</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="Auto-generated if left empty" {...field} className="h-12" />
+                                                <Input placeholder="Enter item name" {...field} className="h-12" />
                                             </FormControl>
-                                            <p className="text-xs text-muted-foreground">Leave empty to auto-generate from category and tag</p>
                                             <FormMessage />
                                         </FormItem>
                                     )}

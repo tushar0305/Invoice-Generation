@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabase/client';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createLoanAction } from '@/actions/loan-actions';
 import {
     User,
     Gem,
@@ -48,6 +51,16 @@ import { CustomerFTSCombobox } from '@/components/search/customer-fts-combobox';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { LoanSummary } from './loan-summary';
@@ -69,25 +82,75 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
     // State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showMobileDetails, setShowMobileDetails] = useState(false);
+    const [showClearConfirmation, setShowClearConfirmation] = useState(false);
 
     // Form Data
-    const [formData, setFormData] = useState<LoanWizardValues>({
-        customer: {
-            name: '',
-            phone: '',
-            isNew: false
-        },
-        collateral: [],
-        terms: {
-            loan_number: `LN-${Date.now().toString().slice(-6)}`,
-            start_date: new Date(),
-            principal_amount: 0,
-            interest_rate: 24, // Default 24% (2% monthly)
-            repayment_type: 'interest_only',
-            tenure_months: 12,
-        },
-        documents: []
+    const form = useForm<LoanWizardValues>({
+        resolver: zodResolver(loanWizardSchema),
+        defaultValues: {
+            customer: {
+                name: '',
+                phone: '',
+                isNew: false
+            },
+            collateral: [],
+            terms: {
+                loan_number: `LN-${Date.now().toString().slice(-6)}`,
+                start_date: new Date(),
+                principal_amount: 0,
+                interest_rate: 24, // Default 24% (2% monthly)
+                repayment_type: 'interest_only',
+                tenure_months: 12,
+            },
+            documents: []
+        }
     });
+
+    // --- Offline Drafts ---
+    const DRAFT_KEY = useMemo(() => shopId ? `LOAN_DRAFT_${shopId}` : null, [shopId]);
+
+    // Save draft on form change
+    useEffect(() => {
+        if (!DRAFT_KEY) return;
+
+        const subscription = form.watch((value) => {
+            // Debounce save to avoid performance hit
+            const handler = setTimeout(() => {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(value));
+            }, 1000);
+            return () => clearTimeout(handler);
+        });
+        return () => subscription.unsubscribe();
+    }, [form, DRAFT_KEY]);
+
+    // Restore draft on mount
+    useEffect(() => {
+        if (!DRAFT_KEY) return;
+
+        const saved = localStorage.getItem(DRAFT_KEY);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // Check if draft has meaningful data
+                if (parsed.customer?.name || parsed.collateral?.length > 0 || parsed.terms?.principal_amount > 0) {
+                    // Convert date strings back to Date objects
+                    if (parsed.terms?.start_date) {
+                        parsed.terms.start_date = new Date(parsed.terms.start_date);
+                    }
+                    form.reset(parsed);
+                    toast({
+                        title: "Draft Restored",
+                        description: "We restored your unsaved loan details.",
+                        duration: 3000
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to parse draft", e);
+            }
+        }
+    }, [DRAFT_KEY, form, toast]);
+
+    const formData = form.watch();
 
     const isDirty = useMemo(() => {
         return formData.customer.name !== '' || formData.collateral.length > 0 || formData.terms.principal_amount > 0;
@@ -104,178 +167,105 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
 
     // Handlers
     const handleCustomerSelect = (customer: any) => {
-        setFormData(prev => ({
-            ...prev,
-            customer: {
-                id: customer.id,
-                name: customer.name,
-                phone: customer.phone,
-                address: customer.address,
-                isNew: false
-            }
-        }));
+        form.setValue('customer', {
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone,
+            address: customer.address,
+            isNew: false
+        }, { shouldValidate: true });
     };
 
     const handleClearCustomer = () => {
-        setFormData(prev => ({
-            ...prev,
-            customer: { name: '', phone: '', isNew: false }
-        }));
+        form.setValue('customer', { name: '', phone: '', isNew: false });
     };
 
     const handleAddCollateral = (item: CollateralItemValues) => {
-        setFormData(prev => ({
-            ...prev,
-            collateral: [...prev.collateral, item]
-        }));
+        form.setValue('collateral', [...formData.collateral, item], { shouldValidate: true });
     };
 
     const handleRemoveCollateral = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            collateral: prev.collateral.filter((_, i) => i !== index)
-        }));
+        form.setValue('collateral', formData.collateral.filter((_, i) => i !== index), { shouldValidate: true });
     };
 
     const handleAddDocument = (doc: DocumentValues) => {
-        setFormData(prev => ({
-            ...prev,
-            documents: [...prev.documents, doc]
-        }));
+        form.setValue('documents', [...formData.documents, doc]);
     };
 
     const handleRemoveDocument = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            documents: prev.documents.filter((_, i) => i !== index)
-        }));
+        form.setValue('documents', formData.documents.filter((_, i) => i !== index));
     };
 
     const handleTermsChange = (updates: Partial<LoanTermsValues>) => {
-        setFormData(prev => ({
-            ...prev,
-            terms: { ...prev.terms, ...updates }
-        }));
+        form.setValue('terms', { ...formData.terms, ...updates }, { shouldValidate: true });
     };
 
-    const validateForm = (): boolean => {
-        try {
-            if (!formData.customer.name) throw new Error("Customer name is required");
-            if (formData.customer.isNew && !formData.customer.phone) throw new Error("Phone number is required for new customers");
-            if (formData.collateral.length === 0) throw new Error("Add at least one collateral item");
-            if (formData.terms.principal_amount <= 0) throw new Error("Principal amount must be positive");
-
-            // Validate Documents
-            const invalidDocs = formData.documents.filter(d => d.file && !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(d.file.type));
-            if (invalidDocs.length > 0) throw new Error("Only images (JPG, PNG) and PDFs are allowed");
-
-            return true;
-        } catch (e: any) {
-            toast({ title: "Validation Error", description: e.message, variant: "destructive" });
-            return false;
-        }
-    };
-
-    const handleSubmit = async () => {
-        if (!validateForm()) return;
-
+    const onSubmit = async (data: LoanWizardValues) => {
         setIsSubmitting(true);
         try {
-            // 1. Resolve Customer ID (Ensure customer exists in loan_customers)
-            let customerId = formData.customer.id;
-            
-            // If user selected from search (isNew=false), the ID is from 'customers' table, not 'loan_customers'.
-            // We must check if this customer exists in 'loan_customers' by phone, or create them.
-            // If user created new (isNew=true), we create them.
-            
-            // Strategy: Always try to find by phone first to avoid duplicates, then create if missing.
-            if (formData.customer.phone) {
-                 const { data: existingLoanCust } = await supabase
-                    .from('loan_customers')
-                    .select('id')
-                    .eq('shop_id', shopId)
-                    .eq('phone', formData.customer.phone)
-                    .maybeSingle();
-                 
-                 if (existingLoanCust) {
-                     customerId = existingLoanCust.id;
-                 } else {
-                     // Create new loan_customer
-                     const { data: newCust, error: createError } = await supabase
-                        .from('loan_customers')
-                        .insert({
-                            shop_id: shopId,
-                            name: formData.customer.name,
-                            phone: formData.customer.phone,
-                            address: formData.customer.address,
-                        })
-                        .select()
-                        .single();
-                     
-                     if (createError) throw createError;
-                     customerId = newCust.id;
-                 }
-            } else {
-                throw new Error("Customer phone is required");
-            }
-
-
-            // 2. Upload Documents (if any)
-            const uploadedDocs = [];
-            for (const doc of formData.documents) {
+            // 1. Upload Documents in Parallel
+            const uploadedDocs = await Promise.all(data.documents.map(async (doc) => {
                 if (doc.file) {
-                    // Check file size (5MB = 5 * 1024 * 1024 bytes)
                     if (doc.file.size > 5 * 1024 * 1024) {
                         throw new Error(`File ${doc.name} exceeds the 5MB limit`);
                     }
 
                     const fileExt = doc.file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-                    const filePath = `${shopId}/${formData.terms.loan_number}/${fileName}`; // Use loan number in path
+                    const filePath = `${shopId}/${data.terms.loan_number}/${fileName}`;
 
                     const { error: uploadError } = await supabase.storage
                         .from('loans')
                         .upload(filePath, doc.file);
 
                     if (uploadError) {
-                        console.error('Upload failed:', uploadError);
                         throw new Error(`Failed to upload ${doc.name}: ${uploadError.message}`);
                     }
 
-                    // For private buckets, we store the path, not the public URL.
-                    // The 'url' field in DB will hold the storage path for now.
-                    uploadedDocs.push({
+                    return {
                         name: doc.name,
                         type: doc.type,
-                        url: filePath // Storing path instead of full URL for private bucket
-                    });
+                        url: filePath
+                    };
                 }
+                return { name: doc.name, type: doc.type, url: doc.previewUrl || '' };
+            }));
+
+            // 2. Call Server Action
+            const payload = {
+                shopId,
+                customerId: data.customer.id,
+                customer: data.customer,
+                loanNumber: data.terms.loan_number,
+                principalAmount: data.terms.principal_amount,
+                interestRate: data.terms.interest_rate,
+                repaymentType: data.terms.repayment_type,
+                tenureMonths: data.terms.tenure_months,
+                emiAmount: data.terms.emi_amount,
+                startDate: format(data.terms.start_date, 'yyyy-MM-dd'),
+                collateral: data.collateral,
+                documents: uploadedDocs
+            };
+
+            const formData = new FormData();
+            formData.append('data', JSON.stringify(payload));
+
+            const result = await createLoanAction({}, formData);
+
+            if (result.error) {
+                if (result.validationErrors) {
+                    Object.entries(result.validationErrors).forEach(([key, errors]) => {
+                        toast({ title: "Validation Error", description: `${key}: ${errors.join(', ')}`, variant: "destructive" });
+                    });
+                } else {
+                    throw new Error(result.error);
+                }
+                return;
             }
 
-            // 3. Create Loan via API
-            const res = await fetch('/api/v1/loans', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    shopId,
-                    customerId,
-                    loanNumber: formData.terms.loan_number,
-                    principalAmount: formData.terms.principal_amount,
-                    interestRate: formData.terms.interest_rate,
-                    repaymentType: formData.terms.repayment_type,
-                    tenureMonths: formData.terms.tenure_months,
-                    emiAmount: formData.terms.emi_amount,
-                    startDate: format(formData.terms.start_date, 'yyyy-MM-dd'),
-                    collateral: formData.collateral,
-                    documents: uploadedDocs
-                })
-            });
-
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.error || 'Failed to create loan');
-
             toast({ title: "Success", description: "Loan created successfully!" });
-            router.push(`/shop/${shopId}/loans/${result.data.id}`);
+            if (DRAFT_KEY) localStorage.removeItem(DRAFT_KEY);
+            router.push(`/shop/${shopId}/loans/${result.loanId}`);
 
         } catch (error: any) {
             console.error(error);
@@ -284,30 +274,40 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                 description: error.message || "Failed to create loan",
                 variant: "destructive"
             });
+        } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="min-h-screen flex flex-col lg:block">
 
             {/* 1. Header */}
-            <div className="flex-none p-4 py-3 bg-background border-b z-20 sticky top-0 lg:static lg:p-0 lg:border-none lg:mb-6 lg:bg-transparent">
+            <div className="flex-none p-4 py-3 bg-background border-b z-50 sticky top-0 lg:static lg:p-0 lg:border-none lg:mb-4 lg:bg-transparent">
                 <div className="container mx-auto px-0 max-w-6xl flex items-center justify-between">
-                    <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 -ml-2 pl-0 hover:bg-transparent lg:hover:bg-accent lg:pl-4">
-                        <ArrowLeft className="h-4 w-4" /> Back
-                    </Button>
-                    <h1 className="font-bold text-lg lg:hidden">New Loan</h1>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 -ml-2 pl-0 hover:bg-transparent lg:hover:bg-accent lg:pl-4">
+                            <ArrowLeft className="h-4 w-4" /> Back
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowClearConfirmation(true)}
+                            className="text-muted-foreground hover:text-destructive"
+                        >
+                            Clear
+                        </Button>
+                    </div>
                 </div>
             </div>
 
-            {/* Main Content Area - Full Height with internal scrolling */}
-            <div className="flex-1 overflow-hidden container mx-auto px-0 lg:px-4 max-w-6xl">
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr,400px] gap-6 h-full">
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col lg:flex-none lg:block container mx-auto px-0 lg:px-4 max-w-6xl">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr,400px] gap-6">
 
-                    {/* LEFT COLUMN: FORM - Scrollable */}
-                    <div className="flex-1 h-full overflow-y-auto custom-scrollbar px-4 lg:px-1 pb-24 lg:pb-12">
-                        <div className="space-y-6">
+                    {/* LEFT COLUMN: FORM */}
+                    <div className="flex flex-col">
+                        <div className="px-4 lg:px-1 space-y-6 pb-24 lg:pb-0">
                             {/* 1. Customer Section */}
                             <Card className="border-2 shadow-sm">
                                 <CardHeader className="pb-3 border-b bg-gray-50/50 dark:bg-gray-900/20">
@@ -319,7 +319,7 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                                     <CustomerStep
                                         shopId={shopId}
                                         value={formData.customer}
-                                        onChange={val => setFormData(prev => ({ ...prev, customer: val }))}
+                                        onChange={val => form.setValue('customer', val, { shouldValidate: true })}
                                         onSelectFTS={handleCustomerSelect}
                                         onClear={handleClearCustomer}
                                     />
@@ -375,8 +375,8 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN: SUMMARY (Desktop) - Static/Sticky */}
-                    <div className="hidden lg:block h-full overflow-y-auto pt-1">
+                    {/* RIGHT COLUMN: SUMMARY (Desktop) - Sticky */}
+                    <div className="hidden lg:block sticky top-6 h-fit">
                         <LoanSummary
                             principal={formData.terms.principal_amount}
                             interestRate={formData.terms.interest_rate}
@@ -388,7 +388,7 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                             totalItems={formData.collateral.length}
                             startDate={formData.terms.start_date}
                             isSubmitting={isSubmitting}
-                            onSave={handleSubmit}
+                            onSave={form.handleSubmit(onSubmit)}
                             onCancel={() => router.back()}
                         />
                     </div>
@@ -396,7 +396,7 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
             </div>
 
             {/* Footer Actions (Mobile Only) */}
-            <div className="flex-none lg:hidden border-t bg-background p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-20">
+            <div className="flex-none lg:hidden border-t bg-background p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-20 sticky bottom-0">
                 <div className="space-y-3">
 
                     {showMobileDetails && (
@@ -432,7 +432,7 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                     </div>
 
                     <Button
-                        onClick={handleSubmit}
+                        onClick={form.handleSubmit(onSubmit)}
                         disabled={isSubmitting}
                         className="w-full h-12 text-base font-semibold shadow-md"
                     >
@@ -445,6 +445,44 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                     </Button>
                 </div>
             </div>
+
+            {/* Clear Form Confirmation Modal */}
+            <AlertDialog open={showClearConfirmation} onOpenChange={setShowClearConfirmation}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Clear Loan Form?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to clear the form? This will discard all customer and loan details. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                                form.reset({
+                                    customer: { name: '', phone: '', isNew: false },
+                                    collateral: [],
+                                    terms: {
+                                        loan_number: `LN-${Date.now().toString().slice(-6)}`,
+                                        start_date: new Date(),
+                                        principal_amount: 0,
+                                        interest_rate: 24,
+                                        repayment_type: 'interest_only',
+                                        tenure_months: 12,
+                                    },
+                                    documents: []
+                                });
+                                if (DRAFT_KEY) localStorage.removeItem(DRAFT_KEY);
+                                toast({ title: 'Form Cleared', description: 'Started a new loan application.' });
+                                setShowClearConfirmation(false);
+                            }}
+                        >
+                            Clear Form
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
