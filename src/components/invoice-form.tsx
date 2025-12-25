@@ -53,62 +53,12 @@ import { CustomerDetailsCard } from '@/components/invoice/customer-details-card'
 import { InvoiceItemsTable } from '@/components/invoice/invoice-items-table';
 import { MultiQRScanner } from '@/components/inventory/multi-qr-scanner';
 import { QrCode } from 'lucide-react';
+import { InvoiceSchema, type InvoiceFormValues } from '@/lib/validation';
 
 // --- 1. Robust Schema Definition ---
-const invoiceItemSchema = z.object({
-  id: z.string().optional(),
-  stockId: z.string().optional(),
-  description: z.string().min(1, 'Description is required'),
-  hsnCode: z.string().optional(),
-  metalType: z.string().optional(),
-  category: z.string().optional(),
-  purity: z.string().default('22K'),
+// Imported from @/lib/validation
 
-  // Weights (Standardized to numeric)
-  grossWeight: z.coerce.number().min(0, 'Must be positive'),
-  stoneWeight: z.coerce.number().min(0).default(0),
-  netWeight: z.coerce.number().min(0, 'Must be positive'),
-  wastagePercent: z.coerce.number().min(0).default(0),
 
-  // Value Components
-  rate: z.coerce.number().min(1, 'Rate is required'),
-  makingRate: z.coerce.number().min(0).default(0), // Per gram
-  making: z.number().default(0), // Legacy (calculated or fixed total)
-  stoneAmount: z.coerce.number().min(0).default(0),
-  tagId: z.string().optional(),
-}).superRefine((data, ctx) => {
-  if (data.netWeight > data.grossWeight) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Net weight cannot exceed gross weight",
-      path: ["netWeight"],
-    });
-  }
-});
-
-const invoiceSchema = z.object({
-  customerName: z.string().min(1, 'Customer name is required'),
-  customerAddress: z.string().optional(),
-  customerState: z.string().optional(),
-  customerPincode: z.string().optional(),
-  customerPhone: z.string()
-    .min(1, "Phone number is required")
-    .regex(/^[6-9]\d{9}$/, "Invalid phone number (10 digits required)"),
-  customerEmail: z.preprocess(
-    (val) => (val === null || val === undefined) ? '' : String(val),
-    z.string().email().or(z.literal('')).optional()
-  ),
-  invoiceDate: z.date(),
-  // Global current rate (₹/g) to apply when item rate is not set
-  currentRate: z.coerce.number().min(0).default(0),
-  items: z.array(invoiceItemSchema).min(1, 'At least one item is required'),
-  discount: z.coerce.number().min(0).default(0),
-  status: z.enum(['paid', 'due']),
-  redeemPoints: z.boolean().default(false),
-  pointsToRedeem: z.coerce.number().min(0).default(0),
-});
-
-type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 interface InvoiceFormProps {
   invoice?: Invoice & { items?: InvoiceItem[] };
@@ -136,7 +86,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
   // --- 3. Form Initialization ---
   const form = useForm<InvoiceFormValues>({
-    resolver: zodResolver(invoiceSchema),
+    resolver: zodResolver(InvoiceSchema),
     defaultValues: {
       customerName: invoice?.customerSnapshot?.name || '',
       customerAddress: invoice?.customerSnapshot?.address || '',
@@ -199,6 +149,10 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         const parsed = JSON.parse(saved);
         // Check if draft has meaningful data (e.g. items or customer)
         if (parsed.items?.length > 0 || parsed.customerName) {
+          // Fix: Convert date string back to Date object
+          if (parsed.invoiceDate) {
+            parsed.invoiceDate = new Date(parsed.invoiceDate);
+          }
           form.reset(parsed);
           toast({
             title: "Draft Restored",
@@ -434,6 +388,42 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     });
   };
 
+  const onError = (errors: any) => {
+    console.error("Validation Errors:", JSON.stringify(errors, null, 2));
+    
+    // Helper to find the first error message recursively
+    const getFirstErrorMessage = (errorObj: any): string | null => {
+      if (!errorObj) return null;
+      if (typeof errorObj.message === 'string') return errorObj.message;
+      
+      // If it's an array (like items), iterate
+      if (Array.isArray(errorObj)) {
+        for (const item of errorObj) {
+          const msg = getFirstErrorMessage(item);
+          if (msg) return msg;
+        }
+      }
+      
+      // If it's an object, iterate values
+      if (typeof errorObj === 'object') {
+        for (const key in errorObj) {
+          const msg = getFirstErrorMessage(errorObj[key]);
+          if (msg) return msg;
+        }
+      }
+      
+      return null;
+    };
+
+    const message = getFirstErrorMessage(errors) || "Please check the form for missing or invalid fields.";
+
+    toast({
+      title: "Validation Error",
+      description: message,
+      variant: "destructive",
+    });
+  };
+
   if (shopLoading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
 
   return (
@@ -469,7 +459,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             <Form {...form}>
               <form
                 id="invoice-form"
-                onSubmit={form.handleSubmit(onSubmit)}
+                onSubmit={form.handleSubmit(onSubmit, onError)}
                 className="flex flex-col"
               >
 
@@ -741,7 +731,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
                     <Button
                       type="button"
-                      onClick={() => setShowConfirmation(true)}
+                      onClick={form.handleSubmit(() => setShowConfirmation(true), onError)}
                       className="w-full h-11 text-base shadow-sm font-semibold"
                       disabled={isPending || watchedItems.length === 0}
                     >
@@ -770,7 +760,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => router.back()} className="flex-1 h-12">Cancel</Button>
               <Button
-                onClick={() => setShowConfirmation(true)}
+                onClick={form.handleSubmit(() => setShowConfirmation(true), onError)}
                 disabled={isPending || watchedItems.length === 0}
                 className="flex-1 h-12 shadow-lg"
               >

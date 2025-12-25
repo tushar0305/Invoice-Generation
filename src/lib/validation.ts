@@ -58,80 +58,7 @@ export type CustomerInput = z.infer<typeof CustomerSchema>;
 // INVOICE ITEM VALIDATION
 // ========================================
 
-export const InvoiceItemSchema = z.object({
-    description: z
-        .string()
-        .min(1, 'Description is required')
-        .max(500, 'Description is too long')
-        .transform(sanitizeString),
 
-    quantity: z
-        .number()
-        .positive('Quantity must be positive')
-        .max(10000, 'Quantity is too large')
-        .int('Quantity must be a whole number'),
-
-    rate: z
-        .number()
-        .nonnegative('Rate must be non-negative')
-        .max(10000000, 'Rate is too large'),
-
-    purity: z
-        .number()
-        .min(0)
-        .max(100)
-        .optional(),
-
-    weight: z
-        .number()
-        .positive()
-        .max(100000)
-        .optional(),
-});
-
-export type InvoiceItemInput = z.infer<typeof InvoiceItemSchema>;
-
-// ========================================
-// INVOICE VALIDATION
-// ========================================
-
-export const InvoiceSchema = z.object({
-    customerId: z.string().uuid('Invalid customer ID'),
-
-    customerName: z
-        .string()
-        .min(1, 'Customer name is required')
-        .max(255)
-        .regex(/^[a-zA-Z\s.'-]+$/, 'Name contains invalid characters')
-        .transform(sanitizeString),
-
-    customerPhone: z
-        .string()
-        .regex(phoneRegex, 'Invalid phone number')
-        .optional()
-        .or(z.literal('')),
-
-    items: z
-        .array(InvoiceItemSchema)
-        .min(1, 'At least one item is required')
-        .max(100, 'Too many items'),
-
-    discount: z
-        .number()
-        .min(0, 'Discount cannot be negative')
-        .max(100, 'Discount cannot exceed 100%')
-        .optional()
-        .default(0),
-
-    notes: z
-        .string()
-        .max(1000, 'Notes are too long')
-        .optional()
-        .or(z.literal(''))
-        .transform((val) => val ? sanitizeString(val) : val),
-});
-
-export type InvoiceInput = z.infer<typeof InvoiceSchema>;
 
 
 
@@ -172,3 +99,62 @@ export const ShopSchema = z.object({
 });
 
 export type ShopInput = z.infer<typeof ShopSchema>;
+
+// ========================================
+// INVOICE VALIDATION
+// ========================================
+
+export const InvoiceItemSchema = z.object({
+  id: z.string().optional(),
+  stockId: z.string().optional(),
+  description: z.string().min(1, 'Description is required'),
+  hsnCode: z.string().optional(),
+  metalType: z.string().optional(),
+  category: z.string().optional(),
+  purity: z.string().default('22K'),
+
+  // Weights (Standardized to numeric)
+  grossWeight: z.coerce.number().gt(0, 'Gross weight is required'),
+  stoneWeight: z.coerce.number().min(0).default(0),
+  netWeight: z.coerce.number().gt(0, 'Net weight is required'),
+  wastagePercent: z.coerce.number().min(0).default(0),
+
+  // Value Components
+  rate: z.coerce.number().min(1, 'Rate is required'),
+  makingRate: z.coerce.number().min(0).default(0), // Per gram
+  making: z.number().default(0), // Legacy (calculated or fixed total)
+  stoneAmount: z.coerce.number().min(0).default(0),
+  tagId: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.netWeight > data.grossWeight) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Net weight cannot exceed gross weight",
+      path: ["netWeight"],
+    });
+  }
+});
+
+export const InvoiceSchema = z.object({
+  customerName: z.string().min(1, 'Customer name is required'),
+  customerAddress: z.string().optional(),
+  customerState: z.string().optional(),
+  customerPincode: z.string().optional(),
+  customerPhone: z.string()
+    .min(1, "Phone number is required")
+    .regex(/^[6-9]\d{9}$/, "Invalid phone number (10 digits required)"),
+  customerEmail: z.preprocess(
+    (val) => (val === null || val === undefined) ? '' : String(val),
+    z.string().email().or(z.literal('')).optional()
+  ),
+  invoiceDate: z.date(),
+  // Global current rate (₹/g) to apply when item rate is not set
+  currentRate: z.coerce.number().min(0).default(0),
+  items: z.array(InvoiceItemSchema).min(1, 'At least one item is required'),
+  discount: z.coerce.number().min(0).default(0),
+  status: z.enum(['paid', 'due']),
+  redeemPoints: z.boolean().default(false),
+  pointsToRedeem: z.coerce.number().min(0).default(0),
+});
+
+export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;

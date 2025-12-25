@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/supabase/server';
 import { Customer } from '@/lib/definitions';
+import { InvoiceItemSchema } from '@/lib/validation';
+import { z } from 'zod';
 
 /**
  * Server Actions for invoice mutations
@@ -53,6 +55,13 @@ export async function createInvoiceAction(formData: {
     const limitCheck = await checkSubscriptionLimit(formData.shopId, 'invoices');
     if (!limitCheck.allowed) {
         return { success: false, error: limitCheck.message };
+    }
+
+    // Validate Items
+    const itemsValidation = z.array(InvoiceItemSchema).safeParse(formData.items);
+    if (!itemsValidation.success) {
+        console.error("Server validation failed:", itemsValidation.error);
+        return { success: false, error: "Validation failed: " + itemsValidation.error.issues.map(i => i.message).join(", ") };
     }
 
     const supabase = await createClient();
@@ -248,6 +257,14 @@ export async function updateInvoiceAction(
         }>;
     }
 ) {
+    // Validate Items if present
+    if (formData.items) {
+        const itemsValidation = z.array(InvoiceItemSchema).safeParse(formData.items);
+        if (!itemsValidation.success) {
+            return { success: false, error: "Validation failed: " + itemsValidation.error.issues.map(i => i.message).join(", ") };
+        }
+    }
+
     const supabase = await createClient();
 
     try {

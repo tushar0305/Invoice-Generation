@@ -279,6 +279,42 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
         }
     };
 
+    const onError = (errors: any) => {
+        console.error("Validation Errors:", JSON.stringify(errors, null, 2));
+        
+        // Helper to find the first error message recursively
+        const getFirstErrorMessage = (errorObj: any): string | null => {
+            if (!errorObj) return null;
+            if (typeof errorObj.message === 'string') return errorObj.message;
+            
+            // If it's an array (like items), iterate
+            if (Array.isArray(errorObj)) {
+                for (const item of errorObj) {
+                    const msg = getFirstErrorMessage(item);
+                    if (msg) return msg;
+                }
+            }
+            
+            // If it's an object, iterate values
+            if (typeof errorObj === 'object') {
+                for (const key in errorObj) {
+                    const msg = getFirstErrorMessage(errorObj[key]);
+                    if (msg) return msg;
+                }
+            }
+            
+            return null;
+        };
+
+        const message = getFirstErrorMessage(errors) || "Please check the form for missing or invalid fields.";
+
+        toast({
+            title: "Validation Error",
+            description: message,
+            variant: "destructive",
+        });
+    };
+
     return (
         <div className="min-h-screen flex flex-col lg:block">
 
@@ -388,7 +424,7 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                             totalItems={formData.collateral.length}
                             startDate={formData.terms.start_date}
                             isSubmitting={isSubmitting}
-                            onSave={form.handleSubmit(onSubmit)}
+                            onSave={form.handleSubmit(onSubmit, onError)}
                             onCancel={() => router.back()}
                         />
                     </div>
@@ -432,7 +468,7 @@ export function NewLoanWizardClient({ shopId, existingCustomers }: { shopId: str
                     </div>
 
                     <Button
-                        onClick={form.handleSubmit(onSubmit)}
+                        onClick={form.handleSubmit(onSubmit, onError)}
                         disabled={isSubmitting}
                         className="w-full h-12 text-base font-semibold shadow-md"
                     >

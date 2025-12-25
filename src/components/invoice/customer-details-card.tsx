@@ -60,6 +60,11 @@ export function CustomerDetailsCard({ form, shopId, disabled }: CustomerDetailsC
                         <p className="text-xs text-muted-foreground">
                             Search by name or phone. If not found, you can add a new customer directly from the dropdown.
                         </p>
+                        {form.formState.errors.customerName && (
+                            <p className="text-xs text-destructive font-medium animate-in slide-in-from-top-1">
+                                {form.formState.errors.customerName.message as string}
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <div className="rounded-xl border bg-card/50 p-4 space-y-3 relative group">
