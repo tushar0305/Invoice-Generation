@@ -211,7 +211,7 @@ export function MarketingDashboardClient({
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="grid md:grid-cols-2 gap-4">
+                        <div className="grid md:grid-cols-3 gap-4">
                             <Link href={`/shop/${shopId}/marketing/send`} className="block h-full">
                                 <Card className="h-full border-0 bg-gradient-to-br from-primary/10 to-primary/5 text-foreground shadow-xl shadow-primary/5 hover:shadow-primary/10 transition-all">
                                     <CardContent className="p-6 md:p-8 flex flex-col justify-center h-full space-y-4">
@@ -226,6 +226,25 @@ export function MarketingDashboardClient({
                                         </div>
                                         <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 rounded-full shadow-lg shadow-primary/20">
                                             Start Now <ChevronRight className="h-4 w-4 ml-2" />
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+
+                            <Link href={`/shop/${shopId}/marketing/lucky-draw`} className="block h-full">
+                                <Card className="h-full border-0 bg-gradient-to-br from-amber-500/10 to-orange-500/5 text-foreground shadow-xl shadow-amber-500/5 hover:shadow-amber-500/10 transition-all">
+                                    <CardContent className="p-6 md:p-8 flex flex-col justify-center h-full space-y-4">
+                                        <div className="p-3 bg-amber-500/10 rounded-xl w-fit">
+                                            <Sparkles className="h-6 w-6 text-amber-600" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h3 className="text-xl font-bold">Lucky Draw</h3>
+                                            <p className="text-muted-foreground text-sm leading-relaxed">
+                                                Reward loyal customers with monthly automated draws.
+                                            </p>
+                                        </div>
+                                        <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white border-0 rounded-full shadow-lg shadow-amber-600/20">
+                                            Manage Draws <ChevronRight className="h-4 w-4 ml-2" />
                                         </Button>
                                     </CardContent>
                                 </Card>

@@ -94,6 +94,37 @@ export const POST = withAuth(async (
     // Ensure we have an ID before logging
     const customerId = data?.customer_id ?? data?.id;
     if (customerId) {
+        // [NEW] Handle Referral Logic
+        try {
+            const newReferralCode = (input.name.substring(0, 4).toUpperCase() + Math.floor(1000 + Math.random() * 9000)).replace(/[^A-Z0-9]/g, '');
+            let referrerId = null;
+
+            if (input.referralCode) {
+                const { data: referrer } = await supabase
+                    .from('customers')
+                    .select('id')
+                    .eq('shop_id', input.shopId)
+                    .eq('referral_code', input.referralCode)
+                    .single();
+                
+                if (referrer) {
+                    referrerId = referrer.id;
+                }
+            }
+
+            await supabase
+                .from('customers')
+                .update({ 
+                    referral_code: newReferralCode,
+                    referred_by: referrerId
+                })
+                .eq('id', customerId);
+
+        } catch (refError) {
+            console.error('Error processing referral:', refError);
+            // Don't fail the request if referral fails
+        }
+
         await auditLogger.logCreate('customer', customerId, {
             name: input.name,
             phone: input.phone,

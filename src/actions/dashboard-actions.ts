@@ -370,3 +370,85 @@ function mapStatsToResult(stats: any) {
 
 // Export cached function
 export const getAdditionalStats = fetchAdditionalStatsCached;
+
+export async function getSchemeStats(shopId: string) {
+    const supabase = await createClient();
+    
+    const today = new Date();
+    const next30Days = new Date();
+    next30Days.setDate(today.getDate() + 30);
+
+    const [activeResult, liabilityResult, maturityResult] = await Promise.all([
+        // 1. Active Enrollments
+        supabase
+            .from('scheme_enrollments')
+            .select('*', { count: 'exact', head: true })
+            .eq('shop_id', shopId)
+            .eq('status', 'ACTIVE'),
+
+        // 2. Total Gold Liability
+        supabase
+            .from('scheme_enrollments')
+            .select('total_gold_weight_accumulated')
+            .eq('shop_id', shopId)
+            .eq('status', 'ACTIVE'),
+
+        // 3. Upcoming Maturities (Next 30 days)
+        supabase
+            .from('scheme_enrollments')
+            .select('*', { count: 'exact', head: true })
+            .eq('shop_id', shopId)
+            .eq('status', 'ACTIVE')
+            .gte('maturity_date', today.toISOString())
+            .lte('maturity_date', next30Days.toISOString())
+    ]);
+
+    const totalGoldLiability = liabilityResult.data?.reduce((sum, row) => sum + (Number(row.total_gold_weight_accumulated) || 0), 0) || 0;
+
+    return {
+        activeEnrollments: activeResult.count || 0,
+        totalGoldLiability,
+        upcomingMaturities: maturityResult.count || 0
+    };
+}
+
+export async function getReferralStats(shopId: string) {
+    const supabase = await createClient();
+    
+    // Count total referrals
+    const { count: totalReferrals } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+        .eq('shop_id', shopId)
+        .not('referred_by', 'is', null);
+
+    // Get referrals to calculate top referrer
+    const { data: referrals } = await supabase
+        .from('customers')
+        .select('referred_by, referrer:referred_by(name)')
+        .eq('shop_id', shopId)
+        .not('referred_by', 'is', null);
+        
+    // Aggregate
+    const referralCounts: Record<string, { count: number, name: string }> = {};
+    referrals?.forEach((r: any) => {
+        const id = r.referred_by;
+        if (id) {
+            if (!referralCounts[id]) {
+                // r.referrer might be an array if the relationship is inferred as One-to-Many, 
+                // but here we are selecting the parent, so it should be an object or array of 1.
+                const name = Array.isArray(r.referrer) ? r.referrer[0]?.name : r.referrer?.name || 'Unknown';
+                referralCounts[id] = { count: 0, name };
+            }
+            referralCounts[id].count++;
+        }
+    });
+    
+    const sorted = Object.values(referralCounts).sort((a, b) => b.count - a.count);
+    const topReferrer = sorted[0] || null;
+    
+    return {
+        totalReferrals: totalReferrals || 0,
+        topReferrer
+    };
+}

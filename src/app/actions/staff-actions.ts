@@ -182,11 +182,15 @@ export async function removeStaffAction(staffId: string, shopId: string) {
             .delete()
             .eq('id', staffId);
 
-        if (error) throw error;
+        if (error) {
+            console.error('Error removing staff:', error);
+            throw new Error('Failed to remove staff member. They may have associated records.');
+        }
 
         revalidatePath(`/shop/${shopId}/staff`);
         return { success: true };
     } catch (error: any) {
+        console.error('removeStaffAction error:', error);
         return { success: false, error: error.message };
     }
 }

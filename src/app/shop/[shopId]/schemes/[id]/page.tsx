@@ -1,21 +1,24 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useActiveShop } from '@/hooks/use-active-shop';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, UserPlus, Coins, TrendingUp, Calendar, Phone, Wallet, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, UserPlus, Coins, TrendingUp, Calendar, Phone, Wallet, Loader2, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
 import type { Scheme, SchemeEnrollment } from '@/lib/scheme-types';
 import { PaymentEntryModal } from '@/components/schemes/payment-entry-modal';
+import { RedemptionModal } from '@/components/schemes/redemption-modal';
 import { calculateMaturityValue } from '@/lib/utils/scheme-calculations';
 import { formatCurrency, cn } from '@/lib/utils';
 import { StatCard } from '@/components/schemes/stat-card';
 
 
+
+import { EnrollmentWizard } from '@/components/schemes/enrollment-wizard';
 
 export default function SchemeDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const unwrappedParams = use(params);
@@ -31,46 +34,49 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
     const [isLoading, setIsLoading] = useState(true);
 
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-    const [selectedEnrollment, setSelectedEnrollment] = useState<SchemeEnrollment | undefined>(undefined);
+    const [isRedemptionModalOpen, setIsRedemptionModalOpen] = useState(false);
+    const [selectedEnrollment, setSelectedEnrollment] = useState<SchemeEnrollment | null>(null);
+
+    const fetchData = useCallback(async () => {
+        if (!shopId || !schemeId) return;
+        
+        // Only set loading on initial load, not on refresh
+        if (!scheme) setIsLoading(true);
+        
+        try {
+            const { data: schemeData, error: schemeError } = await supabase
+                .from('schemes')
+                .select('*')
+                .eq('id', schemeId)
+                .single();
+
+            if (schemeError) throw schemeError;
+            setScheme(schemeData as unknown as Scheme);
+
+            const { data: enrollData, error: enrollError } = await supabase
+                .from('scheme_enrollments')
+                .select('*, customer:customers(name, phone)')
+                .eq('scheme_id', schemeId)
+                .order('created_at', { ascending: false });
+
+            if (enrollError) throw enrollError;
+            setEnrollments(enrollData as unknown as SchemeEnrollment[]);
+
+        } catch (error: any) {
+            console.error('Error fetching scheme details:', error);
+            toast({
+                title: "Error",
+                description: "Could not load scheme details",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [shopId, schemeId, toast, scheme]);
 
     useEffect(() => {
-        if (!shopId || !schemeId) return;
-
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const { data: schemeData, error: schemeError } = await supabase
-                    .from('schemes')
-                    .select('*')
-                    .eq('id', schemeId)
-                    .single();
-
-                if (schemeError) throw schemeError;
-                setScheme(schemeData as unknown as Scheme);
-
-                const { data: enrollData, error: enrollError } = await supabase
-                    .from('scheme_enrollments')
-                    .select('*, customer:customers(name, phone)')
-                    .eq('scheme_id', schemeId)
-                    .order('created_at', { ascending: false });
-
-                if (enrollError) throw enrollError;
-                setEnrollments(enrollData as unknown as SchemeEnrollment[]);
-
-            } catch (error: any) {
-                console.error('Error fetching scheme details:', error);
-                toast({
-                    title: "Error",
-                    description: "Could not load scheme details",
-                    variant: "destructive"
-                });
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         fetchData();
-    }, [shopId, schemeId, toast]);
+    }, [fetchData]);
 
     const handleOpenPayment = (enrollment: SchemeEnrollment) => {
         const enrollmentWithScheme = { ...enrollment, scheme: scheme! };
@@ -78,7 +84,14 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
         setIsPaymentModalOpen(true);
     };
 
+    const handleOpenRedemption = (enrollment: SchemeEnrollment) => {
+        const enrollmentWithScheme = { ...enrollment, scheme: scheme! };
+        setSelectedEnrollment(enrollmentWithScheme);
+        setIsRedemptionModalOpen(true);
+    };
+
     const handlePaymentSuccess = () => {
+        fetchData();
         router.refresh();
     };
 
@@ -107,93 +120,125 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
     const totalGold = enrollments.reduce((sum, en) => sum + (en.total_gold_weight_accumulated || 0), 0);
 
     return (
-        <div className="space-y-6 pb-24 md:pb-8 max-w-7xl mx-auto p-4 md:p-8">
-
-
-
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.back()}
-                        className="shrink-0 h-10 w-10 rounded-xl bg-background/50 border border-border/50 hover:bg-background mt-1 shadow-sm md:mt-0"
-                    >
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">{scheme.name}</h1>
-                            <Badge
-                                variant={scheme.is_active ? 'default' : 'secondary'}
-                                className={cn(
-                                    "text-xs font-medium px-2.5 py-0.5 rounded-full shrink-0 border",
-                                    scheme.is_active
-                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                        : 'bg-muted text-muted-foreground border-border/50'
-                                )}
+        <div className="relative min-h-screen pb-24 md:pb-8">
+            {/* Background Elements */}
+            <div className="fixed inset-0 bg-gradient-to-br from-primary/5 via-background to-background -z-10" />
+            <div className="fixed top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-10" />
+            
+            <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+                {/* Glass Header */}
+                <div className="relative overflow-hidden rounded-3xl border border-primary/10 shadow-xl bg-gradient-to-br from-primary/5 via-background to-background backdrop-blur-xl p-6 md:p-8">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-50" />
+                    
+                    <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex items-start gap-5">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => router.back()}
+                                className="shrink-0 h-11 w-11 rounded-full bg-background/50 border border-border/50 hover:bg-background hover:scale-105 transition-all shadow-sm"
                             >
-                                <span className={cn(
-                                    "w-1.5 h-1.5 rounded-full mr-1.5 animate-pulse",
-                                    scheme.is_active ? "bg-emerald-500" : "bg-muted-foreground"
-                                )} />
-                                {scheme.is_active ? 'Active' : 'Paused'}
-                            </Badge>
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                            <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">
+                                        {scheme.name}
+                                    </h1>
+                                    <Badge
+                                        variant={scheme.is_active ? 'default' : 'secondary'}
+                                        className={cn(
+                                            "text-xs font-medium px-3 py-1 rounded-full shrink-0 border shadow-sm",
+                                            scheme.is_active
+                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                                : 'bg-muted text-muted-foreground border-border/50'
+                                        )}
+                                    >
+                                        <span className={cn(
+                                            "w-1.5 h-1.5 rounded-full mr-2 animate-pulse",
+                                            scheme.is_active ? "bg-emerald-500" : "bg-muted-foreground"
+                                        )} />
+                                        {scheme.is_active ? 'Active' : 'Paused'}
+                                    </Badge>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-background/40 border border-border/40">
+                                        <Calendar className="w-4 h-4 text-primary" />
+                                        <span className="font-medium">{scheme.duration_months} Months</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-background/40 border border-border/40">
+                                        <Wallet className="w-4 h-4 text-primary" />
+                                        <span className="font-medium">
+                                            {scheme.scheme_type === 'FIXED_DURATION' && (scheme.scheme_amount || 0) > 0
+                                                ? formatCurrency(scheme.scheme_amount || 0) + '/mo' 
+                                                : 'Flexible Amount'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                                <Calendar className="w-4 h-4 text-primary/70" />
-                                <span className="font-medium text-foreground/80">{scheme.duration_months} Months</span>
-                            </div>
-                            <span className="text-border">|</span>
-                            <div className="flex items-center gap-1.5">
-                                <Wallet className="w-4 h-4 text-primary/70" />
-                                <span className="font-medium text-foreground/80">
-                                    {scheme.scheme_type === 'FIXED_DURATION' ? formatCurrency(scheme.installment_amount || 0) + '/mo' : 'Flexible Amount'}
-                                </span>
-                            </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <Button 
+                                variant="outline" 
+                                className="rounded-full hidden md:flex"
+                                onClick={() => router.push(`/shop/${shopId}/schemes/create?edit=${schemeId}`)}
+                            >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Scheme
+                            </Button>
+                            <EnrollmentWizard 
+                                shopId={shopId!} 
+                                schemeId={schemeId} 
+                                onSuccess={fetchData}
+                                trigger={
+                                    <Button className="rounded-full shadow-lg shadow-primary/20 w-full md:w-auto">
+                                        <UserPlus className="w-4 h-4 mr-2" />
+                                        Enroll Customer
+                                    </Button>
+                                }
+                            />
                         </div>
                     </div>
                 </div>
 
-                {/* Desktop Action (Optional) */}
-                {/* <Button>Edit Scheme</Button> */}
-            </div>
-
-            {/* Stats Grid - Horizontal Scroll on Mobile */}
-            <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:pb-0 sm:mx-0 sm:px-0 no-scrollbar">
-                <div className="snap-center min-w-[85vw] sm:min-w-0">
-                    <StatCard
-                        title="Total Enrollments"
-                        value={enrollments.length}
-                        subtext="Active members"
-                        icon={UserPlus}
-                        iconColor="text-blue-600 dark:text-blue-400"
-                        bgColor="bg-blue-500/10"
-                    />
+                {/* Stats Grid - Responsive Grid on Mobile */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="col-span-1">
+                        <StatCard
+                            title="Total Enrollments"
+                            value={enrollments.length}
+                            subtext="Active members"
+                            icon={UserPlus}
+                            iconColor="text-blue-600 dark:text-blue-400"
+                            bgColor="bg-blue-500/10"
+                        />
+                    </div>
+                    <div className="col-span-1">
+                        <StatCard
+                            title="Total Collected"
+                            value={formatCurrency(totalCollected)}
+                            subtext={scheme.scheme_type === 'FIXED_DURATION' ? `${scheme.duration_months} months term` : `${scheme.interest_rate}% Interest`}
+                            icon={Coins}
+                            iconColor="text-emerald-600 dark:text-emerald-400"
+                            bgColor="bg-emerald-500/10"
+                        />
+                    </div>
+                    <div className="col-span-2 md:col-span-1">
+                        <StatCard
+                            title="Est. Maturity"
+                            value={`~${formatCurrency(
+                                scheme.benefit_type === 'BONUS_MONTH' 
+                                    ? totalCollected + ((totalCollected / (scheme.duration_months || 1)) * (scheme.bonus_months || 1))
+                                    : calculateMaturityValue(scheme, totalCollected)
+                            )}`}
+                            subtext="Projected total payout"
+                            icon={TrendingUp}
+                            iconColor="text-pink-600 dark:text-pink-400"
+                            bgColor="bg-pink-500/10"
+                        />
+                    </div>
                 </div>
-                <div className="snap-center min-w-[85vw] sm:min-w-0">
-                    <StatCard
-                        title="Total Collected"
-                        value={formatCurrency(totalCollected)}
-                        subtext={scheme.scheme_type === 'FIXED_DURATION' ? `${scheme.duration_months} months term` : `${scheme.interest_rate}% Interest`}
-                        icon={Coins}
-                        iconColor="text-emerald-600 dark:text-emerald-400"
-                        bgColor="bg-emerald-500/10"
-                    />
-                </div>
-                <div className="snap-center min-w-[85vw] sm:min-w-0">
-                    <StatCard
-                        title="Est. Maturity"
-                        value={`~${formatCurrency(calculateMaturityValue(scheme, totalCollected))}`}
-                        subtext="Projected total payout"
-                        icon={TrendingUp}
-                        iconColor="text-pink-600 dark:text-pink-400"
-                        bgColor="bg-pink-500/10"
-                    />
-                </div>
-            </div>
 
             {/* Enrolled Customers Table/List */}
             <Card className="border-border/60 shadow-sm overflow-hidden">
@@ -226,7 +271,12 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                                 {enrollments.map((enrollment, idx) => (
                                     <div
                                         key={enrollment.id}
-                                        className="p-4 hover:bg-muted/30 active:bg-muted/50 transition-colors"
+                                        className="p-4 hover:bg-muted/30 active:bg-muted/50 transition-colors cursor-pointer"
+                                        onClick={(e) => {
+                                            // Prevent navigation if clicking the Pay button
+                                            if ((e.target as HTMLElement).closest('button')) return;
+                                            router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(enrollment.customer?.name || '')}`);
+                                        }}
                                     >
                                         <div className="flex items-start gap-4">
                                             {/* Avatar */}
@@ -238,7 +288,10 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start mb-1">
                                                     <div>
-                                                        <h4 className="font-semibold text-sm text-foreground truncate">{enrollment.customer?.name}</h4>
+                                                        <h4 className="font-semibold text-sm text-foreground truncate flex items-center gap-1">
+                                                            {enrollment.customer?.name}
+                                                            <ArrowRight className="w-3 h-3 text-muted-foreground opacity-50" />
+                                                        </h4>
                                                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground mt-0.5">
                                                             {enrollment.customer?.phone && (
                                                                 <>
@@ -251,14 +304,41 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => handleOpenPayment(enrollment)}
-                                                        className="h-8 px-3 text-xs font-medium bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground -mr-2"
-                                                    >
-                                                        Pay EMI
-                                                    </Button>
+                                                    <div className="flex items-center gap-2">
+                                                        {enrollment.status === 'ACTIVE' ? (
+                                                            <>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleOpenPayment(enrollment);
+                                                                    }}
+                                                                    className="h-8 px-3 text-xs font-medium bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
+                                                                >
+                                                                    Pay EMI
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleOpenRedemption(enrollment);
+                                                                    }}
+                                                                    className="h-8 px-3 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
+                                                                >
+                                                                    Redeem
+                                                                </Button>
+                                                            </>
+                                                        ) : (
+                                                            <Badge variant="secondary" className={cn(
+                                                                "h-8 px-3 text-xs font-medium",
+                                                                enrollment.status === 'MATURED' ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : "bg-slate-100 text-slate-600"
+                                                            )}>
+                                                                {enrollment.status}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 {/* Stats Row */}
@@ -299,14 +379,21 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
                                         {enrollments.map((enrollment) => (
-                                            <tr key={enrollment.id} className="hover:bg-muted/20 transition-colors">
+                                            <tr 
+                                                key={enrollment.id} 
+                                                className="hover:bg-muted/20 transition-colors cursor-pointer group"
+                                                onClick={() => router.push(`/shop/${shopId}/customers/view?name=${encodeURIComponent(enrollment.customer?.name || '')}`)}
+                                            >
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                                             {enrollment.customer?.name?.charAt(0) || 'C'}
                                                         </div>
                                                         <div>
-                                                            <div className="font-semibold">{enrollment.customer?.name}</div>
+                                                            <div className="font-semibold group-hover:text-primary transition-colors flex items-center gap-2">
+                                                                {enrollment.customer?.name}
+                                                                <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            </div>
                                                             <div className="text-xs text-muted-foreground">{enrollment.customer?.phone || 'No phone'}</div>
                                                         </div>
                                                     </div>
@@ -328,14 +415,41 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => handleOpenPayment(enrollment)}
-                                                        className="hover:border-primary hover:text-primary hover:bg-primary/5"
-                                                    >
-                                                        Record Payment
-                                                    </Button>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        {enrollment.status === 'ACTIVE' ? (
+                                                            <>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleOpenPayment(enrollment);
+                                                                    }}
+                                                                    className="hover:border-primary hover:text-primary hover:bg-primary/5"
+                                                                >
+                                                                    Record Payment
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleOpenRedemption(enrollment);
+                                                                    }}
+                                                                    className="text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                                                                >
+                                                                    Redeem
+                                                                </Button>
+                                                            </>
+                                                        ) : (
+                                                            <Badge variant="secondary" className={cn(
+                                                                "px-3 py-1",
+                                                                enrollment.status === 'MATURED' ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : "bg-slate-100 text-slate-600"
+                                                            )}>
+                                                                {enrollment.status}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -353,6 +467,14 @@ export default function SchemeDetailsPage({ params }: { params: Promise<{ id: st
                 enrollment={selectedEnrollment}
                 onSuccess={handlePaymentSuccess}
             />
+
+            <RedemptionModal
+                isOpen={isRedemptionModalOpen}
+                onClose={() => setIsRedemptionModalOpen(false)}
+                enrollment={selectedEnrollment}
+                onSuccess={handlePaymentSuccess}
+            />
+            </div>
         </div>
     );
 }

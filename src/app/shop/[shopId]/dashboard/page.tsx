@@ -1,7 +1,7 @@
 import { startOfMonth, endOfMonth, startOfWeek, startOfDay, subMonths, isSameDay, subDays, format } from 'date-fns';
 import { getCatalogueStats } from '@/actions/catalogue-actions';
 import { createClient } from '@/supabase/server';
-import { getDashboardData, getMarketRates, getAdditionalStats } from '@/actions/dashboard-actions';
+import { getDashboardData, getMarketRates, getAdditionalStats, getSchemeStats, getReferralStats } from '@/actions/dashboard-actions';
 import { FloatingStoreAssistant } from '@/components/dashboard/floating-store-assistant';
 import { GoldSilverTicker } from '@/components/dashboard/gold-silver-ticker';
 import { FinelessHero } from '@/components/dashboard/fineless-hero';
@@ -23,6 +23,8 @@ import { SmartInsightsGrid } from '@/components/dashboard/smart-insights-grid';
 import { BusinessHealthWidget } from '@/components/dashboard/business-health';
 import { CustomerInsightsWidget } from '@/components/dashboard/customer-insights';
 import { QuickActions } from '@/components/dashboard/quick-actions';
+import { SchemesWidget } from '@/components/dashboard/schemes-widget';
+import { ReferralWidget } from '@/components/dashboard/referral-widget';
 
 import { DashboardInvoiceRow } from '@/components/dashboard/dashboard-invoice-row';
 
@@ -49,10 +51,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
   const { shopId } = await params;
   const supabase = await createClient();
 
-  const [stats, marketRates, additionalStats] = await Promise.all([
+  const [stats, marketRates, additionalStats, schemeStats, referralStats] = await Promise.all([
     getDashboardData(shopId),
     getMarketRates(shopId),
-    getAdditionalStats(shopId)
+    getAdditionalStats(shopId),
+    getSchemeStats(shopId),
+    getReferralStats(shopId)
   ]);
 
   if (!stats) {
@@ -272,6 +276,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
                 returningCustomers={returningCustomers}
                 topCustomer={topCustomer}
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <SchemesWidget stats={schemeStats} shopId={shopId} />
+                <ReferralWidget shopId={shopId} stats={referralStats} />
+              </div>
             </div>
           </div>
 

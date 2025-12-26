@@ -134,6 +134,7 @@ export const CreateCustomerSchema = z.object({
     state: z.string().max(100).optional(),
     pincode: z.string().max(10).optional(),
     openingBalance: z.number().nonnegative().optional(),
+    referralCode: z.string().max(20).optional(),
 });
 
 export const UpdateCustomerSchema = CreateCustomerSchema.partial().omit({ shopId: true });

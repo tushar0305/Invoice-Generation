@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -9,19 +9,23 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Share2, Printer } from 'lucide-react';
 import { SchemeEnrollment } from '@/lib/scheme-types';
 import { calculateGoldWeight } from '@/lib/utils/scheme-calculations';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { getShopSlug, generatePassbookUrl, openWhatsApp, getPaymentMessage } from '@/lib/scheme-share';
+import { getMarketRates } from '@/actions/dashboard-actions';
 
 interface PaymentEntryModalProps {
     isOpen: boolean;
     onClose: () => void;
-    enrollment?: SchemeEnrollment;
+    enrollment?: SchemeEnrollment | null;
+    customerName?: string;
+    customerPhone?: string;
     onSuccess?: () => void;
 }
 
-export function PaymentEntryModal({ isOpen, onClose, enrollment, onSuccess }: PaymentEntryModalProps) {
+export function PaymentEntryModal({ isOpen, onClose, enrollment, customerName, customerPhone, onSuccess }: PaymentEntryModalProps) {
     const { toast } = useToast();
     const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -31,9 +35,36 @@ export function PaymentEntryModal({ isOpen, onClose, enrollment, onSuccess }: Pa
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [successData, setSuccessData] = useState<{ transaction: any, enrollment: SchemeEnrollment } | null>(null);
 
+    // Auto-fetch gold rate when modal opens
+    useEffect(() => {
+        if (isOpen && enrollment?.shop_id) {
+            const fetchRate = async () => {
+                try {
+                    const rates = await getMarketRates(enrollment.shop_id);
+                    if (rates && rates.gold_22k) {
+                        setGoldRate(rates.gold_22k.toString());
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch market rates', err);
+                }
+            };
+            fetchRate();
+        }
+    }, [isOpen, enrollment?.shop_id]);
+
     // Fetch shop details for PDF
     const fetchShopDetails = async (shopId: string) => {
         const { data } = await supabase.from('shops').select('*').eq('id', shopId).single();
+        if (data) {
+            return {
+                ...data,
+                shopName: data.shop_name || data.name || data.shopName,
+                phoneNumber: data.phone_number || data.phone || data.phoneNumber,
+                address: data.address,
+                email: data.email,
+                logoUrl: data.logo_url || data.logoUrl
+            };
+        }
         return data;
     };
 
@@ -60,8 +91,38 @@ export function PaymentEntryModal({ isOpen, onClose, enrollment, onSuccess }: Pa
         }
     };
 
+    const handleShare = async () => {
+        if (!successData || !enrollment) return;
+        try {
+            const shopId = enrollment.shop_id;
+            const slug = await getShopSlug(shopId);
+            if (!slug) {
+                toast({ title: "Cannot Share", description: "Shop public link not configured.", variant: "destructive" });
+                return;
+            }
+            const url = generatePassbookUrl(slug, enrollment.id);
+            const msg = getPaymentMessage(
+                customerName || 'Customer', 
+                successData.transaction.amount, 
+                successData.transaction.gold_weight || 0,
+                enrollment.scheme?.name || 'Scheme',
+                url
+            );
+            openWhatsApp(customerPhone, msg);
+        } catch (e) {
+            console.error(e);
+            toast({ title: "Error", description: "Failed to generate share link", variant: "destructive" });
+        }
+    };
+
+    const isWeightScheme = enrollment?.scheme?.calculation_type === 'WEIGHT_ACCUMULATION';
+
     const handleSubmit = async () => {
         if (!enrollment || !amount) return;
+        if (isWeightScheme && !goldRate) {
+            toast({ title: "Error", description: "Gold Rate is required for this scheme.", variant: "destructive" });
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -84,19 +145,15 @@ export function PaymentEntryModal({ isOpen, onClose, enrollment, onSuccess }: Pa
             if (txError) throw txError;
 
             // Update enrollment totals
-            const { error: updateError } = await supabase.rpc('update_enrollment_totals', {
-                enrollment_uuid: enrollment.id,
-                amount_paid: numericAmount,
-                weight_added: weight
-            });
+            // Note: We need to ensure the RPC supports weight updates or we do it manually
+            // For now, manual update is safer as RPC might be old
+            const { error: updateError } = await supabase.from('scheme_enrollments').update({
+                total_paid: (enrollment.total_paid || 0) + numericAmount,
+                total_gold_weight_accumulated: (enrollment.total_gold_weight_accumulated || 0) + weight,
+                current_weight_balance: (enrollment.current_weight_balance || 0) + weight // Update balance too
+            }).eq('id', enrollment.id);
 
-            if (updateError) {
-                // Fallback manual update
-                await supabase.from('scheme_enrollments').update({
-                    total_paid: (enrollment.total_paid || 0) + numericAmount,
-                    total_gold_weight_accumulated: (enrollment.total_gold_weight_accumulated || 0) + weight
-                }).eq('id', enrollment.id);
-            }
+            if (updateError) throw updateError;
 
             toast({
                 title: "Payment Recorded",
@@ -154,14 +211,22 @@ export function PaymentEntryModal({ isOpen, onClose, enrollment, onSuccess }: Pa
             </div>
 
             <div className="space-y-2">
-                <Label>Today's Gold Rate (per gram) (Optional)</Label>
+                <Label>
+                    Today's Gold Rate (per gram) 
+                    {isWeightScheme ? <span className="text-red-500 ml-1">*</span> : ' (Optional)'}
+                </Label>
                 <Input
                     type="number"
                     value={goldRate}
                     onChange={(e) => setGoldRate(e.target.value)}
                     placeholder="Current gold rate"
+                    required={isWeightScheme}
                 />
-                <p className="text-xs text-muted-foreground">Enter rate to convert payment amount to gold weight.</p>
+                <p className="text-xs text-muted-foreground">
+                    {isWeightScheme 
+                        ? 'Required to calculate accumulated gold weight.' 
+                        : 'Enter rate to convert payment amount to gold weight.'}
+                </p>
             </div>
         </div>
     );
@@ -175,10 +240,16 @@ export function PaymentEntryModal({ isOpen, onClose, enrollment, onSuccess }: Pa
                 <h3 className="text-lg font-bold">₹{successData.transaction.amount} Received</h3>
                 <p className="text-sm text-muted-foreground">Transaction ID: {successData.transaction.id.slice(0, 8)}</p>
             </div>
-            <Button className="w-full gap-2" onClick={handlePrintReceipt}>
-                <Loader2 className="h-4 w-4 hidden" /> {/* Placeholder for loading state if needed */}
-                Print Receipt
-            </Button>
+            <div className="flex flex-col w-full gap-2">
+                <Button className="w-full gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white" onClick={handleShare}>
+                    <Share2 className="h-4 w-4" />
+                    Share Receipt on WhatsApp
+                </Button>
+                <Button variant="outline" className="w-full gap-2" onClick={handlePrintReceipt}>
+                    <Printer className="h-4 w-4" />
+                    Print Receipt
+                </Button>
+            </div>
         </div>
     ) : null;
 

@@ -364,7 +364,7 @@ function ShopLayoutInner({
                 )}
 
                 {/* Mobile Header - Adaptive Design */}
-                {isMobile && !pathname.includes('/invoices/new') && !pathname.includes('/loans/new') && (
+                {isMobile && !pathname.includes('/invoices/new') && !pathname.includes('/loans/new') && !pathname.includes('/schemes/create') && (
                     <header className="sticky top-0 z-50 flex flex-col w-full">
                         {pathname === `/shop/${shopId}/dashboard` ? (
                             /* 1. Dashboard Header - Immersive & Welcoming */
@@ -413,9 +413,9 @@ function ShopLayoutInner({
                 <main id="shop-main-content" className={cn(
                     "flex-1 overflow-x-hidden px-0 py-0 md:px-6 md:py-3 md:pb-6",
                     // Allow scrolling on invoice/loan creation pages; other creation pages may manage their own scrolling
-                    pathname.endsWith('/new') && !pathname.includes('/invoices/new') && !pathname.includes('/loans/new') ? "overflow-hidden" : "overflow-y-auto",
+                    (pathname.endsWith('/new') || pathname.endsWith('/create')) && !pathname.includes('/invoices/new') && !pathname.includes('/loans/new') && !pathname.includes('/schemes/create') ? "overflow-hidden" : "overflow-y-auto",
                     // Add bottom padding only if mobile nav is visible
-                    isMobile && !pathname.endsWith('/new') ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : ""
+                    isMobile && !pathname.endsWith('/new') && !pathname.endsWith('/create') ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : ""
                 )}>
                     {children}
                 </main>

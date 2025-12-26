@@ -10,14 +10,19 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Calendar, CreditCard, FileText, Phone, MapPin, Mail } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { ArrowLeft, Calendar, CreditCard, FileText, Phone, MapPin, Mail, Share2, Copy, Target } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { Invoice } from '@/lib/definitions';
 import {
     // Breadcrumb imports removed
 } from '@/components/ui/breadcrumb';
 import { EnrollmentModal } from '@/components/schemes/enrollment-modal';
+import { PaymentEntryModal } from '@/components/schemes/payment-entry-modal';
+import { ReferralShareModal } from '@/components/schemes/referral-share-modal';
+import { RequestPaymentModal } from '@/components/schemes/request-payment-modal';
 
 export function CustomerDetailsClient() {
     const searchParams = useSearchParams();
@@ -31,22 +36,50 @@ export function CustomerDetailsClient() {
 
     const [customerData, setCustomerData] = useState<any>(null);
     const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false);
+    const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isRequestPaymentOpen, setIsRequestPaymentOpen] = useState(false);
+    const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
     const [enrollments, setEnrollments] = useState<any[]>([]);
+    const { toast } = useToast();
+
+    const generateReferral = async () => {
+        if (!customerData?.id) return;
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const { error } = await supabase
+            .from('customers')
+            .update({ referral_code: code })
+            .eq('id', customerData.id);
+        
+        if (!error) {
+            setCustomerData({ ...customerData, referral_code: code });
+            toast({ title: "Success", description: "Referral code generated" });
+        } else {
+            toast({ title: "Error", description: "Failed to generate code", variant: "destructive" });
+        }
+    };
 
     useEffect(() => {
         const shopId = params.shopId as string;
-        if (!shopId || !customerName) return;
+        const customerIdParam = searchParams.get('id');
+        
+        if (!shopId || (!customerName && !customerIdParam)) return;
 
         const load = async () => {
             setIsLoading(true);
 
-            // Fetch real customer data for loyalty points
-            const { data: custData } = await supabase
+            let query = supabase
                 .from('customers')
                 .select('*')
-                .eq('shop_id', shopId)
-                .ilike('name', customerName)
-                .maybeSingle();
+                .eq('shop_id', shopId);
+
+            if (customerIdParam) {
+                query = query.eq('id', customerIdParam);
+            } else {
+                query = query.ilike('name', customerName);
+            }
+
+            const { data: custData } = await query.maybeSingle();
 
             if (custData) {
                 setCustomerData(custData);
@@ -54,7 +87,7 @@ export function CustomerDetailsClient() {
                 // Fetch active enrollments for this customer
                 const { data: enrollData } = await supabase
                     .from('scheme_enrollments')
-                    .select('*, scheme:schemes(name, scheme_type, duration_months, interest_rate, bonus_months, installment_amount)')
+                    .select('*, scheme:schemes(name, scheme_type, duration_months, interest_rate, bonus_months, scheme_amount)')
                     .eq('customer_id', custData.id)
                     .neq('status', 'CLOSED');
 
@@ -64,11 +97,13 @@ export function CustomerDetailsClient() {
             }
 
             // Query invoices by shop_id and customer name (case-insensitive)
+            // Note: Invoices store snapshot, so we still search by name for now
+            // Ideally invoices should link to customer_id
             const { data, error } = await supabase
                 .from('invoices')
                 .select('*')
                 .eq('shop_id', shopId)
-                .filter('customer_snapshot->>name', 'ilike', customerName)
+                .filter('customer_snapshot->>name', 'ilike', custData?.name || customerName)
                 .is('deleted_at', null)
                 .order('invoice_date', { ascending: false });
 
@@ -138,9 +173,14 @@ export function CustomerDetailsClient() {
                     </div>
                 </div>
                 {customerData && (
-                    <Button onClick={() => setIsEnrollmentOpen(true)} className="gap-2">
-                        <CreditCard className="h-4 w-4" /> Enroll in Scheme
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setIsShareModalOpen(true)} className="gap-2">
+                            <Share2 className="h-4 w-4" /> Refer
+                        </Button>
+                        <Button onClick={() => setIsEnrollmentOpen(true)} className="gap-2">
+                            <CreditCard className="h-4 w-4" /> Enroll in Scheme
+                        </Button>
+                    </div>
                 )}
             </div>
 
@@ -234,15 +274,249 @@ export function CustomerDetailsClient() {
                                         </p>
                                     )}
                                 </div>
+                                {customerData && (
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                            <Share2 className="h-3 w-3" /> Referral Code
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {customerData.referral_code ? (
+                                                <>
+                                                    <p className="font-medium font-mono bg-muted px-2 py-0.5 rounded text-sm">
+                                                        {customerData.referral_code}
+                                                    </p>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-6 w-6" 
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(customerData.referral_code);
+                                                        }}
+                                                    >
+                                                        <Copy className="h-3 w-3" />
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50" 
+                                                        onClick={() => setIsShareModalOpen(true)}
+                                                    >
+                                                        <Share2 className="h-3 w-3" />
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <Button variant="outline" size="sm" onClick={generateReferral} className="h-7 text-xs">
+                                                    Generate Code
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <p className="text-muted-foreground">No contact details available.</p>
                         )}
                     </CardContent>
                 </Card>
-
-
             </div>
+
+            {/* Active Schemes Section */}
+            <Card className="glass-card md:col-span-3">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <CreditCard className="h-5 w-5 text-primary" />
+                        Active Schemes
+                    </CardTitle>
+                    <CardDescription>Currently enrolled savings plans.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {enrollments.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+                            <p>No active scheme enrollments.</p>
+                            <Button variant="link" onClick={() => setIsEnrollmentOpen(true)} className="mt-2">
+                                Enroll Now
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="rounded-md border border-gray-200 dark:border-white/10 overflow-hidden">
+                            <div className="relative">
+                                {/* Mobile View - Cards */}
+                                <div className="md:hidden space-y-3 p-4">
+                                    {enrollments.map((enrollment) => {
+                                        const progress = enrollment.target_amount > 0 
+                                            ? Math.min(100, (enrollment.total_paid / enrollment.target_amount) * 100)
+                                            : enrollment.target_weight > 0
+                                                ? Math.min(100, (enrollment.total_gold_weight_accumulated / enrollment.target_weight) * 100)
+                                                : 0;
+                                        
+                                        return (
+                                        <div
+                                            key={enrollment.id}
+                                            className="bg-card border border-border rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
+                                            onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
+                                        >
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                    {enrollment.goal_name && (
+                                                        <div className="flex items-center gap-1 mb-1 text-primary font-medium text-xs">
+                                                            <Target className="h-3 w-3" />
+                                                            {enrollment.goal_name}
+                                                        </div>
+                                                    )}
+                                                    <div className="font-bold text-foreground">{enrollment.scheme?.name}</div>
+                                                    <div className="text-xs text-muted-foreground font-mono">
+                                                        #{enrollment.account_number}
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-2">
+                                                    <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80' : ''}>
+                                                        {enrollment.status}
+                                                    </Badge>
+                                                    {enrollment.status === 'ACTIVE' && (
+                                                        <div className="flex gap-1">
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline" 
+                                                                className="h-7 text-xs"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedEnrollment(enrollment);
+                                                                    setIsRequestPaymentOpen(true);
+                                                                }}
+                                                            >
+                                                                Request
+                                                            </Button>
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline" 
+                                                                className="h-7 text-xs"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedEnrollment(enrollment);
+                                                                }}
+                                                            >
+                                                                Pay
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {(enrollment.target_amount > 0 || enrollment.target_weight > 0) && (
+                                                <div className="space-y-1 py-2">
+                                                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                                                        <span>Progress</span>
+                                                        <span>{progress.toFixed(0)}%</span>
+                                                    </div>
+                                                    <Progress value={progress} className="h-1.5" />
+                                                </div>
+                                            )}
+
+                                            <div className="grid grid-cols-2 gap-3 pt-2 mt-2 border-t border-border">
+                                                <div>
+                                                    <div className="text-xs text-muted-foreground mb-0.5">Total Paid</div>
+                                                    <div className="font-bold text-green-600">{formatCurrency(enrollment.total_paid)}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-muted-foreground mb-0.5">Gold Accumulated</div>
+                                                    <div className="font-bold text-amber-600">
+                                                        {enrollment.total_gold_weight_accumulated > 0
+                                                            ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
+                                                            : '-'
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground bg-muted/30 p-2 rounded-lg">
+                                                <span>Started: {format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</span>
+                                                <span>Maturity: {enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                    )})}
+                                </div>
+
+                                {/* Desktop View - Table */}
+                                <div className="hidden md:block overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
+                                                <TableHead className="text-primary">Scheme Name</TableHead>
+                                                <TableHead className="text-primary">Account #</TableHead>
+                                                <TableHead className="text-primary hidden md:table-cell">Start Date</TableHead>
+                                                <TableHead className="text-primary hidden md:table-cell">Maturity</TableHead>
+                                                <TableHead className="text-primary text-right">Total Paid</TableHead>
+                                                <TableHead className="text-primary text-right">Gold Acc.</TableHead>
+                                                <TableHead className="text-primary text-center">Status</TableHead>
+                                                <TableHead className="text-primary text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {enrollments.map((enrollment) => (
+                                                <TableRow
+                                                    key={enrollment.id}
+                                                    className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
+                                                    onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
+                                                >
+                                                    <TableCell className="font-medium">
+                                                        <div className="flex flex-col">
+                                                            <span>{enrollment.scheme?.name}</span>
+                                                            <span className="text-xs text-muted-foreground md:hidden">{format(new Date(enrollment.start_date), 'MMM yyyy')}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-sm text-muted-foreground">{enrollment.account_number}</TableCell>
+                                                    <TableCell className="hidden md:table-cell">{format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</TableCell>
+                                                    <TableCell className="hidden md:table-cell">{enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</TableCell>
+                                                    <TableCell className="text-right font-bold text-green-600">
+                                                        {formatCurrency(enrollment.total_paid)}
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-medium text-amber-600">
+                                                        {enrollment.total_gold_weight_accumulated > 0
+                                                            ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
+                                                            : '-'
+                                                        }
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80 hover:bg-green-600/70' : ''}>
+                                                            {enrollment.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {enrollment.status === 'ACTIVE' && (
+                                                            <div className="flex justify-end gap-2">
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedEnrollment(enrollment);
+                                                                        setIsRequestPaymentOpen(true);
+                                                                    }}
+                                                                >
+                                                                    Request
+                                                                </Button>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedEnrollment(enrollment);
+                                                                    }}
+                                                                >
+                                                                    Pay
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Invoice History */}
             <Card className="glass-card">
@@ -356,123 +630,59 @@ export function CustomerDetailsClient() {
                 </CardContent>
             </Card>
 
-            {/* Active Schemes Table */}
-            {enrollments.length > 0 && (
-                <Card className="glass-card md:col-span-3">
-                    <CardHeader>
-                        <CardTitle>Active Gold Schemes</CardTitle>
-                        <CardDescription>Currently enrolled saving plans and payment details</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="rounded-md border border-gray-200 dark:border-white/10 overflow-hidden">
-                            <div className="relative">
-                                {/* Mobile View - Cards */}
-                                <div className="md:hidden space-y-3 p-4">
-                                    {enrollments.map((enrollment) => (
-                                        <div
-                                            key={enrollment.id}
-                                            className="bg-card border border-border rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
-                                            onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
-                                        >
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <div className="font-bold text-foreground">{enrollment.scheme?.name}</div>
-                                                    <div className="text-xs text-muted-foreground font-mono">
-                                                        #{enrollment.account_number}
-                                                    </div>
-                                                </div>
-                                                <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80' : ''}>
-                                                    {enrollment.status}
-                                                </Badge>
-                                            </div>
 
-                                            <div className="grid grid-cols-2 gap-3 pt-3 mt-2 border-t border-border">
-                                                <div>
-                                                    <div className="text-xs text-muted-foreground mb-0.5">Total Paid</div>
-                                                    <div className="font-bold text-green-600">{formatCurrency(enrollment.total_paid)}</div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-xs text-muted-foreground mb-0.5">Gold Accumulated</div>
-                                                    <div className="font-bold text-amber-600">
-                                                        {enrollment.total_gold_weight_accumulated > 0
-                                                            ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
-                                                            : '-'
-                                                        }
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground bg-muted/30 p-2 rounded-lg">
-                                                <span>Started: {format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</span>
-                                                <span>Maturity: {enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Desktop View - Table */}
-                                <div className="hidden md:block overflow-x-auto">
-                                    <Table>
-                                        <TableHeader className="bg-muted/50">
-                                            <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
-                                                <TableHead className="text-primary">Scheme Name</TableHead>
-                                                <TableHead className="text-primary">Account #</TableHead>
-                                                <TableHead className="text-primary hidden md:table-cell">Start Date</TableHead>
-                                                <TableHead className="text-primary hidden md:table-cell">Maturity</TableHead>
-                                                <TableHead className="text-primary text-right">Total Paid</TableHead>
-                                                <TableHead className="text-primary text-right">Gold Acc.</TableHead>
-                                                <TableHead className="text-primary text-center">Status</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {enrollments.map((enrollment) => (
-                                                <TableRow
-                                                    key={enrollment.id}
-                                                    className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
-                                                    onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
-                                                >
-                                                    <TableCell className="font-medium">
-                                                        <div className="flex flex-col">
-                                                            <span>{enrollment.scheme?.name}</span>
-                                                            <span className="text-xs text-muted-foreground md:hidden">{format(new Date(enrollment.start_date), 'MMM yyyy')}</span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="font-mono text-sm text-muted-foreground">{enrollment.account_number}</TableCell>
-                                                    <TableCell className="hidden md:table-cell">{format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</TableCell>
-                                                    <TableCell className="hidden md:table-cell">{enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</TableCell>
-                                                    <TableCell className="text-right font-bold text-green-600">
-                                                        {formatCurrency(enrollment.total_paid)}
-                                                    </TableCell>
-                                                    <TableCell className="text-right font-medium text-amber-600">
-                                                        {enrollment.total_gold_weight_accumulated > 0
-                                                            ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
-                                                            : '-'
-                                                        }
-                                                    </TableCell>
-                                                    <TableCell className="text-center">
-                                                        <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80 hover:bg-green-600/70' : ''}>
-                                                            {enrollment.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
 
             {customerData && (
-                <EnrollmentModal
-                    isOpen={isEnrollmentOpen}
-                    onClose={() => setIsEnrollmentOpen(false)}
-                    customerId={customerData.id}
+                <>
+                    <EnrollmentModal
+                        isOpen={isEnrollmentOpen}
+                        onClose={() => setIsEnrollmentOpen(false)}
+                        customerId={customerData.id}
+                        customerName={customerName}
+                        customerPhone={customerData.phone}
+                        onSuccess={() => {
+                            // Optional: refresh data or show success toast
+                            window.location.reload();
+                        }}
+                    />
+                    <ReferralShareModal
+                        isOpen={isShareModalOpen}
+                        onClose={() => setIsShareModalOpen(false)}
+                        customerName={customerName}
+                        customerPhone={customerData.phone}
+                        referralCode={customerData.referral_code}
+                        shopName="My Jewellery Shop" // Ideally fetch this from shop context
+                    />
+                </>
+            )}
+
+            {selectedEnrollment && !isRequestPaymentOpen && (
+                <PaymentEntryModal
+                    isOpen={!!selectedEnrollment}
+                    onClose={() => setSelectedEnrollment(null)}
+                    enrollment={selectedEnrollment}
                     customerName={customerName}
+                    customerPhone={customerData?.phone}
                     onSuccess={() => {
-                        // Optional: refresh data or show success toast
+                        // Refresh to show updated totals
+                        window.location.reload();
                     }}
+                />
+            )}
+
+            {selectedEnrollment && isRequestPaymentOpen && (
+                <RequestPaymentModal
+                    isOpen={isRequestPaymentOpen}
+                    onClose={() => {
+                        setIsRequestPaymentOpen(false);
+                        setSelectedEnrollment(null);
+                    }}
+                    shopId={params.shopId as string}
+                    shopName="My Jewellery Shop"
+                    customerName={customerName}
+                    customerPhone={customerData?.phone}
+                    amount={selectedEnrollment.scheme?.scheme_amount || 0}
+                    note={`Payment for ${selectedEnrollment.scheme?.name}`}
                 />
             )}
         </MotionWrapper>

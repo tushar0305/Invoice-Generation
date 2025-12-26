@@ -10,6 +10,7 @@ import {
     Sparkles,
     TrendingUp,
     Users,
+    UserPlus,
     ShieldCheck,
     Briefcase,
     Search,
@@ -29,6 +30,10 @@ import { supabase } from '@/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StatCard } from '@/components/schemes/stat-card';
 import { SchemesHeader } from '@/components/schemes/schemes-header';
+import { MaturityForecast } from '@/components/schemes/analytics/maturity-forecast';
+import { DefaulterList } from '@/components/schemes/analytics/defaulter-list';
+import { EnrollmentWizard } from '@/components/schemes/enrollment-wizard';
+import { EnrolledCustomersDrawer } from '@/components/schemes/enrolled-customers-drawer';
 
 export default function SchemesPage() {
     const { activeShop, isLoading: isShopLoading } = useActiveShop();
@@ -60,11 +65,21 @@ export default function SchemesPage() {
 
                 const { data: enrollmentValues } = await supabase
                     .from('scheme_enrollments')
-                    .select('scheme:schemes(installment_amount)')
+                    .select('scheme:schemes(scheme_amount, scheme_type)')
                     .eq('shop_id', shopId)
                     .eq('status', 'ACTIVE');
 
-                const totalValue = enrollmentValues?.reduce((sum, item: any) => sum + (item.scheme?.installment_amount || 0), 0) || 0;
+                const totalValue = enrollmentValues?.reduce((sum, item: any) => {
+                    const scheme = Array.isArray(item.scheme) ? item.scheme[0] : item.scheme;
+                    if (!scheme) return sum;
+                    
+                    // Only count fixed duration schemes for monthly collection projection
+                    if (scheme.scheme_type === 'FIXED_DURATION') {
+                        const amount = Number(scheme.scheme_amount);
+                        return sum + (isNaN(amount) ? 0 : amount);
+                    }
+                    return sum;
+                }, 0) || 0;
 
                 setStats({ totalEnrollments, totalValue });
             } finally {
@@ -104,6 +119,7 @@ export default function SchemesPage() {
                 shopName={activeShop?.shopName || 'My Shop'} 
                 stats={stats} 
                 onAddNew={() => router.push(`/shop/${shopId}/schemes/create`)} 
+                onLuckyDraw={() => router.push(`/shop/${shopId}/schemes/lucky-draw`)}
             />
 
             {/* MAIN CONTENT - Overlaps Header */}
@@ -198,37 +214,45 @@ export default function SchemesPage() {
                                 </CardContent>
                             </Card>
                         ) : (
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <Card className="border-none shadow-xl shadow-gray-200/50 dark:shadow-black/20 bg-card overflow-hidden relative group">
-                                    <CardContent className="p-6 md:p-8 flex flex-col justify-center h-full space-y-4">
-                                        <div className="space-y-2">
-                                            <h3 className="text-xl font-bold">Manage Schemes</h3>
-                                            <p className="text-muted-foreground text-sm leading-relaxed">
-                                                View and edit your existing schemes, or create new ones to attract more customers.
-                                            </p>
-                                        </div>
-                                        <Button variant="outline" className="w-full sm:w-auto rounded-full" onClick={() => setActiveTab('schemes')}>
-                                            View All Schemes
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                                
-                                <Card className="border-0 bg-gradient-to-br from-primary/10 to-primary/5 text-foreground shadow-xl shadow-primary/5">
-                                    <CardContent className="p-6 md:p-8 flex flex-col justify-center h-full space-y-4">
-                                        <div className="p-3 bg-primary/10 rounded-xl w-fit">
-                                            <Sparkles className="h-6 w-6 text-primary" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <h3 className="text-xl font-bold">Grow Your Business</h3>
-                                            <p className="text-muted-foreground text-sm leading-relaxed">
-                                                Gold schemes are a great way to build customer loyalty and ensure recurring revenue.
-                                            </p>
-                                        </div>
-                                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 rounded-full shadow-lg shadow-primary/20" onClick={() => router.push(`/shop/${shopId}/schemes/create`)}>
-                                            <Plus className="mr-2 h-4 w-4" /> Create New Scheme
-                                        </Button>
-                                    </CardContent>
-                                </Card>
+                            <div className="space-y-6">
+                                {/* Analytics Section */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <MaturityForecast shopId={shopId!} />
+                                    <DefaulterList shopId={shopId!} />
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <Card className="border-none shadow-xl shadow-gray-200/50 dark:shadow-black/20 bg-card overflow-hidden relative group">
+                                        <CardContent className="p-6 md:p-8 flex flex-col justify-center h-full space-y-4">
+                                            <div className="space-y-2">
+                                                <h3 className="text-xl font-bold">Manage Schemes</h3>
+                                                <p className="text-muted-foreground text-sm leading-relaxed">
+                                                    View and edit your existing schemes, or create new ones to attract more customers.
+                                                </p>
+                                            </div>
+                                            <Button variant="outline" className="w-full sm:w-auto rounded-full" onClick={() => setActiveTab('schemes')}>
+                                                View All Schemes
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                    
+                                    <Card className="border-0 bg-gradient-to-br from-primary/10 to-primary/5 text-foreground shadow-xl shadow-primary/5">
+                                        <CardContent className="p-6 md:p-8 flex flex-col justify-center h-full space-y-4">
+                                            <div className="p-3 bg-primary/10 rounded-xl w-fit">
+                                                <Sparkles className="h-6 w-6 text-primary" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h3 className="text-xl font-bold">Grow Your Business</h3>
+                                                <p className="text-muted-foreground text-sm leading-relaxed">
+                                                    Gold schemes are a great way to build customer loyalty and ensure recurring revenue.
+                                                </p>
+                                            </div>
+                                            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 rounded-full shadow-lg shadow-primary/20" onClick={() => router.push(`/shop/${shopId}/schemes/create`)}>
+                                                <Plus className="mr-2 h-4 w-4" /> Create New Scheme
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                </div>
                             </div>
                         )}
                     </TabsContent>
@@ -237,7 +261,7 @@ export default function SchemesPage() {
                     <TabsContent value="schemes" className="space-y-6 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
                         
                         {/* Search & Filter Bar */}
-                        <div className="bg-background/95 backdrop-blur-md p-4 rounded-2xl border border-border/50 shadow-sm sticky top-20 z-50">
+                        <div className="bg-background/95 backdrop-blur-md p-4 rounded-2xl border border-border/50 shadow-sm sticky top-0 md:top-20 z-40 transition-all duration-200 mb-6">
                             <div className="flex flex-col sm:flex-row gap-3">
                                 <div className="relative flex-1">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -293,15 +317,43 @@ export default function SchemesPage() {
                                             )}>
                                                 <CardHeader className="p-5 pb-2">
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <Badge
-                                                            variant="outline"
-                                                            className={cn(
-                                                                "rounded-md px-2 py-0 border-0 font-medium",
-                                                                scheme.is_active ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20" : "bg-slate-100 text-slate-500"
+                                                        <div className="flex gap-2">
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={cn(
+                                                                    "rounded-md px-2 py-0 border-0 font-medium",
+                                                                    scheme.is_active ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20" : "bg-slate-100 text-slate-500"
+                                                                )}
+                                                            >
+                                                                {scheme.is_active ? 'Active' : 'Paused'}
+                                                            </Badge>
+                                                            {scheme.calculation_type === 'WEIGHT_ACCUMULATION' && (
+                                                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">
+                                                                    Gold SIP
+                                                                </Badge>
                                                             )}
-                                                        >
-                                                            {scheme.is_active ? 'Active' : 'Paused'}
-                                                        </Badge>
+                                                        </div>
+                                                        <div className="flex gap-1" onClick={(e) => e.preventDefault()}>
+                                                            <EnrolledCustomersDrawer
+                                                                shopId={shopId!}
+                                                                schemeId={scheme.id}
+                                                                schemeName={scheme.name}
+                                                                trigger={
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" title="View Enrollments">
+                                                                        <Users className="h-4 w-4" />
+                                                                    </Button>
+                                                                }
+                                                            />
+                                                            <EnrollmentWizard 
+                                                                shopId={shopId!} 
+                                                                schemeId={scheme.id} 
+                                                                trigger={
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 text-muted-foreground hover:text-primary" title="Enroll Customer">
+                                                                        <UserPlus className="h-4 w-4" />
+                                                                    </Button>
+                                                                }
+                                                            />
+                                                        </div>
                                                     </div>
                                                     <CardTitle className="text-xl font-bold line-clamp-1 group-hover:text-primary transition-colors">
                                                         {scheme.name}
@@ -315,10 +367,13 @@ export default function SchemesPage() {
                                                     {/* Financial Terms Grid */}
                                                     <div className="grid grid-cols-3 gap-2 mt-4 p-3 rounded-xl bg-muted/40 border border-border/50">
                                                         <div className="text-center">
-                                                            <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Monthly</p>
+                                                            <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">
+                                                                {scheme.payment_frequency === 'WEEKLY' ? 'Weekly' : 
+                                                                 scheme.payment_frequency === 'DAILY' ? 'Daily' : 'Monthly'}
+                                                            </p>
                                                             <p className="text-sm font-bold">
                                                                 {scheme.scheme_type === 'FIXED_DURATION'
-                                                                    ? formatCurrency(scheme.installment_amount || 0)
+                                                                    ? formatCurrency(scheme.scheme_amount || 0)
                                                                     : 'Flexible'}
                                                             </p>
                                                         </div>
@@ -329,7 +384,9 @@ export default function SchemesPage() {
                                                         <div className="text-center border-l border-border/50">
                                                             <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Benefit</p>
                                                             <p className="text-sm font-bold text-emerald-600">
-                                                                {scheme.bonus_months > 0 ? `+${scheme.bonus_months} Mo` : 'Fixed'}
+                                                                {scheme.benefit_type === 'BONUS_MONTH' ? `+${scheme.bonus_months} Mo` :
+                                                                 scheme.benefit_type === 'INTEREST' ? `${scheme.interest_rate}%` :
+                                                                 scheme.benefit_type === 'MAKING_CHARGE_DISCOUNT' ? 'No MC' : 'Fixed'}
                                                             </p>
                                                         </div>
                                                     </div>

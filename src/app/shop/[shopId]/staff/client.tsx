@@ -165,7 +165,7 @@ export function StaffClient({
                 toast({ title: 'Success', description: 'Staff member removed' });
                 router.refresh();
             } else {
-                toast({ variant: 'destructive', title: 'Error', description: result.error });
+                toast({ variant: 'destructive', title: 'Error', description: result.error || "Failed to remove staff member." });
             }
         });
     };

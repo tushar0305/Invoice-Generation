@@ -1,31 +1,20 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Coins, PiggyBank, ArrowRight } from 'lucide-react';
+import { Coins, PiggyBank, ArrowRight, Users, CalendarClock } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 
-
-// We'll fetch this client-side or pass data from server. For simplicity in this widget, let's accept props.
-// But to match the pattern of other widgets (which accept shopId and fetch, or take props), let's see.
-// The others seem to take raw data props or do their own thing. 
-// Ideally, the parent DashboardPage fetches data.
-
 interface SchemesWidgetProps {
-    totalSchemes: number;
-    activeEnrollments: number;
-    totalCollectedMonth: number;
-    totalGoldAccumulated: number;
+    stats: {
+        activeEnrollments: number;
+        totalGoldLiability: number;
+        upcomingMaturities: number;
+        totalSchemes?: number;
+    };
     shopId: string;
 }
 
-export function SchemesWidget({
-    totalSchemes,
-    activeEnrollments,
-    totalCollectedMonth,
-    totalGoldAccumulated,
-    shopId
-}: SchemesWidgetProps) {
+export function SchemesWidget({ stats, shopId }: SchemesWidgetProps) {
     return (
         <Card className="glass-card flex flex-col h-full bg-gradient-to-br from-card/50 to-amber-500/5 border-amber-500/10">
             <CardHeader className="pb-2">
@@ -41,38 +30,28 @@ export function SchemesWidget({
                     </Link>
                 </div>
             </CardHeader>
-            <CardContent className="flex-1 space-y-4">
-                {totalSchemes === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
-                        <p className="text-sm">No schemes active.</p>
-                        <Link href={`/shop/${shopId}/schemes/create`} className="mt-2 text-primary text-xs hover:underline">
-                            Create one
-                        </Link>
+            <CardContent className="flex-1">
+                <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col items-center justify-center p-2 bg-primary/5 rounded-lg">
+                        <Users className="h-4 w-4 text-primary mb-1" />
+                        <span className="text-xl font-bold">{stats.activeEnrollments}</span>
+                        <span className="text-[10px] text-muted-foreground text-center leading-tight">Active Members</span>
                     </div>
-                ) : (
-                    <>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <span className="text-xs text-muted-foreground">Enrollments</span>
-                                <p className="text-2xl font-bold">{activeEnrollments}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <span className="text-xs text-muted-foreground">Collected (Mo)</span>
-                                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalCollectedMonth)}</p>
-                            </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-border/50">
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground flex items-center gap-1.5">
-                                    <Coins className="h-3.5 w-3.5 text-amber-500" />
-                                    Gold Booked
-                                </span>
-                                <span className="font-semibold text-amber-600">{totalGoldAccumulated.toFixed(3)}g</span>
-                            </div>
-                        </div>
-                    </>
-                )}
+                    <div className="flex flex-col items-center justify-center p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                        <Coins className="h-4 w-4 text-amber-600 mb-1" />
+                        <span className="text-xl font-bold text-amber-700 dark:text-amber-500">
+                            {stats.totalGoldLiability.toFixed(2)}g
+                        </span>
+                        <span className="text-[10px] text-muted-foreground text-center leading-tight">Gold Liability</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <CalendarClock className="h-4 w-4 text-blue-600 mb-1" />
+                        <span className="text-xl font-bold text-blue-700 dark:text-blue-500">
+                            {stats.upcomingMaturities}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground text-center leading-tight">Maturities (30d)</span>
+                    </div>
+                </div>
             </CardContent>
         </Card>
     );

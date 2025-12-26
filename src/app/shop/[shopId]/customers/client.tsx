@@ -62,6 +62,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
         email: '',
         address: '',
         gstNumber: '',
+        referralCode: '',
     });
 
     const handleAddCustomer = async () => {
@@ -97,7 +98,7 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                 });
 
                 setIsAddCustomerOpen(false);
-                setNewCustomer({ name: '', phone: '', email: '', address: '', gstNumber: '' });
+                setNewCustomer({ name: '', phone: '', email: '', address: '', gstNumber: '', referralCode: '' });
                 router.refresh();
             } catch (error: any) {
                 console.error('Create customer error:', error);
@@ -235,6 +236,14 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                             </Button>
                         }
                     />
+                    
+                    <Button 
+                        onClick={() => setIsAddCustomerOpen(true)}
+                        className="h-12 px-6 gap-2 rounded-full shadow-lg shadow-primary/20 transition-all"
+                    >
+                        <Plus className="h-4 w-4" />
+                        <span className="hidden sm:inline">Add Customer</span>
+                    </Button>
                 </div>
             </div>
 
@@ -433,6 +442,61 @@ export function CustomersClient({ customerData, shopId }: CustomersClientProps) 
                     </div>
                 )}
             </div>
+
+            <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Add New Customer</DialogTitle>
+                        <DialogDescription>
+                            Create a new customer profile. Click save when you're done.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input
+                                id="name"
+                                value={newCustomer.name}
+                                onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                                placeholder="John Doe"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="phone">Phone</Label>
+                            <Input
+                                id="phone"
+                                value={newCustomer.phone}
+                                onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                                placeholder="+91 98765 43210"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="email">Email (Optional)</Label>
+                            <Input
+                                id="email"
+                                value={newCustomer.email}
+                                onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                                placeholder="john@example.com"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="referral">Referral Code (Optional)</Label>
+                            <Input
+                                id="referral"
+                                value={newCustomer.referralCode}
+                                onChange={(e) => setNewCustomer({ ...newCustomer, referralCode: e.target.value })}
+                                placeholder="Enter referral code"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddCustomerOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddCustomer} disabled={isPending}>
+                            {isPending ? 'Creating...' : 'Create Customer'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </MotionWrapper>
     );
 }

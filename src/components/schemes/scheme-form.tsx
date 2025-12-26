@@ -32,13 +32,39 @@ import { supabase } from '@/supabase/client';
 import { Separator } from '@/components/ui/separator';
 
 const schemeSchema = z.object({
-    name: z.string().min(3, 'Name must be at least 3 characters'),
-    description: z.string().optional(),
+    name: z.string().min(3, 'Name must be at least 3 characters').max(100, 'Name is too long'),
+    description: z.string().max(500, 'Description is too long').optional(),
     scheme_type: z.enum(['FIXED_DURATION', 'FLEXIBLE']),
-    duration_months: z.coerce.number().min(1, 'Duration must be at least 1 month'),
+    
+    // Next-Gen Fields
+    calculation_type: z.enum(['FLAT_AMOUNT', 'WEIGHT_ACCUMULATION']).default('FLAT_AMOUNT'),
+    payment_frequency: z.enum(['MONTHLY', 'WEEKLY', 'DAILY', 'FLEXIBLE']).default('MONTHLY'),
+    min_amount: z.coerce.number().min(0, 'Amount cannot be negative').default(0),
+    benefit_type: z.enum(['BONUS_MONTH', 'INTEREST', 'MAKING_CHARGE_DISCOUNT', 'FIXED_AMOUNT']).default('BONUS_MONTH'),
+    benefit_value: z.coerce.number().min(0, 'Benefit value cannot be negative').default(0),
+
+    duration_months: z.coerce.number().int().min(1, 'Duration must be at least 1 month').max(120, 'Duration cannot exceed 10 years'),
     installment_amount: z.coerce.number().min(0).optional(),
     bonus_months: z.coerce.number().min(0).optional(),
     interest_rate: z.coerce.number().min(0).optional(),
+}).superRefine((data, ctx) => {
+    if (data.scheme_type === 'FIXED_DURATION') {
+        if (!data.installment_amount || data.installment_amount <= 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Installment amount is required for fixed duration schemes",
+                path: ["installment_amount"]
+            });
+        }
+    }
+    
+    if (data.benefit_type === 'INTEREST' && data.benefit_value > 100) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Interest rate cannot exceed 100%",
+            path: ["benefit_value"]
+        });
+    }
 });
 
 type SchemeFormValues = z.infer<typeof schemeSchema>;
@@ -58,14 +84,21 @@ export function SchemeForm({ shopId, onSuccess }: SchemeFormProps) {
             name: '',
             description: '',
             scheme_type: 'FIXED_DURATION',
-            duration_months: 11,
-            installment_amount: 1000,
-            bonus_months: 1,
+            calculation_type: 'FLAT_AMOUNT',
+            payment_frequency: 'MONTHLY',
+            min_amount: 0,
+            benefit_type: 'BONUS_MONTH',
+            benefit_value: 0,
+            duration_months: 12,
+            installment_amount: 0,
+            bonus_months: 0,
             interest_rate: 0,
         },
     });
 
     const schemeType = form.watch('scheme_type');
+    const calculationType = form.watch('calculation_type');
+    const benefitType = form.watch('benefit_type');
 
     async function onSubmit(data: SchemeFormValues) {
         setIsSubmitting(true);
@@ -73,12 +106,21 @@ export function SchemeForm({ shopId, onSuccess }: SchemeFormProps) {
             const payload: CreateSchemePayload = {
                 shop_id: shopId,
                 name: data.name,
-                description: data.description,
                 scheme_type: data.scheme_type,
+                
+                // Next-Gen
+                calculation_type: data.calculation_type,
+                payment_frequency: data.payment_frequency,
+                min_amount: data.min_amount,
+                benefit_type: data.benefit_type,
+                benefit_value: data.benefit_value,
+
                 duration_months: data.duration_months,
-                installment_amount: data.installment_amount || 0,
-                bonus_months: data.bonus_months || 0,
-                interest_rate: data.interest_rate || 0,
+                scheme_amount: data.installment_amount || 0,
+                
+                rules: {
+                    description: data.description
+                }
             };
 
             const { error } = await supabase.from('schemes').insert(payload);
@@ -93,8 +135,8 @@ export function SchemeForm({ shopId, onSuccess }: SchemeFormProps) {
                 router.refresh();
             }
         } catch (error: any) {
-            console.error('Error creating scheme:', error);
-            toast.error(error.message || 'Failed to create scheme');
+            console.error('Error creating scheme:', JSON.stringify(error, null, 2));
+            toast.error(error?.message || 'Failed to create scheme. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -151,7 +193,7 @@ export function SchemeForm({ shopId, onSuccess }: SchemeFormProps) {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="FIXED_DURATION">Fixed Installment (e.g. 11+1)</SelectItem>
+                                                    <SelectItem value="FIXED_DURATION">Fixed Installment</SelectItem>
                                                     <SelectItem value="FLEXIBLE">Flexible Amount</SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -160,6 +202,58 @@ export function SchemeForm({ shopId, onSuccess }: SchemeFormProps) {
                                                     ? 'Fixed monthly payments with maturity bonus.'
                                                     : 'Variable payments with interest calculation.'}
                                             </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Next-Gen Configuration */}
+                                <FormField
+                                    control={form.control}
+                                    name="calculation_type"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2 md:col-span-1">
+                                            <FormLabel>Saving Mode</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger className="h-10">
+                                                        <SelectValue placeholder="Select mode" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="FLAT_AMOUNT">Cash Value (₹)</SelectItem>
+                                                    <SelectItem value="WEIGHT_ACCUMULATION">Gold Weight (Grams)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormDescription className="text-xs">
+                                                {field.value === 'FLAT_AMOUNT'
+                                                    ? 'Customer saves money. Bonus is given on total amount.'
+                                                    : 'Customer buys gold grams at daily rate. Hedges against price rise.'}
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="payment_frequency"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2 md:col-span-1">
+                                            <FormLabel>Payment Frequency</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger className="h-10">
+                                                        <SelectValue placeholder="Select frequency" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="MONTHLY">Monthly</SelectItem>
+                                                    <SelectItem value="WEEKLY">Weekly</SelectItem>
+                                                    <SelectItem value="DAILY">Daily</SelectItem>
+                                                    <SelectItem value="FLEXIBLE">Anytime (Flexible)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -194,7 +288,7 @@ export function SchemeForm({ shopId, onSuccess }: SchemeFormProps) {
                                 </CardTitle>
                                 <CardDescription>Define duration, amounts, and benefits.</CardDescription>
                             </CardHeader>
-                            <CardContent className="grid gap-6 md:grid-cols-3">
+                            <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                                 <FormField
                                     control={form.control}
                                     name="duration_months"
@@ -213,59 +307,87 @@ export function SchemeForm({ shopId, onSuccess }: SchemeFormProps) {
                                 />
 
                                 {schemeType === 'FIXED_DURATION' ? (
-                                    <>
-                                        <FormField
-                                            control={form.control}
-                                            name="installment_amount"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Monthly Amount (₹)</FormLabel>
-                                                    <FormControl>
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-2.5 text-muted-foreground font-semibold text-sm">₹</span>
-                                                            <Input type="number" placeholder="0" className="pl-8 h-10" {...field} />
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="bonus_months"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Bonus (Installements)</FormLabel>
-                                                    <FormControl>
-                                                        <div className="relative">
-                                                            <Gift className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
-                                                            <Input type="number" step="0.5" className="pl-9 h-10" {...field} />
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormDescription className="text-xs truncate">
-                                                        Shop pays this many months.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </>
+                                    <FormField
+                                        control={form.control}
+                                        name="installment_amount"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Monthly Amount (₹)</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-2.5 text-muted-foreground font-semibold text-sm">₹</span>
+                                                        <Input type="number" placeholder="0" className="pl-8 h-10" {...field} />
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                 ) : (
                                     <FormField
                                         control={form.control}
-                                        name="interest_rate"
+                                        name="min_amount"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Interest Rate (%)</FormLabel>
+                                                <FormLabel>Min. Payment (₹)</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" step="0.1" className="h-10" {...field} />
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-2.5 text-muted-foreground font-semibold text-sm">₹</span>
+                                                        <Input type="number" placeholder="500" className="pl-8 h-10" {...field} />
+                                                    </div>
                                                 </FormControl>
-                                                <FormDescription>Annual interest rate.</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                 )}
+
+                                {/* Benefit Configuration */}
+                                <FormField
+                                    control={form.control}
+                                    name="benefit_type"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Benefit Type</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger className="h-10">
+                                                        <SelectValue placeholder="Select benefit" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="BONUS_MONTH">Bonus Installment</SelectItem>
+                                                    <SelectItem value="INTEREST">Interest (%)</SelectItem>
+                                                    <SelectItem value="MAKING_CHARGE_DISCOUNT">Making Charge Discount (%)</SelectItem>
+                                                    <SelectItem value="FIXED_AMOUNT">Fixed Cash Bonus (₹)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="benefit_value"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                {benefitType === 'BONUS_MONTH' ? 'Bonus (Months)' :
+                                                 benefitType === 'INTEREST' ? 'Interest Rate (%)' :
+                                                 benefitType === 'MAKING_CHARGE_DISCOUNT' ? 'Discount (%)' :
+                                                 'Bonus Amount (₹)'}
+                                            </FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Gift className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
+                                                    <Input type="number" step="0.1" className="pl-9 h-10" {...field} />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </CardContent>
                         </Card>
                     </div>
