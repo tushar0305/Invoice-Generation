@@ -277,16 +277,17 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
                 topCustomer={topCustomer}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <SchemesWidget stats={schemeStats} shopId={shopId} />
-                <ReferralWidget shopId={shopId} stats={referralStats} />
-              </div>
+
             </div>
           </div>
 
           {/* Right Column: Recent Activity */}
           <div className="space-y-6">
-            <Card className="h-full bg-card/60 backdrop-blur-md border border-border/50 shadow-sm flex flex-col min-h-[400px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SchemesWidget stats={schemeStats} shopId={shopId} />
+              <ReferralWidget shopId={shopId} stats={referralStats} />
+            </div>
+            <Card className="bg-card/60 backdrop-blur-md border border-border/50 shadow-sm flex flex-col">
               <CardHeader className="py-4 px-5 flex flex-row items-center justify-between border-b border-border/40">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-primary" />
@@ -301,7 +302,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
               <CardContent className="p-0 flex-1 overflow-hidden">
                 {stats.recentInvoices.length > 0 ? (
                   <div className="divide-y divide-border/30">
-                    {stats.recentInvoices.slice(0, 8).map((invoice: any) => (
+                    {stats.recentInvoices.slice(0, 7).map((invoice: any) => (
                       <div key={invoice.id} className="p-1 px-2 hover:bg-muted/30 transition-colors">
                         <DashboardInvoiceRow invoice={invoice} shopId={shopId} />
                       </div>
@@ -313,6 +314,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ shop
                   </div>
                 )}
               </CardContent>
+              <div className="p-3 border-t bg-muted/20">
+                <Link href={`/shop/${shopId}/invoices`} className="flex items-center justify-center text-xs font-medium text-muted-foreground hover:text-primary transition-colors py-1">
+                  View All Activity <ArrowRight className="h-3 w-3 ml-1" />
+                </Link>
+              </div>
             </Card>
           </div>
         </div>

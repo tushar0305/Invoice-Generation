@@ -364,7 +364,7 @@ function ShopLayoutInner({
                 )}
 
                 {/* Mobile Header - Adaptive Design */}
-                {isMobile && !pathname.includes('/invoices/new') && !pathname.includes('/loans/new') && !pathname.includes('/schemes/create') && (
+                {isMobile && !pathname.includes('/invoices/new') && !pathname.includes('/loans/new') && !pathname.includes('/schemes/create') && !pathname.includes('/customers/view') && (
                     <header className="sticky top-0 z-50 flex flex-col w-full">
                         {pathname === `/shop/${shopId}/dashboard` ? (
                             /* 1. Dashboard Header - Immersive & Welcoming */

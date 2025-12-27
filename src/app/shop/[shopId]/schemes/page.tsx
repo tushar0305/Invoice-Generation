@@ -26,7 +26,9 @@ import { Input } from '@/components/ui/input';
 import { useActiveShop } from '@/hooks/use-active-shop';
 import { useSchemes } from '@/hooks/use-schemes';
 import { formatCurrency, cn } from '@/lib/utils';
-import { supabase } from '@/supabase/client';
+// import { supabase } from '@/supabase/client'; // Removed unused import if not used elsewhere (checking validation)
+import { supabase } from '@/supabase/client'; // Keeping it if needed for other things, but logic suggests removing if fully replaced.
+import { getSchemeStats } from '@/actions/dashboard-actions';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StatCard } from '@/components/schemes/stat-card';
 import { SchemesHeader } from '@/components/schemes/schemes-header';
@@ -50,38 +52,18 @@ export default function SchemesPage() {
     const [stats, setStats] = useState({ totalEnrollments: 0, totalValue: 0 });
     const [loadingStats, setLoadingStats] = useState(true);
 
-    // Fetch extra stats
+    // Fetch stats using Server Action
     useEffect(() => {
         if (!shopId) return;
         const fetchStats = async () => {
             try {
-                const { data: enrollments } = await supabase
-                    .from('scheme_enrollments')
-                    .select('scheme_id')
-                    .eq('shop_id', shopId)
-                    .eq('status', 'ACTIVE');
-
-                const totalEnrollments = enrollments?.length || 0;
-
-                const { data: enrollmentValues } = await supabase
-                    .from('scheme_enrollments')
-                    .select('scheme:schemes(scheme_amount, scheme_type)')
-                    .eq('shop_id', shopId)
-                    .eq('status', 'ACTIVE');
-
-                const totalValue = enrollmentValues?.reduce((sum, item: any) => {
-                    const scheme = Array.isArray(item.scheme) ? item.scheme[0] : item.scheme;
-                    if (!scheme) return sum;
-                    
-                    // Only count fixed duration schemes for monthly collection projection
-                    if (scheme.scheme_type === 'FIXED_DURATION') {
-                        const amount = Number(scheme.scheme_amount);
-                        return sum + (isNaN(amount) ? 0 : amount);
-                    }
-                    return sum;
-                }, 0) || 0;
-
-                setStats({ totalEnrollments, totalValue });
+                const data = await getSchemeStats(shopId);
+                setStats({
+                    totalEnrollments: data.activeEnrollments,
+                    totalValue: data.monthlyCollection || 0
+                });
+            } catch (error) {
+                console.error("Failed to fetch scheme stats:", error);
             } finally {
                 setLoadingStats(false);
             }
@@ -113,12 +95,12 @@ export default function SchemesPage() {
 
     return (
         <div className="min-h-screen bg-background pb-24 md:pb-8 transition-colors duration-300">
-            
+
             {/* HEADER */}
-            <SchemesHeader 
-                shopName={activeShop?.shopName || 'My Shop'} 
-                stats={stats} 
-                onAddNew={() => router.push(`/shop/${shopId}/schemes/create`)} 
+            <SchemesHeader
+                shopName={activeShop?.shopName || 'My Shop'}
+                stats={stats}
+                onAddNew={() => router.push(`/shop/${shopId}/schemes/create`)}
                 onLuckyDraw={() => router.push(`/shop/${shopId}/schemes/lucky-draw`)}
             />
 
@@ -146,7 +128,7 @@ export default function SchemesPage() {
 
                     {/* OVERVIEW TAB */}
                     <TabsContent value="overview" className="space-y-6 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        
+
                         {/* Mobile Stats Grid */}
                         <div className="grid grid-cols-2 gap-3 md:hidden">
                             <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm col-span-2">
@@ -171,7 +153,7 @@ export default function SchemesPage() {
 
                         {/* Desktop Additional Stats (Active Schemes) */}
                         <div className="hidden md:grid md:grid-cols-3 gap-6">
-                             <StatCard
+                            <StatCard
                                 title="Active Schemes"
                                 value={activeSchemesCount}
                                 subtext={`${schemes.length} total created`}
@@ -179,7 +161,7 @@ export default function SchemesPage() {
                                 iconColor="text-blue-600 dark:text-blue-400"
                                 bgColor="bg-blue-50 dark:bg-blue-900/20"
                             />
-                             <StatCard
+                            <StatCard
                                 title="Active Enrollments"
                                 value={stats.totalEnrollments}
                                 subtext="Customers currently paying"
@@ -235,7 +217,7 @@ export default function SchemesPage() {
                                             </Button>
                                         </CardContent>
                                     </Card>
-                                    
+
                                     <Card className="border-0 bg-gradient-to-br from-primary/10 to-primary/5 text-foreground shadow-xl shadow-primary/5">
                                         <CardContent className="p-6 md:p-8 flex flex-col justify-center h-full space-y-4">
                                             <div className="p-3 bg-primary/10 rounded-xl w-fit">
@@ -259,7 +241,7 @@ export default function SchemesPage() {
 
                     {/* SCHEMES LIST TAB */}
                     <TabsContent value="schemes" className="space-y-6 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        
+
                         {/* Search & Filter Bar */}
                         <div className="bg-background/95 backdrop-blur-md p-4 rounded-2xl border border-border/50 shadow-sm sticky top-0 md:top-20 z-40 transition-all duration-200 mb-6">
                             <div className="flex flex-col sm:flex-row gap-3">
@@ -344,9 +326,9 @@ export default function SchemesPage() {
                                                                     </Button>
                                                                 }
                                                             />
-                                                            <EnrollmentWizard 
-                                                                shopId={shopId!} 
-                                                                schemeId={scheme.id} 
+                                                            <EnrollmentWizard
+                                                                shopId={shopId!}
+                                                                schemeId={scheme.id}
                                                                 trigger={
                                                                     <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 text-muted-foreground hover:text-primary" title="Enroll Customer">
                                                                         <UserPlus className="h-4 w-4" />
@@ -368,8 +350,8 @@ export default function SchemesPage() {
                                                     <div className="grid grid-cols-3 gap-2 mt-4 p-3 rounded-xl bg-muted/40 border border-border/50">
                                                         <div className="text-center">
                                                             <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">
-                                                                {scheme.payment_frequency === 'WEEKLY' ? 'Weekly' : 
-                                                                 scheme.payment_frequency === 'DAILY' ? 'Daily' : 'Monthly'}
+                                                                {scheme.payment_frequency === 'WEEKLY' ? 'Weekly' :
+                                                                    scheme.payment_frequency === 'DAILY' ? 'Daily' : 'Monthly'}
                                                             </p>
                                                             <p className="text-sm font-bold">
                                                                 {scheme.scheme_type === 'FIXED_DURATION'
@@ -385,8 +367,8 @@ export default function SchemesPage() {
                                                             <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Benefit</p>
                                                             <p className="text-sm font-bold text-emerald-600">
                                                                 {scheme.benefit_type === 'BONUS_MONTH' ? `+${scheme.bonus_months} Mo` :
-                                                                 scheme.benefit_type === 'INTEREST' ? `${scheme.interest_rate}%` :
-                                                                 scheme.benefit_type === 'MAKING_CHARGE_DISCOUNT' ? 'No MC' : 'Fixed'}
+                                                                    scheme.benefit_type === 'INTEREST' ? `${scheme.interest_rate}%` :
+                                                                        scheme.benefit_type === 'MAKING_CHARGE_DISCOUNT' ? 'No MC' : 'Fixed'}
                                                             </p>
                                                         </div>
                                                     </div>

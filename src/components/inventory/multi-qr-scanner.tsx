@@ -12,6 +12,10 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import jsQR from 'jsqr';
 
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Zap } from 'lucide-react';
+
 interface QRScannerProps {
     shopId: string;
     onItemsAdded: (items: Array<{
@@ -56,6 +60,9 @@ export function MultiQRScanner({
     const [cameraActive, setCameraActive] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
 
+    // UX-NEW: Continuous Scan
+    const [continuousMode, setContinuousMode] = useState(false);
+
     const inputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,6 +82,28 @@ export function MultiQRScanner({
             stopCamera();
         };
     }, []);
+
+    const playSuccessSound = () => {
+        const audio = new Audio('/sounds/beep.mp3'); // Fallback or native beep?
+        // Using AudioContext for a simple generated beep is more reliable than missing file
+        try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 1000;
+                osc.type = 'sine';
+                gain.gain.value = 0.1;
+                osc.start();
+                setTimeout(() => osc.stop(), 150);
+            }
+        } catch (e) {
+            console.error("Audio beep failed", e);
+        }
+    };
 
     const startCamera = async () => {
         try {
@@ -188,9 +217,6 @@ export function MultiQRScanner({
 
         // Check if already scanned in this session
         if (scannedItems.some(item => item.tag_id === trimmedQR)) {
-            // Just show a small toast or ignore to not spam user
-            // But we do add to list if user wants to see it? 
-            // Logic in original code added a duplicate entry. Let's keep that but maybe not spam fetch.
             setScannedItems(prev => [...prev, {
                 tag_id: trimmedQR,
                 status: 'duplicate',
@@ -230,17 +256,34 @@ export function MultiQRScanner({
                     timestamp: Date.now()
                 }]);
             } else {
-                // UX-003: Feedback on successful scan
-                if ('vibrate' in navigator) {
-                    navigator.vibrate([50, 30, 50]); // Success pattern
-                }
+                // Success!
+                playSuccessSound();
+                if ('vibrate' in navigator) navigator.vibrate([50]);
 
-                setScannedItems(prev => [...prev, {
-                    tag_id: trimmedQR,
-                    status: 'success',
-                    item: data,
-                    timestamp: Date.now()
-                }]);
+                if (continuousMode) {
+                    // Auto-Add immediately
+                    onItemsAdded([data]);
+                    toast({
+                        title: "Added Item",
+                        description: `${data.name} (${data.tag_id})`,
+                        duration: 1500,
+                        className: "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    });
+                    setScannedItems(prev => [...prev, {
+                        tag_id: trimmedQR,
+                        status: 'success',
+                        item: data,
+                        timestamp: Date.now()
+                    }]);
+                } else {
+                    // Manual Add later
+                    setScannedItems(prev => [...prev, {
+                        tag_id: trimmedQR,
+                        status: 'success',
+                        item: data,
+                        timestamp: Date.now()
+                    }]);
+                }
             }
         } catch (err: any) {
             setScannedItems(prev => [...prev, {
@@ -295,39 +338,54 @@ export function MultiQRScanner({
                         Scan Multiple QR Codes
                     </DialogTitle>
                     <DialogDescription>
-                        Choose scan mode: Use camera to scan or manually enter tag IDs.
+                        Choose scan mode: Use camera or enter IDs manually.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    {/* Mode Toggle */}
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant={scanMode === 'manual' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => {
-                                setScanMode('manual');
-                                stopCamera();
-                            }}
-                            className="gap-2"
-                        >
-                            <Keyboard className="h-4 w-4" />
-                            Manual Entry
-                        </Button>
-                        <Button
-                            type="button"
-                            variant={scanMode === 'camera' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => {
-                                setScanMode('camera');
-                                startCamera();
-                            }}
-                            className="gap-2"
-                        >
-                            <Camera className="h-4 w-4" />
-                            Camera Scan
-                        </Button>
+                    {/* Mode Toggle & Continuous Switch */}
+                    <div className="flex flex-col sm:flex-row justify-between gap-3 bg-muted/30 p-3 rounded-lg border">
+                        <div className="flex gap-2">
+                            <Button
+                                type="button"
+                                variant={scanMode === 'manual' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => {
+                                    setScanMode('manual');
+                                    stopCamera();
+                                }}
+                                className="gap-2"
+                            >
+                                <Keyboard className="h-4 w-4" />
+                                Manual
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={scanMode === 'camera' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => {
+                                    setScanMode('camera');
+                                    startCamera();
+                                }}
+                                className="gap-2"
+                            >
+                                <Camera className="h-4 w-4" />
+                                Camera
+                            </Button>
+                        </div>
+
+                        {/* Continuous Mode Toggle */}
+                        <div className="flex items-center space-x-2 border-l pl-4 border-border/50">
+                            <Switch
+                                id="continuous-mode"
+                                checked={continuousMode}
+                                onCheckedChange={setContinuousMode}
+                            />
+                            <Label htmlFor="continuous-mode" className="text-sm cursor-pointer flex items-center gap-1.5 font-medium">
+                                <Zap className={cn("h-3.5 w-3.5", continuousMode ? "text-amber-500 fill-amber-500" : "text-muted-foreground")} />
+                                Auto-Add Items
+                            </Label>
+                        </div>
                     </div>
 
                     {/* Camera Mode */}
@@ -340,7 +398,7 @@ export function MultiQRScanner({
                             )}
                             {cameraActive && (
                                 <div className="space-y-2">
-                                    <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+                                    <div className="relative bg-black rounded-lg overflow-hidden aspect-video shadow-inner">
                                         <video
                                             ref={videoRef}
                                             autoPlay
@@ -350,12 +408,24 @@ export function MultiQRScanner({
                                         />
                                         {/* Crosshair overlay */}
                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <div className="w-48 h-48 border-2 border-green-500/50 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
-                                            <div className="absolute w-48 h-0.5 bg-red-500/50 animate-pulse top-1/2 -translate-y-1/2" />
+                                            <div className="w-56 h-56 border-2 border-primary/50 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] relative">
+                                                <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-primary -mt-1 -ml-1"></div>
+                                                <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-primary -mt-1 -mr-1"></div>
+                                                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-primary -mb-1 -ml-1"></div>
+                                                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-primary -mb-1 -mr-1"></div>
+                                            </div>
+                                            <div className="absolute w-64 h-0.5 bg-red-500/80 animate-pulse top-1/2 -translate-y-1/2 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
                                         </div>
+                                        {/* Continuous Mode Indicator */}
+                                        {continuousMode && (
+                                            <div className="absolute top-4 right-4 bg-black/60 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1.5 backdrop-blur-md border border-white/10">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                                Auto-Add On
+                                            </div>
+                                        )}
                                     </div>
                                     <p className="text-xs text-muted-foreground text-center">
-                                        Point camera at QR code. Detected QR will be added automatically.
+                                        {continuousMode ? "Scan items continuously. They will be added automatically." : "Point camera at QR code."}
                                     </p>
                                     <Button
                                         type="button"
@@ -371,11 +441,14 @@ export function MultiQRScanner({
                             {!cameraActive && !cameraError && (
                                 <Button
                                     type="button"
-                                    className="w-full gap-2"
+                                    className="w-full gap-2 py-8 bg-muted/50 hover:bg-muted border-2 border-dashed text-muted-foreground"
+                                    variant="ghost"
                                     onClick={startCamera}
                                 >
-                                    <Camera className="h-4 w-4" />
-                                    Start Camera
+                                    <div className="flex flex-col items-center gap-1">
+                                        <Camera className="h-6 w-6" />
+                                        <span>Tap to Start Camera</span>
+                                    </div>
                                 </Button>
                             )}
                         </div>
@@ -411,6 +484,7 @@ export function MultiQRScanner({
                                     Add
                                 </Button>
                             </form>
+                            {continuousMode && <p className="text-xs text-amber-600 flex items-center gap-1"><Zap className="h-3 w-3" /> Auto-add enabled for manual entry too.</p>}
                         </div>
                     )}
 
@@ -426,7 +500,7 @@ export function MultiQRScanner({
                             {successCount > 0 && (
                                 <Badge className="bg-green-500/10 text-green-600 border-green-200">
                                     <Check className="h-3 w-3 mr-1" />
-                                    {successCount} Found
+                                    {successCount} Added
                                 </Badge>
                             )}
                             {duplicateCount > 0 && (
@@ -438,61 +512,63 @@ export function MultiQRScanner({
                             {errorCount > 0 && (
                                 <Badge className="bg-red-500/10 text-red-600 border-red-200">
                                     <X className="h-3 w-3 mr-1" />
-                                    {errorCount} Not Found
+                                    {errorCount} Error
                                 </Badge>
                             )}
                         </div>
                     )}
 
                     {/* Scanned Items List */}
-                    <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-                        {scannedItems.map((scannedItem, idx) => (
-                            <Card
-                                key={idx}
-                                className={cn(
-                                    'transition-colors',
-                                    scannedItem.status === 'success' && 'bg-green-50/50 dark:bg-green-950/20 border-green-200',
-                                    scannedItem.status === 'error' && 'bg-red-50/50 dark:bg-red-950/20 border-red-200',
-                                    scannedItem.status === 'duplicate' && 'bg-yellow-50/50 dark:bg-yellow-950/20 border-yellow-200'
-                                )}
-                            >
-                                <CardContent className="p-3">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                                {scannedItem.status === 'success' && (
-                                                    <Check className="h-4 w-4 text-green-600" />
+                    {scannedItems.length > 0 && (
+                        <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-1 custom-scrollbar">
+                            {scannedItems.slice().reverse().map((scannedItem, idx) => (
+                                <Card
+                                    key={scannedItem.timestamp}
+                                    className={cn(
+                                        'transition-all duration-300 animate-in slide-in-from-top-2',
+                                        scannedItem.status === 'success' && 'bg-green-50/50 dark:bg-green-950/20 border-green-200',
+                                        scannedItem.status === 'error' && 'bg-red-50/50 dark:bg-red-950/20 border-red-200',
+                                        scannedItem.status === 'duplicate' && 'bg-yellow-50/50 dark:bg-yellow-950/20 border-yellow-200'
+                                    )}
+                                >
+                                    <CardContent className="p-2.5">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    {scannedItem.status === 'success' && (
+                                                        <Check className="h-3.5 w-3.5 text-green-600" />
+                                                    )}
+                                                    {scannedItem.status === 'error' && (
+                                                        <X className="h-3.5 w-3.5 text-red-600" />
+                                                    )}
+                                                    {scannedItem.status === 'duplicate' && (
+                                                        <AlertCircle className="h-3.5 w-3.5 text-yellow-600" />
+                                                    )}
+                                                    <span className="font-mono font-bold text-sm">{scannedItem.tag_id}</span>
+                                                </div>
+                                                {scannedItem.item && (
+                                                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                                                        <span>{scannedItem.item.name} • {scannedItem.item.net_weight}g</span>
+                                                    </div>
                                                 )}
-                                                {scannedItem.status === 'error' && (
-                                                    <X className="h-4 w-4 text-red-600" />
+                                                {scannedItem.error && (
+                                                    <div className="text-xs text-destructive mt-0.5">
+                                                        {scannedItem.error}
+                                                    </div>
                                                 )}
-                                                {scannedItem.status === 'duplicate' && (
-                                                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                                )}
-                                                <span className="font-mono font-bold">{scannedItem.tag_id}</span>
                                             </div>
-                                            {scannedItem.item && (
-                                                <div className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
-                                                    <span>{scannedItem.item.name} • {scannedItem.item.net_weight}g</span>
-                                                    <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-300">
-                                                        In Stock
-                                                    </Badge>
-                                                </div>
-                                            )}
-                                            {scannedItem.error && (
-                                                <div className="text-sm text-destructive mt-1">
-                                                    {scannedItem.error}
-                                                </div>
-                                            )}
+                                            <div className="text-[10px] text-muted-foreground opacity-50">
+                                                {new Date(scannedItem.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                            </div>
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Actions */}
-                    <div className="flex gap-2 justify-end pt-4 border-t">
+                    <div className="flex gap-2 justify-end pt-4 border-t mt-2">
                         <Button
                             variant="outline"
                             onClick={handleClearScan}
@@ -504,16 +580,18 @@ export function MultiQRScanner({
                             variant="outline"
                             onClick={() => onOpenChange(false)}
                         >
-                            Cancel
+                            Close
                         </Button>
-                        <Button
-                            onClick={handleAddScannedItems}
-                            disabled={successCount === 0}
-                            className="gap-2"
-                        >
-                            <Check className="h-4 w-4" />
-                            Add {successCount} Items
-                        </Button>
+                        {!continuousMode && (
+                            <Button
+                                onClick={handleAddScannedItems}
+                                disabled={successCount === 0}
+                                className="gap-2"
+                            >
+                                <Check className="h-4 w-4" />
+                                Add {successCount} Items
+                            </Button>
+                        )}
                     </div>
                 </div>
             </DialogContent>

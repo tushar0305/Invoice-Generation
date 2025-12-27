@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { FileText, Plus, Trash2, Calculator } from 'lucide-react';
 import { UseFormReturn, useFieldArray } from 'react-hook-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getInventoryItems } from '@/services/inventory';
 import { useEffect, useState, useRef } from 'react';
 import { InventoryItem, STATUS_LABELS, ITEM_CATEGORIES } from '@/lib/inventory-types';
 import { Badge } from '@/components/ui/badge';
+import { NumericKeypadDrawer } from '@/components/ui/numeric-keypad-drawer';
 
 interface InvoiceItemsTableProps {
     form: UseFormReturn<any>;
@@ -79,6 +80,33 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
         const currentGross = form.getValues(`items.${index}.grossWeight`) || 0;
         form.setValue(`items.${index}.stoneWeight`, stone);
         form.setValue(`items.${index}.netWeight`, Number((currentGross - stone).toFixed(3)));
+    };
+
+
+    // UX-NEW: Mobile Numeric Keypad Logic
+    const [isKeypadOpen, setIsKeypadOpen] = useState(false);
+    const [keypadConfig, setKeypadConfig] = useState({ field: '', label: '', value: 0 });
+
+    const openKeypad = (field: string, label: string, value: any) => {
+        setKeypadConfig({ field, label, value: Number(value) || 0 });
+        setIsKeypadOpen(true);
+    };
+
+    const handleKeypadChange = (val: string) => {
+        const numVal = parseFloat(val);
+        const fieldPath = keypadConfig.field; // e.g., items.0.grossWeight
+
+        // Update Form
+        form.setValue(fieldPath, numVal);
+
+        // Handle Side Effects (Net Weight Calc)
+        if (fieldPath.includes('grossWeight')) {
+            const index = parseInt(fieldPath.split('.')[1]);
+            handleGrossChange(index, val);
+        } else if (fieldPath.includes('stoneWeight')) {
+            const index = parseInt(fieldPath.split('.')[1]);
+            handleStoneChange(index, val);
+        }
     };
 
     return (
@@ -247,7 +275,7 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                 <div className="h-4 w-1 bg-primary rounded-full"></div>
                                 <span className="text-xs font-bold text-foreground">Weight Details</span>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-3">
                                 <FormField
                                     control={form.control}
@@ -256,14 +284,26 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                         <FormItem className="space-y-1">
                                             <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Gross Wt (g)</FormLabel>
                                             <FormControl>
-                                                <Input
-                                                    type="number"
-                                                    inputMode="decimal"
-                                                    {...field}
-                                                    value={field.value === 0 ? '' : field.value}
-                                                    onChange={(e) => handleGrossChange(index, e.target.value)}
-                                                    className="h-9 bg-background"
-                                                />
+                                                <div className="relative">
+                                                    <Input
+                                                        type="number"
+                                                        inputMode="decimal"
+                                                        {...field}
+                                                        value={field.value === 0 ? '' : field.value}
+                                                        onChange={(e) => handleGrossChange(index, e.target.value)}
+                                                        className="h-9 bg-background"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        tabIndex={-1}
+                                                        className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-primary lg:hidden"
+                                                        onClick={() => openKeypad(`items.${index}.grossWeight`, 'Gross Weight', field.value)}
+                                                    >
+                                                        <Calculator className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -277,14 +317,26 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                         <FormItem className="space-y-1">
                                             <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Stone Wt (g)</FormLabel>
                                             <FormControl>
-                                                <Input
-                                                    type="number"
-                                                    inputMode="decimal"
-                                                    {...field}
-                                                    value={field.value === 0 ? '' : field.value}
-                                                    onChange={(e) => handleStoneChange(index, e.target.value)}
-                                                    className="h-9 bg-background"
-                                                />
+                                                <div className="relative">
+                                                    <Input
+                                                        type="number"
+                                                        inputMode="decimal"
+                                                        {...field}
+                                                        value={field.value === 0 ? '' : field.value}
+                                                        onChange={(e) => handleStoneChange(index, e.target.value)}
+                                                        className="h-9 bg-background"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        tabIndex={-1}
+                                                        className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-primary lg:hidden"
+                                                        onClick={() => openKeypad(`items.${index}.stoneWeight`, 'Stone Weight', field.value)}
+                                                    >
+                                                        <Calculator className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -328,14 +380,26 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                         <FormItem className="space-y-1">
                                             <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Rate (₹/g)</FormLabel>
                                             <FormControl>
-                                                <Input
-                                                    type="number"
-                                                    inputMode="numeric"
-                                                    {...field}
-                                                    value={field.value === 0 ? '' : field.value}
-                                                    onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
-                                                    className="h-9 bg-background"
-                                                />
+                                                <div className="relative">
+                                                    <Input
+                                                        type="number"
+                                                        inputMode="numeric"
+                                                        {...field}
+                                                        value={field.value === 0 ? '' : field.value}
+                                                        onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                                        className="h-9 bg-background"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        tabIndex={-1}
+                                                        className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-primary lg:hidden"
+                                                        onClick={() => openKeypad(`items.${index}.rate`, 'Rate (₹/g)', field.value)}
+                                                    >
+                                                        <Calculator className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -349,14 +413,26 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                         <FormItem className="space-y-1">
                                             <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Making (₹/g)</FormLabel>
                                             <FormControl>
-                                                <Input
-                                                    type="number"
-                                                    inputMode="numeric"
-                                                    {...field}
-                                                    value={field.value === 0 ? '' : field.value}
-                                                    onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
-                                                    className="h-9 bg-background"
-                                                />
+                                                <div className="relative">
+                                                    <Input
+                                                        type="number"
+                                                        inputMode="numeric"
+                                                        {...field}
+                                                        value={field.value === 0 ? '' : field.value}
+                                                        onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                                        className="h-9 bg-background"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        tabIndex={-1}
+                                                        className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-primary lg:hidden"
+                                                        onClick={() => openKeypad(`items.${index}.makingRate`, 'Making (₹/g)', field.value)}
+                                                    >
+                                                        <Calculator className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -371,14 +447,26 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                     <FormItem className="space-y-1">
                                         <FormLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Stone Value (₹)</FormLabel>
                                         <FormControl>
-                                            <Input
-                                                type="number"
-                                                inputMode="numeric"
-                                                {...field}
-                                                value={field.value ?? ''}
-                                                onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
-                                                className="h-9 bg-background"
-                                            />
+                                            <div className="relative">
+                                                <Input
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    {...field}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                                    className="h-9 bg-background"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    tabIndex={-1}
+                                                    className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-primary lg:hidden"
+                                                    onClick={() => openKeypad(`items.${index}.stoneAmount`, 'Stone Value', field.value)}
+                                                >
+                                                    <Calculator className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -388,6 +476,14 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                     </div>
                 ))}
             </CardContent>
+
+            <NumericKeypadDrawer
+                isOpen={isKeypadOpen}
+                onOpenChange={setIsKeypadOpen}
+                title={keypadConfig.label}
+                value={keypadConfig.value}
+                onValueChange={handleKeypadChange}
+            />
         </Card>
     );
 }

@@ -18,6 +18,10 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  Clock,
+  PlayCircle,
+  Trash2,
+  PauseCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -30,6 +34,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useUser } from '@/supabase/provider';
 import { useActiveShop } from '@/hooks/use-active-shop';
 import { updateInvoiceAction, createInvoiceAction } from '@/app/actions/invoice-actions';
@@ -81,6 +93,102 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false); // UX-001: Confirmation modal
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
+
+  // --- UX-NEW: Parked/Hold Invoices ---
+  type ParkedInvoice = {
+    id: string;
+    timestamp: number;
+    customerName: string;
+    amount: number;
+    itemCount: number;
+    data: InvoiceFormValues;
+  };
+  const [parkedInvoices, setParkedInvoices] = useState<ParkedInvoice[]>([]);
+  const [isParkedListOpen, setIsParkedListOpen] = useState(false);
+
+  // Load Parked Invoices
+  useEffect(() => {
+    if (!activeShop?.id) return;
+    const key = `PARKED_INVOICES_${activeShop.id}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        setParkedInvoices(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse parked invoices", e);
+      }
+    }
+  }, [activeShop?.id]);
+
+  // Park Current Invoice
+  const handleParkInvoice = () => {
+    const values = form.getValues();
+    // specific validation for parking: at least one item or customer name
+    if (values.items.length === 0 && !values.customerName) {
+      toast({ title: "Cannot Hold", description: "Enter some details first", variant: "destructive" });
+      return;
+    }
+
+    const parked: ParkedInvoice = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      customerName: values.customerName || 'Walk-in Customer',
+      amount: totals.grandTotal, // We need to capture accurate total
+      itemCount: values.items.length,
+      data: values
+    };
+
+    const newParked = [parked, ...parkedInvoices];
+    setParkedInvoices(newParked);
+    localStorage.setItem(`PARKED_INVOICES_${activeShop?.id}`, JSON.stringify(newParked));
+
+    // Clear current form
+    form.reset({
+      customerName: '',
+      customerAddress: '',
+      customerPhone: '',
+      customerEmail: '',
+      items: [],
+      discount: 0,
+      redeemPoints: false,
+      pointsToRedeem: 0,
+    });
+    // Ensure invoice date is reset to avoid stale dates
+    form.setValue('invoiceDate', new Date());
+
+    // Clear Draft
+    if (DRAFT_KEY) localStorage.removeItem(DRAFT_KEY);
+
+    toast({ title: "Invoice Held", description: "Invoice parked successfully. You can restore it later." });
+  };
+
+  const handleRestoreParked = (invoice: ParkedInvoice) => {
+    // Check if current form is dirty and has data?
+    // For now, just restore. Ideally prompts if overwriting data.
+
+    // Fix dates (JSON serialization breaks Date objects)
+    const restoreData = {
+      ...invoice.data,
+      invoiceDate: new Date(invoice.data.invoiceDate)
+    };
+
+    form.reset(restoreData);
+
+    // Remove from parked
+    const newParked = parkedInvoices.filter(p => p.id !== invoice.id);
+    setParkedInvoices(newParked);
+    localStorage.setItem(`PARKED_INVOICES_${activeShop?.id}`, JSON.stringify(newParked));
+
+    setIsParkedListOpen(false);
+    toast({ title: "Invoice Restored", description: "Continuing parked invoice." });
+  };
+
+  const handleDeleteParked = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newParked = parkedInvoices.filter(p => p.id !== id);
+    setParkedInvoices(newParked);
+    localStorage.setItem(`PARKED_INVOICES_${activeShop?.id}`, JSON.stringify(newParked));
+  };
 
 
 
@@ -247,18 +355,18 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   // Calculate Max Redeemable Points based on Invoice Value
   const maxRedeemablePoints = useMemo(() => {
     if (!loyaltySettings?.redemption_conversion_rate) return 0;
-    
+
     // Max value we can cover with points (Grand Total Before Discount - Cash Discount)
     // We need to recalculate total before discount here to be accurate
     const taxableAmount = totals.subtotal;
     const taxAmount = taxableAmount * ((settings?.sgstRate || 1.5) + (settings?.cgstRate || 1.5)) / 100;
     const totalBeforeDiscount = taxableAmount + taxAmount;
-    
+
     const maxRedeemableValue = Math.max(0, totalBeforeDiscount - (Number(watchedDiscount) || 0));
-    
+
     // Convert value to points
     const maxPointsByValue = Math.floor(maxRedeemableValue / loyaltySettings.redemption_conversion_rate);
-    
+
     // Return lesser of (Customer Balance, Max Allowed by Invoice)
     return Math.min(customerPoints, maxPointsByValue);
   }, [totals.subtotal, watchedDiscount, loyaltySettings, customerPoints, settings?.sgstRate, settings?.cgstRate]);
@@ -390,12 +498,12 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
   const onError = (errors: any) => {
     console.error("Validation Errors:", JSON.stringify(errors, null, 2));
-    
+
     // Helper to find the first error message recursively
     const getFirstErrorMessage = (errorObj: any): string | null => {
       if (!errorObj) return null;
       if (typeof errorObj.message === 'string') return errorObj.message;
-      
+
       // If it's an array (like items), iterate
       if (Array.isArray(errorObj)) {
         for (const item of errorObj) {
@@ -403,7 +511,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           if (msg) return msg;
         }
       }
-      
+
       // If it's an object, iterate values
       if (typeof errorObj === 'object') {
         for (const key in errorObj) {
@@ -411,7 +519,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           if (msg) return msg;
         }
       }
-      
+
       return null;
     };
 
@@ -436,14 +544,42 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
             <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 -ml-2 pl-0 hover:bg-transparent lg:hover:bg-accent lg:pl-4">
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowClearConfirmation(true)}
               className="text-muted-foreground hover:text-destructive"
             >
               Clear
             </Button>
+            <div className="h-4 w-px bg-border mx-2" />
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                handleParkInvoice();
+              }}
+              className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 mr-1"
+              title="Hold current invoice to serve another customer"
+            >
+              <PauseCircle className="h-4 w-4 mr-1.5" />
+              Hold
+            </Button>
+
+            {parkedInvoices.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsParkedListOpen(true)}
+                className="gap-2 border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800"
+              >
+                <Clock className="h-4 w-4" />
+                Held <span className="ml-0.5 bg-orange-200 px-1.5 py-0.5 rounded-full text-[10px] min-w-[1.25rem] text-center">{parkedInvoices.length}</span>
+              </Button>
+            )}
           </div>
           <Button variant="outline" size="sm" onClick={() => setShowPreview(true)} className="gap-2 lg:hidden">
             <Eye className="h-4 w-4" /> Preview
@@ -604,8 +740,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                             <FormItem className="flex items-center justify-between border p-3 rounded-lg bg-card shadow-sm">
                               <FormLabel className="cursor-pointer font-medium">Redeem Points</FormLabel>
                               <FormControl>
-                                <Switch 
-                                  checked={field.value} 
+                                <Switch
+                                  checked={field.value}
                                   onCheckedChange={(val) => {
                                     // Wrap in transition to avoid flushSync errors with Radix UI
                                     startTransition(() => {
@@ -613,7 +749,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                                       // Reset points if disabled
                                       if (!val) form.setValue('pointsToRedeem', 0);
                                     });
-                                  }} 
+                                  }}
                                   disabled={customerPoints <= 0 || maxRedeemablePoints <= 0}
                                 />
                               </FormControl>
@@ -832,7 +968,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 form.reset({
@@ -853,6 +989,50 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Parked Invoices List Modal */}
+      <Dialog open={isParkedListOpen} onOpenChange={setIsParkedListOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Held Invoices</DialogTitle>
+            <DialogDescription>
+              Select an invoice to resume or delete.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+            {parkedInvoices.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg">
+                <Clock className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                <p>No held invoices</p>
+              </div>
+            ) : (
+              parkedInvoices.map((inv) => (
+                <div key={inv.id} className="flex flex-col gap-2 p-3 rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/30 transition-all cursor-pointer group shadow-sm" onClick={() => handleRestoreParked(inv)}>
+                  <div className="flex justify-between items-start">
+                    <div className="font-semibold text-foreground">{inv.customerName}</div>
+                    <div className="text-sm font-bold text-primary">{formatCurrency(inv.amount)}</div>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-muted-foreground p-0.5">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {new Date(inv.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • <span className="font-medium text-foreground">{inv.itemCount} items</span>
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full opacity-70 group-hover:opacity-100 transition-all"
+                      onClick={(e) => handleDeleteParked(inv.id, e)}
+                      title="Delete Held Invoice"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </MotionWrapper>
   );
 }

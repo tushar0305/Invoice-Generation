@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, TrendingUp, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, TrendingUp, ArrowRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/supabase/client';
-import { addMonths, differenceInDays, format, isBefore, parseISO } from 'date-fns';
+import { addMonths, differenceInDays } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
@@ -33,6 +33,7 @@ export function MaturityForecast({ shopId }: MaturityForecastProps) {
         const fetchMaturities = async () => {
             try {
                 // Fetch active enrollments with scheme details
+                // Updated to select 'rules' instead of flattened columns
                 const { data: enrollments, error } = await supabase
                     .from('scheme_enrollments')
                     .select(`
@@ -42,7 +43,7 @@ export function MaturityForecast({ shopId }: MaturityForecastProps) {
                         status,
                         total_paid,
                         customer:customers(name),
-                        scheme:schemes(id, name, duration_months, benefit_value, benefit_type, scheme_amount, bonus_months)
+                        scheme:schemes(id, name, duration_months, scheme_amount, rules)
                     `)
                     .eq('shop_id', shopId)
                     .eq('status', 'ACTIVE');
@@ -50,8 +51,6 @@ export function MaturityForecast({ shopId }: MaturityForecastProps) {
                 if (error) throw error;
 
                 const today = new Date();
-                // Look ahead 60 days to show more data
-                const lookAheadDate = addMonths(today, 2);
 
                 const upcoming = enrollments
                     .filter((enrollment: any) => enrollment.scheme) // Filter out enrollments with missing scheme data
@@ -59,20 +58,26 @@ export function MaturityForecast({ shopId }: MaturityForecastProps) {
                         const startDate = new Date(enrollment.start_date || enrollment.created_at);
                         const duration = enrollment.scheme?.duration_months || 11;
                         const maturityDate = addMonths(startDate, duration);
-                        
+
                         // Estimate Payout
                         const principal = enrollment.total_paid || 0;
                         let estimatedBonus = 0;
                         const scheme = enrollment.scheme;
+                        const rules = scheme.rules || {};
 
-                        if (scheme.benefit_type === 'INTEREST') {
-                            estimatedBonus = (principal * (scheme.benefit_value || 0)) / 100;
-                        } else if (scheme.benefit_type === 'BONUS_MONTH') {
+                        const benefitType = rules.benefit_type || 'BONUS_MONTH';
+                        // Handle legacy or nested fields
+                        const benefitValue = rules.benefit_value ?? rules.bonus_months ?? rules.interest_rate ?? 0;
+
+                        if (benefitType === 'INTEREST') {
+                            estimatedBonus = (principal * (benefitValue || 0)) / 100;
+                        } else if (benefitType === 'BONUS_MONTH') {
                             // Bonus = Installment Amount * Bonus Months
-                            // If flexible, this might be tricky, but usually bonus month implies fixed installment
-                            estimatedBonus = (scheme.scheme_amount || 0) * (scheme.bonus_months || 1);
+                            estimatedBonus = (scheme.scheme_amount || 0) * (benefitValue || 1);
+                        } else if (benefitType === 'FIXED_AMOUNT') {
+                            estimatedBonus = Number(benefitValue) || 0;
                         }
-                        
+
                         return {
                             id: scheme.id, // Link to scheme page
                             enrollmentId: enrollment.id,
@@ -86,7 +91,7 @@ export function MaturityForecast({ shopId }: MaturityForecastProps) {
                     .filter(item => {
                         // Filter for maturity within next 60 days (or overdue)
                         const daysUntil = differenceInDays(item.maturityDate, today);
-                        return daysUntil <= 60; 
+                        return daysUntil <= 60;
                     })
                     .sort((a, b) => a.maturityDate.getTime() - b.maturityDate.getTime())
                     .slice(0, 5); // Top 5
@@ -142,8 +147,8 @@ export function MaturityForecast({ shopId }: MaturityForecastProps) {
                             const isOverdue = daysLeft < 0;
 
                             return (
-                                <div 
-                                    key={item.enrollmentId} 
+                                <div
+                                    key={item.enrollmentId}
                                     className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group"
                                     onClick={() => router.push(`/shop/${shopId}/schemes/${item.id}`)}
                                 >
@@ -165,8 +170,8 @@ export function MaturityForecast({ shopId }: MaturityForecastProps) {
                                 </div>
                             );
                         })}
-                        <Button 
-                            variant="ghost" 
+                        <Button
+                            variant="ghost"
                             className="w-full text-xs text-muted-foreground hover:text-foreground h-8"
                             onClick={(e) => {
                                 e.stopPropagation();

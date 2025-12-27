@@ -4,21 +4,20 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@/supabase/provider';
 import { supabase } from '@/supabase/client';
-import { MotionWrapper, FadeIn } from '@/components/ui/motion-wrapper';
+import { MotionWrapper } from '@/components/ui/motion-wrapper';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Calendar, CreditCard, FileText, Phone, MapPin, Mail, Share2, Copy, Target } from 'lucide-react';
+import { ArrowLeft, Calendar, CreditCard, FileText, Phone, Mail, Share2, Copy, Target, Sparkles } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import type { Invoice } from '@/lib/definitions';
-import {
-    // Breadcrumb imports removed
-} from '@/components/ui/breadcrumb';
+
 import { EnrollmentModal } from '@/components/schemes/enrollment-modal';
 import { PaymentEntryModal } from '@/components/schemes/payment-entry-modal';
 import { ReferralShareModal } from '@/components/schemes/referral-share-modal';
@@ -50,7 +49,7 @@ export function CustomerDetailsClient() {
             .from('customers')
             .update({ referral_code: code })
             .eq('id', customerData.id);
-        
+
         if (!error) {
             setCustomerData({ ...customerData, referral_code: code });
             toast({ title: "Success", description: "Referral code generated" });
@@ -62,7 +61,7 @@ export function CustomerDetailsClient() {
     useEffect(() => {
         const shopId = params.shopId as string;
         const customerIdParam = searchParams.get('id');
-        
+
         if (!shopId || (!customerName && !customerIdParam)) return;
 
         const load = async () => {
@@ -87,7 +86,7 @@ export function CustomerDetailsClient() {
                 // Fetch active enrollments for this customer
                 const { data: enrollData } = await supabase
                     .from('scheme_enrollments')
-                    .select('*, scheme:schemes(name, scheme_type, duration_months, interest_rate, bonus_months, scheme_amount)')
+                    .select('*, scheme:schemes(name, duration_months, scheme_amount, rules)')
                     .eq('customer_id', custData.id)
                     .neq('status', 'CLOSED');
 
@@ -158,533 +157,499 @@ export function CustomerDetailsClient() {
     }, [invoices]);
 
     return (
-        <MotionWrapper className="space-y-6">
-            {/* Breadcrumb Navigation */}
 
-
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <h1 className="text-2xl font-heading font-bold text-primary">{customerName}</h1>
-                        <p className="text-sm text-muted-foreground">Customer Profile</p>
-                    </div>
-                </div>
-                {customerData && (
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => setIsShareModalOpen(true)} className="gap-2">
-                            <Share2 className="h-4 w-4" /> Refer
-                        </Button>
-                        <Button onClick={() => setIsEnrollmentOpen(true)} className="gap-2">
-                            <CreditCard className="h-4 w-4" /> Enroll in Scheme
-                        </Button>
-                    </div>
-                )}
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-3">
-                {/* Stats Cards */}
-                <Card className="glass-card md:col-span-3 lg:col-span-1">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Overview</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-4">
-                        <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                                    <CreditCard className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Spent</p>
-                                    <div className="font-bold text-xl text-primary">
-                                        {isLoading ? <Skeleton className="h-6 w-24" /> : formatCurrency(stats.totalSpent)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
-                                <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-                                    <FileText className="h-4 w-4" />
-                                    <span className="text-xs font-medium uppercase">Invoices</span>
-                                </div>
-                                <div className="font-bold text-2xl">
-                                    {isLoading ? <Skeleton className="h-8 w-12" /> : stats.invoiceCount}
-                                </div>
-                            </div>
-                            <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
-                                <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-                                    <Calendar className="h-4 w-4" />
-                                    <span className="text-xs font-medium uppercase">Last Visit</span>
-                                </div>
-                                <div className="font-medium text-sm">
-                                    {isLoading ? <Skeleton className="h-6 w-20" /> : stats.lastPurchase ? format(new Date(stats.lastPurchase), 'dd MMM, yy') : 'N/A'}
+        <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background relative pb-20">
+            <MotionWrapper className="space-y-6 p-4 md:p-6 pb-24 md:pb-6 max-w-[1200px] mx-auto">
+                {/* Header Card */}
+                <div className="bg-card/80 backdrop-blur-md rounded-3xl border border-border/50 shadow-sm p-5 md:p-8 relative overflow-hidden">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+                        <div className="flex items-center gap-4">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="shrink-0 h-10 w-10 rounded-xl bg-muted/50 hover:bg-muted"
+                                onClick={() => router.back()}
+                            >
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                            <div>
+                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                                    {customerName}
+                                    {customerData?.loyalty_points > 0 && (
+                                        <Badge variant="outline" className="ml-2 bg-primary/5 text-primary border-primary/20">
+                                            {customerData.loyalty_points} Points
+                                        </Badge>
+                                    )}
+                                </h1>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                    <span>Customer Profile</span>
+                                    {customerDetails?.phone && (
+                                        <>
+                                            <span className="hidden sm:inline">•</span>
+                                            <span className="flex items-center gap-1">
+                                                <Phone className="h-3 w-3" /> {customerDetails.phone}
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
                         {customerData && (
-                            <div className="p-4 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-900/20 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400">
-                                        <CreditCard className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-purple-600/80 dark:text-purple-400/80 font-medium uppercase tracking-wider">Loyalty Points</p>
-                                        <div className="font-bold text-xl text-purple-700 dark:text-purple-300">
-                                            {customerData.loyalty_points || 0}
-                                        </div>
-                                    </div>
-                                </div>
+                            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsShareModalOpen(true)}
+                                    className="flex-1 md:flex-none border-primary/20 hover:bg-primary/5 hover:text-primary hover:border-primary/50"
+                                >
+                                    <Share2 className="mr-2 h-4 w-4" />
+                                    Refer
+                                </Button>
+                                <Button
+                                    onClick={() => setIsEnrollmentOpen(true)}
+                                    className="flex-1 md:flex-none bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 border-0"
+                                >
+                                    <CreditCard className="mr-2 h-4 w-4" />
+                                    Enroll Scheme
+                                </Button>
                             </div>
                         )}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
-                {/* Contact Info */}
-                <Card className="glass-card md:col-span-3 lg:col-span-2">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Contact Information</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? (
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-3/4" />
-                            </div>
-                        ) : customerDetails ? (
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                        <Phone className="h-3 w-3" /> Phone
-                                    </div>
-                                    <p className="font-medium">{customerDetails.phone || 'N/A'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                        <MapPin className="h-3 w-3" /> Address
-                                    </div>
-                                    <p className="font-medium">{customerDetails.address || 'N/A'}</p>
-                                    {(customerDetails.state || customerDetails.pincode) && (
-                                        <p className="text-sm text-muted-foreground">
-                                            {[customerDetails.state, customerDetails.pincode].filter(Boolean).join(', ')}
-                                        </p>
-                                    )}
-                                </div>
-                                {customerData && (
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                            <Share2 className="h-3 w-3" /> Referral Code
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {customerData.referral_code ? (
-                                                <>
-                                                    <p className="font-medium font-mono bg-muted px-2 py-0.5 rounded text-sm">
-                                                        {customerData.referral_code}
-                                                    </p>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="h-6 w-6" 
-                                                        onClick={() => {
-                                                            navigator.clipboard.writeText(customerData.referral_code);
-                                                        }}
-                                                    >
-                                                        <Copy className="h-3 w-3" />
-                                                    </Button>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50" 
-                                                        onClick={() => setIsShareModalOpen(true)}
-                                                    >
-                                                        <Share2 className="h-3 w-3" />
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <Button variant="outline" size="sm" onClick={generateReferral} className="h-7 text-xs">
-                                                    Generate Code
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="text-muted-foreground">No contact details available.</p>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
+                {/* Content Tabs */}
+                <Tabs defaultValue="overview" className="w-full">
+                    <TabsList className="bg-muted/50 p-1 rounded-xl w-full sm:w-auto grid grid-cols-3 sm:flex sm:justify-start mb-6">
+                        <TabsTrigger
+                            value="overview"
+                            className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground shadow-sm transition-all duration-200"
+                        >
+                            Overview
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="schemes"
+                            className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground shadow-sm transition-all duration-200"
+                        >
+                            Schemes
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="history"
+                            className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground shadow-sm transition-all duration-200"
+                        >
+                            History
+                        </TabsTrigger>
+                    </TabsList>
 
-            {/* Active Schemes Section */}
-            <Card className="glass-card md:col-span-3">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <CreditCard className="h-5 w-5 text-primary" />
-                        Active Schemes
-                    </CardTitle>
-                    <CardDescription>Currently enrolled savings plans.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {enrollments.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                            <p>No active scheme enrollments.</p>
-                            <Button variant="link" onClick={() => setIsEnrollmentOpen(true)} className="mt-2">
-                                Enroll Now
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="rounded-md border border-gray-200 dark:border-white/10 overflow-hidden">
-                            <div className="relative">
-                                {/* Mobile View - Cards */}
-                                <div className="md:hidden space-y-3 p-4">
-                                    {enrollments.map((enrollment) => {
-                                        const progress = enrollment.target_amount > 0 
-                                            ? Math.min(100, (enrollment.total_paid / enrollment.target_amount) * 100)
-                                            : enrollment.target_weight > 0
-                                                ? Math.min(100, (enrollment.total_gold_weight_accumulated / enrollment.target_weight) * 100)
-                                                : 0;
-                                        
-                                        return (
-                                        <div
-                                            key={enrollment.id}
-                                            className="bg-card border border-border rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
-                                            onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
-                                        >
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    {enrollment.goal_name && (
-                                                        <div className="flex items-center gap-1 mb-1 text-primary font-medium text-xs">
-                                                            <Target className="h-3 w-3" />
-                                                            {enrollment.goal_name}
+                    <TabsContent value="overview" className="space-y-6">
+                        <div className="grid gap-6 md:grid-cols-3">
+                            {/* Stats 1: Total Spent */}
+                            <Card className="border border-border shadow-sm bg-card overflow-hidden h-full">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Spent</CardTitle>
+                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <CreditCard className="h-4 w-4 text-primary" />
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-foreground">
+                                        {isLoading ? <Skeleton className="h-8 w-32" /> : formatCurrency(stats.totalSpent)}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">Lifetime spending</p>
+                                </CardContent>
+                            </Card>
+
+                            {/* Stats 2: Invoices */}
+                            <Card className="border border-border shadow-sm bg-card overflow-hidden h-full">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Invoices</CardTitle>
+                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <FileText className="h-4 w-4 text-primary" />
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-foreground">
+                                        {isLoading ? <Skeleton className="h-8 w-12" /> : stats.invoiceCount}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 uppercase">Transactions</p>
+                                </CardContent>
+                            </Card>
+
+                            {/* Stats 3: Last Visit */}
+                            <Card className="border border-border shadow-sm bg-card overflow-hidden h-full">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">Last Visit</CardTitle>
+                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <Calendar className="h-4 w-4 text-primary" />
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-foreground">
+                                        {isLoading ? <Skeleton className="h-8 w-24" /> : stats.lastPurchase ? format(new Date(stats.lastPurchase), 'dd MMM, yy') : 'N/A'}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">Most recent activity</p>
+                                </CardContent>
+                            </Card>
+
+                            {/* Contact Info */}
+                            <Card className="border border-border/50 bg-card shadow-sm md:col-span-3">
+                                <CardHeader className="pb-3 border-b border-border/50">
+                                    <CardTitle className="text-lg">Contact Information</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 md:p-6 grid gap-6 sm:grid-cols-2">
+                                    {isLoading ? (
+                                        <div className="space-y-4">
+                                            <Skeleton className="h-12 w-full rounded-xl" />
+                                            <Skeleton className="h-12 w-3/4 rounded-xl" />
+                                        </div>
+                                    ) : customerDetails ? (
+                                        <>
+                                            <div className="space-y-1">
+                                                <div className="text-xs font-medium text-muted-foreground uppercase">Phone</div>
+                                                <div className="font-medium text-foreground">{customerDetails.phone || 'N/A'}</div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="text-xs font-medium text-muted-foreground uppercase">Address</div>
+                                                <div className="font-medium text-foreground">{customerDetails.address || 'N/A'}</div>
+                                                {(customerDetails.state || customerDetails.pincode) && (
+                                                    <div className="text-sm text-muted-foreground">
+                                                        {[customerDetails.state, customerDetails.pincode].filter(Boolean).join(', ')}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Referral Section */}
+                                            {customerData && (
+                                                <div className="sm:col-span-2 mt-2 pt-4 border-t border-border/50">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/30 p-4 rounded-xl border border-border/50">
+                                                        <div>
+                                                            <div className="text-sm font-medium text-foreground">Referral Code</div>
+                                                            <div className="text-xs text-muted-foreground">Share this code to earn points.</div>
                                                         </div>
-                                                    )}
-                                                    <div className="font-bold text-foreground">{enrollment.scheme?.name}</div>
-                                                    <div className="text-xs text-muted-foreground font-mono">
-                                                        #{enrollment.account_number}
+                                                        <div className="flex items-center gap-2">
+                                                            {customerData.referral_code ? (
+                                                                <div className="flex items-center gap-2 bg-background p-1.5 pl-3 rounded-lg border border-border shadow-sm">
+                                                                    <code className="text-sm font-bold text-primary font-mono select-all">
+                                                                        {customerData.referral_code}
+                                                                    </code>
+                                                                    <div className="h-4 w-px bg-border mx-1" />
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 hover:text-primary"
+                                                                        onClick={() => {
+                                                                            navigator.clipboard.writeText(customerData.referral_code);
+                                                                            toast({ title: "Copied!", description: "Referral code copied." });
+                                                                        }}
+                                                                    >
+                                                                        <Copy className="h-3.5 w-3.5" />
+                                                                    </Button>
+                                                                </div>
+                                                            ) : (
+                                                                <Button variant="outline" size="sm" onClick={generateReferral}>
+                                                                    Generate Code
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col items-end gap-2">
-                                                    <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80' : ''}>
-                                                        {enrollment.status}
-                                                    </Badge>
-                                                    {enrollment.status === 'ACTIVE' && (
-                                                        <div className="flex gap-1">
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="outline" 
-                                                                className="h-7 text-xs"
-                                                                onClick={(e) => {
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="col-span-2 text-center py-4 text-muted-foreground">No contact details available.</div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="schemes">
+                        <Card className="border border-border/50 bg-card shadow-sm">
+                            <CardHeader className="pb-3 border-b border-border/50 flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-lg">Active Schemes</CardTitle>
+                                    <CardDescription className="text-xs md:text-sm">Currently enrolled savings plans.</CardDescription>
+                                </div>
+                                <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                                    {enrollments.length} Active
+                                </Badge>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                {enrollments.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                                        <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
+                                            <Target className="h-6 w-6" />
+                                        </div>
+                                        <h3 className="text-base font-semibold text-foreground">No enrollments</h3>
+                                        <p className="text-sm text-muted-foreground max-w-[250px] mt-1 mb-4">
+                                            Start a savings plan for this customer.
+                                        </p>
+                                        <Button size="sm" onClick={() => setIsEnrollmentOpen(true)}>Enroll Now</Button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Mobile View - List */}
+                                        <div className="md:hidden divide-y divide-border/50">
+                                            {enrollments.map((enrollment) => {
+                                                const progress = enrollment.target_amount > 0
+                                                    ? Math.min(100, (enrollment.total_paid / enrollment.target_amount) * 100)
+                                                    : enrollment.target_weight > 0
+                                                        ? Math.min(100, (enrollment.total_gold_weight_accumulated / enrollment.target_weight) * 100)
+                                                        : 0;
+                                                return (
+                                                    <div
+                                                        key={enrollment.id}
+                                                        className="p-4 space-y-3 active:bg-muted/50"
+                                                        onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
+                                                    >
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <div className="font-semibold text-foreground">{enrollment.scheme?.name}</div>
+                                                                <div className="text-xs text-muted-foreground">#{enrollment.account_number}</div>
+                                                            </div>
+                                                            <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600 hover:bg-green-700' : ''}>
+                                                                {enrollment.status}
+                                                            </Badge>
+                                                        </div>
+
+                                                        {/* Progress Bar */}
+                                                        {(enrollment.target_amount > 0 || enrollment.target_weight > 0) && (
+                                                            <div className="space-y-1">
+                                                                <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
+                                                                    <span>Progress</span>
+                                                                    <span>{progress.toFixed(0)}%</span>
+                                                                </div>
+                                                                <Progress value={progress} className="h-1.5" />
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex justify-between items-end pt-1">
+                                                            <div>
+                                                                <div className="text-[10px] uppercase text-muted-foreground">Paid</div>
+                                                                <div className="font-medium text-foreground">{formatCurrency(enrollment.total_paid)}</div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="text-[10px] uppercase text-muted-foreground">Gold</div>
+                                                                <div className="font-medium text-primary">
+                                                                    {enrollment.total_gold_weight_accumulated > 0 ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g` : '-'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {enrollment.status === 'ACTIVE' && (
+                                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setSelectedEnrollment(enrollment);
                                                                     setIsRequestPaymentOpen(true);
-                                                                }}
-                                                            >
-                                                                Request
-                                                            </Button>
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="outline" 
-                                                                className="h-7 text-xs"
-                                                                onClick={(e) => {
+                                                                }}>Request</Button>
+                                                                <Button size="sm" className="h-8 text-xs" onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setSelectedEnrollment(enrollment);
-                                                                }}
-                                                            >
-                                                                Pay
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {(enrollment.target_amount > 0 || enrollment.target_weight > 0) && (
-                                                <div className="space-y-1 py-2">
-                                                    <div className="flex justify-between text-[10px] text-muted-foreground">
-                                                        <span>Progress</span>
-                                                        <span>{progress.toFixed(0)}%</span>
+                                                                }}>Pay EMI</Button>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <Progress value={progress} className="h-1.5" />
-                                                </div>
-                                            )}
-
-                                            <div className="grid grid-cols-2 gap-3 pt-2 mt-2 border-t border-border">
-                                                <div>
-                                                    <div className="text-xs text-muted-foreground mb-0.5">Total Paid</div>
-                                                    <div className="font-bold text-green-600">{formatCurrency(enrollment.total_paid)}</div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-xs text-muted-foreground mb-0.5">Gold Accumulated</div>
-                                                    <div className="font-bold text-amber-600">
-                                                        {enrollment.total_gold_weight_accumulated > 0
-                                                            ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
-                                                            : '-'
-                                                        }
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground bg-muted/30 p-2 rounded-lg">
-                                                <span>Started: {format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</span>
-                                                <span>Maturity: {enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</span>
-                                            </div>
+                                                );
+                                            })}
                                         </div>
-                                    )})}
+
+                                        {/* Desktop View - Table */}
+                                        <div className="hidden md:block overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow className="hover:bg-muted/30 border-b border-border/50">
+                                                        <TableHead>Scheme</TableHead>
+                                                        <TableHead className="hidden lg:table-cell">Dates</TableHead>
+                                                        <TableHead className="text-right">Total Paid</TableHead>
+                                                        <TableHead className="text-right">Gold Acc.</TableHead>
+                                                        <TableHead className="text-center">Status</TableHead>
+                                                        <TableHead className="text-right">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {enrollments.map((enrollment) => (
+                                                        <TableRow
+                                                            key={enrollment.id}
+                                                            className="hover:bg-muted/30 border-b border-border/30 cursor-pointer"
+                                                            onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
+                                                        >
+                                                            <TableCell>
+                                                                <div className="font-medium">{enrollment.scheme?.name}</div>
+                                                                <div className="text-xs text-muted-foreground">#{enrollment.account_number}</div>
+                                                            </TableCell>
+                                                            <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                                                                <div>Start: {format(new Date(enrollment.start_date), 'MMM d, yy')}</div>
+                                                                {enrollment.maturity_date && <div>End: {format(new Date(enrollment.maturity_date), 'MMM d, yy')}</div>}
+                                                            </TableCell>
+                                                            <TableCell className="text-right font-medium">{formatCurrency(enrollment.total_paid)}</TableCell>
+                                                            <TableCell className="text-right font-medium text-primary">
+                                                                {enrollment.total_gold_weight_accumulated > 0 ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g` : '-'}
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600 hover:bg-green-700 shadow-sm' : ''}>
+                                                                    {enrollment.status}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                {enrollment.status === 'ACTIVE' && (
+                                                                    <div className="flex justify-end gap-2">
+                                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedEnrollment(enrollment);
+                                                                            setIsRequestPaymentOpen(true);
+                                                                        }}><Mail className="h-4 w-4" /></Button>
+                                                                        <Button size="sm" className="h-8" onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedEnrollment(enrollment);
+                                                                        }}>Pay</Button>
+                                                                    </div>
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="history">
+                        <Card className="border border-border/50 bg-card shadow-sm">
+                            <CardHeader className="pb-3 border-b border-border/50">
+                                <CardTitle className="text-lg">Invoice History</CardTitle>
+                                <CardDescription className="text-xs md:text-sm">Recent transactions.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                {/* Mobile View */}
+                                <div className="md:hidden divide-y divide-border/50">
+                                    {isLoading ? (
+                                        <div className="p-4 text-center text-muted-foreground">Loading...</div>
+                                    ) : invoices && invoices.length > 0 ? (
+                                        invoices.map((inv) => (
+                                            <div
+                                                key={inv.id}
+                                                className="p-4 space-y-2 active:bg-muted/50"
+                                                onClick={() => router.push(`/dashboard/invoices/view?id=${inv.id}`)}
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <div className="font-medium text-foreground">{inv.invoiceNumber}</div>
+                                                        <div className="text-xs text-muted-foreground">{format(new Date(inv.invoiceDate), 'MMM d, yyyy')}</div>
+                                                    </div>
+                                                    <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'} className={inv.status === 'paid' ? 'bg-green-600' : ''}>
+                                                        {inv.status}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex justify-between items-center pt-2">
+                                                    <span className="text-xs text-muted-foreground">Total</span>
+                                                    <span className="font-bold text-primary">{formatCurrency(inv.grandTotal)}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground px-4">No invoices found.</div>
+                                    )}
                                 </div>
 
-                                {/* Desktop View - Table */}
+                                {/* Desktop View */}
                                 <div className="hidden md:block overflow-x-auto">
                                     <Table>
-                                        <TableHeader className="bg-muted/50">
-                                            <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
-                                                <TableHead className="text-primary">Scheme Name</TableHead>
-                                                <TableHead className="text-primary">Account #</TableHead>
-                                                <TableHead className="text-primary hidden md:table-cell">Start Date</TableHead>
-                                                <TableHead className="text-primary hidden md:table-cell">Maturity</TableHead>
-                                                <TableHead className="text-primary text-right">Total Paid</TableHead>
-                                                <TableHead className="text-primary text-right">Gold Acc.</TableHead>
-                                                <TableHead className="text-primary text-center">Status</TableHead>
-                                                <TableHead className="text-primary text-right">Actions</TableHead>
+                                        <TableHeader>
+                                            <TableRow className="hover:bg-muted/30 border-b border-border/50">
+                                                <TableHead>Invoice #</TableHead>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead className="text-right">Amount</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {enrollments.map((enrollment) => (
-                                                <TableRow
-                                                    key={enrollment.id}
-                                                    className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
-                                                    onClick={() => router.push(`/shop/${params.shopId}/schemes/${enrollment.scheme_id}`)}
-                                                >
-                                                    <TableCell className="font-medium">
-                                                        <div className="flex flex-col">
-                                                            <span>{enrollment.scheme?.name}</span>
-                                                            <span className="text-xs text-muted-foreground md:hidden">{format(new Date(enrollment.start_date), 'MMM yyyy')}</span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="font-mono text-sm text-muted-foreground">{enrollment.account_number}</TableCell>
-                                                    <TableCell className="hidden md:table-cell">{format(new Date(enrollment.start_date), 'dd MMM, yyyy')}</TableCell>
-                                                    <TableCell className="hidden md:table-cell">{enrollment.maturity_date ? format(new Date(enrollment.maturity_date), 'dd MMM, yyyy') : 'N/A'}</TableCell>
-                                                    <TableCell className="text-right font-bold text-green-600">
-                                                        {formatCurrency(enrollment.total_paid)}
-                                                    </TableCell>
-                                                    <TableCell className="text-right font-medium text-amber-600">
-                                                        {enrollment.total_gold_weight_accumulated > 0
-                                                            ? `${enrollment.total_gold_weight_accumulated.toFixed(3)}g`
-                                                            : '-'
-                                                        }
-                                                    </TableCell>
-                                                    <TableCell className="text-center">
-                                                        <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'} className={enrollment.status === 'ACTIVE' ? 'bg-green-600/80 hover:bg-green-600/70' : ''}>
-                                                            {enrollment.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        {enrollment.status === 'ACTIVE' && (
-                                                            <div className="flex justify-end gap-2">
-                                                                <Button 
-                                                                    size="sm" 
-                                                                    variant="outline"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSelectedEnrollment(enrollment);
-                                                                        setIsRequestPaymentOpen(true);
-                                                                    }}
-                                                                >
-                                                                    Request
-                                                                </Button>
-                                                                <Button 
-                                                                    size="sm" 
-                                                                    variant="outline"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSelectedEnrollment(enrollment);
-                                                                    }}
-                                                                >
-                                                                    Pay
-                                                                </Button>
-                                                            </div>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
+                                            {isLoading ? (
+                                                <TableRow><TableCell colSpan={4} className="text-center py-4">Loading...</TableCell></TableRow>
+                                            ) : invoices && invoices.length > 0 ? (
+                                                invoices.map((inv) => (
+                                                    <TableRow
+                                                        key={inv.id}
+                                                        className="hover:bg-muted/30 border-b border-border/30 cursor-pointer"
+                                                        onClick={() => router.push(`/dashboard/invoices/view?id=${inv.id}`)}
+                                                    >
+                                                        <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                                                        <TableCell className="text-muted-foreground">{format(new Date(inv.invoiceDate), 'MMM d, yyyy')}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'} className={inv.status === 'paid' ? 'bg-green-600 shadow-sm' : ''}>
+                                                                {inv.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-bold text-primary">{formatCurrency(inv.grandTotal)}</TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No invoices found.</TableCell></TableRow>
+                                            )}
                                         </TableBody>
                                     </Table>
                                 </div>
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
 
-            {/* Invoice History */}
-            <Card className="glass-card">
-                <CardHeader>
-                    <CardTitle>Invoice History</CardTitle>
-                    <CardDescription>Recent transactions with this customer.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border border-gray-200 dark:border-white/10 overflow-hidden">
-                        <div className="relative">
-                            {/* Mobile View - Cards */}
-                            <div className="md:hidden space-y-3 p-4">
-                                {isLoading ? (
-                                    Array.from({ length: 3 }).map((_, i) => (
-                                        <div key={i} className="bg-card border border-border rounded-xl p-4 space-y-3">
-                                            <div className="flex justify-between">
-                                                <Skeleton className="h-5 w-20" />
-                                                <Skeleton className="h-5 w-16" />
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <Skeleton className="h-4 w-24" />
-                                                <Skeleton className="h-5 w-20" />
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : invoices && invoices.length > 0 ? (
-                                    invoices.map((inv) => (
-                                        <div
-                                            key={inv.id}
-                                            className="bg-card border border-border rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
-                                            onClick={() => router.push(`/dashboard/invoices/view?id=${inv.id}`)}
-                                        >
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <div className="font-bold text-foreground">{inv.invoiceNumber}</div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        {format(new Date(inv.invoiceDate), 'dd MMM, yyyy')}
-                                                    </div>
-                                                </div>
-                                                <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'} className={inv.status === 'paid' ? 'bg-green-600/80' : ''}>
-                                                    {inv.status}
-                                                </Badge>
-                                            </div>
-                                            <div className="flex justify-between items-end border-t border-border pt-2 mt-2">
-                                                <div className="text-xs text-muted-foreground">Total Amount</div>
-                                                <div className="font-bold text-lg text-amber-600 dark:text-gold-400">
-                                                    {formatCurrency(inv.grandTotal)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                                        No invoices found.
-                                    </div>
-                                )}
-                            </div>
+                {/* Modals */}
+                {customerData && (
+                    <>
+                        <EnrollmentModal
+                            isOpen={isEnrollmentOpen}
+                            onClose={() => setIsEnrollmentOpen(false)}
+                            customerId={customerData.id}
+                            customerName={customerName}
+                            customerPhone={customerData.phone}
+                            onSuccess={() => {
+                                window.location.reload();
+                            }}
+                        />
+                        <ReferralShareModal
+                            isOpen={isShareModalOpen}
+                            onClose={() => setIsShareModalOpen(false)}
+                            customerName={customerName}
+                            customerPhone={customerData.phone}
+                            referralCode={customerData.referral_code}
+                            shopName="My Jewellery Shop"
+                        />
+                    </>
+                )}
 
-                            {/* Desktop View - Table */}
-                            <div className="hidden md:block overflow-x-auto">
-                                <Table>
-                                    <TableHeader className="bg-muted/50">
-                                        <TableRow className="hover:bg-transparent border-b-gray-200 dark:border-b-white/10">
-                                            <TableHead className="text-primary">Invoice #</TableHead>
-                                            <TableHead className="text-primary">Date</TableHead>
-                                            <TableHead className="text-primary">Status</TableHead>
-                                            <TableHead className="text-right text-primary">Amount</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {isLoading ? (
-                                            Array.from({ length: 3 }).map((_, i) => (
-                                                <TableRow key={i} className="border-b-gray-100 dark:border-b-white/5">
-                                                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                                    <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : invoices && invoices.length > 0 ? (
-                                            invoices.map((inv) => (
-                                                <TableRow
-                                                    key={inv.id}
-                                                    className="hover:bg-gray-50 dark:hover:bg-white/5 border-b-gray-100 dark:border-b-white/5 cursor-pointer transition-colors"
-                                                    onClick={() => router.push(`/dashboard/invoices/view?id=${inv.id}`)}
-                                                >
-                                                    <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                                                    <TableCell>{format(new Date(inv.invoiceDate), 'dd MMM, yyyy')}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'} className={inv.status === 'paid' ? 'bg-green-600/80' : ''}>
-                                                            {inv.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-right font-medium text-amber-600 dark:text-gold-400">
-                                                        {formatCurrency(inv.grandTotal)}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                                    No invoices found.
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-
-
-            {customerData && (
-                <>
-                    <EnrollmentModal
-                        isOpen={isEnrollmentOpen}
-                        onClose={() => setIsEnrollmentOpen(false)}
-                        customerId={customerData.id}
+                {selectedEnrollment && !isRequestPaymentOpen && (
+                    <PaymentEntryModal
+                        isOpen={!!selectedEnrollment}
+                        onClose={() => setSelectedEnrollment(null)}
+                        enrollment={selectedEnrollment}
                         customerName={customerName}
-                        customerPhone={customerData.phone}
+                        customerPhone={customerData?.phone}
                         onSuccess={() => {
-                            // Optional: refresh data or show success toast
                             window.location.reload();
                         }}
                     />
-                    <ReferralShareModal
-                        isOpen={isShareModalOpen}
-                        onClose={() => setIsShareModalOpen(false)}
+                )}
+
+                {selectedEnrollment && isRequestPaymentOpen && (
+                    <RequestPaymentModal
+                        isOpen={isRequestPaymentOpen}
+                        onClose={() => {
+                            setIsRequestPaymentOpen(false);
+                            setSelectedEnrollment(null);
+                        }}
+                        shopId={params.shopId as string}
+                        shopName="My Jewellery Shop"
                         customerName={customerName}
-                        customerPhone={customerData.phone}
-                        referralCode={customerData.referral_code}
-                        shopName="My Jewellery Shop" // Ideally fetch this from shop context
+                        customerPhone={customerData?.phone}
+                        amount={selectedEnrollment.scheme?.scheme_amount || 0}
+                        note={`Payment for ${selectedEnrollment.scheme?.name}`}
                     />
-                </>
-            )}
-
-            {selectedEnrollment && !isRequestPaymentOpen && (
-                <PaymentEntryModal
-                    isOpen={!!selectedEnrollment}
-                    onClose={() => setSelectedEnrollment(null)}
-                    enrollment={selectedEnrollment}
-                    customerName={customerName}
-                    customerPhone={customerData?.phone}
-                    onSuccess={() => {
-                        // Refresh to show updated totals
-                        window.location.reload();
-                    }}
-                />
-            )}
-
-            {selectedEnrollment && isRequestPaymentOpen && (
-                <RequestPaymentModal
-                    isOpen={isRequestPaymentOpen}
-                    onClose={() => {
-                        setIsRequestPaymentOpen(false);
-                        setSelectedEnrollment(null);
-                    }}
-                    shopId={params.shopId as string}
-                    shopName="My Jewellery Shop"
-                    customerName={customerName}
-                    customerPhone={customerData?.phone}
-                    amount={selectedEnrollment.scheme?.scheme_amount || 0}
-                    note={`Payment for ${selectedEnrollment.scheme?.name}`}
-                />
-            )}
-        </MotionWrapper>
+                )}
+            </MotionWrapper>
+        </div>
     );
 }

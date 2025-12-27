@@ -373,12 +373,12 @@ export const getAdditionalStats = fetchAdditionalStatsCached;
 
 export async function getSchemeStats(shopId: string) {
     const supabase = await createClient();
-    
+
     const today = new Date();
     const next30Days = new Date();
     next30Days.setDate(today.getDate() + 30);
 
-    const [activeResult, liabilityResult, maturityResult] = await Promise.all([
+    const [activeResult, liabilityResult, maturityResult, collectionResult] = await Promise.all([
         // 1. Active Enrollments
         supabase
             .from('scheme_enrollments')
@@ -400,21 +400,36 @@ export async function getSchemeStats(shopId: string) {
             .eq('shop_id', shopId)
             .eq('status', 'ACTIVE')
             .gte('maturity_date', today.toISOString())
-            .lte('maturity_date', next30Days.toISOString())
+            .lte('maturity_date', next30Days.toISOString()),
+
+        // 4. Monthly Collection (Sum of fixed amounts)
+        supabase
+            .from('scheme_enrollments')
+            .select('scheme:schemes!inner(scheme_amount)')
+            .eq('shop_id', shopId)
+            .eq('status', 'ACTIVE')
     ]);
 
     const totalGoldLiability = liabilityResult.data?.reduce((sum, row) => sum + (Number(row.total_gold_weight_accumulated) || 0), 0) || 0;
 
+    // Calculate Monthly Collection (Total Value of active fixed schemes)
+    const monthlyCollection = collectionResult.data?.reduce((sum, row: any) => {
+        const scheme = Array.isArray(row.scheme) ? row.scheme[0] : row.scheme;
+        // Ensure we only sum if scheme_amount is a valid number (> 0 implies fixed/defined)
+        return sum + (Number(scheme?.scheme_amount) || 0);
+    }, 0) || 0;
+
     return {
         activeEnrollments: activeResult.count || 0,
         totalGoldLiability,
-        upcomingMaturities: maturityResult.count || 0
+        upcomingMaturities: maturityResult.count || 0,
+        monthlyCollection
     };
 }
 
 export async function getReferralStats(shopId: string) {
     const supabase = await createClient();
-    
+
     // Count total referrals
     const { count: totalReferrals } = await supabase
         .from('customers')
@@ -428,7 +443,7 @@ export async function getReferralStats(shopId: string) {
         .select('referred_by, referrer:referred_by(name)')
         .eq('shop_id', shopId)
         .not('referred_by', 'is', null);
-        
+
     // Aggregate
     const referralCounts: Record<string, { count: number, name: string }> = {};
     referrals?.forEach((r: any) => {
@@ -443,10 +458,10 @@ export async function getReferralStats(shopId: string) {
             referralCounts[id].count++;
         }
     });
-    
+
     const sorted = Object.values(referralCounts).sort((a, b) => b.count - a.count);
     const topReferrer = sorted[0] || null;
-    
+
     return {
         totalReferrals: totalReferrals || 0,
         topReferrer
