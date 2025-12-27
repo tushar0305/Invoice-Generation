@@ -81,11 +81,14 @@ export function PremiumHeader({ shopName, shopId, userId, userEmail, logoUrl }: 
             segments.push({ label: 'New Customer' });
         } else if (pathname.includes('/customers')) {
             segments.push({ label: 'Customers' });
-        } else if (pathname.includes('/stock/new')) {
-            segments.push({ label: 'Stock', href: `/shop/${shopId}/stock` });
+        } else if (pathname.includes('/inventory/new')) {
+            segments.push({ label: 'Inventory', href: `/shop/${shopId}/inventory` });
             segments.push({ label: 'Add Item' });
-        } else if (pathname.includes('/stock')) {
-            segments.push({ label: 'Stock' });
+        } else if (pathname.includes('/inventory/bulk')) {
+            segments.push({ label: 'Inventory', href: `/shop/${shopId}/inventory` });
+            segments.push({ label: 'Bulk Entry' });
+        } else if (pathname.includes('/inventory')) {
+            segments.push({ label: 'Inventory' });
         } else if (pathname.includes('/staff')) {
             segments.push({ label: 'Staff' });
         } else if (pathname.includes('/khata')) {

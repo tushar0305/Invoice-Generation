@@ -118,7 +118,7 @@ export function KPICard({
                                 <svg width="100%" height="100%" viewBox="0 0 100 30" preserveAspectRatio="none" className="overflow-visible">
                                     <defs>
                                         <linearGradient id={`grad-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
+                                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
                                             <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
                                         </linearGradient>
                                     </defs>
@@ -133,7 +133,8 @@ export function KPICard({
                                         d={pathD}
                                         fill="none"
                                         stroke="hsl(var(--primary))"
-                                        strokeWidth="2.5"
+                                        strokeOpacity="0.8"
+                                        strokeWidth="2"
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
                                         vectorEffect="non-scaling-stroke"

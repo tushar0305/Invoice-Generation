@@ -11,8 +11,7 @@ import type { Invoice, InvoiceItem } from './definitions';
 
 export const shareInvoice = async (invoice: Invoice) => {
   try {
-    // 1. Fetch Items & Settings if needed (Dashboard usually only has invoice summary)
-    // We fetch fresh data to be sure
+    // 1. Fetch Items & Settings
     const [itemsResult, shopResult] = await Promise.all([
       supabase
         .from('invoice_items')
@@ -22,7 +21,7 @@ export const shareInvoice = async (invoice: Invoice) => {
       supabase
         .from('shops')
         .select('*')
-        .eq('id', invoice.shopId) // Ensure invoice has shopId, or we use invoice.shop_id if raw
+        .eq('id', invoice.shopId)
         .single()
     ]);
 
@@ -58,41 +57,61 @@ export const shareInvoice = async (invoice: Invoice) => {
       templateId: shopDetails.template_id || 'classic',
     } : undefined;
 
-    // 2. Generate PDF
-    const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
-    const file = new File([pdfBlob], `Invoice-${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' });
+    const title = `Invoice #${invoice.invoiceNumber}`;
+    const text = `Invoice for ${invoice.customerSnapshot?.name || 'Customer'} from ${settings?.shopName || 'SwarnaVyapar'}`;
+    const viewUrl = `${window.location.origin}/shop/${invoice.shopId}/invoices/view?id=${invoice.id}`;
 
-    // 3. Share File
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        files: [file],
-        title: `Invoice #${invoice.invoiceNumber}`,
-        text: `Invoice for ${invoice.customerSnapshot?.name || 'Customer'}`,
-      });
-      return { success: true, message: 'Shared successfully' };
+    // 2. Generate PDF for Sharing (Primary Method)
+    let file: File | null = null;
+    try {
+      const pdfBlob = await generateInvoicePdf({ invoice, items, settings });
+      file = new File([pdfBlob], `Invoice-${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' });
+    } catch (e) {
+      console.warn("PDF generation for share failed, falling back to link", e);
     }
 
-    // 4. Fallback if file sharing not supported (Desktop/some browsers)
-    // We'll download it instead or copy link? User specifically asked for PDF sharing.
-    // If we can't share files, we validly fallback to link logic but warn?
-    // Let's keep the link fallback for now but prioritizing file.
-
+    // 3. Attempt Sharing
     if (navigator.share) {
-      await navigator.share({
-        title: `Invoice #${invoice.invoiceNumber}`,
-        text: `Invoice for ${invoice.customerSnapshot?.name || 'Customer'}`,
-        url: window.location.href // This might be wrong on dashboard... should be view link
-      });
-      return { success: true, message: 'Shared link (File sharing not supported)' };
+      // Method A: Share File (Best UX)
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title,
+            text,
+          });
+          return { success: true, message: 'Invoice PDF shared successfully' };
+        } catch (error: any) {
+          // Ignore AbortError (User cancelled share sheet)
+          if (error.name === 'AbortError') return { success: false, aborted: true };
+          console.warn("File share failed, attempting text share...", error);
+        }
+      }
+
+      // Method B: Share Link (Fallback)
+      try {
+        await navigator.share({
+          title,
+          text: `${text}\nView Invoice: ${viewUrl}`,
+          url: viewUrl
+        });
+        return { success: true, message: 'Invoice link shared' };
+      } catch (error: any) {
+        if (error.name === 'AbortError') return { success: false, aborted: true };
+        console.warn("Link share failed", error);
+      }
     }
 
-    // Final fallback
-    const url = `${window.location.origin}/shop/${invoice.shopId}/invoices/view?id=${invoice.id}`;
-    await navigator.clipboard.writeText(url);
-    return { success: true, message: 'Link copied (Sharing not supported)' };
+    // Method C: Clipboard (Last Resort)
+    try {
+      await navigator.clipboard.writeText(viewUrl);
+      return { success: true, message: 'Link copied to clipboard (Share unavailable)' };
+    } catch (e) {
+      return { success: false, error: 'Could not share or copy link' };
+    }
 
   } catch (error) {
-    console.error('Share failed:', error);
+    console.error('Share process failed:', error);
     return { success: false, error };
   }
 };

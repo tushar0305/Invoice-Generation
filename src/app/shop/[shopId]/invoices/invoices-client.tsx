@@ -647,9 +647,9 @@ export function InvoicesClient({
     ];
 
     return (
-        <MotionWrapper className="pb-24 pt-2 px-4 md:px-0">
+        <MotionWrapper className="h-[calc(100vh-6rem)] flex flex-col px-4 md:px-0 overflow-hidden">
             {/* Sticky Header Section */}
-            <div className="sticky top-0 z-20 bg-background pb-4 space-y-3 -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="shrink-0 bg-background pb-4 space-y-3 pt-2">
                 {/* Top Bar: Search + Refresh */}
                 <div className="flex items-center gap-2 pt-2">
                     <div className="relative flex-1">
@@ -821,148 +821,270 @@ export function InvoicesClient({
             {/* Content */}
             <div className="space-y-4">
                 {/* Desktop/Tablet Table View */}
-                <div className="rounded-2xl border-2 border-gray-300 dark:border-white/20 overflow-hidden hidden md:block bg-card shadow-lg">
-                    <Table className="table-modern min-w-[600px]">
-                        <TableHeader className="bg-muted/50 border-b-2 border-gray-300 dark:border-white/20 sticky top-0 z-10">
-                            <TableRow className="hover:bg-transparent border-none">
-                                <TableHead className="w-[40px] px-4 h-12">
-                                    <Checkbox
-                                        checked={filteredInvoices.length > 0 && selectedInvoices.size === filteredInvoices.length}
-                                        onCheckedChange={toggleSelectAll}
-                                        aria-label="Select all"
-                                        className="border-gray-400 dark:border-white/40 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                    />
-                                </TableHead>
-                                <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Invoice #</TableHead>
-                                <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Date</TableHead>
-                                <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Customer</TableHead>
-                                <TableHead className="text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Status</TableHead>
-                                <TableHead className="text-right text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Amount</TableHead>
-                                <TableHead className="text-right text-gray-700 dark:text-gray-200 font-bold text-xs uppercase tracking-wider h-12">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredInvoices.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="h-96 text-center">
-                                        <EmptyState
-                                            icon={FilePlus2}
-                                            title="No invoices found"
-                                            description={
-                                                statusFilter !== 'all' || searchTerm
-                                                    ? "Try adjusting your filters or search terms to find what you're looking for."
-                                                    : "Get started by creating your first invoice."
-                                            }
-                                            action={
-                                                statusFilter !== 'all' || searchTerm
-                                                    ? { label: 'Clear filters', onClick: () => { setStatusFilter('all'); setSearchTerm(''); } }
-                                                    : { label: 'Create Invoice', onClick: () => router.push(`/shop/${shopId}/invoices/new`) }
-                                            }
+                {/* Desktop/Tablet Table View - Fixed Layout */}
+                {/* Desktop Table View - Standardized */}
+                <div className="hidden md:flex flex-col flex-1 rounded-2xl border-2 border-gray-300 dark:border-white/20 overflow-hidden bg-card shadow-lg relative min-h-0">
+                    <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+                        <Table className="table-modern min-w-[1000px] relative">
+                            <TableHeader className="bg-muted/50 border-b-2 border-gray-300 dark:border-white/20 sticky top-0 z-20 shadow-sm backdrop-blur-sm">
+                                <TableRow className="hover:bg-transparent border-b border-border/50">
+                                    <TableHead className="w-[5%] px-4 h-10">
+                                        <Checkbox
+                                            checked={selectedInvoices.size === filteredInvoices.length && filteredInvoices.length > 0}
+                                            onCheckedChange={toggleSelectAll}
+                                            aria-label="Select all"
+                                            className="translate-y-[2px]"
                                         />
-                                    </TableCell>
+                                    </TableHead>
+                                    <TableHead className="h-10 font-bold text-gray-700 dark:text-gray-200 text-xs uppercase tracking-wider w-[15%]">Invoice #</TableHead>
+                                    <TableHead className="h-10 font-bold text-gray-700 dark:text-gray-200 text-xs uppercase tracking-wider w-[25%]">Customer</TableHead>
+                                    <TableHead className="h-10 font-bold text-gray-700 dark:text-gray-200 text-xs uppercase tracking-wider w-[15%]">Date</TableHead>
+                                    <TableHead className="h-10 font-bold text-gray-700 dark:text-gray-200 text-xs uppercase tracking-wider w-[15%] text-right">Amount</TableHead>
+                                    <TableHead className="h-10 font-bold text-gray-700 dark:text-gray-200 text-xs uppercase tracking-wider w-[10%] text-center">Status</TableHead>
+                                    <TableHead className="h-10 font-bold text-gray-700 dark:text-gray-200 text-xs uppercase tracking-wider w-[15%] text-right pr-4">Actions</TableHead>
                                 </TableRow>
-                            ) : (
-                                filteredInvoices.map((invoice) => (
-                                    <TableRow
-                                        key={invoice.id}
-                                        className={cn(
-                                            "hover:bg-muted/50 border-b border-border transition-colors cursor-pointer group",
-                                            selectedInvoices.has(invoice.id) && "bg-primary/5"
-                                        )}
-                                        onClick={() => router.push(`/shop/${shopId}/invoices/view?id=${invoice.id}`)}
-                                    >
-                                        <TableCell className="px-4" onClick={(e) => e.stopPropagation()}>
-                                            <Checkbox
-                                                checked={selectedInvoices.has(invoice.id)}
-                                                onCheckedChange={() => toggleSelectInvoice(invoice.id)}
-                                                aria-label={`Select invoice ${invoice.invoiceNumber}`}
-                                                className="border-gray-300 dark:border-white/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                            </TableHeader>
+                            <TableBody>
+                                {filteredInvoices.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="h-[400px] text-center">
+                                            <EmptyState
+                                                icon={FilePlus2}
+                                                title="No invoices found"
+                                                description={searchTerm || dateRange ? "Try adjusting your filters" : "Create a new invoice to get started"}
+                                                action={!searchTerm && !dateRange ? {
+                                                    label: "Create Invoice",
+                                                    onClick: () => router.push(`/shop/${shopId}/invoices/new`)
+                                                } : undefined}
                                             />
                                         </TableCell>
-                                        <TableCell className="font-medium text-xs lg:text-sm text-gray-900 dark:text-foreground group-hover:text-primary transition-colors">{invoice.invoiceNumber}</TableCell>
-                                        <TableCell className="text-xs lg:text-sm text-gray-500 dark:text-muted-foreground">{format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}</TableCell>
-                                        <TableCell className="text-xs lg:text-sm truncate max-w-[150px] lg:max-w-none text-gray-900 dark:text-foreground">{invoice.customerSnapshot?.name || 'Unknown'}</TableCell>
-                                        <TableCell>
-                                            <div className={cn(
-                                                "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border",
-                                                invoice.status === 'paid'
-                                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20"
-                                                    : "bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20"
-                                            )}>
-                                                {invoice.status}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-bold text-gray-900 dark:text-foreground text-xs lg:text-sm">₹{invoice.grandTotal.toFixed(2)}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    title={invoice.status === 'paid' ? 'Mark as Due' : 'Mark as Paid'}
-                                                    onClick={() => handleMarkPaid(invoice.id)}
-                                                    className="hover:bg-gray-100 dark:hover:bg-white/10"
-                                                >
-                                                    {invoice.status === 'paid' ? (
-                                                        <Undo2 className="h-4 w-4 text-gray-500 dark:text-muted-foreground" />
-                                                    ) : (
-                                                        <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
-                                                    )}
-                                                </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(invoice.id)} className="hover:bg-gray-100 dark:hover:bg-white/10">
-                                                    <Download className="h-4 w-4 text-primary" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteConfirmation(invoice.id)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : (
+                                    filteredInvoices.map((invoice) => (
+                                        <TableRow
+                                            key={invoice.id}
+                                            className={cn(
+                                                "group transition-colors data-[state=selected]:bg-primary/5 hover:bg-primary/5 cursor-pointer border-b border-border/50 last:border-0",
+                                                selectedInvoices.has(invoice.id) && "bg-primary/5"
+                                            )}
+                                            onClick={(e) => {
+                                                if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('[role="checkbox"]')) return;
+                                                router.push(`/shop/${shopId}/invoices/view?id=${invoice.id}`);
+                                            }}
+                                        >
+                                            <TableCell className="px-4 py-2">
+                                                <Checkbox
+                                                    checked={selectedInvoices.has(invoice.id)}
+                                                    onCheckedChange={() => toggleSelectInvoice(invoice.id)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="font-medium font-mono text-xs py-2 text-primary">
+                                                {invoice.invoiceNumber}
+                                            </TableCell>
+                                            <TableCell className="py-2">
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-sm text-foreground">{invoice.customerSnapshot?.name || 'Unknown'}</span>
+                                                    <span className="text-[10px] text-muted-foreground">{invoice.customerSnapshot?.phone || ''}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground text-xs py-2">
+                                                {format(new Date(invoice.invoiceDate), 'dd MMM yyyy')}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium tabular-nums text-sm py-2">
+                                                ₹{invoice.grandTotal.toLocaleString('en-IN')}
+                                            </TableCell>
+                                            <TableCell className="text-center py-2">
+                                                <Badge
+                                                    variant={invoice.status === 'paid' ? 'default' : 'destructive'}
+                                                    className={cn(
+                                                        "capitalize shadow-sm h-5 px-2 text-[10px]",
+                                                        invoice.status === 'paid' ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/25 border-emerald-500/20" : "bg-rose-500/15 text-rose-700 dark:text-rose-400 hover:bg-rose-500/25 border-rose-500/20"
+                                                    )}
+                                                >
+                                                    {invoice.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right py-2 pr-4 relative">
+                                                <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                                        onClick={() => handlePrint(invoice.id)}
+                                                        title="Print"
+                                                    >
+                                                        <Printer className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                                        onClick={() => handleDownloadPdf(invoice.id)}
+                                                        title="Download PDF"
+                                                    >
+                                                        <Download className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                        onClick={() => handleDeleteConfirmation(invoice.id)}
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-muted">
+                                                                <Share2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-48">
+                                                            <DropdownMenuItem onClick={() => handleShare(invoice.id)}>
+                                                                <Share2 className="mr-2 h-4 w-4" /> Share Link
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleMarkPaid(invoice.id)}>
+                                                                {invoice.status === 'paid' ? (
+                                                                    <>
+                                                                        <Undo2 className="mr-2 h-4 w-4 text-orange-500" /> Mark Unpaid
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Banknote className="mr-2 h-4 w-4 text-emerald-500" /> Mark Paid
+                                                                    </>
+                                                                )}
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {/* Fixed Pagination Footer (Desktop) */}
+                    {
+                        pagination && pagination.totalCount > 0 && (
+                            <div className="flex items-center justify-between border-t border-gray-200 dark:border-white/10 p-4 bg-muted/20 backdrop-blur-sm z-20">
+                                <div className="text-sm text-muted-foreground text-center sm:text-left">
+                                    Showing <span className="font-medium text-foreground">{(pagination?.currentPage - 1) * pagination?.limit + 1}</span> - <span className="font-medium text-foreground">{Math.min(pagination?.currentPage * pagination?.limit, pagination?.totalCount)}</span> of <span className="font-medium text-foreground">{pagination?.totalCount}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const params = new URLSearchParams(window.location.search);
+                                            params.set('page', String((pagination?.currentPage || 1) - 1));
+                                            router.push(`?${params.toString()}`);
+                                        }}
+                                        disabled={pagination.currentPage <= 1}
+                                        className="rounded-full px-4 border-none shadow-sm bg-background hover:bg-muted"
+                                    >
+                                        Previous
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const params = new URLSearchParams(window.location.search);
+                                            params.set('page', String((pagination?.currentPage || 1) + 1));
+                                            router.push(`?${params.toString()}`);
+                                        }}
+                                        disabled={pagination.currentPage >= pagination.totalPages}
+                                        className="rounded-full px-4 border-none shadow-sm bg-background hover:bg-muted"
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            </div>
+                        )
+                    }
                 </div>
 
+
                 {/* Mobile Card View */}
-                <div className="md:hidden space-y-3">
-                    {filteredInvoices.length === 0 ? (
-                        <div className="py-12">
-                            <EmptyState
-                                icon={FilePlus2}
-                                title="No invoices found"
-                                description={
-                                    statusFilter !== 'all' || searchTerm
-                                        ? "Try adjusting your filters or search terms to find what you're looking for."
-                                        : "Get started by creating your first invoice."
-                                }
-                                action={
-                                    statusFilter !== 'all' || searchTerm
-                                        ? { label: 'Clear filters', onClick: () => { setStatusFilter('all'); setSearchTerm(''); } }
-                                        : { label: 'Create Invoice', onClick: () => router.push(`/shop/${shopId}/invoices/new`) }
-                                }
-                            />
-                        </div>
-                    ) : (
-                        filteredInvoices.map((invoice) => (
-                            <InvoiceMobileCard
-                                key={invoice.id}
-                                invoice={invoice}
-                                onView={(id) => router.push(`/shop/${shopId}/invoices/view?id=${id}`)}
-                                onDelete={handleDeleteConfirmation}
-                                onDownload={handleDownloadPdf}
-                                onShare={handleShare}
-                                onMarkPaid={handleMarkPaid}
-                                onPrint={handlePrint}
-                            />
-                        ))
-                    )}
-                </div>
-            </div>
+                < div className="md:hidden space-y-3" >
+                    {
+                        filteredInvoices.length === 0 ? (
+                            <div className="py-12">
+                                <EmptyState
+                                    icon={FilePlus2}
+                                    title="No invoices found"
+                                    description={
+                                        statusFilter !== 'all' || searchTerm
+                                            ? "Try adjusting your filters or search terms to find what you're looking for."
+                                            : "Get started by creating your first invoice."
+                                    }
+                                    action={
+                                        statusFilter !== 'all' || searchTerm
+                                            ? { label: 'Clear filters', onClick: () => { setStatusFilter('all'); setSearchTerm(''); } }
+                                            : { label: 'Create Invoice', onClick: () => router.push(`/shop/${shopId}/invoices/new`) }
+                                    }
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                {filteredInvoices.map((invoice) => (
+                                    <InvoiceMobileCard
+                                        key={invoice.id}
+                                        invoice={invoice}
+                                        onView={(id) => router.push(`/shop/${shopId}/invoices/view?id=${id}`)}
+                                        onDelete={handleDeleteConfirmation}
+                                        onDownload={handleDownloadPdf}
+                                        onShare={handleShare}
+                                        onMarkPaid={handleMarkPaid}
+                                        onPrint={handlePrint}
+                                    />
+                                ))}
+                                {/* Pagination (Mobile) */}
+                                {pagination && pagination.totalCount > 0 && (
+                                    <div className="flex items-center justify-between pt-4 pb-24">
+                                        <div className="text-sm text-muted-foreground">
+                                            Showing {((pagination.currentPage - 1) * pagination.limit) + 1}-{Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const p = new URLSearchParams(window.location.search);
+                                                    p.set('page', String(Math.max(1, pagination.currentPage - 1)));
+                                                    router.push(`?${p.toString()}`);
+                                                }}
+                                                disabled={pagination.currentPage <= 1}
+                                            >
+                                                Previous
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const p = new URLSearchParams(window.location.search);
+                                                    p.set('page', String(Math.min(pagination.totalPages, pagination.currentPage + 1)));
+                                                    router.push(`?${p.toString()}`);
+                                                }}
+                                                disabled={pagination.currentPage >= pagination.totalPages}
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )
+                    }
+                </div >
+            </div >
 
 
 
             {/* Delete Confirmation Dialog */}
-            <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            < AlertDialog open={dialogOpen} onOpenChange={setDialogOpen} >
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Invoice?</AlertDialogTitle>
@@ -983,10 +1105,10 @@ export function InvoicesClient({
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </AlertDialog>
+            </AlertDialog >
 
             {/* Status Change Confirmation Dialog */}
-            <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+            < AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen} >
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Change Invoice Status?</AlertDialogTitle>
@@ -1007,10 +1129,10 @@ export function InvoicesClient({
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </AlertDialog>
+            </AlertDialog >
 
             {/* Batch Delete Confirmation Dialog */}
-            <AlertDialog open={batchDeleteDialogOpen} onOpenChange={setBatchDeleteDialogOpen}>
+            < AlertDialog open={batchDeleteDialogOpen} onOpenChange={setBatchDeleteDialogOpen} >
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete {selectedInvoices.size} Invoices?</AlertDialogTitle>
@@ -1031,44 +1153,9 @@ export function InvoicesClient({
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </AlertDialog>
+            </AlertDialog >
 
-            {/* Pagination Controls */}
-            {pagination && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 pb-12 sm:pb-6 border-t border-border mt-4">
-                    <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
-                        Showing <span className="font-medium text-foreground">{(pagination?.currentPage - 1) * pagination?.limit + 1}</span> - <span className="font-medium text-foreground">{Math.min(pagination?.currentPage * pagination?.limit, pagination?.totalCount)}</span> of <span className="font-medium text-foreground">{pagination?.totalCount}</span>
-                    </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 sm:flex-none"
-                            disabled={pagination?.currentPage <= 1}
-                            onClick={() => {
-                                const params = new URLSearchParams(window.location.search);
-                                params.set('page', String((pagination?.currentPage || 1) - 1));
-                                router.push(`?${params.toString()}`);
-                            }}
-                        >
-                            Previous
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 sm:flex-none"
-                            disabled={pagination?.currentPage >= pagination?.totalPages}
-                            onClick={() => {
-                                const params = new URLSearchParams(window.location.search);
-                                params.set('page', String((pagination?.currentPage || 1) + 1));
-                                router.push(`?${params.toString()}`);
-                            }}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </div>
-            )}
-        </MotionWrapper>
+
+        </MotionWrapper >
     );
 }

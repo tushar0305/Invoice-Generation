@@ -364,7 +364,7 @@ function ShopLayoutInner({
                 )}
 
                 {/* Mobile Header - Adaptive Design */}
-                {isMobile && !pathname.includes('/invoices/new') && !pathname.includes('/loans/new') && !pathname.includes('/schemes/create') && !pathname.includes('/customers/view') && (
+                {isMobile && !pathname.includes('/invoices/new') && !pathname.includes('/loans/new') && !pathname.includes('/schemes/create') && !pathname.includes('/customers/view') && !pathname.endsWith('/invoices') && !pathname.endsWith('/inventory') && !pathname.endsWith('/customers') && (
                     <header className="sticky top-0 z-50 flex flex-col w-full">
                         {pathname === `/shop/${shopId}/dashboard` ? (
                             /* 1. Dashboard Header - Immersive & Welcoming */
@@ -420,19 +420,7 @@ function ShopLayoutInner({
                     {children}
                 </main>
 
-                {/* Footer - only on desktop */}
-                {!isMobile && (
-                    <footer className="py-3 px-6 border-t border-border/40 bg-background/60 backdrop-blur-sm">
-                        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-2">
-                                <span className="font-medium">Swarnavyapar</span>
-                                <span className="opacity-50">•</span>
-                                <span>v{process.env.npm_package_version || '0.1.0'}</span>
-                            </div>
-                            <span>© {new Date().getFullYear()}</span>
-                        </div>
-                    </footer>
-                )}
+
             </SidebarInset>
 
             {/* Mobile Navigation */}

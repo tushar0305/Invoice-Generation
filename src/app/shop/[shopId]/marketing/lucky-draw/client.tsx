@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { format } from 'date-fns';
-import { Trophy, Users, Calendar, Gift, Sparkles, History, Loader2 } from 'lucide-react';
+import { Trophy, Users, Calendar, Gift, Sparkles, History, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,7 +29,7 @@ export function LuckyDrawClient({ initialHistory }: LuckyDrawClientProps) {
     const [participants, setParticipants] = useState<EligibleParticipant[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [prize, setPrize] = useState('1g Gold Coin');
-    
+
     const [isSpinning, setIsSpinning] = useState(false);
     const [winner, setWinner] = useState<EligibleParticipant | null>(null);
     const [showWinnerModal, setShowWinnerModal] = useState(false);
@@ -56,7 +56,7 @@ export function LuckyDrawClient({ initialHistory }: LuckyDrawClientProps) {
 
     const handleSpin = async () => {
         if (participants.length === 0) return;
-        
+
         // Check if draw already exists for this month
         const drawExists = history.some(h => {
             const d = new Date(h.draw_period);
@@ -64,21 +64,21 @@ export function LuckyDrawClient({ initialHistory }: LuckyDrawClientProps) {
         });
 
         if (drawExists) {
-            toast({ 
-                title: "Draw Already Conducted", 
-                description: "A lucky draw has already been done for this month.", 
-                variant: "destructive" 
+            toast({
+                title: "Draw Already Conducted",
+                description: "A lucky draw has already been done for this month.",
+                variant: "destructive"
             });
             return;
         }
 
         setIsSpinning(true);
-        
+
         // Simulate spinning effect
         let spinInterval: NodeJS.Timeout;
         let counter = 0;
         const spinDuration = 3000; // 3 seconds
-        
+
         // Visual spin
         spinInterval = setInterval(() => {
             const randomIndex = Math.floor(Math.random() * participants.length);
@@ -92,16 +92,16 @@ export function LuckyDrawClient({ initialHistory }: LuckyDrawClientProps) {
             const finalWinnerIndex = Math.floor(Math.random() * participants.length);
             const finalWinner = participants[finalWinnerIndex];
             setWinner(finalWinner);
-            
+
             try {
                 const savedDraw = await saveLuckyDrawWinner(
-                    shopId, 
-                    parseInt(month) + 1, 
-                    parseInt(year), 
-                    finalWinner.enrollmentId, 
+                    shopId,
+                    parseInt(month) + 1,
+                    parseInt(year),
+                    finalWinner.enrollmentId,
                     prize
                 );
-                
+
                 // Update history locally
                 setHistory([
                     {
@@ -114,7 +114,7 @@ export function LuckyDrawClient({ initialHistory }: LuckyDrawClientProps) {
                     },
                     ...history
                 ]);
-                
+
                 setShowWinnerModal(true);
                 toast({ title: "Winner Selected!", description: `${finalWinner.customerName} won the lucky draw!` });
             } catch (error: any) {
@@ -136,12 +136,17 @@ export function LuckyDrawClient({ initialHistory }: LuckyDrawClientProps) {
     return (
         <MotionWrapper className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Sparkles className="h-6 w-6 text-amber-500" />
-                        Monthly Lucky Draw
-                    </h1>
-                    <p className="text-muted-foreground">Reward your loyal customers who pay on time.</p>
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" onClick={() => window.history.back()}>
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-bold flex items-center gap-2">
+                            <Sparkles className="h-6 w-6 text-amber-500" />
+                            Monthly Lucky Draw
+                        </h1>
+                        <p className="text-muted-foreground">Reward your loyal customers who pay on time.</p>
+                    </div>
                 </div>
             </div>
 
@@ -166,7 +171,7 @@ export function LuckyDrawClient({ initialHistory }: LuckyDrawClientProps) {
                                 </SelectContent>
                             </Select>
                         </div>
-                        
+
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Year</label>
                             <Select value={year} onValueChange={setYear}>
@@ -183,15 +188,15 @@ export function LuckyDrawClient({ initialHistory }: LuckyDrawClientProps) {
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Prize</label>
-                            <Input 
-                                value={prize} 
-                                onChange={(e) => setPrize(e.target.value)} 
+                            <Input
+                                value={prize}
+                                onChange={(e) => setPrize(e.target.value)}
                                 placeholder="e.g. 1g Gold Coin"
                             />
                         </div>
 
                         <div className="pt-4">
-                            <Button 
+                            <Button
                                 className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-0"
                                 size="lg"
                                 onClick={handleSpin}
@@ -319,12 +324,12 @@ export function LuckyDrawClient({ initialHistory }: LuckyDrawClientProps) {
                     <DialogHeader>
                         <DialogTitle className="text-center text-2xl font-bold text-amber-600">🎉 We Have a Winner! 🎉</DialogTitle>
                     </DialogHeader>
-                    
+
                     <div className="py-8 flex flex-col items-center justify-center space-y-4">
                         <div className="h-24 w-24 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200">
                             <Trophy className="h-12 w-12 text-amber-600" />
                         </div>
-                        
+
                         <div className="space-y-1">
                             <h2 className="text-3xl font-bold">{winner?.customerName}</h2>
                             <p className="text-muted-foreground font-mono">{winner?.accountNumber}</p>

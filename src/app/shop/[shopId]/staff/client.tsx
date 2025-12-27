@@ -86,13 +86,22 @@ type StaffClientProps = {
     initialInvitations: Invitation[];
     shopId: string;
     currentUserId: string;
+    searchParams?: { q?: string };
+    pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalCount: number;
+        limit: number;
+    };
 };
 
 export function StaffClient({
     initialStaff,
     initialInvitations,
     shopId,
-    currentUserId
+    currentUserId,
+    pagination,
+    searchParams
 }: StaffClientProps) {
     const router = useRouter();
     const { toast } = useToast();
@@ -101,27 +110,34 @@ export function StaffClient({
     const isMobile = useIsMobile();
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
+    const [searchQuery, setSearchQuery] = useState(searchParams?.q || '');
 
-    const filteredStaff = initialStaff.filter(member => 
-        member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.role.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Server-side pagination means we don't slice locally.
+    const paginatedStaff = initialStaff;
 
-    const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
-    const paginatedStaff = filteredStaff.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
-    
     // Form State
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<'manager' | 'staff'>('staff');
+
+    const handleSearch = (term: string) => {
+        setSearchQuery(term);
+        // Debouncing/Submitting logic
+    };
+
+    const onSearchSubmit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const p = new URLSearchParams(window.location.search);
+        if (searchQuery) {
+            p.set('q', searchQuery);
+            p.set('page', '1');
+        } else {
+            p.delete('q');
+            p.set('page', '1');
+        }
+        router.push(`?${p.toString()}`);
+    };
 
     const handleCreateStaff = async () => {
         if (!name || !email || !password) {
@@ -240,17 +256,17 @@ export function StaffClient({
 
     return (
         <div className="min-h-screen bg-background pb-24 md:pb-8 transition-colors duration-300">
-            <StaffHeader 
-                shopName="My Shop" 
+            <StaffHeader
+                shopName="My Shop"
                 stats={{
-                    totalStaff: initialStaff.length,
+                    totalStaff: pagination?.totalCount || initialStaff.length,
                     activeNow: initialStaff.filter(s => s.is_active).length
                 }}
                 onAddStaff={() => setIsCreateOpen(true)}
             />
 
             <div className="max-w-5xl mx-auto px-4 md:px-8 -mt-8 relative z-10 space-y-8">
-                
+
                 {/* Pending Invitations */}
                 {initialInvitations.length > 0 && (
                     <div className="space-y-3">
@@ -291,19 +307,16 @@ export function StaffClient({
                 <Card className="border-none shadow-xl bg-card/50 backdrop-blur-xl">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                         <CardTitle>Team Members</CardTitle>
-                        <div className="relative w-full max-w-xs">
+                        <form onSubmit={onSearchSubmit} className="relative w-full max-w-xs">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 type="search"
                                 placeholder="Search staff..."
                                 className="pl-9 bg-background/50"
                                 value={searchQuery}
-                                onChange={(e) => {
-                                    setSearchQuery(e.target.value);
-                                    setCurrentPage(1);
-                                }}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                             />
-                        </div>
+                        </form>
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -325,83 +338,91 @@ export function StaffClient({
                                     </TableRow>
                                 ) : (
                                     paginatedStaff.map((member) => (
-                                    <TableRow 
-                                        key={member.id} 
-                                        className="hover:bg-muted/30 border-border/50 transition-colors cursor-pointer"
-                                        onClick={() => router.push(`/shop/${shopId}/staff/${member.user_id}`)}
-                                    >
-                                        <TableCell className="font-medium">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                                                    {member.name.charAt(0).toUpperCase()}
+                                        <TableRow
+                                            key={member.id}
+                                            className="hover:bg-muted/30 border-border/50 transition-colors cursor-pointer"
+                                            onClick={() => router.push(`/shop/${shopId}/staff/${member.user_id}`)}
+                                        >
+                                            <TableCell className="font-medium">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                                                        {member.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-foreground">{member.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm font-semibold text-foreground">{member.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={cn("capitalize font-medium border-0", getRoleBadgeColor(member.role))}>
+                                                    {member.role}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <div className={cn("h-2 w-2 rounded-full", member.is_active ? "bg-emerald-500" : "bg-rose-500")} />
+                                                    <span className="text-sm text-muted-foreground">{member.is_active ? 'Active' : 'Inactive'}</span>
                                                 </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className={cn("capitalize font-medium border-0", getRoleBadgeColor(member.role))}>
-                                                {member.role}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <div className={cn("h-2 w-2 rounded-full", member.is_active ? "bg-emerald-500" : "bg-rose-500")} />
-                                                <span className="text-sm text-muted-foreground">{member.is_active ? 'Active' : 'Inactive'}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground text-sm">
-                                            {format(new Date(member.joined_at), 'MMM d, yyyy')}
-                                        </TableCell>
-                                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                            {permissions.canInviteStaff && member.user_id !== currentUserId && (
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-40">
-                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem 
-                                                            className="text-rose-600 focus:text-rose-600 cursor-pointer"
-                                                            onClick={() => handleRemoveStaff(member.id)}
-                                                        >
-                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                            Remove
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                )))}
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground text-sm">
+                                                {format(new Date(member.joined_at), 'MMM d, yyyy')}
+                                            </TableCell>
+                                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                                {permissions.canInviteStaff && member.user_id !== currentUserId && (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-40">
+                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                className="text-rose-600 focus:text-rose-600 cursor-pointer"
+                                                                onClick={() => handleRemoveStaff(member.id)}
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Remove
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    )))}
                             </TableBody>
                         </Table>
 
                         {/* Pagination Controls */}
-                        {totalPages > 1 && (
+                        {pagination && pagination.totalCount > 0 && (
                             <div className="flex items-center justify-end space-x-2 py-4">
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
+                                    onClick={() => {
+                                        const p = new URLSearchParams(window.location.search);
+                                        p.set('page', String(Math.max(1, pagination.currentPage - 1)));
+                                        router.push(`?${p.toString()}`);
+                                    }}
+                                    disabled={pagination.currentPage <= 1}
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                     Previous
                                 </Button>
-                                <div className="text-sm text-muted-foreground">
-                                    Page {currentPage} of {totalPages}
+                                <div className="text-sm text-muted-foreground font-medium">
+                                    Showing {((pagination.currentPage - 1) * pagination.limit) + 1} to {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} staff
                                 </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
+                                    onClick={() => {
+                                        const p = new URLSearchParams(window.location.search);
+                                        p.set('page', String(Math.min(pagination.totalPages, pagination.currentPage + 1)));
+                                        router.push(`?${p.toString()}`);
+                                    }}
+                                    disabled={pagination.currentPage >= pagination.totalPages}
                                 >
                                     Next
                                     <ChevronRight className="h-4 w-4" />

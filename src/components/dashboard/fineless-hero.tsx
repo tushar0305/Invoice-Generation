@@ -46,15 +46,18 @@ export function FinelessHero({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="relative overflow-hidden rounded-2xl border border-white/20 bg-background/60 backdrop-blur-xl shadow-xl hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 group"
+            className="relative overflow-hidden rounded-2xl border border-primary/10 bg-background/40 backdrop-blur-xl shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 group"
         >
             {/* Ambient Glow Background - Premium Gold Gradient */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-60 pointer-events-none" />
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+
+            {/* Fine Grain Texture (Optional, simulates paper/premium feel) */}
+            <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] pointer-events-none mix-blend-overlay" />
 
             {/* Decorative Elements */}
             <div className="absolute top-4 right-4 p-2 opacity-10 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none">
-                <Gem className="w-24 h-24 text-primary rotate-12" />
+                <Gem className="w-32 h-32 text-primary/80 rotate-12" />
             </div>
 
             <div className="relative z-10 p-4 md:p-8 grid md:grid-cols-2 gap-4 md:gap-8 items-center">
@@ -77,8 +80,8 @@ export function FinelessHero({
                     <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm font-medium">
                         <span className={cn(
                             "flex items-center gap-1 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full border text-xs",
-                            isPositive 
-                                ? "text-emerald-600 bg-emerald-500/10 border-emerald-500/20" 
+                            isPositive
+                                ? "text-emerald-600 bg-emerald-500/10 border-emerald-500/20"
                                 : "text-rose-600 bg-rose-500/10 border-rose-500/20"
                         )}>
                             {isPositive ? <TrendingUp className="w-3 h-3" /> : null}
@@ -93,7 +96,7 @@ export function FinelessHero({
                     <div className="flex flex-col justify-center space-y-3 md:space-y-5 relative">
                         {/* Divider for mobile */}
                         <div className="md:hidden w-full h-px bg-border/50 my-1" />
-                        
+
                         {/* Vertical Divider for desktop */}
                         <div className="hidden md:block absolute left-0 top-2 bottom-2 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
@@ -103,8 +106,8 @@ export function FinelessHero({
                                     <Sparkles className="w-3 h-3 md:w-4 md:h-4 text-primary" />
                                     <h3 className="text-xs md:text-sm font-semibold text-foreground uppercase tracking-wider">Storefront Stats</h3>
                                 </div>
-                                <Link 
-                                    href="/shop/dashboard/catalogue" 
+                                <Link
+                                    href="/shop/dashboard/catalogue"
                                     className="group/link text-[10px] md:text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-0.5 md:gap-1 z-20 relative transition-colors"
                                 >
                                     View Analytics <ArrowRight className="w-2.5 h-2.5 md:w-3 md:h-3 group-hover/link:translate-x-0.5 transition-transform" />

@@ -9,7 +9,7 @@ import { UseFormReturn, useFieldArray } from 'react-hook-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getInventoryItems } from '@/services/inventory';
 import { useEffect, useState, useRef } from 'react';
-import { InventoryItem, STATUS_LABELS, ITEM_CATEGORIES } from '@/lib/inventory-types';
+import { InventoryItem, STATUS_LABELS, INVENTORY_CATEGORIES } from '@/lib/inventory-types';
 import { Badge } from '@/components/ui/badge';
 import { NumericKeypadDrawer } from '@/components/ui/numeric-keypad-drawer';
 
@@ -242,7 +242,9 @@ export function InvoiceItemsTable({ form, shopId }: InvoiceItemsTableProps) {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {ITEM_CATEGORIES.map((cat) => (
+                                                    {Array.from(new Set(
+                                                        Object.values(INVENTORY_CATEGORIES).flatMap(c => Object.keys(c))
+                                                    )).map((cat) => (
                                                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                                     ))}
                                                 </SelectContent>

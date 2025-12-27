@@ -100,24 +100,24 @@ export async function POST(request: Request) {
 
         const validPurities = PURITY_OPTIONS[body.metal_type] || [];
         if (!validPurities.includes(body.purity)) {
-             return NextResponse.json({ error: `Invalid purity for ${body.metal_type}` }, { status: 400 });
+            return NextResponse.json({ error: `Invalid purity for ${body.metal_type}` }, { status: 400 });
         }
 
         if (body.gross_weight === undefined || body.gross_weight <= 0) {
             return NextResponse.json({ error: 'gross_weight must be positive' }, { status: 400 });
         }
         if (body.net_weight === undefined || body.net_weight <= 0) {
-             return NextResponse.json({ error: 'net_weight must be positive' }, { status: 400 });
+            return NextResponse.json({ error: 'net_weight must be positive' }, { status: 400 });
         }
-        
+
         if (body.net_weight > body.gross_weight) {
             return NextResponse.json({ error: 'net_weight cannot be greater than gross_weight' }, { status: 400 });
         }
-        
+
         const stoneWeight = body.stone_weight || 0;
         const calculatedNet = body.gross_weight - stoneWeight;
         if (Math.abs(calculatedNet - body.net_weight) > 0.01) {
-             return NextResponse.json({ error: 'net_weight must equal gross_weight - stone_weight' }, { status: 400 });
+            return NextResponse.json({ error: 'net_weight must equal gross_weight - stone_weight' }, { status: 400 });
         }
         if (body.net_weight === undefined || body.net_weight <= 0) {
             return NextResponse.json({ error: 'net_weight must be positive' }, { status: 400 });
@@ -139,6 +139,11 @@ export async function POST(request: Request) {
                 making_charge_type: body.making_charge_type || 'PER_GRAM',
                 making_charge_value: body.making_charge_value || 0,
                 stone_value: body.stone_value || 0,
+                sub_category: body.sub_category || null,
+                collection: body.collection || null,
+                huid: body.huid || null,
+                vendor_id: body.vendor_id || null,
+                batch_id: body.batch_id || null,
                 created_by: user.id,
             })
             .select()

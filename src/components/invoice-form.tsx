@@ -535,10 +535,10 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
   if (shopLoading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <MotionWrapper className="min-h-screen flex flex-col lg:block">
+    <MotionWrapper className="flex flex-col lg:block fixed inset-0 z-[100] bg-background lg:static lg:bg-transparent lg:z-auto h-[100dvh] lg:h-auto overflow-hidden lg:overflow-visible">
 
       {/* 1. Fixed Header (Mobile) / Regular Header (Desktop) */}
-      <div className="flex-none p-4 py-3 bg-background border-b z-50 sticky top-0 lg:static lg:p-0 lg:border-none lg:mb-4 lg:bg-transparent">
+      <div className="flex-none p-3 border-b bg-background/95 backdrop-blur z-50 lg:static lg:p-0 lg:border-none lg:mb-4 lg:bg-transparent">
         <div className="container mx-auto px-4 lg:px-0 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 -ml-2 pl-0 hover:bg-transparent lg:hover:bg-accent lg:pl-4">
@@ -587,7 +587,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-none lg:block">
+      <div className="flex-1 overflow-y-auto lg:overflow-visible lg:flex-none lg:block pb-safe">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr,400px] gap-6">
 
           {/* LEFT COLUMN: FORM */}
@@ -600,7 +600,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
               >
 
                 {/* Scrollable Content Area */}
-                <div className="px-2 py-3 lg:p-0 space-y-3 lg:space-y-4">
+                <div className="px-3 py-4 lg:p-0 space-y-3 lg:space-y-4 pb-24 lg:pb-0">
 
                   {/* 1. Customer Details */}
                   <CustomerDetailsCard

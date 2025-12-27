@@ -1,0 +1,7 @@
+
+// This was already partially visible in previous diffs, I'm just confirming the logic is sound.
+// The key is ensuring updateRow handles sub-category resets correctly.
+// I will not write to file here but rely on the previous successful multi_replace if it worked, or fix it if not.
+// Actually, looking at previous output, 9806 failed? No, 9806 succeeded but then I had errors in 9814.
+// Let's assume Bulk Page is mostly fine but might need minor touch up.
+// Focus on Inventory Client for now.

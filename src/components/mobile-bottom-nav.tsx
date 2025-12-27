@@ -94,7 +94,7 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
         )}>
             {/* Glassmorphism Background */}
             <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-t border-border/50 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.3)]" />
-            
+
             <div className="relative flex items-center justify-between h-[60px] px-2" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(60px + env(safe-area-inset-bottom, 0px))' }}>
                 {/* Home */}
                 <Link
@@ -129,7 +129,7 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                     <span className={cn(
                         "text-[10px] font-medium transition-colors duration-300",
                         isActive(`/shop/${shopId}/invoices`, true) ? "text-primary" : "text-muted-foreground"
-                    )}>Bills</span>
+                    )}>Invoices</span>
                 </Link>
 
                 {/* Center FAB - Floating Action Button */}
@@ -208,6 +208,6 @@ export function MobileBottomNav({ shopId }: { shopId: string }) {
                     </SheetContent>
                 </Sheet>
             </div>
-        </nav>
+        </nav >
     );
 }

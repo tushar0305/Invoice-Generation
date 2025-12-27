@@ -41,8 +41,17 @@ export default async function InventoryPage({
         .order('created_at', { ascending: false })
         .range(from, to);
 
+    // Calculate date threshold for aging stock (90 days ago)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const ninetyDaysAgoIso = ninetyDaysAgo.toISOString();
+
     if (status && status !== 'all') {
-        query = query.eq('status', status);
+        if (status === 'aging') {
+            query = query.eq('status', 'IN_STOCK').lt('created_at', ninetyDaysAgoIso);
+        } else {
+            query = query.eq('status', status);
+        }
     }
     if (metal_type) {
         query = query.eq('metal_type', metal_type);
@@ -54,11 +63,12 @@ export default async function InventoryPage({
     const { data: items, count } = await query;
 
     // Get counts for filter badges
-    const [allCount, inStockCount, reservedCount, soldCount] = await Promise.all([
+    const [allCount, inStockCount, reservedCount, soldCount, agingCount] = await Promise.all([
         supabase.from('inventory_items').select('*', { count: 'exact', head: true }).eq('shop_id', shopId),
         supabase.from('inventory_items').select('*', { count: 'exact', head: true }).eq('shop_id', shopId).eq('status', 'IN_STOCK'),
         supabase.from('inventory_items').select('*', { count: 'exact', head: true }).eq('shop_id', shopId).eq('status', 'RESERVED'),
         supabase.from('inventory_items').select('*', { count: 'exact', head: true }).eq('shop_id', shopId).eq('status', 'SOLD'),
+        supabase.from('inventory_items').select('*', { count: 'exact', head: true }).eq('shop_id', shopId).eq('status', 'IN_STOCK').lt('created_at', ninetyDaysAgoIso),
     ]);
 
     return (
@@ -79,6 +89,7 @@ export default async function InventoryPage({
                     inStock: inStockCount.count || 0,
                     reserved: reservedCount.count || 0,
                     sold: soldCount.count || 0,
+                    aging: agingCount.count || 0,
                 }}
             />
         </Suspense>

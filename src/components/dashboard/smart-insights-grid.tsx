@@ -59,7 +59,7 @@ export function SmartInsightsGrid({ shopId, stats }: SmartInsightsProps) {
     };
 
     const insights = [
-        // 1. Gold Scheme
+        // 1. Gold Scheme (Primary Gold)
         {
             title: "Gold Schemes",
             icon: Coins,
@@ -67,13 +67,13 @@ export function SmartInsightsGrid({ shopId, stats }: SmartInsightsProps) {
             subtitle: stats.activeEnrollments > 0 ? `${stats.activeEnrollments} Active Enrollments` : "No active schemes",
             action: stats.activeEnrollments > 0 ? "Manage Schemes" : "Start New Scheme",
             href: `/shop/${shopId}/schemes`,
-            color: "text-amber-500",
+            color: "text-amber-600 dark:text-amber-400",
             bg: "bg-amber-500/10",
             border: "border-amber-500/20",
-            gradient: "from-amber-500/5",
+            gradient: "from-amber-500/10",
             trend: stats.activeEnrollments > 0 ? "Active" : "Inactive"
         },
-        // 2. Pending Invoices
+        // 2. Pending Invoices (Critical Red - High Contrast)
         {
             title: "Pending Payments",
             icon: AlertCircle,
@@ -81,13 +81,13 @@ export function SmartInsightsGrid({ shopId, stats }: SmartInsightsProps) {
             subtitle: getPendingSubtitle(),
             action: stats.pendingCount > 0 ? "Review List" : "View History",
             href: `/shop/${shopId}/invoices?status=due`,
-            color: "text-rose-500",
+            color: "text-rose-600 dark:text-rose-400",
             bg: "bg-rose-500/10",
             border: "border-rose-500/20",
-            gradient: "from-rose-500/5",
+            gradient: "from-rose-500/10",
             alert: stats.pendingCount > 0
         },
-        // 3. Loans
+        // 3. Active Loans (Professional Slate/Blue)
         {
             title: "Active Loans",
             icon: CreditCard,
@@ -95,12 +95,12 @@ export function SmartInsightsGrid({ shopId, stats }: SmartInsightsProps) {
             subtitle: stats.activeLoans > 0 ? "Active Loan Accounts" : "No active loans",
             action: "View Loans",
             href: `/shop/${shopId}/loans`,
-            color: "text-blue-500",
-            bg: "bg-blue-500/10",
-            border: "border-blue-500/20",
-            gradient: "from-blue-500/5"
+            color: "text-slate-600 dark:text-slate-400",
+            bg: "bg-slate-500/10",
+            border: "border-slate-500/20",
+            gradient: "from-slate-500/10"
         },
-        // 4. Khatabook
+        // 4. Khatabook (Neutral Slate)
         {
             title: "Khatabook",
             icon: BookOpen,
@@ -108,26 +108,26 @@ export function SmartInsightsGrid({ shopId, stats }: SmartInsightsProps) {
             subtitle: "Total Udhaar Market",
             action: "Open Khata",
             href: `/shop/${shopId}/khata`,
-            color: "text-violet-500",
-            bg: "bg-violet-500/10",
-            border: "border-violet-500/20",
-            gradient: "from-violet-500/5"
+            color: "text-slate-600 dark:text-slate-400",
+            bg: "bg-slate-500/10",
+            border: "border-slate-500/20",
+            gradient: "from-slate-500/10"
         },
-        // 5. Inventory
+        // 5. Inventory (Amber for Low Stock Warning, otherwise Slate)
         {
-            title: "Inventory Alert",
+            title: "Inventory Status",
             icon: Package,
             value: stats.lowStockCount.toString(),
             subtitle: getInventorySubtitle(),
             action: stats.lowStockCount > 0 ? "Restock Now" : "View Inventory",
             href: `/shop/${shopId}/inventory`,
-            color: "text-orange-500",
-            bg: "bg-orange-500/10",
-            border: "border-orange-500/20",
-            gradient: "from-orange-500/5",
+            color: stats.lowStockCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-600 dark:text-slate-400",
+            bg: stats.lowStockCount > 0 ? "bg-amber-500/10" : "bg-slate-500/10",
+            border: stats.lowStockCount > 0 ? "border-amber-500/20" : "border-slate-500/20",
+            gradient: stats.lowStockCount > 0 ? "from-amber-500/10" : "from-slate-500/10",
             alert: stats.lowStockCount > 0
         },
-        // 6. Loyalty
+        // 6. Loyalty Program (Luxury Gold)
         {
             title: "Loyalty Program",
             icon: GraduationCap,
@@ -135,10 +135,10 @@ export function SmartInsightsGrid({ shopId, stats }: SmartInsightsProps) {
             subtitle: getLoyaltySubtitle(),
             action: "View Rewards",
             href: `/shop/${shopId}/loyalty`,
-            color: "text-emerald-500",
-            bg: "bg-emerald-500/10",
-            border: "border-emerald-500/20",
-            gradient: "from-emerald-500/5"
+            color: "text-amber-600 dark:text-amber-400",
+            bg: "bg-amber-500/10",
+            border: "border-amber-500/20",
+            gradient: "from-amber-500/10"
         }
     ];
 

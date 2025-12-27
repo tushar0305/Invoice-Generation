@@ -14,14 +14,14 @@ export type EligibleParticipant = {
 
 export async function getEligibleParticipants(shopId: string, month: number, year: number) {
     const supabase = await createClient();
-    
+
     // Calculate start and end of the month
     const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
     const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
 
     // Get payments in this range
     const { data: payments, error } = await supabase
-        .from('scheme_payments')
+        .from('scheme_transactions') // Correct table name
         .select(`
             amount,
             enrollment_id,
@@ -33,6 +33,7 @@ export async function getEligibleParticipants(shopId: string, month: number, yea
             )
         `)
         .eq('shop_id', shopId)
+        .eq('transaction_type', 'INSTALLMENT') // Only count installments
         .gte('payment_date', startDate)
         .lte('payment_date', endDate);
 
@@ -67,10 +68,10 @@ export async function getEligibleParticipants(shopId: string, month: number, yea
 }
 
 export async function saveLuckyDrawWinner(
-    shopId: string, 
-    month: number, 
-    year: number, 
-    winnerEnrollmentId: string, 
+    shopId: string,
+    month: number,
+    year: number,
+    winnerEnrollmentId: string,
     prize: string
 ) {
     const supabase = await createClient();

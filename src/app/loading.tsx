@@ -24,23 +24,33 @@ export default function Loading() {
     return (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4">
             {/* Animated Logo */}
-            <motion.div
-                animate={{
-                    scale: [1, 1.1, 1],
-                    opacity: [0.8, 1, 0.8],
-                }}
-                transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                }}
-                className="mb-8 relative"
-            >
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-amber-600 flex items-center justify-center shadow-lg shadow-gold-500/20">
-                    <span className="text-3xl font-bold text-white">S</span>
-                </div>
-                <div className="absolute -inset-4 bg-gold-400/20 blur-xl rounded-full -z-10 animate-pulse" />
-            </motion.div>
+            {/* Animated Logo */}
+            <div className="mb-8 relative">
+                <motion.div
+                    animate={{
+                        scale: [1, 1.05, 1],
+                        opacity: [1, 0.9, 1],
+                    }}
+                    transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className="relative z-10"
+                >
+                    <div className="w-24 h-24 relative">
+                        {/* Fallback to text if image fails, but we expect image at /logo/logo.png */}
+                        <img
+                            src="/logo/logo.png"
+                            alt="SwarnaVyapar"
+                            className="w-full h-full object-contain drop-shadow-2xl"
+                        />
+                    </div>
+                </motion.div>
+
+                {/* Glow Effect behind logo */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-gold-400/20 blur-3xl rounded-full -z-10 animate-pulse" />
+            </div>
 
             {/* Loading Bar */}
             <div className="w-48 h-1.5 bg-muted rounded-full overflow-hidden mb-6">

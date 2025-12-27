@@ -21,10 +21,20 @@ export function DashboardInvoiceRow({ invoice, shopId }: DashboardInvoiceRowProp
         e.stopPropagation();
 
         const result = await shareInvoice(invoice);
+
+        // Only show toast on success
         if (result.success && result.message) {
             toast({
                 title: "Success",
                 description: result.message,
+            });
+        }
+        // Don't show error if aborted by user
+        else if (!result.success && !(result as any).aborted) {
+            toast({
+                title: "Share Failed",
+                description: "Could not share invoice.",
+                variant: 'destructive',
             });
         }
     };

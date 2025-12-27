@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Save, Loader2, ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn, formatCurrency } from '@/lib/utils';
-import { METAL_TYPES, PURITY_OPTIONS, ITEM_CATEGORIES, STATUS_LABELS } from '@/lib/inventory-types';
+import { METAL_TYPES, PURITY_OPTIONS, ALL_CATEGORIES, STATUS_LABELS } from '@/lib/inventory-types';
 import type { MetalType, ItemStatus } from '@/lib/inventory-types';
 
 interface BulkItemRow {
@@ -37,7 +37,7 @@ const createEmptyRow = (): BulkItemRow => ({
     metal_type: 'GOLD',
     purity: '22K',
     hsn_code: '',
-    category: ITEM_CATEGORIES[0],
+    category: ALL_CATEGORIES[0],
     gross_weight: 0,
     net_weight: 0,
     stone_weight: 0,
@@ -144,12 +144,12 @@ export function InventoryBulkEntry({ shopId, onClose }: InventoryBulkEntryProps)
         if (!row.name.trim()) return 'Name is required';
         if (row.gross_weight <= 0) return 'Weight must be positive';
         if (row.net_weight <= 0) return 'Net weight must be positive';
-        
+
         if (row.net_weight > row.gross_weight) return 'Net weight > Gross weight';
-        
+
         const calculatedNet = row.gross_weight - row.stone_weight;
         if (Math.abs(calculatedNet - row.net_weight) > 0.01) return 'Net != Gross - Stone';
-        
+
         const validPurities = PURITY_OPTIONS[row.metal_type] || [];
         if (!validPurities.includes(row.purity)) return `Invalid purity for ${row.metal_type}`;
 
@@ -357,7 +357,7 @@ export function InventoryBulkEntry({ shopId, onClose }: InventoryBulkEntryProps)
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {ITEM_CATEGORIES.map(c => (
+                                                    {ALL_CATEGORIES.map(c => (
                                                         <SelectItem key={c} value={c}>{c}</SelectItem>
                                                     ))}
                                                 </SelectContent>

@@ -17,6 +17,11 @@ export interface InventoryItem {
     metal_type: MetalType;
     purity: Purity | string;
     category: string | null;
+    sub_category?: string | null;
+    collection?: string | null;
+    huid?: string | null;
+    vendor_id?: string | null;
+    batch_id?: string | null;
     hsn_code: string | null;
 
     // Physical Properties
@@ -70,7 +75,13 @@ export interface CreateInventoryItemPayload {
     name?: string;  // Optional - auto-generated from category + tag_id
     metal_type: MetalType;
     purity: string;
+
     category?: string;
+    sub_category?: string;
+    collection?: string;
+    huid?: string;
+    vendor_id?: string;
+    batch_id?: string;
     hsn_code?: string;
     gross_weight: number;
     net_weight: number;
@@ -98,24 +109,78 @@ export const QR_CONFIG = {
     ERROR_CORRECTION: 'L',
 } as const;
 
-// Category presets
-export const ITEM_CATEGORIES = [
-    'Ring',
-    'Necklace',
-    'Chain',
-    'Bangle',
-    'Bracelet',
-    'Earring',
-    'Pendant',
-    'Mangalsutra',
-    'Anklet',
-    'Nose Pin',
-    'Coin',
-    'Bar',
-    'Other'
-] as const;
+// Category Hierarchies
+// Category Hierarchies with Sub-Categories
+export const INVENTORY_CATEGORIES: Record<MetalType, Record<string, string[]>> = {
+    GOLD: {
+        'Ring': ['Ladies', 'Gents', 'Couple', 'Baby', 'Engagement'],
+        'Chain': ['Rope', 'Box', 'Lotus', 'Machine', 'Hollow'],
+        'Necklace': ['Choker', 'Long', 'Bridal', 'Light Weight'],
+        'Bangle': ['Patla', 'Kada', 'Chudi', 'Bombay'],
+        'Bracelet': ['Ladies', 'Gents', 'Kids'],
+        'Earring': ['Studs', 'Jhumka', 'Bali', 'Drops'],
+        'Pendant': ['Gents', 'Ladies', 'God', 'Alphabet'],
+        'Mangalsutra': ['Short', 'Long', 'Pendant Only'],
+        'Nose Pin': ['Press', 'Screw'],
+        'Coin': ['1g', '2g', '5g', '8g', '10g', '20g'],
+        'Bar': [],
+        'Other': []
+    },
+    SILVER: {
+        'Payal': ['Bombay', 'Agra', 'Fancy', 'Light Weight'],
+        'Ring': ['Ladies', 'Gents', 'Bichiya'],
+        'Chain': ['Gents', 'Ladies'],
+        'Bracelet': ['Gents', 'Ladies'],
+        'Utensils': ['Glass', 'Bowl', 'Plate', 'Spoon', 'Set'],
+        'Idol': ['Ganesh', 'Lakshmi', 'Radha Krishna'],
+        'Coin': ['5g', '10g', '20g', '50g', '100g'],
+        'Bar': [],
+        'Other': []
+    },
+    DIAMOND: {
+        'Ring': ['Solitaire', 'Cluster', 'Band'],
+        'Necklace': ['Choker', 'Set'],
+        'Earring': ['Studs', 'Drops'],
+        'Pendant': [],
+        'Bracelet': [],
+        'Bangle': [],
+        'Nose Pin': [],
+        'Other': []
+    },
+    PLATINUM: {
+        'Ring': ['Couple Bands', 'Solitaire'],
+        'Chain': [],
+        'Bracelets': [],
+        'Other': []
+    }
+};
+
+export const ALL_CATEGORIES = Array.from(new Set(
+    Object.values(INVENTORY_CATEGORIES).flatMap(cat => Object.keys(cat))
+));
 
 export const METAL_TYPES: MetalType[] = ['GOLD', 'SILVER', 'DIAMOND', 'PLATINUM'];
+
+// Audit Types
+export interface InventoryAudit {
+    id: string;
+    shop_id: string;
+    status: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+    started_at: string;
+    completed_at?: string;
+    total_items_snapshot: number;
+    verified_items_count: number;
+    missing_items_count: number;
+    notes?: string;
+}
+
+export interface InventoryAuditItem {
+    id: string;
+    audit_id: string;
+    inventory_item_id: string;
+    status: 'VERIFIED' | 'MISSING' | 'EXTRA';
+    scanned_at: string;
+}
 
 export const PURITY_OPTIONS: Record<MetalType, string[]> = {
     GOLD: ['24K', '22K', '18K', '14K'],

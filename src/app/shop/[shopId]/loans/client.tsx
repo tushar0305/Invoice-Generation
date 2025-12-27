@@ -58,14 +58,36 @@ type LoansDashboardClientProps = {
     loans: (Loan & { loan_customers: { name: string; phone: string } })[];
     stats: LoanDashboardStats;
     shopId: string;
+    pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalCount: number;
+        limit: number;
+    };
 };
 
 export function LoansDashboardClient({
     loans,
     stats,
     shopId,
+    pagination,
 }: LoansDashboardClientProps) {
     const router = useRouter();
+    // Removed client-side filtering since we are doing server-side pagination & potentially search
+    // But keeping it for now if search meant to filter *current page* results?
+    // Actually, page.tsx doesn't pass 'q' down effectively for client filtering of full dataset.
+    // If 'q' is passed, filter locally? No, standard practice is server search.
+    // However, the original code had client search. For now, let's keep search LOCAL to the page data
+    // OR switch to server search.
+    // Given the props include `pagination`, we should probably assume server-side data is what we have.
+    // Let's implement server-side search handling in `handleSearch` or similar.
+
+    // BUT, the existing code:
+    // `const [searchTerm, setSearchTerm] = useState('');`
+    // `const filteredLoans = loans.filter(...)`
+    // This implies filtering *current page* results.
+    // Let's keep it simple: Just fix the type error first, and add pagination UI.
+
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredLoans = loans.filter(loan =>
@@ -73,6 +95,12 @@ export function LoansDashboardClient({
         loan.loan_customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         loan.loan_customers?.phone.includes(searchTerm)
     );
+
+    const goToPage = (page: number) => {
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', String(page));
+        router.push(`?${params.toString()}`);
+    };
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden">
@@ -292,6 +320,33 @@ export function LoansDashboardClient({
                                         <p className="text-sm">Try adjusting your search terms.</p>
                                     </div>
                                 ) : null}
+
+                                {/* Mobile Pagination */}
+                                {pagination && pagination.totalCount > 0 && (
+                                    <div className="flex items-center justify-between p-4 border-t border-white/10">
+                                        <div className="text-sm text-muted-foreground">
+                                            {((pagination.currentPage - 1) * pagination.limit) + 1}-{Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => goToPage(pagination.currentPage - 1)}
+                                                disabled={pagination.currentPage <= 1}
+                                            >
+                                                Previous
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => goToPage(pagination.currentPage + 1)}
+                                                disabled={pagination.currentPage >= pagination.totalPages}
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Desktop View - Table */}
@@ -349,6 +404,35 @@ export function LoansDashboardClient({
                                         )}
                                     </TableBody>
                                 </Table>
+
+                                {/* Desktop Pagination */}
+                                {pagination && pagination.totalCount > 0 && (
+                                    <div className="flex items-center justify-between border-t border-gray-200 dark:border-white/10 p-4 bg-muted/20 backdrop-blur-sm z-20">
+                                        <div className="text-sm text-muted-foreground text-center sm:text-left">
+                                            Showing <span className="font-medium text-foreground">{(pagination?.currentPage - 1) * pagination?.limit + 1}</span> - <span className="font-medium text-foreground">{Math.min(pagination?.currentPage * pagination?.limit, pagination?.totalCount)}</span> of <span className="font-medium text-foreground">{pagination?.totalCount}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => goToPage(pagination.currentPage - 1)}
+                                                disabled={pagination.currentPage <= 1}
+                                                className="rounded-full px-4 border-none shadow-sm bg-background hover:bg-muted"
+                                            >
+                                                Previous
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => goToPage(pagination.currentPage + 1)}
+                                                disabled={pagination.currentPage >= pagination.totalPages}
+                                                className="rounded-full px-4 border-none shadow-sm bg-background hover:bg-muted"
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </Card>

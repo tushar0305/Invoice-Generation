@@ -218,6 +218,12 @@ export async function createInvoiceAction(formData: {
         return { success: true, invoiceId: normalizedInvoiceId };
     } catch (error: any) {
         console.error('createInvoiceAction error:', error);
+
+        // Handle specific Concurrency Error from DB
+        if (error.message && error.message.includes('Item is no longer available')) {
+            return { success: false, error: "Stock Mismatch: One of these items was just sold by another session. Please check inventory." };
+        }
+
         return { success: false, error: error.message || 'Failed to create invoice' };
     }
 
